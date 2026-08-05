@@ -1,4 +1,6 @@
-# @tifan/pi-inline-skills
+# @herbertgao/pi-inline-skills
+
+> HerbertGao-maintained fork of [@tifan/pi-inline-skills](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-inline-skills), distributed under MIT with the original attribution preserved.
 
 Load skills from inside a pi prompt.
 
@@ -9,7 +11,7 @@ Type `/` and part of a skill name, pick a skill, then keep writing. On submit, t
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-inline-skills
+pi install npm:@herbertgao/pi-inline-skills
 ```
 
 ## Usage

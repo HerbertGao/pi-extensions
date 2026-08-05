@@ -4,7 +4,7 @@ import {
   generateRename,
   getUserMessageContext,
   sanitizeRenameText,
-} from "@tifan/pi-rename/naming"
+} from "@herbertgao/pi-rename/naming"
 import type {
   ExtensionAPI,
   ExtensionCommandContext,

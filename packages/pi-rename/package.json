@@ -1,5 +1,5 @@
 {
-  "name": "@tifan/pi-rename",
+  "name": "@herbertgao/pi-rename",
   "version": "0.4.2",
   "description": "Generate pi session names and rename the current Herdr tab.",
   "keywords": [
@@ -11,13 +11,16 @@
     "session",
     "tab"
   ],
-  "homepage": "https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-rename#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-rename#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Tifan Dwi Avianto <hi@tifan.me>"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
     "directory": "packages/pi-rename"
   },
   "files": [
@@ -40,5 +43,11 @@
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "x-upstream": {
+    "package": "@tifan/pi-rename",
+    "version": "0.4.2",
+    "repository": "https://github.com/tifandotme/pi-extensions",
+    "commit": "460d580"
   }
 }

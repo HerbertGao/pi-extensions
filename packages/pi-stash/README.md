@@ -1,11 +1,13 @@
-# @tifan/pi-stash
+# @herbertgao/pi-stash
+
+> HerbertGao-maintained fork of [@tifan/pi-stash](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-stash), distributed under MIT with the original attribution preserved.
 
 Stash one draft, send another message, and return to the draft while pi works.
 
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-stash
+pi install npm:@herbertgao/pi-stash
 ```
 
 ## Keybinding

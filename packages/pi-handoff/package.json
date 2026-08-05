@@ -1,5 +1,5 @@
 {
-  "name": "@tifan/pi-handoff",
+  "name": "@herbertgao/pi-handoff",
   "version": "1.1.2",
   "description": "Transfer pi session context to a new session and query past sessions.",
   "keywords": [
@@ -9,18 +9,22 @@
     "pi-package",
     "session"
   ],
-  "homepage": "https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-handoff#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-handoff#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Tifan Dwi Avianto <hi@tifan.me>"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
     "directory": "packages/pi-handoff"
   },
   "files": [
     "src/**/*.ts",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "type": "module",
@@ -29,7 +33,7 @@
     "provenance": true
   },
   "dependencies": {
-    "@tifan/pi-rename": "^0.4.2"
+    "@herbertgao/pi-rename": "^0.4.2"
   },
   "engines": {
     "node": ">=20"
@@ -39,5 +43,11 @@
       "./src/index.ts",
       "./src/session-query.ts"
     ]
+  },
+  "x-upstream": {
+    "package": "@tifan/pi-handoff",
+    "version": "1.1.2",
+    "repository": "https://github.com/tifandotme/pi-extensions",
+    "commit": "460d580"
   }
 }

@@ -1,4 +1,6 @@
-# @tifan/pi-titlebar-spinner
+# @herbertgao/pi-titlebar-spinner
+
+> HerbertGao-maintained fork of [@tifan/pi-titlebar-spinner](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-titlebar-spinner), distributed under MIT with the original attribution preserved.
 
 Show a braille spinner in the pi titlebar while the agent runs.
 
@@ -12,7 +14,7 @@ The spinner starts on `agent_start` and stops when the agent settles or the sess
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-titlebar-spinner
+pi install npm:@herbertgao/pi-titlebar-spinner
 ```
 
 ## Release notes

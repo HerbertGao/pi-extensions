@@ -1,4 +1,6 @@
-# @tifan/pi-preferred-thinking
+# @herbertgao/pi-preferred-thinking
+
+> HerbertGao-maintained fork of [@tifan/pi-preferred-thinking](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-preferred-thinking), distributed under MIT with the original attribution preserved.
 
 Apply per-model thinking levels from `~/.config/pi/extensions/pi-preferred-thinking.json` when sessions start or models change.
 
@@ -9,7 +11,7 @@ This extension is for model-specific preferences. Pi's built-in `defaultThinking
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-preferred-thinking
+pi install npm:@herbertgao/pi-preferred-thinking
 ```
 
 ## Configuration

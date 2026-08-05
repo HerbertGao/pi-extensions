@@ -1,90 +1,49 @@
-# Agent Instructions
+# Repository Instructions
 
-Monorepo of [pi-coding-agent](https://pi.dev) extensions. Each package in `packages/` is an independent pi extension published to npm under `@tifan/`.
+This is the independent `HerbertGao/pi-extensions` monorepo. Published packages use the npm scope `@herbertgao/`.
 
-Release publishing is handled manually. For release notes, use the `creating-changesets` project skill. Don't run `npm publish` or bump versions in `package.json`.
+## Package policy
 
-## Structure
+- Every publishable package lives under `packages/<name>/` and is named `@herbertgao/<name>`.
+- The aggregate package is `@herbertgao/pi-extensions`; it bundles the individually published packages and is the preferred one-command install.
+- Each package declares an explicit license, `files`, Pi resources, repository metadata with its monorepo directory, and `publishConfig: { "access": "public", "provenance": true }`.
+- Preserve upstream attribution and original license notices. Record source repository, package, version, and commit in `x-upstream` metadata.
+- Do not copy or publish code without an explicit redistribution license. `minuque/pi-cc-extensions` remains blocked until its maintainer adds a license or grants permission.
+- Runtime dependencies belong in the package that imports them. Other Pi packages referenced by the aggregate package must appear in both `dependencies` and `bundledDependencies`.
+- Pi extensions are TypeScript loaded directly by Pi through jiti; do not add a build step unless a package requires one.
 
-```
-packages/pi-*/
-```
+## Upstream maintenance
 
-Each package has:
+- `origin`: independent HerbertGao repository.
+- `<owner>-upstream` remotes: read-only conceptual sources. Never push to them.
+- Bring upstream updates through a `sync/<source>-<date>` branch, merge or port only reviewed changes, preserve our namespace/metadata, run all checks, and add a Changeset.
+- Never rebase a branch after one of its commits has been released or tagged.
+- See `docs/maintenance.md` for source baselines and sync commands.
 
-- `package.json` with `"pi": { "extensions": [...] }` declaring entry points and `keywords: ["pi-package", "pi-extension"]`.
-- `src/index.ts` as the pi extension entry point.
-- Supporting `.ts` files in `src/`.
-- `tsconfig.json` extending `../../tsconfig.base.json`.
-- `LICENSE` symlinked to the root `LICENSE`.
-- `README.md` with install snippet, tools/commands list, and a `Credits` section if the package is a fork.
+## Development
 
-Keep the root `README.md` package table in sync whenever a package is added, removed, renamed, or its package README or description changes.
-
-## Writing extensions
-
-Extensions are TypeScript loaded by pi via [jiti](https://github.com/unjs/jiti). No build step. The entry point exports a default function receiving `ExtensionAPI`.
-
-Available runtime imports (provided by pi at load time):
-
-- `@earendil-works/pi-coding-agent` — extension types, components, utilities
-- `@earendil-works/pi-tui` — TUI components
-- `@earendil-works/pi-ai` — AI client types
-- `@earendil-works/pi-agent-core` — agent message types
-- `typebox` — schema definitions for tool parameters
-
-Pi extension docs: https://pi.dev/docs/latest/extensions
-
-## Local development
-
-Install dependencies once at the repo root:
+Use Bun at repository root:
 
 ```bash
 bun install
-```
-
-To try a package without publishing:
-
-```bash
-pi install /absolute/path/to/pi-extensions/packages/pi-<name>
-```
-
-## Checks after code changes
-
-From the repo root:
-
-```bash
-bun run typecheck
+bun run format:check
 bun run lint
-bun run format
+bun run typecheck
+bun run test
 ```
 
-Fix errors before moving on. Keep typecheck before final format because type errors may need code changes, and formatting should be the last cleanup step.
+Run `bun run check` before release-facing changes. Add or update tests for behavior changes.
 
-## Adding a package
+## Changesets and release
 
-1. Create `packages/pi-<name>/`.
-2. Copy the structure of an existing package: `package.json`, `tsconfig.json`, `README.md`, `LICENSE` (symlink → `../../LICENSE`).
-3. Add the extension entry point at `src/index.ts`.
-4. Set `"name": "@tifan/pi-<name>"` and `"pi": { "extensions": ["./src/index.ts"] }`.
-5. Add `"publishConfig": { "access": "public", "provenance": true }`.
-6. Stop there and tell Tifan. For the first manual publish, give Tifan these commands:
-   ```bash
-   cd packages/pi-<name>
-   npm publish --provenance=false
-   npm trust github @tifan/pi-<name> \
-     --repository tifandotme/pi-extensions \
-     --file release.yml \
-     --allow-publish \
-     --yes
-   ```
-   Publish before configuring trust because npm requires the package to exist. `--provenance=false` applies only to the local bootstrap publish; later releases use OIDC provenance in GitHub Actions.
+- Add a Changeset for every user-visible package change after the initial scoped-package bootstrap.
+- Versions are independent. Use patch for fixes, minor for features, and major only for intentional breaking changes in packages already at `1.x`.
+- GitHub Actions uses npm trusted publishing with OIDC and provenance.
+- Never run `npm publish`, enable release automation, push, tag, or create a GitHub release unless the user explicitly requests it.
+- Initial npm publication is manual because npm requires each package to exist before trusted publishing can be configured.
 
-## Conventions
+## Git
 
-- TypeScript, no build step.
-- Conventional Commits (`feat`, `fix`, `chore`, `docs`, ...). Lowercase subject, no period, header under 72 chars.
-- One npm package per extension. No cross-package imports.
-- Keep package TypeScript under `src/`.
-- `master` is the default branch.
-- Bun is the package manager; commit `bun.lock`.
+- Keep changes focused and use Conventional Commits.
+- Do not modify sibling source repositories while importing or comparing upstream work.
+- Do not commit session JSONL files, dependency directories, build output, or credentials.

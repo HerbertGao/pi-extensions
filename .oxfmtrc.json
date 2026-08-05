@@ -1,5 +1,7 @@
 {
-  "ignorePatterns": [],
+  "ignorePatterns": [
+    "packages/pi-subagents/examples/agent-tool-description.md"
+  ],
   "semi": false,
   "useTabs": false,
   "tabWidth": 2,

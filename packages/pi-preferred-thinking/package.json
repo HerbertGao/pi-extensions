@@ -1,5 +1,5 @@
 {
-  "name": "@tifan/pi-preferred-thinking",
+  "name": "@herbertgao/pi-preferred-thinking",
   "version": "0.3.0",
   "description": "Persist preferred thinking level per model in pi.",
   "keywords": [
@@ -9,18 +9,22 @@
     "settings",
     "thinking"
   ],
-  "homepage": "https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-preferred-thinking#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-preferred-thinking#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Tifan Dwi Avianto <hi@tifan.me>"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
     "directory": "packages/pi-preferred-thinking"
   },
   "files": [
     "src/**/*.ts",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "type": "module",
@@ -35,5 +39,11 @@
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "x-upstream": {
+    "package": "@tifan/pi-preferred-thinking",
+    "version": "0.3.0",
+    "repository": "https://github.com/tifandotme/pi-extensions",
+    "commit": "460d580"
   }
 }

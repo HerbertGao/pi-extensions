@@ -1,4 +1,10 @@
-# @tifan/pi-fixed-editor
+# @herbertgao/pi-fixed-editor
+
+## 0.2.6
+
+### Patch Changes
+
+- [`c53f628`](https://github.com/HerbertGao/pi-extensions/commit/c53f628) - Reduce streaming flicker and terminal output by avoiding nested synchronized-output sequences and redrawing only changed fixed-editor rows.
 
 ## 0.2.5
 

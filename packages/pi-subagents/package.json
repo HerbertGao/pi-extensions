@@ -1,0 +1,72 @@
+{
+  "name": "@herbertgao/pi-subagents",
+  "version": "0.15.0",
+  "description": "Claude Code-style autonomous subagents for Pi, with HerbertGao-maintained UI extensions.",
+  "keywords": [
+    "agent",
+    "autonomous",
+    "pi",
+    "pi-extension",
+    "pi-package",
+    "subagent"
+  ],
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-subagents#readme",
+  "bugs": {
+    "url": "https://github.com/HerbertGao/pi-extensions/issues"
+  },
+  "license": "MIT",
+  "author": "Herbert Gao",
+  "contributors": [
+    "tintinweb"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
+    "directory": "packages/pi-subagents"
+  },
+  "files": [
+    "src/**/*.ts",
+    "examples/**/*.md",
+    "media/*",
+    "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "lint": "biome check src/ test/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.49",
+    "croner": "^10.0.1",
+    "nanoid": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": ">=0.80.0",
+    "@earendil-works/pi-coding-agent": ">=0.80.0",
+    "@earendil-works/pi-tui": ">=0.80.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "video": "https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-subagents/media/demo.mp4",
+    "image": "https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-subagents/media/screenshot.png"
+  },
+  "x-upstream": {
+    "package": "@tintinweb/pi-subagents",
+    "version": "0.14.3",
+    "repository": "https://github.com/tintinweb/pi-subagents",
+    "commit": "2966cd5"
+  }
+}

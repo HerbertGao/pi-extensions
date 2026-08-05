@@ -1,11 +1,13 @@
-# @tifan/pi-fixed-editor
+# @herbertgao/pi-fixed-editor
+
+> HerbertGao-maintained fork of [@tifan/pi-fixed-editor](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-fixed-editor), distributed under MIT with the original attribution preserved.
 
 Keep Pi's editor, footer, and editor-adjacent widgets fixed at the bottom of the terminal while the transcript scrolls.
 
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-fixed-editor
+pi install npm:@herbertgao/pi-fixed-editor
 ```
 
 ## What it does

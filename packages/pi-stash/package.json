@@ -1,5 +1,5 @@
 {
-  "name": "@tifan/pi-stash",
+  "name": "@herbertgao/pi-stash",
   "version": "0.1.0",
   "description": "Stash one pi draft and restore it after the next message.",
   "keywords": [
@@ -9,13 +9,16 @@
     "prompt",
     "stash"
   ],
-  "homepage": "https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-stash#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-stash#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Tifan Dwi Avianto <hi@tifan.me>"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
     "directory": "packages/pi-stash"
   },
   "files": [
@@ -28,6 +31,9 @@
     "access": "public",
     "provenance": true
   },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/**/*.test.ts"
+  },
   "engines": {
     "node": ">=20"
   },
@@ -35,5 +41,11 @@
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "x-upstream": {
+    "package": "@tifan/pi-stash",
+    "version": "0.1.0",
+    "repository": "https://github.com/tifandotme/pi-extensions",
+    "commit": "460d580"
   }
 }

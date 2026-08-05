@@ -1,5 +1,5 @@
 {
-  "name": "@tifan/pi-recap",
+  "name": "@herbertgao/pi-recap",
   "version": "0.4.4",
   "description": "One-line session recap on demand or after you have been away.",
   "keywords": [
@@ -9,18 +9,22 @@
     "recap",
     "summary"
   ],
-  "homepage": "https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-recap#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-recap#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Tifan Dwi Avianto <hi@tifan.me>"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
     "directory": "packages/pi-recap"
   },
   "files": [
     "src/**/*.ts",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "type": "module",
@@ -35,5 +39,11 @@
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "x-upstream": {
+    "package": "@tifan/pi-recap",
+    "version": "0.4.4",
+    "repository": "https://github.com/tifandotme/pi-extensions",
+    "commit": "460d580"
   }
 }
