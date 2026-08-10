@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-08-10
+
+### Fixed
+
+- Exclude repository-only demo media from the npm package. The README continues to reference the GitHub-hosted screenshot and video, while installs no longer download the large MP4 asset.
+
 ## [0.15.0] - 2026-08-05
 
 ### Added

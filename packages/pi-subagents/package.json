@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-subagents",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Claude Code-style autonomous subagents for Pi, with HerbertGao-maintained UI extensions.",
   "keywords": [
     "agent",
@@ -27,7 +27,6 @@
   "files": [
     "src/**/*.ts",
     "examples/**/*.md",
-    "media/*",
     "README.md",
     "CHANGELOG.md",
     "SECURITY.md",
