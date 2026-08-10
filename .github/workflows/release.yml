@@ -47,7 +47,7 @@ jobs:
 
       - name: Upgrade npm for OIDC trusted publishing
         run: |
-          bun add -g npm@11.6.2
+          bun add -g npm@12.0.2
           echo "registry=https://registry.npmjs.org/" > ~/.npmrc
 
       - name: Install dependencies
