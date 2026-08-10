@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os"
 import { basename, dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { parseJson, parseNpmPackOutput } from "./npm-pack-json.mjs"
 import { run } from "./process.mjs"
 
 const npmEnv = {
@@ -34,14 +35,6 @@ async function pathExists(path) {
   } catch (error) {
     if (error?.code === "ENOENT") return false
     throw error
-  }
-}
-
-function parseJson(text, source) {
-  try {
-    return JSON.parse(text)
-  } catch (error) {
-    throw new Error(`Invalid JSON in ${source}`, { cause: error })
   }
 }
 
@@ -94,7 +87,10 @@ async function packWorkspacePackages(tarballsDir) {
       ["pack", "--json", "--pack-destination", tarballsDir, packageDir],
       { env: npmEnv },
     ).stdout
-    const [packed] = parseJson(output, `npm pack output for ${packageDir}`)
+    const packed = parseNpmPackOutput(
+      output,
+      `npm pack output for ${packageDir}`,
+    )
     tarballByName.set(packed.name, join(tarballsDir, packed.filename))
   }
   return tarballByName
