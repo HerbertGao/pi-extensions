@@ -9,3 +9,7 @@ node_modules/
 # Local agent state
 .claude/
 .pi/
+
+# Hermetic pi-subagents templates used by CI.
+!packages/pi-subagents/test/fixtures/.pi/
+!packages/pi-subagents/test/fixtures/.pi/**

@@ -1,7 +1,8 @@
 {
   "ignorePatterns": [
     "packages/pi-cc-extensions/**",
-    "packages/pi-subagents/examples/agent-tool-description.md"
+    "packages/pi-subagents/examples/agent-tool-description.md",
+    "packages/pi-subagents/test/fixtures/.pi/**"
   ],
   "semi": false,
   "useTabs": false,
