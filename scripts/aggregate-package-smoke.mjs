@@ -2,18 +2,11 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { parseJson, parseNpmPackOutput } from "./npm-pack-json.mjs"
 import { run } from "./process.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const aggregateDir = join(root, "packages", "pi-extensions")
-
-function parseJson(text, source) {
-  try {
-    return JSON.parse(text)
-  } catch (error) {
-    throw new Error(`Invalid JSON in ${source}`, { cause: error })
-  }
-}
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
 try {
@@ -28,7 +21,7 @@ try {
     throw new Error(packResult.stderr.trim())
   }
 
-  const [packed] = parseJson(packResult.stdout, "npm pack output")
+  const packed = parseNpmPackOutput(packResult.stdout, "npm pack output")
   const tarballPath = join(stageDir, packed.filename)
   const installDir = join(stageDir, "install")
   run(
