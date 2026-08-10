@@ -119,7 +119,7 @@ export function cleanupWorktree(
     const status = execFileSync("git", ["status", "--porcelain"], {
       cwd: worktree.path,
       stdio: "pipe",
-      timeout: 10000,
+      timeout: 30000,
     })
       .toString()
       .trim()

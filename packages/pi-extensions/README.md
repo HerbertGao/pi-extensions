@@ -8,7 +8,7 @@ Aggregate installer for HerbertGao-maintained Pi extensions and pinned upstream 
 pi install npm:@herbertgao/pi-extensions
 ```
 
-The package bundles 11 `@herbertgao/*` child packages plus the following upstream packages under their original names:
+The package bundles 11 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions`, plus the following upstream packages under their original names:
 
 - `@juicesharp/rpiv-ask-user-question@2.4.0`
 - `pi-mcp-adapter@2.19.0`
@@ -18,7 +18,7 @@ The package bundles 11 `@herbertgao/*` child packages plus the following upstrea
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
-`@herbertgao/pi-cc-extensions` is not included yet because its upstream source has no explicit redistribution license.
+Pi 0.84.1 or newer should use native `fullscreen` TUI mode. The deprecated `@herbertgao/pi-fixed-editor` legacy package is intentionally not bundled.
 
 See the [repository README](https://github.com/HerbertGao/pi-extensions#readme) for the complete package list and provenance.
 

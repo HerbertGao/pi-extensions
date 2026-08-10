@@ -2,6 +2,7 @@ import {
   copyToClipboard,
   type ExtensionAPI,
   type ExtensionContext,
+  VERSION,
 } from "@earendil-works/pi-coding-agent"
 import type { Component } from "@earendil-works/pi-tui"
 import { visibleWidth } from "@earendil-works/pi-tui"
@@ -11,9 +12,16 @@ import {
   TerminalSplitCompositor,
   type TerminalLike,
 } from "./terminal-split.js"
+import { getPiSupport } from "./version.js"
 
 const WIDGET_KEY = "pi-fixed-editor-probe"
 const WARNING_MESSAGE = "pi-fixed-editor: unsupported Pi TUI layout"
+const UPGRADE_MESSAGE =
+  "pi-fixed-editor is deprecated. Upgrade Pi to 0.84.1 or newer, enable fullscreen mode, then uninstall this package."
+const NATIVE_FULLSCREEN_MESSAGE =
+  "pi-fixed-editor is deprecated. Enable Pi's fullscreen mode, then uninstall this package."
+
+const PI_SUPPORT = getPiSupport(VERSION)
 
 interface ContainerLike extends Component {
   children: Component[]
@@ -240,6 +248,14 @@ export default function fixedEditor(pi: ExtensionAPI) {
     didWarnUnsupported = false
     if (ctx.mode !== "tui") return
 
+    if (PI_SUPPORT !== "legacy") {
+      ctx.ui.notify(
+        PI_SUPPORT === "upgrade" ? UPGRADE_MESSAGE : NATIVE_FULLSCREEN_MESSAGE,
+        "warning",
+      )
+      return
+    }
+
     ctx.ui.setWidget(
       WIDGET_KEY,
       (tui) => {
@@ -251,6 +267,8 @@ export default function fixedEditor(pi: ExtensionAPI) {
   })
 
   pi.on("session_shutdown", (_event, ctx) => {
+    if (PI_SUPPORT !== "legacy") return
+
     if (ctx.mode === "tui") {
       ctx.ui.setWidget(WIDGET_KEY, undefined)
     }

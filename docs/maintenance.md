@@ -10,11 +10,28 @@
 
 | Local package set      | Upstream                   | Imported baseline                                     | Notes                                                                                                                                                |
 | ---------------------- | -------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tifan-derived packages | `tifandotme/pi-extensions` | `460d580`                                             | Repository history retained; fixed-editor additionally contains HerbertGao commit `c53f628`.                                                         |
+| Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`                                             | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                                |
 | `pi-subagents`         | `tintinweb/pi-subagents`   | `2966cd5` plus the sibling working-tree customization | The imported customization adds Claude Code/Agency Agents-compatible name colors across the tool header, widget, FleetView, and conversation viewer. |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | Not imported                                          | Blocked because upstream has no explicit redistribution license.                                                                                     |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `b94bb6b` (`0.8.51`)                                  | Imported after upstream added an explicit MIT license; uses Pi 0.84's native fullscreen pipeline.                                                    |
 
-Record a new upstream commit in this table whenever a sync is accepted.
+Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
+
+| Local package                       | Upstream package               | Imported version | Imported commit |
+| ----------------------------------- | ------------------------------ | ---------------- | --------------- |
+| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.51`         | `b94bb6b`       |
+| `@herbertgao/pi-copy-response`      | `@tifan/pi-copy-response`      | `0.2.6`          | `460d580`       |
+| `@herbertgao/pi-fixed-editor`       | `@tifan/pi-fixed-editor`       | `0.3.0`          | `5975a48`       |
+| `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `1.1.2`          | `460d580`       |
+| `@herbertgao/pi-inline-skills`      | `@tifan/pi-inline-skills`      | `1.0.5`          | `460d580`       |
+| `@herbertgao/pi-mermaid-open`       | `@tifan/pi-mermaid-open`       | `0.1.3`          | `460d580`       |
+| `@herbertgao/pi-preferred-thinking` | `@tifan/pi-preferred-thinking` | `0.3.0`          | `460d580`       |
+| `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.4`          | `460d580`       |
+| `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.4.2`          | `460d580`       |
+| `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.1.0`          | `460d580`       |
+| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.14.3`         | `2966cd5`       |
+| `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
+
+`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. The workflow maintains one rolling GitHub Issue instead of opening duplicate reminders.
 
 ## Bundled upstream companions
 
@@ -64,7 +81,7 @@ git diff 2966cd5..tintinweb-upstream/master -- src test README.md package.json
 
 Paths from that standalone repository map under `packages/pi-subagents/` here. Review package manifests and docs separately because this monorepo intentionally uses different npm scope, repository metadata, lockfile, and release tooling.
 
-Never merge or copy `minuque/pi-cc-extensions` until an explicit license or written redistribution permission is recorded.
+The `minuque/pi-cc-extensions` MIT license was added in upstream commit `58743f2` and confirmed by the maintainer in issue #3. Preserve that LICENSE and upstream attribution during every sync.
 
 ## Package manifest standard
 

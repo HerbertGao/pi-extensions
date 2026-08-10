@@ -8,7 +8,7 @@ This is the independent `HerbertGao/pi-extensions` monorepo. Published packages 
 - The aggregate package is `@herbertgao/pi-extensions`; it bundles the individually published packages and is the preferred one-command install.
 - Each package declares an explicit license, `files`, Pi resources, repository metadata with its monorepo directory, and `publishConfig: { "access": "public", "provenance": true }`.
 - Preserve upstream attribution and original license notices. Record source repository, package, version, and commit in `x-upstream` metadata.
-- Do not copy or publish code without an explicit redistribution license. `minuque/pi-cc-extensions` remains blocked until its maintainer adds a license or grants permission.
+- Do not copy or publish code without an explicit redistribution license. Preserve the MIT license and provenance for the imported `minuque/pi-cc-extensions` source.
 - Runtime dependencies belong in the package that imports them. Other Pi packages referenced by the aggregate package must appear in both `dependencies` and `bundledDependencies`.
 - Pi extensions are TypeScript loaded directly by Pi through jiti; do not add a build step unless a package requires one.
 

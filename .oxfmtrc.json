@@ -1,5 +1,6 @@
 {
   "ignorePatterns": [
+    "packages/pi-cc-extensions/**",
     "packages/pi-subagents/examples/agent-tool-description.md"
   ],
   "semi": false,

@@ -1,5 +1,17 @@
 # @herbertgao/pi-fixed-editor
 
+## 0.3.0
+
+### Minor Changes
+
+- Deprecate the extension in favor of Pi 0.84.1's native fullscreen mode while preserving frozen support for older Pi versions.
+
+## 0.2.7
+
+### Patch Changes
+
+- Avoid render recursion with Pi 0.84's re-resolving TUI proxy. Pi 0.84.1 users should migrate to native fullscreen instead.
+
 ## 0.2.6
 
 ### Patch Changes

@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["packages/pi-subagents/**"],
+  "ignorePatterns": [
+    "packages/pi-cc-extensions/**",
+    "packages/pi-subagents/**"
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "error",

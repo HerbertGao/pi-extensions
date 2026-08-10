@@ -1,7 +1,7 @@
 {
   "name": "@herbertgao/pi-fixed-editor",
-  "version": "0.2.6",
-  "description": "Keep the pi editor and footer fixed while the transcript scrolls.",
+  "version": "0.3.0",
+  "description": "Legacy fixed-editor support for Pi versions before 0.84.",
   "keywords": [
     "fixed-editor",
     "pi",
@@ -48,8 +48,8 @@
   },
   "x-upstream": {
     "package": "@tifan/pi-fixed-editor",
-    "version": "0.2.5",
+    "version": "0.3.0",
     "repository": "https://github.com/tifandotme/pi-extensions",
-    "commit": "460d580"
+    "commit": "5975a48cde9670bb1e8f7cbb76ad04f7c9102853"
   }
 }

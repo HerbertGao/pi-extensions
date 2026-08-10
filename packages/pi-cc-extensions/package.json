@@ -1,0 +1,76 @@
+{
+	"name": "@herbertgao/pi-cc-extensions",
+	"version": "0.8.51",
+	"license": "MIT",
+	"description": "A Pi productivity suite with Claude Code-style UI, context inspection, and agent/session references",
+	"type": "module",
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"pi-coding-agent",
+		"claude-code"
+	],
+	"homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-cc-extensions#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/HerbertGao/pi-extensions.git",
+		"directory": "packages/pi-cc-extensions"
+	},
+	"bugs": {
+		"url": "https://github.com/HerbertGao/pi-extensions/issues"
+	},
+	"author": "Herbert Gao",
+	"files": [
+		"extensions",
+		"assets/readme",
+		"themes",
+		"README.md",
+		"README.en.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"./extensions/index.ts"
+		],
+		"themes": [
+			"./themes/cc-dark.json",
+			"./themes/cc-light.json"
+		],
+		"image": "https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-cc-extensions/assets/readme/welcome.webp",
+		"video": "https://github.com/user-attachments/assets/debf76ea-a9dc-4f34-977f-aae344a9a7f8"
+	},
+	"scripts": {
+		"test": "node --test tests/**/*.test.ts",
+		"typecheck": "node scripts/typecheck.mjs",
+		"format": "biome format --write .",
+		"format:check": "biome format ."
+	},
+	"dependencies": {
+		"@shikijs/cli": "^4.0.2",
+		"grok-mermaid": "^0.2.2",
+		"jiti": "^2.7.0"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "^0.84.0",
+		"@earendil-works/pi-coding-agent": "^0.84.0",
+		"@earendil-works/pi-tui": "^0.84.0"
+	},
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.5",
+		"@types/node": "^26.1.1",
+		"typescript": "^5.9.3"
+	},
+	"x-upstream": {
+		"package": "pi-cc-extensions",
+		"version": "0.8.51",
+		"repository": "https://github.com/minuque/pi-cc-extensions",
+		"commit": "b94bb6b2be2c32fc0857e6c7f8048faad3580835"
+	}
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "./upstreams.schema.json",
+  "repositories": [
+    {
+      "name": "Tifan Pi extensions",
+      "repository": "https://github.com/tifandotme/pi-extensions",
+      "reviewedCommit": "5975a48cde9670bb1e8f7cbb76ad04f7c9102853"
+    },
+    {
+      "name": "pi-subagents",
+      "repository": "https://github.com/tintinweb/pi-subagents",
+      "reviewedCommit": "2966cd5a33c0640de9698b56a39c11f83207a835"
+    },
+    {
+      "name": "pi-cc-extensions",
+      "repository": "https://github.com/minuque/pi-cc-extensions",
+      "reviewedCommit": "b94bb6b2be2c32fc0857e6c7f8048faad3580835"
+    }
+  ],
+  "companions": [
+    {
+      "package": "@juicesharp/rpiv-ask-user-question",
+      "repository": "https://github.com/juicesharp/rpiv-mono"
+    },
+    {
+      "package": "pi-mcp-adapter",
+      "repository": "https://github.com/nicobailon/pi-mcp-adapter"
+    },
+    {
+      "package": "pi-lens",
+      "repository": "https://github.com/apmantza/pi-lens"
+    },
+    {
+      "package": "pi-web-access",
+      "repository": "https://github.com/nicobailon/pi-web-access"
+    },
+    {
+      "package": "@czottmann/pi-automode",
+      "repository": "https://github.com/czottmann/pi-automode"
+    }
+  ]
+}

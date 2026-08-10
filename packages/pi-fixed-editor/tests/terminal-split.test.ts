@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { type Component, type Terminal, TUI } from "@earendil-works/pi-tui"
+import type { Component, Terminal } from "@earendil-works/pi-tui"
+import { TuiMainScreen } from "@earendil-works/pi-tui/dist/tui-main-screen.js"
 import type { FixedEditorClusterRender } from "../src/cluster.ts"
 import {
   beginSynchronizedOutput,
@@ -437,14 +438,14 @@ test("deletes Kitty images when rendering after scrolling", () => {
     render: () => rootLines,
     invalidate: () => {},
   }
-  const tui = new TUI(terminal)
+  const tui = new TuiMainScreen(terminal)
   tui.addChild(root)
   const compositor = new TerminalSplitCompositor({
     tui: tui as unknown as { children: Component[] },
     terminal,
     renderCluster: () => ({ lines: ["editor", "footer"], cursor: null }),
   })
-  const handleInput = Reflect.get(tui, "handleInput")
+  const handleInput = Reflect.get(tui, "handleTerminalInput")
   assert.equal(typeof handleInput, "function")
 
   compositor.install()
