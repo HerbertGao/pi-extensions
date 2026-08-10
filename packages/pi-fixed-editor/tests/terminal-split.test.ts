@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { type Component, type Terminal, TUI } from "@earendil-works/pi-tui"
+import type { Component, Terminal } from "@earendil-works/pi-tui"
+import { TuiMainScreen } from "@earendil-works/pi-tui/dist/tui-main-screen.js"
 import type { FixedEditorClusterRender } from "../src/cluster.ts"
 import {
   beginSynchronizedOutput,
@@ -19,6 +20,15 @@ function countOccurrences(value: string, search: string): number {
 
 function synchronizedFrame(body: string): string {
   return beginSynchronizedOutput() + body + endSynchronizedOutput()
+}
+
+type TestInputListener = (data: string) => { consume?: boolean } | undefined
+
+function requireInputListener(
+  listener: TestInputListener | null,
+): TestInputListener {
+  assert.ok(listener)
+  return listener
 }
 
 function createCompositorHarness(
@@ -428,14 +438,14 @@ test("deletes Kitty images when rendering after scrolling", () => {
     render: () => rootLines,
     invalidate: () => {},
   }
-  const tui = new TUI(terminal)
+  const tui = new TuiMainScreen(terminal)
   tui.addChild(root)
   const compositor = new TerminalSplitCompositor({
     tui: tui as unknown as { children: Component[] },
     terminal,
     renderCluster: () => ({ lines: ["editor", "footer"], cursor: null }),
   })
-  const handleInput = Reflect.get(tui, "handleInput")
+  const handleInput = Reflect.get(tui, "handleTerminalInput")
   assert.equal(typeof handleInput, "function")
 
   compositor.install()
@@ -508,14 +518,66 @@ test("rapid scrolling defers full transcript rendering", () => {
   compositor.install()
   try {
     tui.render()
-    assert.ok(inputListener)
+    const listener = requireInputListener(inputListener)
 
     for (let index = 0; index < 100; index++) {
-      inputListener("\x1b[<64;1;1M")
+      listener("\x1b[<64;1;1M")
     }
 
     assert.equal(synchronousRenders, 0)
     assert.ok(renderRequests > 0)
+  } finally {
+    compositor.dispose({ resetExtendedKeyboardModes: true })
+  }
+})
+
+test("streaming and Working updates preserve a manual scroll anchor", () => {
+  let inputListener:
+    | ((data: string) => { consume?: boolean } | undefined)
+    | null = null
+  const rootLines = Array.from({ length: 10 }, (_, index) => `line ${index}`)
+  let workingMessage = "Working"
+  const terminal: TerminalLike = {
+    columns: 80,
+    rows: 6,
+    write: () => {},
+  }
+  const tui = {
+    children: [],
+    render: () => rootLines,
+    requestRender: () => {},
+    addInputListener: (
+      listener: (data: string) => { consume?: boolean } | undefined,
+    ) => {
+      inputListener = listener
+      return () => {
+        inputListener = null
+      }
+    },
+    hasOverlay: () => false,
+  }
+  const compositor = new TerminalSplitCompositor({
+    tui,
+    terminal,
+    renderCluster: () => ({
+      lines: [workingMessage, "editor"],
+      cursor: null,
+    }),
+  })
+
+  compositor.install()
+  try {
+    const listener = requireInputListener(inputListener)
+    tui.render()
+    assert.equal(listener("\x1b[5~")?.consume, true)
+    const anchoredLines = tui.render()
+    assert.deepEqual(anchoredLines, ["line 0", "line 1", "line 2", "line 3"])
+
+    rootLines.push("line 10")
+    assert.deepEqual(tui.render(), anchoredLines)
+
+    workingMessage = "Working · 2s"
+    assert.deepEqual(tui.render(), anchoredLines)
   } finally {
     compositor.dispose({ resetExtendedKeyboardModes: true })
   }
@@ -556,12 +618,12 @@ test("plain enter scrolls the transcript back to the bottom", () => {
 
   compositor.install()
   try {
-    assert.ok(inputListener)
-    assert.equal(inputListener("\x1b[5~")?.consume, true)
+    const listener = requireInputListener(inputListener)
+    assert.equal(listener("\x1b[5~")?.consume, true)
     assert.deepEqual(tui.render(), ["line 0", "line 1", "line 2", "line 3"])
     renderRequests = 0
 
-    assert.equal(inputListener("\r"), undefined)
+    assert.equal(listener("\r"), undefined)
 
     assert.deepEqual(tui.render(), ["line 6", "line 7", "line 8", "line 9"])
     assert.equal(renderRequests, 1)

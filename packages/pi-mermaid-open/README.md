@@ -1,4 +1,6 @@
-# @tifan/pi-mermaid-open
+# @herbertgao/pi-mermaid-open
+
+> HerbertGao-maintained fork of [@tifan/pi-mermaid-open](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-mermaid-open), distributed under MIT with the original attribution preserved.
 
 Extract Mermaid diagrams from recent pi assistant messages, render them to SVG, and open them in the system viewer.
 
@@ -7,7 +9,7 @@ The command scans the last 50 assistant messages for ` ```mermaid ` or ` ```mmd 
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-mermaid-open
+pi install npm:@herbertgao/pi-mermaid-open
 ```
 
 ## Commands

@@ -1,4 +1,22 @@
-# @tifan/pi-fixed-editor
+# @herbertgao/pi-fixed-editor
+
+## 0.3.0
+
+### Minor Changes
+
+- Deprecate the extension in favor of Pi 0.84.1's native fullscreen mode while preserving frozen support for older Pi versions.
+
+## 0.2.7
+
+### Patch Changes
+
+- Avoid render recursion with Pi 0.84's re-resolving TUI proxy. Pi 0.84.1 users should migrate to native fullscreen instead.
+
+## 0.2.6
+
+### Patch Changes
+
+- [`c53f628`](https://github.com/HerbertGao/pi-extensions/commit/c53f628) - Reduce streaming flicker and terminal output by avoiding nested synchronized-output sequences and redrawing only changed fixed-editor rows.
 
 ## 0.2.5
 

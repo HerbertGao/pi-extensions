@@ -1,7 +1,7 @@
 {
-  "name": "@tifan/pi-fixed-editor",
-  "version": "0.2.5",
-  "description": "Keep the pi editor and footer fixed while the transcript scrolls.",
+  "name": "@herbertgao/pi-fixed-editor",
+  "version": "0.3.0",
+  "description": "Legacy fixed-editor support for Pi versions before 0.84.",
   "keywords": [
     "fixed-editor",
     "pi",
@@ -9,13 +9,16 @@
     "pi-package",
     "terminal"
   ],
-  "homepage": "https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-fixed-editor#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-fixed-editor#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Tifan Dwi Avianto <hi@tifan.me>"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
     "directory": "packages/pi-fixed-editor"
   },
   "files": [
@@ -42,5 +45,11 @@
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "x-upstream": {
+    "package": "@tifan/pi-fixed-editor",
+    "version": "0.3.0",
+    "repository": "https://github.com/tifandotme/pi-extensions",
+    "commit": "5975a48cde9670bb1e8f7cbb76ad04f7c9102853"
   }
 }

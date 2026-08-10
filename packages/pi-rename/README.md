@@ -1,11 +1,13 @@
-# @tifan/pi-rename
+# @herbertgao/pi-rename
+
+> HerbertGao-maintained fork of [@tifan/pi-rename](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-rename), distributed under MIT with the original attribution preserved.
 
 Generate session names for pi and Herdr.
 
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-rename
+pi install npm:@herbertgao/pi-rename
 ```
 
 For local development:

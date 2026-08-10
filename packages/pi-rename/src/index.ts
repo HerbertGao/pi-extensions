@@ -67,8 +67,16 @@ interface HerdrTabInfo {
   readonly number?: number
 }
 
+function parseRecord(value: string): Record<string, unknown> | undefined {
+  try {
+    return asRecord(JSON.parse(value) as unknown)
+  } catch {
+    return undefined
+  }
+}
+
 function extractTabId(stdout: string): string | undefined {
-  const parsed = asRecord(JSON.parse(stdout) as unknown)
+  const parsed = parseRecord(stdout)
   const result = asRecord(parsed?.["result"])
   const pane = asRecord(result?.["pane"])
   const tabId = pane?.["tab_id"]
@@ -76,7 +84,7 @@ function extractTabId(stdout: string): string | undefined {
 }
 
 function extractTabInfo(stdout: string): HerdrTabInfo | undefined {
-  const parsed = asRecord(JSON.parse(stdout) as unknown)
+  const parsed = parseRecord(stdout)
   const result = asRecord(parsed?.["result"])
   const tab = asRecord(result?.["tab"])
   const tabId = tab?.["tab_id"]

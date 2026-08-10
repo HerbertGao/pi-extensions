@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
-import type { Api, Model } from "@earendil-works/pi-ai"
+import type { Api, Model, ProviderHeaders } from "@earendil-works/pi-ai"
 import {
   getAgentDir,
   type ExtensionContext,
@@ -23,7 +23,7 @@ export interface RenameModelPreference {
 export interface RenameModelAuth {
   readonly model: Model<Api>
   readonly apiKey: string
-  readonly headers: Record<string, string> | undefined
+  readonly headers: ProviderHeaders | undefined
 }
 
 export type RenameModelConfig =
@@ -85,7 +85,12 @@ export function parseModelSpec(
 
 function readConfig(): RenameConfig {
   const content = readFileSync(CONFIG_PATH, "utf-8")
-  const config = JSON.parse(content) as unknown
+  let config: unknown
+  try {
+    config = JSON.parse(content)
+  } catch {
+    return {}
+  }
   return config && typeof config === "object" && !Array.isArray(config)
     ? (config as RenameConfig)
     : {}

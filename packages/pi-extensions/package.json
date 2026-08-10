@@ -1,0 +1,103 @@
+{
+  "name": "@herbertgao/pi-extensions",
+  "version": "0.1.0",
+  "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
+  "keywords": [
+    "extensions",
+    "pi",
+    "pi-extension",
+    "pi-package"
+  ],
+  "homepage": "https://github.com/HerbertGao/pi-extensions#readme",
+  "bugs": {
+    "url": "https://github.com/HerbertGao/pi-extensions/issues"
+  },
+  "license": "MIT",
+  "author": "Herbert Gao",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
+    "directory": "packages/pi-extensions"
+  },
+  "files": [
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "prepack": "node ../../scripts/aggregate-bundle.mjs prepare",
+    "postpack": "node ../../scripts/aggregate-bundle.mjs restore"
+  },
+  "dependencies": {
+    "@czottmann/pi-automode": "1.9.0",
+    "@herbertgao/pi-cc-extensions": "0.8.51",
+    "@herbertgao/pi-copy-response": "0.2.6",
+    "@herbertgao/pi-handoff": "1.1.2",
+    "@herbertgao/pi-inline-skills": "1.0.5",
+    "@herbertgao/pi-mermaid-open": "0.1.3",
+    "@herbertgao/pi-preferred-thinking": "0.3.0",
+    "@herbertgao/pi-recap": "0.4.4",
+    "@herbertgao/pi-rename": "0.4.2",
+    "@herbertgao/pi-stash": "0.1.0",
+    "@herbertgao/pi-subagents": "0.15.0",
+    "@herbertgao/pi-titlebar-spinner": "0.1.3",
+    "@juicesharp/rpiv-ask-user-question": "2.4.0",
+    "pi-lens": "3.8.74",
+    "pi-mcp-adapter": "2.19.0",
+    "pi-web-access": "0.18.0"
+  },
+  "bundledDependencies": [
+    "@czottmann/pi-automode",
+    "@herbertgao/pi-cc-extensions",
+    "@herbertgao/pi-copy-response",
+    "@herbertgao/pi-handoff",
+    "@herbertgao/pi-inline-skills",
+    "@herbertgao/pi-mermaid-open",
+    "@herbertgao/pi-preferred-thinking",
+    "@herbertgao/pi-recap",
+    "@herbertgao/pi-rename",
+    "@herbertgao/pi-stash",
+    "@herbertgao/pi-subagents",
+    "@herbertgao/pi-titlebar-spinner",
+    "@juicesharp/rpiv-ask-user-question",
+    "pi-lens",
+    "pi-mcp-adapter",
+    "pi-web-access"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./node_modules/@herbertgao/pi-cc-extensions/extensions/index.ts",
+      "./node_modules/@herbertgao/pi-copy-response/src/index.ts",
+      "./node_modules/@herbertgao/pi-handoff/src/index.ts",
+      "./node_modules/@herbertgao/pi-handoff/src/session-query.ts",
+      "./node_modules/@herbertgao/pi-inline-skills/src/index.ts",
+      "./node_modules/@herbertgao/pi-mermaid-open/src/index.ts",
+      "./node_modules/@herbertgao/pi-preferred-thinking/src/index.ts",
+      "./node_modules/@herbertgao/pi-recap/src/index.ts",
+      "./node_modules/@herbertgao/pi-rename/src/index.ts",
+      "./node_modules/@herbertgao/pi-stash/src/index.ts",
+      "./node_modules/@herbertgao/pi-subagents/src/index.ts",
+      "./node_modules/@herbertgao/pi-titlebar-spinner/src/index.ts",
+      "./node_modules/@juicesharp/rpiv-ask-user-question/index.ts",
+      "./node_modules/pi-mcp-adapter/index.ts",
+      "./node_modules/pi-lens/dist/index.js",
+      "./node_modules/pi-web-access/index.ts",
+      "./node_modules/@czottmann/pi-automode/extensions/auto-mode.ts"
+    ],
+    "themes": [
+      "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-dark.json",
+      "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-light.json"
+    ],
+    "skills": [
+      "./node_modules/pi-mcp-adapter/skills",
+      "./node_modules/pi-lens/skills"
+    ]
+  }
+}

@@ -1,11 +1,13 @@
-# @tifan/pi-handoff
+# @herbertgao/pi-handoff
+
+> HerbertGao-maintained fork of [@tifan/pi-handoff](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-handoff), distributed under MIT with the original attribution preserved.
 
 Start a fresh pi session from a handoff document, and query past sessions for context, decisions, or code changes.
 
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-handoff
+pi install npm:@herbertgao/pi-handoff
 ```
 
 For local development:

@@ -1,35 +1,37 @@
-# @tifan/pi-fixed-editor
+# @herbertgao/pi-fixed-editor
 
-Keep Pi's editor, footer, and editor-adjacent widgets fixed at the bottom of the terminal while the transcript scrolls.
+> [!WARNING]
+> This package is deprecated for Pi 0.84.1 and newer. Use [Pi's native fullscreen mode](https://pi.dev/docs/latest/settings#ui-display) instead. Support for older Pi versions is frozen.
 
-## Install
+## Migrate to native fullscreen
+
+Remove this package:
 
 ```bash
-pi install npm:@tifan/pi-fixed-editor
+pi remove npm:@herbertgao/pi-fixed-editor
 ```
 
-## What it does
+Then enable fullscreen mode in one of these ways:
 
-- Pins Pi's existing editor/footer area to the bottom of the terminal.
-- Keeps `aboveEditor` and `belowEditor` widgets with the editor.
-- Preserves existing editor behavior, footer content, and autocomplete.
-- Routes mouse wheel and PageUp/PageDown scrolling to the transcript.
-- Jumps the transcript back to the bottom when you submit a query with Enter.
+- Open `/settings` and set **TUI mode** to `fullscreen`.
+- Add `"tuiMode": "fullscreen"` to `~/.pi/agent/settings.json`.
+- Start Pi with `pi --tui-mode fullscreen`.
 
-## What it does not do
+Native fullscreen keeps the editor, status, widgets, and footer fixed while the transcript scrolls.
 
-- No styling.
-- No powerline footer.
-- No commands.
-- No settings.
-- No custom shortcuts.
-- No print or RPC mode behavior.
+## Legacy support
 
-Uninstall or disable the extension to return to Pi's default scrolling behavior.
+On Pi versions before 0.84, the extension continues to provide its existing fixed-editor behavior, including reduced streaming repaint. No further fixes are planned.
+
+```bash
+pi install npm:@herbertgao/pi-fixed-editor
+```
+
+Pi 0.84.0 users should upgrade to Pi 0.84.1 or newer and use native fullscreen mode.
 
 ## Credits
 
-Fixed terminal-region behavior is adapted from [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-footer) by Nico Bailon.
+Originally derived from [`@tifan/pi-fixed-editor`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-fixed-editor). Fixed terminal-region behavior is adapted from [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-footer) by Nico Bailon.
 
 ## License
 

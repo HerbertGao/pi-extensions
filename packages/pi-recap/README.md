@@ -1,4 +1,6 @@
-# @tifan/pi-recap
+# @herbertgao/pi-recap
+
+> HerbertGao-maintained fork of [@tifan/pi-recap](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-recap), distributed under MIT with the original attribution preserved.
 
 Re-enter a session without rereading the transcript.
 
@@ -9,7 +11,7 @@ Re-enter a session without rereading the transcript.
 ## Install
 
 ```bash
-pi install npm:@tifan/pi-recap
+pi install npm:@herbertgao/pi-recap
 ```
 
 ## How it works

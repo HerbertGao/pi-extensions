@@ -1,44 +1,52 @@
 {
-  "name": "pi-extensions",
+  "name": "@herbertgao/pi-extensions-workspace",
   "private": true,
-  "description": "Pi coding-agent extensions by Tifan",
-  "homepage": "https://github.com/tifandotme/pi-extensions#readme",
-  "bugs": "https://github.com/tifandotme/pi-extensions/issues",
+  "description": "HerbertGao-maintained extensions for the Pi coding agent",
+  "homepage": "https://github.com/HerbertGao/pi-extensions#readme",
+  "bugs": "https://github.com/HerbertGao/pi-extensions/issues",
   "license": "MIT",
-  "author": "Tifan Dwi Avianto <hi@tifan.me>",
+  "author": "Herbert Gao",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tifandotme/pi-extensions.git"
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git"
   },
   "workspaces": [
     "packages/*"
   ],
   "type": "module",
   "scripts": {
-    "format": "oxfmt .",
-    "format:check": "oxfmt --check .",
-    "lint": "oxlint .",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "format": "oxfmt . && bun run --cwd packages/pi-cc-extensions format",
+    "format:check": "oxfmt --check . && bun run --cwd packages/pi-cc-extensions format:check",
+    "lint": "oxlint . && bun run --cwd packages/pi-subagents lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json && bun run --cwd packages/pi-subagents typecheck && bun run --cwd packages/pi-cc-extensions typecheck",
+    "test": "bun run --cwd packages/pi-fixed-editor test && bun run --cwd packages/pi-stash test && bun run --cwd packages/pi-subagents test && bun run --cwd packages/pi-cc-extensions test",
+    "test:aggregate": "node scripts/aggregate-package-smoke.mjs",
+    "check:upstreams": "node scripts/check-upstreams.mjs --validate",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:aggregate && bun run check:upstreams",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "changeset publish"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "@earendil-works/pi-agent-core": "^0.80.6",
-    "@earendil-works/pi-ai": "^0.80.6",
-    "@earendil-works/pi-coding-agent": "^0.80.6",
-    "@earendil-works/pi-tui": "^0.80.6",
+    "@earendil-works/pi-agent-core": "^0.84.1",
+    "@earendil-works/pi-ai": "^0.84.1",
+    "@earendil-works/pi-coding-agent": "^0.84.1",
+    "@earendil-works/pi-tui": "^0.84.1",
     "@tsconfig/node24": "24.0.4",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "^24",
     "oxfmt": "^0.58.0",
     "oxlint": "^1.73.0",
-    "typebox": "1.3.6",
-    "typescript": "7.0.2"
+    "typebox": "1.3.7",
+    "typescript": "7.0.2",
+    "vitest": "^4.0.18"
   },
   "engines": {
-    "bun": ">=1.1.0"
-  }
+    "bun": ">=1.1.0",
+    "node": ">=22.19.0"
+  },
+  "packageManager": "bun@1.3.14"
 }
