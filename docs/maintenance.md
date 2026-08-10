@@ -96,18 +96,22 @@ Every publishable package must have:
 
 Cross-package dependencies use `@herbertgao/*`. The aggregate package pins exact versions and lists every maintained child and upstream companion in `bundledDependencies` so Pi can load resources through `node_modules/` under one isolated package root.
 
+Maintained child packages use SemVer and normally preserve their imported upstream version. The aggregate package uses UTC CalVer in `YYYY.M.PATCH` form, without a leading `v` or a zero-padded month. Release PRs prepared in the same month increment `PATCH`; the first release PR prepared in a new month resets it to `0`. Add a patch Changeset for aggregate changes. `scripts/version-packages.mjs` runs Changesets, then normalizes the aggregate version for the UTC month when the version PR is generated and updates its generated changelog heading.
+
 `packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 16 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
-## Initial npm and OIDC bootstrap
+## npm and Trusted Publishing bootstrap
 
-The current machine must authenticate first:
+The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 22.22.2 or newer plus npm 12 or newer for the `npm trust` command:
 
 ```bash
+node --version
 npm login
 npm whoami
+npm install --global npm@12.0.2
 ```
 
-For each new scoped package, publish once locally before configuring trusted publishing:
+For each new scoped package, publish once locally before configuring Trusted Publishing:
 
 ```bash
 cd packages/<package>
@@ -119,10 +123,12 @@ npm trust github @herbertgao/<package> \
   --yes
 ```
 
-Run the aggregate package last, after all exact child versions exist. Enable the repository variable only after every package trusts the workflow:
+Run the aggregate package last, after all exact child versions exist. Do not create a long-lived `NPM_TOKEN` or a granular token that bypasses 2FA; the release workflow authenticates with GitHub OIDC and publishes with provenance. Enable the repository variable only after every package trusts the workflow:
 
 ```bash
 gh variable set NPM_RELEASE_ENABLED --repo HerbertGao/pi-extensions --body true
 ```
+
+The release workflow intentionally runs only on pushes to `master`. Do not add unrestricted `workflow_dispatch`: npm trusts the workflow file, and a manual run could otherwise select an arbitrary branch. If manual releases become necessary, first bind npm trust to a GitHub environment whose deployment branches are restricted to `master`.
 
 Subsequent releases are Changeset PRs published through GitHub Actions OIDC with provenance. Never store an npm token in repository secrets.
