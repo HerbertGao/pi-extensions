@@ -38,9 +38,9 @@ test("rejects ambiguous or incomplete pack output", () => {
   )
 })
 
-test("detects dependencies added only to the packed manifest", () => {
+test("detects dependency differences in either manifest", () => {
   const sourceManifest = {
-    dependencies: { bundled: "1.0.0" },
+    dependencies: { bundled: "1.0.0", sourceOnly: "4.0.0" },
     optionalDependencies: {},
   }
   const packedManifest = {
@@ -49,6 +49,7 @@ test("detects dependencies added only to the packed manifest", () => {
   }
 
   assert.deepEqual(findPublishedManifestDrift(sourceManifest, packedManifest), [
+    'dependencies.sourceOnly: source="4.0.0" packed=undefined',
     'dependencies.runtime: source=undefined packed="^2.0.0"',
     'optionalDependencies.native: source=undefined packed="3.0.0"',
   ])

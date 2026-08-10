@@ -37,10 +37,16 @@ export function findPublishedManifestDrift(sourceManifest, packedManifest) {
   for (const section of ["dependencies", "optionalDependencies"]) {
     const sourceDependencies = sourceManifest[section] ?? {}
     const packedDependencies = packedManifest[section] ?? {}
-    for (const [name, range] of Object.entries(packedDependencies)) {
-      if (sourceDependencies[name] !== range) {
+    const names = new Set([
+      ...Object.keys(sourceDependencies),
+      ...Object.keys(packedDependencies),
+    ])
+    for (const name of names) {
+      const sourceRange = sourceDependencies[name]
+      const packedRange = packedDependencies[name]
+      if (sourceRange !== packedRange) {
         drift.push(
-          `${section}.${name}: source=${JSON.stringify(sourceDependencies[name])} packed=${JSON.stringify(range)}`,
+          `${section}.${name}: source=${JSON.stringify(sourceRange)} packed=${JSON.stringify(packedRange)}`,
         )
       }
     }
