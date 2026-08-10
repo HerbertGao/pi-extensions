@@ -31,3 +31,25 @@ export function parseNpmPackOutput(text, source) {
 
   return packed
 }
+
+export function findPublishedManifestDrift(sourceManifest, packedManifest) {
+  const drift = []
+  for (const section of ["dependencies", "optionalDependencies"]) {
+    const sourceDependencies = sourceManifest[section] ?? {}
+    const packedDependencies = packedManifest[section] ?? {}
+    const names = new Set([
+      ...Object.keys(sourceDependencies),
+      ...Object.keys(packedDependencies),
+    ])
+    for (const name of names) {
+      const sourceRange = sourceDependencies[name]
+      const packedRange = packedDependencies[name]
+      if (sourceRange !== packedRange) {
+        drift.push(
+          `${section}.${name}: source=${JSON.stringify(sourceRange)} packed=${JSON.stringify(packedRange)}`,
+        )
+      }
+    }
+  }
+  return drift
+}

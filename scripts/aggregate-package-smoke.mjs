@@ -2,7 +2,11 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { parseJson, parseNpmPackOutput } from "./npm-pack-json.mjs"
+import {
+  findPublishedManifestDrift,
+  parseJson,
+  parseNpmPackOutput,
+} from "./npm-pack-json.mjs"
 import { run } from "./process.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
@@ -46,6 +50,18 @@ try {
   )
   const manifestPath = join(packageRoot, "package.json")
   const manifest = parseJson(await readFile(manifestPath, "utf8"), manifestPath)
+  const sourceManifestPath = join(aggregateDir, "package.json")
+  const sourceManifest = parseJson(
+    await readFile(sourceManifestPath, "utf8"),
+    sourceManifestPath,
+  )
+  const metadataDrift = findPublishedManifestDrift(sourceManifest, manifest)
+  if (metadataDrift.length > 0) {
+    throw new Error(
+      `Registry dependency metadata would differ from the tarball:\n${metadataDrift.join("\n")}`,
+    )
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
