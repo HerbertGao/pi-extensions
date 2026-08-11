@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.2
+
+### Patch Changes
+
+- [#15](https://github.com/HerbertGao/pi-extensions/pull/15) [`bc083d2`](https://github.com/HerbertGao/pi-extensions/commit/bc083d27c974f6b5239561dbd2295b6dd53526c0) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Skip unreadable or malformed custom agent files by default, warn when an earlier same-named definition remains active, and add opt-in strict startup validation.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
