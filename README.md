@@ -38,7 +38,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.21.2`       | MCP tools and skills.           |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `3.8.74`       | Code diagnostics and skills.    |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.18.0`       | Web search and content access.  |
-| [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.9.0`        | Auto-mode guardrails.           |
+| [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.11.0`       | Auto-mode guardrails.           |
 
 ## Native fullscreen
 
