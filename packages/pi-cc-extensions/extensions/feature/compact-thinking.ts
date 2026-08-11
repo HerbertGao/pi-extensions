@@ -13,6 +13,14 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { getKeybindings } from "@earendil-works/pi-tui";
 import { Markdown, Spacer, Text, type Component } from "@earendil-works/pi-tui";
+import {
+	animateCompactThinkingText,
+	formatThoughtDuration,
+	styleCompactThinkingText,
+} from "../renderer/compact-mode.ts";
+import { refreshMountedTranscript } from "../renderer/transcript-refresh.ts";
+// 保持导出兼容：渲染函数已并入 renderer/compact-mode.ts，这里 re-export。
+export { animateCompactThinkingText, formatThoughtDuration, styleCompactThinkingText };
 
 // pi-tui 类型声明中 TUI 的 re-export 解析失败，本地用最小结构化类型（只用到 requestRender）。
 type RenderTui = { requestRender(force?: boolean): void };
@@ -144,70 +152,6 @@ function restoreDurationEntries(
 		}
 		durations.set(data.contentIndex, data.durationMs);
 	}
-}
-
-function formatThoughtDuration(durationMs: number) {
-	if (durationMs < 1_000) {
-		return `${Math.max(1, Math.round(durationMs))}ms`;
-	}
-
-	const totalSeconds = Math.max(1, Math.round(durationMs / 1_000));
-	const minutes = Math.floor(totalSeconds / 60);
-	const seconds = totalSeconds % 60;
-	if (minutes === 0) return `${seconds}s`;
-	return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
-}
-
-export { formatThoughtDuration };
-
-type CompactThinkingTheme = Pick<Theme, "fg" | "italic" | "bold">;
-
-/** 与 compact-thinking 主渲染器共用的静态文字样式。 */
-export function styleCompactThinkingText(
-	text: string,
-	theme: CompactThinkingTheme | undefined,
-	bold = false,
-): string {
-	if (!theme) return text;
-	const colored = typeof theme.fg === "function" ? theme.fg("thinkingText", text) : text;
-	const weighted = bold && typeof theme.bold === "function" ? theme.bold(colored) : colored;
-	return typeof theme.italic === "function" ? theme.italic(weighted) : weighted;
-}
-
-/** 与 compact-thinking 主渲染器共用的活动思考扫光动画。 */
-export function animateCompactThinkingText(
-	text: string,
-	theme: CompactThinkingTheme | undefined,
-	animationFrame: number,
-	boldBase = false,
-): string {
-	if (!theme) return text;
-	const characters = Array.from(text);
-	if (characters.length === 0) return "";
-	const highlightWidth = Math.max(1, Math.min(5, Math.ceil(characters.length * 0.28)));
-	const start = (animationFrame % (characters.length + highlightWidth)) - highlightWidth;
-	const end = start + highlightWidth;
-	const before = characters.slice(0, Math.max(0, start)).join("");
-	const highlighted = characters
-		.slice(Math.max(0, start), Math.min(characters.length, end))
-		.join("");
-	const after = characters.slice(Math.max(0, end)).join("");
-	const highlightedColored =
-		highlighted && typeof theme.fg === "function" ? theme.fg("text", highlighted) : highlighted;
-	const highlightedWeighted =
-		highlightedColored && typeof theme.bold === "function"
-			? theme.bold(highlightedColored)
-			: highlightedColored;
-	const highlightedText =
-		highlightedWeighted && typeof theme.italic === "function"
-			? theme.italic(highlightedWeighted)
-			: highlightedWeighted;
-
-	return (
-		styleCompactThinkingText(before, theme, boldBase) +
-		highlightedText +
-		styleCompactThinkingText(after, theme, boldBase)
-	);
 }
 
 function getThinkingToggleHint() {
@@ -343,7 +287,6 @@ function compactThinking(pi: ExtensionAPI) {
 	};
 
 	const completedDurations = new Map<number, Map<number, number>>();
-	const renderedComponents = new Set<AssistantMessageComponentLike>();
 	const streamingComponents = new Set<AssistantMessageComponentLike>();
 	let activeThinking: ActiveThinking | undefined;
 	let activeTheme: Theme | undefined;
@@ -354,14 +297,6 @@ function compactThinking(pi: ExtensionAPI) {
 	let animationFrame = 0;
 	let compactSummaryActive = false;
 	let patchInstalled = true;
-
-	function refreshRenderedComponents() {
-		for (const component of renderedComponents) {
-			const self = component as unknown as AssistantInternals;
-			if (self.lastMessage) self.updateContent(self.lastMessage);
-		}
-		activeTui?.requestRender(true);
-	}
 
 	function thinkingStyle(text: string) {
 		return styleCompactThinkingText(text, activeTheme);
@@ -403,7 +338,6 @@ function compactThinking(pi: ExtensionAPI) {
 		const component = this as AssistantMessageComponentLike;
 		const self = this as unknown as AssistantInternals;
 		self.lastMessage = message;
-		renderedComponents.add(component);
 		latestComponent = component;
 		latestComponentTimestamp = message.timestamp;
 
@@ -512,8 +446,10 @@ function compactThinking(pi: ExtensionAPI) {
 					(durationText ? thinkingStyle(` · ${durationText}`) : "");
 			} else {
 				// Completed compact blocks use one provider-independent status line.
+				// 无时长记录（中断流/旧会话/entry 缺失或索引错位）时不回退到加载文案
+				// "Thinking..."：改用摘要标题或中性 "Thought"。
 				heading = thinkingStyle(
-					durationText ? `Thought for ${durationText}` : self.hiddenThinkingLabel || "Thinking...",
+					durationText ? `Thought for ${durationText}` : (latestSummary?.title ?? "Thought"),
 				);
 			}
 			self.contentContainer.addChild(new Text(heading, self.outputPad, 0));
@@ -684,7 +620,7 @@ function compactThinking(pi: ExtensionAPI) {
 					content?.type === "toolCall" &&
 					(content.name === "Agent" ||
 						content.name === "Agents" ||
-						content.args?.subagent_type != null),
+						content.arguments?.subagent_type != null),
 			)
 		);
 	}
@@ -728,7 +664,9 @@ function compactThinking(pi: ExtensionAPI) {
 	// OpenAI-compatible providers may not close reasoning until the response ends.
 	pi.on("tool_execution_start", (event: any) => {
 		if (event.toolName === "Agent" || event.toolName === "Agents") {
-			resumeAgentThinking(latestComponent?.lastMessage ?? undefined);
+			const lastMessage = (latestComponent as unknown as { lastMessage?: AssistantMessage })
+				?.lastMessage;
+			resumeAgentThinking(lastMessage);
 		} else {
 			finishThinking();
 		}
@@ -751,20 +689,24 @@ function compactThinking(pi: ExtensionAPI) {
 
 		// An empty widget gives the animation loop access to requestRender without
 		// enabling terminal mouse reporting or intercepting native scrollback input.
+		// setWidget 的 factory 同步执行，此刻补丁已安装。
 		ctx.ui.setWidget(WIDGET_ID, (tui) => {
 			activeTui = tui;
 			return { render: () => [], invalidate() {} };
 		});
 
-		// On resume, Pi may construct the chat before session_start is emitted.
-		// Rebuild those already-rendered components now that persisted durations
-		// and the active theme are available.
-		refreshRenderedComponents();
+		// pi 在 reload/resume 时先于 session_start 用原始原型重建聊天组件
+		// （rebuildChatFromMessages / renderCurrentSessionState）。由共享的
+		// refreshMountedTranscript 扫描挂载树重绘这些组件，恢复 compact 渲染、
+		// 持久化时长与工具调用显示。
+		refreshMountedTranscript(activeTui);
+		activeTui?.requestRender(true);
 	});
 
 	pi.on("session_tree", (_event, ctx) => {
 		restoreDurationEntries(ctx.sessionManager.getBranch(), completedDurations);
-		refreshRenderedComponents();
+		refreshMountedTranscript(activeTui);
+		activeTui?.requestRender(true);
 	});
 
 	pi.on("session_shutdown", (_event, ctx) => {
@@ -781,7 +723,6 @@ function compactThinking(pi: ExtensionAPI) {
 		latestComponent = undefined;
 		latestComponentTimestamp = undefined;
 		completedDurations.clear();
-		renderedComponents.clear();
 		streamingComponents.clear();
 		if (ctx.mode === "tui") ctx.ui.setWidget(WIDGET_ID, undefined);
 

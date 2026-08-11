@@ -38,7 +38,7 @@ pi install npm:@herbertgao/pi-cc-extensions
 | 功能                 | 说明                                                                                                     | 入口        |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- | ------------- |
 | Claude Code 风格输出 | 工具摘要、折叠展开、rich edit/write diff，以及`on` / `compact` / `off` 三种模式                          | `/ccstyle`  |
-| Fullscreen 鼠标交互  | 工具卡/group 点击展开与收起、预览、hover 高亮、回到底部按钮（tmux/zellij/screen 下自动补开 motion 上报） | `/ccstyle`  |
+| Fullscreen 鼠标交互  | 工具卡/group 点击展开与收起、预览、hover 高亮、回到底部按钮 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
 | 配置面板             | `Style / Diff / Thinking / Feature` 四页签，含启动头开关与滚轮步进                                       | `/ccstyle`  |
 | 上下文检查           | 查看上下文占用，并预览 System prompt、Tools、Skills 和消息内容                                           | `/context`  |
 | Session 引用         | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                                                      | `@session:` |
@@ -79,8 +79,6 @@ bun run typecheck
 ## 兼容性
 
 - Node.js `>=22.19.0`，Pi `^0.84.0`（通过根目录 `package.json` 的 `pi.extensions` 和 `pi.themes` 加载）
-- fixed-editor 相关功能已迁移至官方管线：TUI mode=fullscreen 模式下 `/ccstyle` 鼠标交互仍可用。
-- 需要已移除的 fixed-editor 布局时，请使用 `0.8.46` 及更早版本。
 
 ## 推荐搭配
 

@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && bun run --cwd packages/pi-subagents typecheck && bun run --cwd packages/pi-cc-extensions typecheck",
     "test": "node --test scripts/*.test.mjs && bun run --cwd packages/pi-fixed-editor test && bun run --cwd packages/pi-stash test && bun run --cwd packages/pi-subagents test && bun run --cwd packages/pi-cc-extensions test",
     "test:aggregate": "node scripts/aggregate-package-smoke.mjs",
+    "test:pty:pi-cc": "node scripts/pi-cc-real-pty-smoke.mjs",
     "check:upstreams": "node scripts/check-upstreams.mjs --validate",
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:aggregate && bun run check:upstreams",
     "changeset": "changeset",
