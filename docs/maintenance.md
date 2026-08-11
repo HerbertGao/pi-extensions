@@ -47,7 +47,7 @@ The aggregate package also pins the following unmodified npm packages under thei
 | `pi-mcp-adapter`                     | `2.21.2` | `nicobailon/pi-mcp-adapter` |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.18.0` | `nicobailon/pi-web-access`  |
-| `@czottmann/pi-automode`             | `1.9.0`  | `czottmann/pi-automode`     |
+| `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
 

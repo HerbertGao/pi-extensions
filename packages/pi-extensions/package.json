@@ -35,7 +35,7 @@
   "dependencies": {
     "@ast-grep/cli": "^0.45.0",
     "@ast-grep/napi": "^0.45.0",
-    "@czottmann/pi-automode": "1.9.0",
+    "@czottmann/pi-automode": "1.11.0",
     "@earendil-works/pi-tui": "^0.82.1",
     "@herbertgao/pi-cc-extensions": "0.8.51",
     "@herbertgao/pi-copy-response": "0.2.6",
