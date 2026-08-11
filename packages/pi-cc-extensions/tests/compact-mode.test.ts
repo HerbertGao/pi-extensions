@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import type { AssistantMessage } from "@earendil-works/pi-ai";
 import {
 	AssistantMessageComponent,
 	ToolExecutionComponent,
@@ -18,6 +19,7 @@ import {
 	isCompactAssistantComponent,
 	refreshCompactModeComponents,
 } from "../extensions/renderer/compact-mode.ts";
+import { refreshMountedTranscript } from "../extensions/renderer/transcript-refresh.ts";
 import claudeCodeStyleExtension from "../extensions/renderer/index.ts";
 import {
 	getMessageDisplayTheme,
@@ -67,7 +69,7 @@ function toolCallMessage(timestamp: number, name = "bash") {
 		role: "assistant",
 		timestamp,
 		content: [{ type: "toolCall", name, arguments: { command: "echo" } }],
-	};
+	} as unknown as AssistantMessage;
 }
 
 test("buildMessageSummary: duration first, read dedup by path, counts, first-seen order, edit/write excluded", () => {
@@ -179,7 +181,10 @@ test("compact collapses tool-calling assistant to one line; native render outsid
 		assert.deepEqual(renderText(read), []);
 
 		// 无 toolCall 的 final assistant 走原生渲染。
-		const finalMessage = { role: "assistant", content: [{ type: "text", text: "task done" }] };
+		const finalMessage = {
+			role: "assistant",
+			content: [{ type: "text", text: "task done" }],
+		} as unknown as AssistantMessage;
 		const final = new AssistantMessageComponent(finalMessage, true) as any;
 		final.updateContent(finalMessage);
 		assert.match(renderText(final).join("\n"), /task done/);
@@ -604,6 +609,71 @@ test("unknown assistant wrappers keep ownership without creating a recursion cyc
 		hooks.shutdown();
 		prototype.updateContent = original;
 		config.mode = previousMode;
+	}
+});
+
+test("refreshMountedTranscript asserts compact ownership before redraw (resume without new messages)", async () => {
+	// resume 场景：renderer 先装 compact 补丁，compact-thinking 后装（外层）。
+	// 无新消息 → message_update 的重新认领不触发 → 链序反。
+	// refreshMountedTranscript 必须先断言链序再重绘，round 摘要才含工具统计。
+	const dir = mkdtempSync(join(tmpdir(), "pi-compact-resume-"));
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	const previousMode = config.mode;
+	config.mode = "compact";
+	const events = new Map<string, Function[]>();
+	const pi: any = {
+		registerCommand() {},
+		registerTool() {},
+		appendEntry() {},
+		on(name: string, handler: Function) {
+			const list = events.get(name) ?? [];
+			list.push(handler);
+			events.set(name, list);
+		},
+	};
+	const emit = async (name: string, event: any, context: any) => {
+		for (const handler of events.get(name) ?? []) await handler(event, context);
+	};
+	const ctx = {
+		mode: "tui",
+		hasUI: true,
+		sessionManager: { getBranch: () => [], getEntries: () => [] },
+		ui: {
+			theme: {
+				fg: (_color: string, text: string) => text,
+				italic: (text: string) => text,
+				bold: (text: string) => text,
+			},
+			setStatus() {},
+			requestRender() {},
+			setWidget() {},
+		},
+	};
+	try {
+		claudeCodeStyleExtension(pi, { mode: "compact" });
+		installCompactThinking(pi, {
+			useSummaryTitlesAsThinkingTitle: false,
+			previewLines: 0,
+			animationIntervalMs: 30,
+		});
+		await emit("session_start", {}, ctx);
+		// 不等 renderer 的 setTimeout(syncCompactMode)：模拟无新消息的 resume。
+		const msg = toolCallMessage(Date.now());
+		const component = new AssistantMessageComponent(msg, true) as any;
+		const tui = { getMountedRoots: () => [component] } as any;
+		refreshMountedTranscript(tui);
+		const lines = renderText(component);
+		assert.ok(
+			lines.some((line) => /bash×1/.test(line)),
+			`round summary must include tool counts, got: ${JSON.stringify(lines)}`,
+		);
+	} finally {
+		config.mode = previousMode;
+		await emit("session_shutdown", {}, ctx);
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		rmSync(dir, { recursive: true, force: true });
 	}
 });
 

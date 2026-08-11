@@ -123,3 +123,73 @@ test("代码块内 URL 不动", () => {
 	assert.ok(!out.includes("[https://code.com/x]"));
 	assert.ok(out.includes("[https://outside.com](https://outside.com)"));
 });
+
+test("圈数字转半角括号（Nerd Font 字形缺陷规避）", () => {
+	assert.strictEqual(run("方案②引入，共⑩项"), "方案(2)引入，共(10)项");
+	assert.ok(run("① ② ⑳").includes("(1) (2) (20)"));
+});
+
+test("圈数字转换保留 fenced blocks 与行内 code spans", () => {
+	const input = [
+		"① prose",
+		"```text",
+		"② triple fence",
+		"```",
+		"`③ inline` and ④ prose",
+		"~~~text",
+		"⑤ tilde fence",
+		"~~~",
+		"````text",
+		"⑥ long fence",
+		"````",
+	].join("\n");
+	const output = run(input);
+	assert.ok(output.includes("(1) prose"));
+	assert.ok(output.includes("② triple fence"));
+	assert.ok(output.includes("`③ inline` and (4) prose"));
+	assert.ok(output.includes("⑤ tilde fence"));
+	assert.ok(output.includes("⑥ long fence"));
+});
+
+test("未闭合 fence 后的圈数字保持原文", () => {
+	assert.strictEqual(
+		run("⑦ before\n```text\n⑧ inside\n⑨ still fenced"),
+		"(7) before\n```text\n⑧ inside\n⑨ still fenced",
+	);
+});
+
+test("blockquote 内 fenced code 的圈数字保持原文", () => {
+	assert.strictEqual(
+		run("> ⑪ prose\n> ```text\n> ⑫ fenced\n> ```\n> ⑬ prose"),
+		"> (11) prose\n> ```text\n> ⑫ fenced\n> ```\n> (13) prose",
+	);
+});
+
+test("不同 blockquote depth 的 fence 不会提前闭合", () => {
+	assert.strictEqual(
+		run("```text\n> ```\n⑭ still fenced\n```\n⑮ prose"),
+		"```text\n> ```\n⑭ still fenced\n```\n(15) prose",
+	);
+});
+
+test("跨行 inline code span 的圈数字保持原文", () => {
+	assert.strictEqual(
+		run("⑯ prose `⑰ first\n⑱ second` ⑲ prose"),
+		"(16) prose `⑰ first\n⑱ second` (19) prose",
+	);
+	assert.strictEqual(run("`⑳ unmatched"), "`(20) unmatched");
+});
+
+test("退出 blockquote container 会隐式结束 fenced block", () => {
+	assert.strictEqual(run("> ```text\n> ① fenced\n② prose"), "> ```text\n> ① fenced\n(2) prose");
+});
+
+test("未匹配与转义 backtick 不会隐藏后续 prose 或 code span", () => {
+	assert.strictEqual(run("` unmatched ``② code`` ③ prose"), "` unmatched ``② code`` (3) prose");
+	assert.strictEqual(run("\\`① escaped\\` ② prose"), "\\`(1) escaped\\` (2) prose");
+	assert.strictEqual(run("`①\\` ② prose"), "`①\\` (2) prose");
+});
+
+test("inline code span 不跨空行段落边界", () => {
+	assert.strictEqual(run("`①\n\n②`"), "`(1)\n\n(2)`");
+});
