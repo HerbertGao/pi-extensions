@@ -199,6 +199,16 @@ async function buildMaterializedNodeModules(stageDir) {
       }),
     ),
   )
+  await rm(
+    join(
+      installedNodeModules,
+      "@dietrichgebert",
+      "ponytail",
+      "pi-extension",
+      "test",
+    ),
+    { recursive: true, force: true },
+  )
 
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
   return { manifest, nodeModules: installedNodeModules }

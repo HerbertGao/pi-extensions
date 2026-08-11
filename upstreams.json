@@ -19,8 +19,20 @@
   ],
   "companions": [
     {
+      "package": "@dietrichgebert/ponytail",
+      "repository": "https://github.com/DietrichGebert/ponytail"
+    },
+    {
       "package": "@juicesharp/rpiv-ask-user-question",
       "repository": "https://github.com/juicesharp/rpiv-mono"
+    },
+    {
+      "package": "@narumitw/pi-btw",
+      "repository": "https://github.com/narumiruna/pi-extensions"
+    },
+    {
+      "package": "@pi-plugins/fast-mode",
+      "repository": "https://github.com/k3dom/pi-plugins"
     },
     {
       "package": "pi-mcp-adapter",

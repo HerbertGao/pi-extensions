@@ -102,17 +102,145 @@ try {
     )
   }
 
+  const btwRoot = join(packageRoot, "node_modules", "@narumitw", "pi-btw")
+  const btwManifestPath = join(btwRoot, "package.json")
+  const btwManifest = parseJson(
+    await readFile(btwManifestPath, "utf8"),
+    btwManifestPath,
+  )
+  const expectedBtwVersion = sourceManifest.dependencies["@narumitw/pi-btw"]
+  if (btwManifest.version !== expectedBtwVersion) {
+    throw new Error(
+      `Expected bundled pi-btw ${expectedBtwVersion}, got ${btwManifest.version}`,
+    )
+  }
+  if (btwManifest.license !== "MIT") {
+    throw new Error(`Expected pi-btw MIT license, got ${btwManifest.license}`)
+  }
+  const btwEntryRelative = "./src/index.ts"
+  if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
+    throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
+  }
+  const expectedTuiKitRange = btwManifest.dependencies?.["@narumitw/pi-tui-kit"]
+  if (
+    sourceManifest.dependencies["@narumitw/pi-tui-kit"] !== expectedTuiKitRange
+  ) {
+    throw new Error(
+      `Expected pi-tui-kit dependency ${expectedTuiKitRange}, got ${sourceManifest.dependencies["@narumitw/pi-tui-kit"]}`,
+    )
+  }
+
+  const ponytailRoot = join(
+    packageRoot,
+    "node_modules",
+    "@dietrichgebert",
+    "ponytail",
+  )
+  const ponytailManifestPath = join(ponytailRoot, "package.json")
+  const ponytailManifest = parseJson(
+    await readFile(ponytailManifestPath, "utf8"),
+    ponytailManifestPath,
+  )
+  const expectedPonytailVersion =
+    sourceManifest.dependencies["@dietrichgebert/ponytail"]
+  if (ponytailManifest.version !== expectedPonytailVersion) {
+    throw new Error(
+      `Expected bundled ponytail ${expectedPonytailVersion}, got ${ponytailManifest.version}`,
+    )
+  }
+  if (ponytailManifest.license !== "MIT") {
+    throw new Error(
+      `Expected ponytail MIT license, got ${ponytailManifest.license}`,
+    )
+  }
+  const ponytailEntryRelative = "./pi-extension/index.js"
+  const ponytailSkillsRelative = "./skills"
+  if (!ponytailManifest.pi?.extensions?.includes(ponytailEntryRelative)) {
+    throw new Error(
+      "Bundled ponytail no longer declares its expected Pi extension",
+    )
+  }
+  if (!ponytailManifest.pi?.skills?.includes(ponytailSkillsRelative)) {
+    throw new Error("Bundled ponytail no longer declares its expected skills")
+  }
+
+  const fastModeRoot = join(
+    packageRoot,
+    "node_modules",
+    "@pi-plugins",
+    "fast-mode",
+  )
+  const fastModeManifestPath = join(fastModeRoot, "package.json")
+  const fastModeManifest = parseJson(
+    await readFile(fastModeManifestPath, "utf8"),
+    fastModeManifestPath,
+  )
+  const expectedFastModeVersion =
+    sourceManifest.dependencies["@pi-plugins/fast-mode"]
+  if (fastModeManifest.version !== expectedFastModeVersion) {
+    throw new Error(
+      `Expected bundled fast-mode ${expectedFastModeVersion}, got ${fastModeManifest.version}`,
+    )
+  }
+  if (fastModeManifest.license !== "MIT") {
+    throw new Error(
+      `Expected fast-mode MIT license, got ${fastModeManifest.license}`,
+    )
+  }
+  const fastModeEntryRelative = "./dist/index.mjs"
+  if (!fastModeManifest.pi?.extensions?.includes(fastModeEntryRelative)) {
+    throw new Error(
+      "Bundled fast-mode no longer declares its expected Pi entry",
+    )
+  }
+  for (const [dependency, range] of Object.entries(
+    fastModeManifest.dependencies ?? {},
+  )) {
+    if (sourceManifest.dependencies[dependency] !== range) {
+      throw new Error(
+        `Expected fast-mode dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
+      )
+    }
+  }
+  const expectedEffectVersion = fastModeManifest.dependencies.effect
+  if (
+    sourceManifest.dependencies["@effect/platform-node-shared"] !==
+    expectedEffectVersion
+  ) {
+    throw new Error(
+      `Expected platform-node-shared compatibility pin ${expectedEffectVersion}, got ${sourceManifest.dependencies["@effect/platform-node-shared"]}`,
+    )
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
-  await Promise.all(extensionPaths.map((path) => stat(path)))
+  const skillPaths = manifest.pi.skills.map((entry) =>
+    resolve(packageRoot, entry),
+  )
+  await Promise.all(
+    [...extensionPaths, ...skillPaths].map((path) => stat(path)),
+  )
   await Promise.all(
     [
+      "node_modules/@dietrichgebert/ponytail/LICENSE",
       "node_modules/@juicesharp/rpiv-ask-user-question/LICENSE",
+      "node_modules/@narumitw/pi-btw/LICENSE",
+      "node_modules/@pi-plugins/fast-mode/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
       "node_modules/pi-web-access/LICENSE",
     ].map((path) => stat(join(packageRoot, path))),
+  )
+  await Promise.all(
+    [
+      "ponytail",
+      "ponytail-audit",
+      "ponytail-debt",
+      "ponytail-gain",
+      "ponytail-help",
+      "ponytail-review",
+    ].map((name) => stat(join(ponytailRoot, "skills", name, "SKILL.md"))),
   )
 
   const loaderPath = join(
@@ -146,12 +274,43 @@ try {
   }
   await runPiAutomodeRealSmoke({ automodeEntry })
 
+  const btwEntry = resolve(btwRoot, btwEntryRelative)
+  if (!extensionPaths.includes(btwEntry)) {
+    throw new Error("Packed aggregate is missing the pi-btw extension entry")
+  }
+  const ponytailEntry = resolve(ponytailRoot, ponytailEntryRelative)
+  if (!extensionPaths.includes(ponytailEntry)) {
+    throw new Error("Packed aggregate is missing the ponytail extension entry")
+  }
+  const ponytailSkills = resolve(ponytailRoot, ponytailSkillsRelative)
+  if (!skillPaths.includes(ponytailSkills)) {
+    throw new Error("Packed aggregate is missing the ponytail skills")
+  }
+  const fastModeEntry = resolve(fastModeRoot, fastModeEntryRelative)
+  if (!extensionPaths.includes(fastModeEntry)) {
+    throw new Error("Packed aggregate is missing the fast-mode extension entry")
+  }
+
   const bundled = new Set(packed.bundled)
   const missingBundles = manifest.bundledDependencies.filter(
     (name) => !bundled.has(name),
   )
   if (missingBundles.length > 0) {
     throw new Error(`Missing bundled packages: ${missingBundles.join(", ")}`)
+  }
+  if (bundled.has("@narumitw/pi-tui-kit")) {
+    throw new Error("pi-tui-kit must remain an unbundled runtime dependency")
+  }
+  for (const dependency of [
+    "@effect/platform-node",
+    "@effect/platform-node-shared",
+    "effect",
+  ]) {
+    if (bundled.has(dependency)) {
+      throw new Error(
+        `${dependency} must remain an unbundled runtime dependency`,
+      )
+    }
   }
   if (bundled.size !== manifest.bundledDependencies.length) {
     throw new Error(

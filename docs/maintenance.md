@@ -43,7 +43,10 @@ The aggregate package also pins the following unmodified npm packages under thei
 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
+| `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
 | `@juicesharp/rpiv-ask-user-question` | `2.4.0`  | `juicesharp/rpiv-mono`      |
+| `@narumitw/pi-btw`                   | `0.50.0` | `narumiruna/pi-extensions`  |
+| `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
 | `pi-mcp-adapter`                     | `2.21.2` | `nicobailon/pi-mcp-adapter` |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.18.0` | `nicobailon/pi-web-access`  |
@@ -102,7 +105,7 @@ Cross-package dependencies use `@herbertgao/*`. The aggregate package pins exact
 
 Maintained child packages use SemVer and normally preserve their imported upstream version. The aggregate package uses UTC CalVer in `YYYY.M.PATCH` form, without a leading `v` or a zero-padded month. Release PRs prepared in the same month increment `PATCH`; the first release PR prepared in a new month resets it to `0`. Add a patch Changeset for aggregate changes. `scripts/version-packages.mjs` runs Changesets, then normalizes the aggregate version for the UTC month when the version PR is generated and updates its generated changelog heading.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 16 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 19 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 
