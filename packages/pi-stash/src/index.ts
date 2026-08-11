@@ -6,6 +6,7 @@ import type {
 } from "@earendil-works/pi-coding-agent"
 
 export const STASH_ENTRY_TYPE = "pi-stash-state"
+export const STASH_SHORTCUT = "alt+s"
 
 interface StashState {
   draft: string | null
@@ -92,7 +93,7 @@ export default function stashExtension(pi: ExtensionAPI) {
     if (shouldAutoRestore(event.source, event.text)) restoreDraft(ctx)
   })
 
-  pi.registerShortcut("ctrl+s", {
+  pi.registerShortcut(STASH_SHORTCUT, {
     description: "Stash or restore the current draft",
     handler: (ctx) => {
       const action = getShortcutAction(ctx.ui.getEditorText(), pendingDraft)

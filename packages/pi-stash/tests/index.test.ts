@@ -6,9 +6,14 @@ import {
   getShortcutAction,
   shouldAutoRestore,
   STASH_ENTRY_TYPE,
+  STASH_SHORTCUT,
 } from "../src/index.ts"
 
-test("maps Ctrl+S to one-slot stash actions without losing text", () => {
+test("uses a shortcut that does not conflict with Pi defaults", () => {
+  assert.equal(STASH_SHORTCUT, "alt+s")
+})
+
+test("maps the shortcut to one-slot stash actions without losing text", () => {
   assert.deepEqual(getShortcutAction("draft A", null), {
     type: "stash",
     draft: "draft A",
