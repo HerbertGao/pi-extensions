@@ -36,7 +36,10 @@
     "@ast-grep/cli": "^0.45.0",
     "@ast-grep/napi": "^0.45.0",
     "@czottmann/pi-automode": "1.11.0",
+    "@dietrichgebert/ponytail": "4.9.0",
     "@earendil-works/pi-tui": "^0.82.1",
+    "@effect/platform-node": "4.0.0-beta.103",
+    "@effect/platform-node-shared": "4.0.0-beta.103",
     "@herbertgao/pi-cc-extensions": "0.8.51",
     "@herbertgao/pi-copy-response": "0.2.6",
     "@herbertgao/pi-handoff": "1.1.2",
@@ -55,12 +58,16 @@
     "@modelcontextprotocol/ext-apps": "^1.2.2",
     "@mozilla/readability": "^0.6.0",
     "@napi-rs/keyring": "^1.3.0",
+    "@narumitw/pi-btw": "0.50.0",
+    "@narumitw/pi-tui-kit": "^0.49.1",
+    "@pi-plugins/fast-mode": "0.1.9",
     "@shikijs/cli": "^4.0.2",
     "@sinclair/typebox": "^0.34.49",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "croner": "^10.0.1",
     "cross-spawn": "^7.0.6",
+    "effect": "4.0.0-beta.103",
     "grok-mermaid": "^0.2.2",
     "jiti": "^2.7.0",
     "js-yaml": "^5.2.2",
@@ -88,6 +95,7 @@
   },
   "bundledDependencies": [
     "@czottmann/pi-automode",
+    "@dietrichgebert/ponytail",
     "@herbertgao/pi-cc-extensions",
     "@herbertgao/pi-copy-response",
     "@herbertgao/pi-handoff",
@@ -100,6 +108,8 @@
     "@herbertgao/pi-subagents",
     "@herbertgao/pi-titlebar-spinner",
     "@juicesharp/rpiv-ask-user-question",
+    "@narumitw/pi-btw",
+    "@pi-plugins/fast-mode",
     "pi-lens",
     "pi-mcp-adapter",
     "pi-web-access"
@@ -109,6 +119,7 @@
   },
   "pi": {
     "extensions": [
+      "./node_modules/@dietrichgebert/ponytail/pi-extension/index.js",
       "./node_modules/@herbertgao/pi-cc-extensions/extensions/index.ts",
       "./node_modules/@herbertgao/pi-copy-response/src/index.ts",
       "./node_modules/@herbertgao/pi-handoff/src/index.ts",
@@ -122,6 +133,8 @@
       "./node_modules/@herbertgao/pi-subagents/src/index.ts",
       "./node_modules/@herbertgao/pi-titlebar-spinner/src/index.ts",
       "./node_modules/@juicesharp/rpiv-ask-user-question/index.ts",
+      "./node_modules/@narumitw/pi-btw/src/index.ts",
+      "./node_modules/@pi-plugins/fast-mode/dist/index.mjs",
       "./node_modules/pi-mcp-adapter/index.ts",
       "./node_modules/pi-lens/dist/index.js",
       "./node_modules/pi-web-access/index.ts",
@@ -132,6 +145,7 @@
       "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-light.json"
     ],
     "skills": [
+      "./node_modules/@dietrichgebert/ponytail/skills",
       "./node_modules/pi-mcp-adapter/skills",
       "./node_modules/pi-lens/skills"
     ]

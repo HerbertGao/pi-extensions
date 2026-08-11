@@ -44,6 +44,9 @@
     "typescript": "7.0.2",
     "vitest": "^4.0.18"
   },
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.0-beta.103"
+  },
   "engines": {
     "bun": ">=1.1.0",
     "node": ">=22.19.0"
