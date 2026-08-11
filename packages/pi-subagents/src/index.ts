@@ -83,6 +83,7 @@ import { SubagentScheduler } from "./schedule.js"
 import { resolveStorePath, ScheduleStore } from "./schedule-store.js"
 import {
   applyAndEmitLoaded,
+  loadSettings,
   type SubagentsSettings,
   saveAndEmitChanged,
   type ToolDescriptionMode,
@@ -426,14 +427,18 @@ export default function (pi: ExtensionAPI) {
     },
   )
 
+  // This setting controls the initial load, which runs before the normal settings
+  // application below. Later per-call reloads deliberately remain tolerant.
+  let strictAgentFiles = loadSettings(process.cwd()).strictAgentFiles === true
+
   /** Reload agents from project/global custom agent dirs and merge with defaults (called on init and each Agent invocation). */
-  const reloadCustomAgents = () => {
-    const userAgents = loadCustomAgents(process.cwd())
+  const reloadCustomAgents = (strict = false) => {
+    const userAgents = loadCustomAgents(process.cwd(), strict)
     registerAgents(userAgents)
   }
 
-  // Initial load
-  reloadCustomAgents()
+  // Initial load — the only strict one.
+  reloadCustomAgents(strictAgentFiles)
 
   // ---- Agent activity tracking + widget ----
   const agentActivity = new Map<string, AgentActivity>()
@@ -990,6 +995,9 @@ export default function (pi: ExtensionAPI) {
       setDefaultJoinMode,
       setSchedulingEnabled,
       setScopeModels: setScopeModelsEnabled,
+      setStrictAgentFiles: (enabled) => {
+        strictAgentFiles = enabled
+      },
       setDisableDefaultAgents: setDisableDefaultAgents,
       setToolDescriptionMode: setToolDescriptionMode,
       setFleetView: setFleetViewEnabled,
@@ -2673,6 +2681,7 @@ ${systemPrompt}
       defaultJoinMode: getDefaultJoinMode(),
       schedulingEnabled: isSchedulingEnabled(),
       scopeModels: isScopeModelsEnabled(),
+      strictAgentFiles,
       disableDefaultAgents: isDefaultsDisabled(),
       toolDescriptionMode: getToolDescriptionMode(),
       fleetView: isFleetViewEnabled(),
@@ -2760,6 +2769,14 @@ ${systemPrompt}
           description:
             "Validate subagent models against scoped models (/scoped-models)",
           currentValue: isScopeModelsEnabled() ? "on" : "off",
+          values: ["on", "off"],
+        },
+        {
+          id: "strictAgentFiles",
+          label: "Strict agent files",
+          description:
+            "Fail startup on an unreadable or unparseable agent .md instead of skipping it with a warning",
+          currentValue: strictAgentFiles ? "on" : "off",
           values: ["on", "off"],
         },
         {
@@ -2867,6 +2884,13 @@ ${systemPrompt}
         const enabled = value === "on"
         setScopeModelsEnabled(enabled)
         notifyApplied(ctx, `Scope models ${enabled ? "enabled" : "disabled"}`)
+      } else if (id === "strictAgentFiles") {
+        const enabled = value === "on"
+        strictAgentFiles = enabled
+        notifyApplied(
+          ctx,
+          `Strict agent files ${enabled ? "enabled" : "disabled"}. Takes effect on next pi session.`,
+        )
       } else if (id === "disableDefaultAgents") {
         const enabled = value === "on"
         setDisableDefaultAgents(enabled)

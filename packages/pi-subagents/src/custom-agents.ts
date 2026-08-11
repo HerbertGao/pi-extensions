@@ -8,6 +8,13 @@ import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent"
 import { BUILTIN_TOOL_NAMES } from "./agent-types.js"
 import type { AgentConfig, MemoryScope, ThinkingLevel } from "./types.js"
 
+interface WarningState {
+  previous: Set<string>
+  current: Set<string>
+}
+
+const warningHistoryByCwd = new Map<string, Set<string>>()
+
 /**
  * Scan for custom agent .md files from multiple locations.
  * Discovery hierarchy (higher priority wins):
@@ -20,15 +27,36 @@ import type { AgentConfig, MemoryScope, ThinkingLevel } from "./types.js"
  * authority; .agents/agents is an additional read location.
  * Any name is allowed — names matching defaults (e.g. "Explore") override them.
  */
-export function loadCustomAgents(cwd: string): Map<string, AgentConfig> {
+export function loadCustomAgents(
+  cwd: string,
+  strict = false,
+): Map<string, AgentConfig> {
   const globalDir = join(getAgentDir(), "agents")
   const workspaceProjectDir = join(cwd, ".agents", "agents")
   const projectDir = join(cwd, ".pi", "agents")
 
   const agents = new Map<string, AgentConfig>()
-  loadFromDir(globalDir, agents, "global") // lowest priority
-  loadFromDir(workspaceProjectDir, agents, "project") // shared workspace
-  loadFromDir(projectDir, agents, "project") // highest priority (overwrites)
+  const skippedOverrides = new Set<string>()
+  const warnings: WarningState = {
+    previous: warningHistoryByCwd.get(cwd) ?? new Set(),
+    current: new Set(),
+  }
+
+  loadFromDir(globalDir, agents, "global", strict, warnings, skippedOverrides) // lowest priority
+  loadFromDir(
+    workspaceProjectDir,
+    agents,
+    "project",
+    strict,
+    warnings,
+    skippedOverrides,
+  ) // shared workspace
+  loadFromDir(projectDir, agents, "project", strict, warnings, skippedOverrides) // highest priority (overwrites)
+
+  for (const name of skippedOverrides) {
+    warnSkippedOverride(name, agents, warnings)
+  }
+  warningHistoryByCwd.set(cwd, warnings.current)
   return agents
 }
 
@@ -37,6 +65,9 @@ function loadFromDir(
   dir: string,
   agents: Map<string, AgentConfig>,
   source: "project" | "global",
+  strict: boolean,
+  warnings: WarningState,
+  skippedOverrides: Set<string>,
 ): void {
   if (!existsSync(dir)) return
 
@@ -49,16 +80,15 @@ function loadFromDir(
 
   for (const file of files) {
     const name = basename(file, ".md")
+    const path = join(dir, file)
 
-    let content: string
-    try {
-      content = readFileSync(join(dir, file), "utf-8")
-    } catch {
+    const parsed = readAgentFile(path, strict, warnings)
+    if (!parsed) {
+      skippedOverrides.add(name)
       continue
     }
-
-    const { frontmatter: fm, body } =
-      parseFrontmatter<Record<string, unknown>>(content)
+    skippedOverrides.delete(name)
+    const { frontmatter: fm, body } = parsed
 
     const { builtinToolNames, extSelectors } = parseToolsField(fm.tools)
 
@@ -97,8 +127,52 @@ function loadFromDir(
       isolation: fm.isolation === "worktree" ? "worktree" : undefined,
       enabled: fm.enabled !== false, // default true; explicitly false disables
       source,
+      sourcePath: path,
     })
   }
+}
+
+/**
+ * Read and parse one agent file, or warn and return undefined for the caller to
+ * skip. Under strict mode the same failure aborts startup while naming the file.
+ */
+function readAgentFile(
+  path: string,
+  strict: boolean,
+  warnings: WarningState,
+): { frontmatter: Record<string, unknown>; body: string } | undefined {
+  try {
+    return parseFrontmatter<Record<string, unknown>>(
+      readFileSync(path, "utf-8"),
+    )
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err)
+    if (strict) throw new Error(`${path}: ${reason}`)
+    warnIfNew(`Skipping agent file ${path}: ${reason}`, warnings)
+    return undefined
+  }
+}
+
+/** Warn when a broken higher-priority file exposes an earlier definition. */
+function warnSkippedOverride(
+  name: string,
+  agents: Map<string, AgentConfig>,
+  warnings: WarningState,
+): void {
+  const surviving = agents.get(name)
+  if (!surviving?.sourcePath || surviving.enabled === false) return
+  warnIfNew(
+    `Agent "${name}" now loads from ${surviving.sourcePath} instead`,
+    warnings,
+  )
+}
+
+/** Warn once while an error is unchanged, but report it again after recovery. */
+function warnIfNew(message: string, warnings: WarningState): void {
+  if (warnings.current.has(message)) return
+  warnings.current.add(message)
+  if (warnings.previous.has(message)) return
+  console.warn(`[pi-subagents] ${message}`)
 }
 
 // ---- Field parsers ----
