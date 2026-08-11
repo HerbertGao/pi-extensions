@@ -40,7 +40,7 @@ The aggregate package also pins the following unmodified npm packages under thei
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@juicesharp/rpiv-ask-user-question` | `2.4.0`  | `juicesharp/rpiv-mono`      |
-| `pi-mcp-adapter`                     | `2.19.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.21.2` | `nicobailon/pi-mcp-adapter` |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.18.0` | `nicobailon/pi-web-access`  |
 | `@czottmann/pi-automode`             | `1.9.0`  | `czottmann/pi-automode`     |

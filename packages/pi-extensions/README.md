@@ -11,7 +11,7 @@ pi install npm:@herbertgao/pi-extensions
 The package bundles 11 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions`, plus the following upstream packages under their original names:
 
 - `@juicesharp/rpiv-ask-user-question@2.4.0`
-- `pi-mcp-adapter@2.19.0`
+- `pi-mcp-adapter@2.21.2`
 - `pi-lens@3.8.74`
 - `pi-web-access@0.18.0`
 - `@czottmann/pi-automode@1.9.0`
