@@ -50,6 +50,12 @@ export interface SubagentsSettings {
    */
   scopeModels?: boolean
   /**
+   * When true, an unreadable or unparseable agent `.md` aborts extension load
+   * instead of being skipped with a warning. This applies only during startup;
+   * later per-call reloads remain tolerant. Defaults to false.
+   */
+  strictAgentFiles?: boolean
+  /**
    * When true, the three built-in default agents (general-purpose, Explore, Plan)
    * are not registered at startup. User-defined agents from project/global custom
    * agent dirs are completely unaffected — only the hardcoded DEFAULT_AGENTS are suppressed.
@@ -129,6 +135,7 @@ export interface SettingsAppliers {
   setDefaultJoinMode: (mode: JoinMode) => void
   setSchedulingEnabled: (b: boolean) => void
   setScopeModels: (enabled: boolean) => void
+  setStrictAgentFiles: (b: boolean) => void
   setDisableDefaultAgents: (b: boolean) => void
   setToolDescriptionMode: (mode: ToolDescriptionMode) => void
   setFleetView: (b: boolean) => void
@@ -206,6 +213,9 @@ function sanitize(raw: unknown): SubagentsSettings {
   }
   if (typeof r.scopeModels === "boolean") {
     out.scopeModels = r.scopeModels
+  }
+  if (typeof r.strictAgentFiles === "boolean") {
+    out.strictAgentFiles = r.strictAgentFiles
   }
   if (typeof r.disableDefaultAgents === "boolean") {
     out.disableDefaultAgents = r.disableDefaultAgents
@@ -315,6 +325,8 @@ export function applySettings(
   if (typeof s.schedulingEnabled === "boolean")
     appliers.setSchedulingEnabled(s.schedulingEnabled)
   if (typeof s.scopeModels === "boolean") appliers.setScopeModels(s.scopeModels)
+  if (typeof s.strictAgentFiles === "boolean")
+    appliers.setStrictAgentFiles(s.strictAgentFiles)
   if (typeof s.disableDefaultAgents === "boolean")
     appliers.setDisableDefaultAgents(s.disableDefaultAgents)
   if (s.toolDescriptionMode)

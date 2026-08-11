@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`strictAgentFiles` — fail startup on a broken agent file instead of skipping it.** Off by default and applied only during initial extension activation; later per-call reloads remain tolerant.
+
+### Fixed
+
+- **One malformed agent file no longer aborts extension activation** ([#212](https://github.com/tintinweb/pi-subagents/issues/212) — thanks [@daromaj](https://github.com/daromaj)). Unreadable and unparseable files are skipped with a path-specific warning, including the earlier source that remains active when a broken file was an override.
+
 ## [0.15.1] - 2026-08-10
 
 ### Fixed

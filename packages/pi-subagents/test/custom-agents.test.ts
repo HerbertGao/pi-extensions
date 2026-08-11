@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BUILTIN_TOOL_NAMES } from "../src/agent-types.js"
 import { loadCustomAgents } from "../src/custom-agents.js"
 
@@ -896,6 +896,208 @@ Bad isolation.`,
 
     const result = loadCustomAgents(tmpDir)
     expect(result.get("bad-isolation")!.isolation).toBeUndefined()
+  })
+
+  it("skips malformed frontmatter and still loads healthy agents", () => {
+    writeAgent(
+      "broken",
+      "---\nname: broken\ndescription: Use this: that\n---\n\nBroken body.",
+    )
+    writeAgent("healthy", "---\ndescription: Still loads\n---\n\nGood body.")
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const result = loadCustomAgents(tmpDir)
+      expect(result.has("broken")).toBe(false)
+      expect(result.get("healthy")?.description).toBe("Still loads")
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("names the offending file and parse error when skipping it", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeAgent(
+        "broken",
+        "---\nname: broken\ndescription: Use this: that\n---\n\nBroken body.",
+      )
+
+      loadCustomAgents(tmpDir)
+
+      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
+      expect(message).toContain(join(tmpDir, ".pi", "agents", "broken.md"))
+      expect(message).toContain("Nested mappings are not allowed")
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("warns when a skipped override exposes an earlier definition", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeWorkspaceAgent(
+        "dup",
+        "---\ndescription: Earlier definition\n---\n\nEarlier body.",
+      )
+      writeAgent(
+        "dup",
+        "---\nname: dup\ndescription: Use this: that\n---\n\nBroken body.",
+      )
+
+      const result = loadCustomAgents(tmpDir)
+
+      expect(result.get("dup")?.description).toBe("Earlier definition")
+      expect(
+        warn.mock.calls.map((args) => String(args[0])).join("\n"),
+      ).toContain(
+        `Agent "dup" now loads from ${join(tmpDir, ".agents", "agents", "dup.md")} instead`,
+      )
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("does not report a stale fallback when a later definition loads", () => {
+    const globalAgentDir = join(tmpDir, "global-agent-dir")
+    process.env.PI_CODING_AGENT_DIR = globalAgentDir
+    mkdirSync(join(globalAgentDir, "agents"), { recursive: true })
+    writeFileSync(
+      join(globalAgentDir, "agents", "dup.md"),
+      "---\ndescription: Global definition\n---\n\nGlobal body.",
+    )
+    writeWorkspaceAgent(
+      "dup",
+      "---\nname: dup\ndescription: Use this: that\n---\n\nBroken body.",
+    )
+    writeAgent(
+      "dup",
+      "---\ndescription: Final project definition\n---\n\nProject body.",
+    )
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const result = loadCustomAgents(tmpDir)
+      expect(result.get("dup")?.description).toBe("Final project definition")
+      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
+      expect(message).toContain("Skipping agent file")
+      expect(message).not.toContain("now loads from")
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("does not claim a fallback when the earlier definition is disabled", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeWorkspaceAgent(
+        "dup",
+        "---\ndescription: Earlier definition\nenabled: false\n---\n\nEarlier body.",
+      )
+      writeAgent(
+        "dup",
+        "---\nname: dup\ndescription: Use this: that\n---\n\nBroken body.",
+      )
+
+      loadCustomAgents(tmpDir)
+
+      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
+      expect(message).toContain("Skipping agent file")
+      expect(message).not.toContain("now loads from")
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("does not claim a fallback when the skipped file overrode nothing", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeAgent(
+        "lonely",
+        "---\nname: lonely\ndescription: Use this: that\n---\n\nBroken body.",
+      )
+
+      loadCustomAgents(tmpDir)
+
+      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
+      expect(message).toContain("Skipping agent file")
+      expect(message).not.toContain("now loads from")
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("skips unreadable agent paths by default and throws in strict mode", () => {
+    const unreadablePath = join(tmpDir, ".pi", "agents", "unreadable.md")
+    mkdirSync(unreadablePath, { recursive: true })
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      expect(loadCustomAgents(tmpDir).has("unreadable")).toBe(false)
+      expect(
+        warn.mock.calls.map((args) => String(args[0])).join("\n"),
+      ).toContain(unreadablePath)
+    } finally {
+      warn.mockRestore()
+    }
+
+    expect(() => loadCustomAgents(tmpDir, true)).toThrow(unreadablePath)
+  })
+
+  it("throws with the offending file in strict mode", () => {
+    writeAgent(
+      "broken",
+      "---\nname: broken\ndescription: Use this: that\n---\n\nBroken.",
+    )
+    const brokenPath = join(tmpDir, ".pi", "agents", "broken.md")
+
+    expect(() => loadCustomAgents(tmpDir, true)).toThrow(brokenPath)
+    expect(() => loadCustomAgents(tmpDir, true)).toThrow(
+      "Nested mappings are not allowed",
+    )
+  })
+
+  it("warns when a file breaks again after being fixed", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeAgent(
+        "flip",
+        "---\nname: flip\ndescription: Use this: that\n---\n\nBroken.",
+      )
+      loadCustomAgents(tmpDir)
+      loadCustomAgents(tmpDir)
+      expect(warn).toHaveBeenCalledTimes(1)
+
+      writeAgent("flip", "---\ndescription: Fixed\n---\n\nFixed.")
+      expect(loadCustomAgents(tmpDir).get("flip")?.description).toBe("Fixed")
+
+      writeAgent(
+        "flip",
+        "---\nname: flip\ndescription: Use this: that\n---\n\nBroken.",
+      )
+      loadCustomAgents(tmpDir)
+      expect(warn).toHaveBeenCalledTimes(2)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("warns once while the same problem remains unchanged", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeAgent(
+        "noisy",
+        "---\nname: noisy\ndescription: Use this: that\n---\n\nBroken body.",
+      )
+
+      loadCustomAgents(tmpDir)
+      loadCustomAgents(tmpDir)
+      loadCustomAgents(tmpDir)
+
+      expect(warn).toHaveBeenCalledTimes(1)
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it("honors PI_CODING_AGENT_DIR for global custom agent discovery", () => {
