@@ -18,7 +18,6 @@ import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { createJiti } from "jiti"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const piCli = join(
@@ -65,6 +64,12 @@ function createPdf(text) {
 
 async function writeJson(path, value) {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+}
+
+async function createPackageJiti(webAccessEntry) {
+  const require = createRequire(webAccessEntry)
+  const { createJiti } = await import(pathToFileURL(require.resolve("jiti")))
+  return createJiti(webAccessEntry, { moduleCache: false })
 }
 
 function inspectRegistration(webAccessEntry, agentDir) {
@@ -152,7 +157,7 @@ async function assertRegistrationGates({
 }
 
 async function assertGeminiWebTransport(webAccessEntry) {
-  const jiti = createJiti(import.meta.url, { moduleCache: false })
+  const jiti = await createPackageJiti(webAccessEntry)
   const gemini = await jiti.import(
     join(dirname(webAccessEntry), "gemini-web.ts"),
   )
@@ -215,9 +220,9 @@ async function assertCacheLimits(webAccessEntry, agentDir, cacheDir) {
   process.env.PI_CODING_AGENT_DIR = agentDir
   try {
     await rm(cacheDir, { recursive: true, force: true })
-    const storage = await createJiti(import.meta.url, {
-      moduleCache: false,
-    }).import(join(dirname(webAccessEntry), "storage.ts"))
+    const storage = await (
+      await createPackageJiti(webAccessEntry)
+    ).import(join(dirname(webAccessEntry), "storage.ts"))
     const store = (id, content) =>
       storage.storeFetchedContentResult(id, {
         id,
