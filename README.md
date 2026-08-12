@@ -40,7 +40,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.9`        | Priority service tier for selected models.    |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.21.2`       | MCP tools and skills.                         |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `3.8.74`       | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.18.0`       | Web search and content access.                |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.22.0`       | Web search and content access.                |
 | [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.11.0`       | Auto-mode guardrails.                         |
 
 ## Native fullscreen

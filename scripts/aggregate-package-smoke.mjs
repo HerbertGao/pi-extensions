@@ -8,6 +8,7 @@ import {
   parseNpmPackOutput,
 } from "./npm-pack-json.mjs"
 import { runPiAutomodeRealSmoke } from "./pi-automode-real-smoke.mjs"
+import { runPiWebAccessRealSmoke } from "./pi-web-access-real-smoke.mjs"
 import { run } from "./process.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
@@ -99,6 +100,48 @@ try {
   if (!automodeLicense.startsWith("# MIT License")) {
     throw new Error(
       "Bundled pi-automode LICENSE.md is not the expected MIT text",
+    )
+  }
+
+  const webAccessRoot = join(packageRoot, "node_modules", "pi-web-access")
+  const webAccessManifestPath = join(webAccessRoot, "package.json")
+  const webAccessManifest = parseJson(
+    await readFile(webAccessManifestPath, "utf8"),
+    webAccessManifestPath,
+  )
+  const expectedWebAccessVersion = sourceManifest.dependencies["pi-web-access"]
+  if (webAccessManifest.version !== expectedWebAccessVersion) {
+    throw new Error(
+      `Expected bundled pi-web-access ${expectedWebAccessVersion}, got ${webAccessManifest.version}`,
+    )
+  }
+  if (webAccessManifest.license !== "MIT") {
+    throw new Error(
+      `Expected pi-web-access MIT license, got ${webAccessManifest.license}`,
+    )
+  }
+  const webAccessLicense = await readFile(
+    join(webAccessRoot, "LICENSE"),
+    "utf8",
+  )
+  if (!webAccessLicense.startsWith("MIT License")) {
+    throw new Error(
+      "Bundled pi-web-access LICENSE is not the expected MIT text",
+    )
+  }
+  const webAccessEntryRelative = "./index.ts"
+  if (!webAccessManifest.pi?.extensions?.includes(webAccessEntryRelative)) {
+    throw new Error(
+      "Bundled pi-web-access no longer declares its expected Pi entry",
+    )
+  }
+  const expectedUndiciRange = webAccessManifest.dependencies?.undici
+  if (
+    !expectedUndiciRange ||
+    sourceManifest.dependencies.undici !== expectedUndiciRange
+  ) {
+    throw new Error(
+      `Expected promoted undici dependency ${expectedUndiciRange}, got ${sourceManifest.dependencies.undici}`,
     )
   }
 
@@ -274,6 +317,14 @@ try {
   }
   await runPiAutomodeRealSmoke({ automodeEntry })
 
+  const webAccessEntry = resolve(webAccessRoot, webAccessEntryRelative)
+  if (!extensionPaths.includes(webAccessEntry)) {
+    throw new Error(
+      "Packed aggregate is missing the pi-web-access extension entry",
+    )
+  }
+  await runPiWebAccessRealSmoke({ webAccessEntry })
+
   const btwEntry = resolve(btwRoot, btwEntryRelative)
   if (!extensionPaths.includes(btwEntry)) {
     throw new Error("Packed aggregate is missing the pi-btw extension entry")
@@ -300,6 +351,9 @@ try {
   }
   if (bundled.has("@narumitw/pi-tui-kit")) {
     throw new Error("pi-tui-kit must remain an unbundled runtime dependency")
+  }
+  if (bundled.has("undici")) {
+    throw new Error("undici must remain an unbundled runtime dependency")
   }
   for (const dependency of [
     "@effect/platform-node",
