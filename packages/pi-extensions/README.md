@@ -16,7 +16,7 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 - `@pi-plugins/fast-mode@0.1.9`
 - `pi-mcp-adapter@2.21.2`
 - `pi-lens@3.8.74`
-- `pi-web-access@0.18.0`
+- `pi-web-access@0.22.0`
 - `@czottmann/pi-automode@1.11.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
