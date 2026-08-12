@@ -2,7 +2,7 @@
 
 import { readFileSync, readdirSync } from "node:fs"
 import { resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)))
 const packageRoot = resolve(root, "packages")
@@ -167,7 +167,8 @@ function markdownReport({
   derived,
   companions,
   repositories,
-  updates,
+  releaseUpdates,
+  repositoryUpdates,
   errors,
 }) {
   const lines = [
@@ -205,11 +206,18 @@ function markdownReport({
     )
   }
 
-  lines.push("", "## Updates", "")
-  if (updates.length === 0) {
-    lines.push("No upstream updates detected.")
+  lines.push("", "## Release updates", "")
+  if (releaseUpdates.length === 0) {
+    lines.push("No upstream releases detected.")
   } else {
-    for (const update of updates) lines.push(`- ${update}`)
+    for (const update of releaseUpdates) lines.push(`- ${update}`)
+  }
+
+  lines.push("", "## Unreleased repository commits", "")
+  if (repositoryUpdates.length === 0) {
+    lines.push("No commits after the review cursors.")
+  } else {
+    for (const update of repositoryUpdates) lines.push(`- ${update}`)
   }
 
   if (repositories.length > 0) {
@@ -240,7 +248,13 @@ async function githubRequest(path, init = {}) {
   })
 }
 
-async function syncIssue(report, hasFindings) {
+export function issueSyncAction(releaseUpdates, errors) {
+  if (releaseUpdates.length > 0) return "open"
+  if (errors.length > 0) return "unchanged"
+  return "close"
+}
+
+async function syncIssue(report, action) {
   const repository = process.env.GITHUB_REPOSITORY
   if (!process.env.GITHUB_TOKEN || !repository) {
     throw new Error("--sync-issue requires GITHUB_TOKEN and GITHUB_REPOSITORY")
@@ -253,7 +267,7 @@ async function syncIssue(report, hasFindings) {
     (candidate) => !candidate.pull_request && candidate.title === issueTitle,
   )
 
-  if (hasFindings) {
+  if (action === "open") {
     const body = JSON.stringify({
       title: issueTitle,
       body: report,
@@ -270,10 +284,14 @@ async function syncIssue(report, hasFindings) {
         body,
       })
     }
-  } else if (issue?.state === "open") {
+  } else if (action === "close" && issue?.state === "open") {
     await githubRequest(`/repos/${repository}/issues/${issue.number}`, {
       method: "PATCH",
-      body: JSON.stringify({ state: "closed", state_reason: "completed" }),
+      body: JSON.stringify({
+        body: report,
+        state: "closed",
+        state_reason: "completed",
+      }),
     })
   }
 }
@@ -294,7 +312,8 @@ async function main() {
     return
   }
 
-  const updates = []
+  const releaseUpdates = []
+  const repositoryUpdates = []
   const companionReport = monitor.companions.map((entry) => ({
     package: entry.package,
     repository: entry.repository,
@@ -306,7 +325,7 @@ async function main() {
       try {
         const latest = await latestNpmVersion(entry.package)
         if (latest !== entry.version) {
-          updates.push(
+          releaseUpdates.push(
             `\`${entry.localPackage}\`: upstream npm \`${entry.package}\` is \`${latest}\` (imported \`${entry.version}\`).`,
           )
         }
@@ -322,7 +341,7 @@ async function main() {
       try {
         const latest = await latestNpmVersion(entry.package)
         if (latest !== entry.version) {
-          updates.push(
+          releaseUpdates.push(
             `\`${entry.package}\`: npm is \`${latest}\` (pinned \`${entry.version}\`).`,
           )
         }
@@ -338,7 +357,7 @@ async function main() {
       try {
         const latestCommit = await latestGitHubCommit(entry.repository)
         if (latestCommit !== entry.reviewedCommit) {
-          updates.push(
+          repositoryUpdates.push(
             `[${entry.name}](${entry.repository}/compare/${entry.reviewedCommit}...${latestCommit}) has commits after the review cursor.`,
           )
         }
@@ -360,23 +379,31 @@ async function main() {
     }),
   )
 
-  updates.sort((a, b) => a.localeCompare(b))
+  releaseUpdates.sort((a, b) => a.localeCompare(b))
+  repositoryUpdates.sort((a, b) => a.localeCompare(b))
   errors.sort((a, b) => a.localeCompare(b))
   const report = markdownReport({
     derived,
     companions: companionReport,
     repositories: repositoryReport,
-    updates,
+    releaseUpdates,
+    repositoryUpdates,
     errors,
   })
   process.stdout.write(report)
 
-  if (shouldSyncIssue)
-    await syncIssue(report, updates.length > 0 || errors.length > 0)
+  if (shouldSyncIssue) {
+    await syncIssue(report, issueSyncAction(releaseUpdates, errors))
+  }
   if (errors.length > 0) process.exitCode = 1
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.stack ?? error.message}\n`)
-  process.exitCode = 1
-})
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+) {
+  main().catch((error) => {
+    process.stderr.write(`${error.stack ?? error.message}\n`)
+    process.exitCode = 1
+  })
+}
