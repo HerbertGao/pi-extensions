@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.4
+
+### Patch Changes
+
+- [#32](https://github.com/HerbertGao/pi-extensions/pull/32) [`ace86f3`](https://github.com/HerbertGao/pi-extensions/commit/ace86f3634776e6e217f670900a7a26456128f59) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `pi-footer@0.5.1` and ship a recommended compact layout for MCP, Auto mode, LSP, Ponytail, Remote Pi, and Subagents with a gray dot separator.
+
 ## 2026.8.3
 
 ### Patch Changes
