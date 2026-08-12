@@ -10,10 +10,21 @@ import {
 } from "./npm-pack-json.mjs"
 import { runPiAutomodeRealSmoke } from "./pi-automode-real-smoke.mjs"
 import { runPiWebAccessRealSmoke } from "./pi-web-access-real-smoke.mjs"
+import { runRemotePiRealSmoke } from "./remote-pi-real-smoke.mjs"
 import { run } from "./process.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const aggregateDir = join(root, "packages", "pi-extensions")
+
+async function pathExists(path) {
+  try {
+    await stat(path)
+    return true
+  } catch (error) {
+    if (error?.code === "ENOENT") return false
+    throw error
+  }
+}
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
 try {
@@ -309,6 +320,111 @@ try {
     )
   }
 
+  const remotePiRoot = join(packageRoot, "node_modules", "remote-pi")
+  const remotePiManifestPath = join(remotePiRoot, "package.json")
+  const remotePiManifest = parseJson(
+    await readFile(remotePiManifestPath, "utf8"),
+    remotePiManifestPath,
+  )
+  const expectedRemotePiVersion = sourceManifest.dependencies["remote-pi"]
+  if (remotePiManifest.version !== expectedRemotePiVersion) {
+    throw new Error(
+      `Expected bundled remote-pi ${expectedRemotePiVersion}, got ${remotePiManifest.version}`,
+    )
+  }
+  if (remotePiManifest.license !== "MIT") {
+    throw new Error(
+      `Expected remote-pi MIT license, got ${remotePiManifest.license}`,
+    )
+  }
+  if (!remotePiManifest.pi?.extensions?.includes("./dist")) {
+    throw new Error("Bundled remote-pi no longer declares its dist Pi entry")
+  }
+  if (
+    remotePiManifest.bin?.["remote-pi"] !== "dist/index.js" ||
+    remotePiManifest.bin?.["pi-supervisord"] !== "dist/bin/supervisord.js"
+  ) {
+    throw new Error("Bundled remote-pi no longer declares its expected CLIs")
+  }
+  const zodManifestPath =
+    createRequire(remotePiManifestPath).resolve("zod/package.json")
+  const zodManifest = parseJson(
+    await readFile(zodManifestPath, "utf8"),
+    zodManifestPath,
+  )
+  const [zodMajor, zodMinor, zodPatch] = zodManifest.version
+    .split(".")
+    .map(Number)
+  if (zodMajor !== 4 || zodMinor < 4 || (zodMinor === 4 && zodPatch < 3)) {
+    throw new Error(
+      `Expected remote-pi-compatible zod 4.4.3+, got ${zodManifest.version}`,
+    )
+  }
+  for (const [dependency, range] of Object.entries(
+    remotePiManifest.dependencies ?? {},
+  )) {
+    if (
+      dependency !== "zod" &&
+      sourceManifest.dependencies[dependency] !== range
+    ) {
+      throw new Error(
+        `Expected remote-pi dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
+      )
+    }
+  }
+  const hostDependencies = [
+    "@earendil-works/pi-coding-agent",
+    "@earendil-works/pi-tui",
+  ]
+  const nestedHosts = await Promise.all(
+    hostDependencies.map((hostDependency) =>
+      pathExists(
+        join(remotePiRoot, "node_modules", ...hostDependency.split("/")),
+      ),
+    ),
+  )
+  for (const [index, hostDependency] of hostDependencies.entries()) {
+    if (remotePiManifest.dependencies?.[hostDependency]) {
+      throw new Error(
+        `Bundled remote-pi must use the aggregate ${hostDependency} host`,
+      )
+    }
+    if (nestedHosts[index]) {
+      throw new Error(`Bundled remote-pi contains a nested ${hostDependency}`)
+    }
+  }
+  if (
+    sourceManifest.dependencies["@earendil-works/pi-coding-agent"] !==
+      "^0.84.1" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.1"
+  ) {
+    throw new Error("Aggregate remote-pi hosts must remain on Pi 0.84.1+")
+  }
+  const installedHosts = await Promise.all(
+    ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"].map(
+      async (hostDependency) => {
+        const hostManifestPath = join(
+          installDir,
+          "node_modules",
+          ...hostDependency.split("/"),
+          "package.json",
+        )
+        const hostManifest = parseJson(
+          await readFile(hostManifestPath, "utf8"),
+          hostManifestPath,
+        )
+        return { hostDependency, version: hostManifest.version }
+      },
+    ),
+  )
+  for (const { hostDependency, version } of installedHosts) {
+    if (version !== "0.84.1") {
+      throw new Error(
+        `Expected remote-pi ${hostDependency} host 0.84.1, got ${version}`,
+      )
+    }
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
@@ -327,6 +443,11 @@ try {
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
       "node_modules/pi-web-access/LICENSE",
+      "node_modules/remote-pi/LICENSE",
+      "node_modules/remote-pi/service-templates/launchd.plist.template",
+      "node_modules/remote-pi/service-templates/systemd.service.template",
+      "node_modules/remote-pi/service-templates/task-launcher.vbs.template",
+      "node_modules/remote-pi/service-templates/task-scheduler.xml.template",
     ].map((path) => stat(join(packageRoot, path))),
   )
   await Promise.all(
@@ -440,6 +561,28 @@ try {
   if (!extensionPaths.includes(fastModeEntry)) {
     throw new Error("Packed aggregate is missing the fast-mode extension entry")
   }
+  const remotePiEntry = resolve(remotePiRoot, "dist/index.js")
+  if (!extensionPaths.includes(remotePiEntry)) {
+    throw new Error("Packed aggregate is missing the remote-pi extension entry")
+  }
+  const remotePiSkills = resolve(remotePiRoot, "skills")
+  if (!skillPaths.includes(remotePiSkills)) {
+    throw new Error("Packed aggregate is missing the remote-pi skills")
+  }
+  const remotePiLicense = await readFile(join(remotePiRoot, "LICENSE"), "utf8")
+  if (
+    !remotePiLicense.startsWith("MIT License\n\nCopyright (c) 2026 Jacob Moura")
+  ) {
+    throw new Error("Bundled remote-pi LICENSE is not the expected MIT text")
+  }
+  const remotePiSkill = await readFile(
+    join(remotePiSkills, "agent-network", "SKILL.md"),
+    "utf8",
+  )
+  if (!remotePiSkill.startsWith("---\nname: agent-network\n")) {
+    throw new Error("Bundled remote-pi agent-network skill is invalid")
+  }
+  await runRemotePiRealSmoke({ remotePiEntry })
 
   const bundled = new Set(packed.bundled)
   const missingBundles = manifest.bundledDependencies.filter(

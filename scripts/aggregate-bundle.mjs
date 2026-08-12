@@ -166,6 +166,22 @@ async function buildMaterializedNodeModules(stageDir) {
     }
   }
 
+  // remote-pi 0.7.0 declares Pi host packages as runtime dependencies with a
+  // 0.79-only range. Keep its published source intact, but make the bundled
+  // copy use the aggregate's single compatible Pi 0.84 host at runtime.
+  const remotePiManifest = childManifests.find(
+    (childManifest) => childManifest.name === "remote-pi",
+  )
+  if (!remotePiManifest)
+    throw new Error("Bundled remote-pi manifest is missing")
+  remotePiManifest.dependencies ??= {}
+  delete remotePiManifest.dependencies["@earendil-works/pi-coding-agent"]
+  delete remotePiManifest.dependencies["@earendil-works/pi-tui"]
+  await writeFile(
+    join(installedNodeModules, "remote-pi", "package.json"),
+    `${JSON.stringify(remotePiManifest, null, 2)}\n`,
+  )
+
   const installedEntries = await readdir(installedNodeModules, {
     withFileTypes: true,
   })

@@ -53,9 +53,12 @@ The aggregate package also pins the following unmodified npm packages under thei
 | `pi-mcp-adapter`                     | `2.23.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.22.0` | `nicobailon/pi-web-access`  |
+| `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
+
+`remote-pi@0.7.0` is accepted for this personal aggregate only with a self-hosted relay restricted by Tailscale or an equivalent private network. Its relay sees routed plaintext, despite transport encryption. Re-audit before every pin change and remove these accepted exceptions when upstream fixes them: pairing URI/token data is currently persisted in Pi session data and can reach model context; local broker/supervisor IPC authenticates only through the OS-user boundary; cancelling first-time setup can retain the cwd lock until process exit; the setup wizard's “encrypted messages” wording overstates relay confidentiality. Do not test against or recommend the community relay.
 
 ## Remotes
 
@@ -108,7 +111,7 @@ Cross-package dependencies use `@herbertgao/*`. The aggregate package pins exact
 
 Maintained child packages use SemVer and normally preserve their imported upstream version. The aggregate package uses UTC CalVer in `YYYY.M.PATCH` form, without a leading `v` or a zero-padded month. Release PRs prepared in the same month increment `PATCH`; the first release PR prepared in a new month resets it to `0`. Add a patch Changeset for aggregate changes. `scripts/version-packages.mjs` runs Changesets, then normalizes the aggregate version for the UTC month when the version PR is generated and updates its generated changelog heading.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 19 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 20 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 

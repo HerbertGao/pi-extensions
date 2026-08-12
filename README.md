@@ -41,7 +41,14 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.23.0`       | MCP tools and skills.                         |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `3.8.74`       | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.22.0`       | Web search and content access.                |
+| [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
 | [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.11.0`       | Auto-mode guardrails.                         |
+
+### Remote Pi trust boundary
+
+This aggregate enables Remote Pi's extension and agent-network skill and carries its supervisor CLI/service templates, but it does not bundle the relay, mobile app, or Cockpit and does not install or activate the supervisor service automatically. Set `REMOTE_PI_RELAY` to a self-hosted relay restricted by Tailscale or another private network before first use. The relay can read routed content even over TLS/Tailscale; Remote Pi 0.7.0 is not end-to-end encrypted.
+
+Accepted 0.7.0 limitations are documented in the aggregate package README: short-lived pairing material is persisted in Pi session data and can enter model context, same-user local IPC is unauthenticated, and cancelled first-time setup may hold its cwd lock until Pi exits.
 
 ## Native fullscreen
 

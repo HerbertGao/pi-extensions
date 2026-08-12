@@ -47,6 +47,10 @@
       "repository": "https://github.com/nicobailon/pi-web-access"
     },
     {
+      "package": "remote-pi",
+      "repository": "https://github.com/jacobaraujo7/remote_pi"
+    },
+    {
       "package": "@czottmann/pi-automode",
       "repository": "https://github.com/czottmann/pi-automode"
     }
