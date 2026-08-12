@@ -109,13 +109,30 @@ export function filterSgrSequences(text: string, filter: (params: number[]) => n
 	});
 }
 
+function isValidColonForeground(segment: string): boolean {
+	const params = segment.split(":");
+	const isByte = (value: string | undefined) =>
+		value !== undefined && /^\d+$/.test(value) && Number(value) <= 255;
+	if (params[0] !== "38") return false;
+	if (params[1] === "5") return params.length === 3 && isByte(params[2]);
+	return (
+		params[1] === "2" &&
+		params.length === 6 &&
+		(params[2] === "" || /^\d+$/.test(params[2] ?? "")) &&
+		params.slice(3).every(isByte)
+	);
+}
+
 function sanitizeColonSgr(rawParams: string): string {
 	const segments = rawParams.split(";");
 	const sanitized: string[] = [];
 	for (let index = 0; index < segments.length; index++) {
 		const segment = segments[index] ?? "";
 		if (segment.includes(":")) {
-			if (Number.parseInt(segment, 10) !== 48) sanitized.push(segment);
+			const code = Number.parseInt(segment, 10);
+			if (code !== 48 && (code !== 38 || isValidColonForeground(segment))) {
+				sanitized.push(segment);
+			}
 			continue;
 		}
 		const param = Number.parseInt(segment, 10);

@@ -55,6 +55,12 @@ test("diff helpers preserve line boundaries and strip colon-form backgrounds", (
 		sanitizeAnsiForThemedOutput("\x1b[4:3mcurly\x1b[58:2::1:2:3munderline"),
 		"\x1b[4:3mcurly\x1b[58:2::1:2:3munderline",
 	);
+	assert.equal(
+		sanitizeAnsiForThemedOutput(
+			"\x1b[38:5:123mvalid\x1b[38:5:mmissing\x1b[38:5:256mwide\x1b[38:2::1:2mshort",
+		),
+		"\x1b[38:5:123mvalidmissingwideshort",
+	);
 });
 
 test("rich diff routes only successful edit/write results in on mode", () => {

@@ -67,6 +67,7 @@ test("agent discovery honors PI_CODING_AGENT_DIR and skips unreadable entries", 
 			{},
 		);
 		assert.match(result?.systemPrompt ?? "", /"coder" \(Coder\)/);
+		assert.doesNotMatch(result?.systemPrompt ?? "", /broken/);
 	} finally {
 		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = previous;
