@@ -51,6 +51,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@narumitw/pi-btw`                   | `0.50.0` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
 | `pi-mcp-adapter`                     | `2.23.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.22.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
@@ -111,7 +112,9 @@ Cross-package dependencies use `@herbertgao/*`. The aggregate package pins exact
 
 Maintained child packages use SemVer and normally preserve their imported upstream version. The aggregate package uses UTC CalVer in `YYYY.M.PATCH` form, without a leading `v` or a zero-padded month. Release PRs prepared in the same month increment `PATCH`; the first release PR prepared in a new month resets it to `0`. Add a patch Changeset for aggregate changes. `scripts/version-packages.mjs` runs Changesets, then normalizes the aggregate version for the UTC month when the version PR is generated and updates its generated changelog heading.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 20 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+Recommended configuration files may be shipped under `packages/pi-extensions/examples/`, but package installation must not write into `~/.pi` or replace existing user configuration. Keep examples valid against the pinned companion version and assert their presence and parsing in the aggregate smoke test.
+
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 21 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 

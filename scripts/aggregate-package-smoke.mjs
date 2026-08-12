@@ -115,6 +115,107 @@ try {
     )
   }
 
+  const footerRoot = join(packageRoot, "node_modules", "pi-footer")
+  const footerManifestPath = join(footerRoot, "package.json")
+  const footerManifest = parseJson(
+    await readFile(footerManifestPath, "utf8"),
+    footerManifestPath,
+  )
+  const expectedFooterVersion = sourceManifest.dependencies["pi-footer"]
+  if (footerManifest.version !== expectedFooterVersion) {
+    throw new Error(
+      `Expected bundled pi-footer ${expectedFooterVersion}, got ${footerManifest.version}`,
+    )
+  }
+  if (footerManifest.license !== "MIT") {
+    throw new Error(
+      `Expected pi-footer MIT license, got ${footerManifest.license}`,
+    )
+  }
+  const footerEntryRelative = "./src/index.ts"
+  if (!footerManifest.pi?.extensions?.includes(footerEntryRelative)) {
+    throw new Error(
+      "Bundled pi-footer no longer declares its expected Pi entry",
+    )
+  }
+  const footerLicense = await readFile(join(footerRoot, "LICENSE"), "utf8")
+  if (!footerLicense.startsWith("MIT License\n\nCopyright (c) 2026 wobondar")) {
+    throw new Error("Bundled pi-footer LICENSE is not the expected MIT text")
+  }
+  for (const [dependency, range] of Object.entries(
+    footerManifest.dependencies ?? {},
+  )) {
+    if (sourceManifest.dependencies[dependency] !== range) {
+      throw new Error(
+        `Expected pi-footer dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
+      )
+    }
+  }
+
+  const footerExamplePath = join(packageRoot, "examples", "pi-footer.json")
+  const footerExample = parseJson(
+    await readFile(footerExamplePath, "utf8"),
+    footerExamplePath,
+  )
+  if (
+    footerExample.separator !== "dot" ||
+    footerExample.separatorFg !== "brightBlack"
+  ) {
+    throw new Error(
+      "Recommended pi-footer config must use a gray dot separator",
+    )
+  }
+  const footerRequire = createRequire(join(footerRoot, footerEntryRelative))
+  const { createJiti: createFooterJiti } = await import(
+    pathToFileURL(footerRequire.resolve("jiti"))
+  )
+  const footerJiti = createFooterJiti(footerExamplePath, {
+    moduleCache: false,
+  })
+  const footerConfigModule = await footerJiti.import(
+    join(footerRoot, "src", "config.ts"),
+  )
+  const normalizedFooter = footerConfigModule.normalizeConfig(footerExample)
+  if (
+    normalizedFooter.separator !== "dot" ||
+    normalizedFooter.separatorFg !== "brightBlack"
+  ) {
+    throw new Error(
+      "Recommended pi-footer separator changed during normalization",
+    )
+  }
+  const footerStoreModule = await footerJiti.import(
+    join(footerRoot, "src", "widgets", "store.ts"),
+  )
+  footerStoreModule.WidgetStore.fromConfig(normalizedFooter)
+  const configuredStatusKeys = new Set(
+    normalizedFooter.lines
+      .flat()
+      .filter((widget) => widget.type === "external-status")
+      .map((widget) => widget.options.externalStatusKey),
+  )
+  const expectedStatusKeys = [
+    "mcp",
+    "pi-automode",
+    "pi-lens-lsp",
+    "ponytail",
+    "remote-pi:peer-active",
+    "remote-pi:relay",
+    "remote-pi:session",
+    "subagents",
+  ]
+  for (const statusKey of expectedStatusKeys) {
+    if (
+      !configuredStatusKeys.has(statusKey) ||
+      !normalizedFooter.extensionStatusRow.hiddenKeys.includes(statusKey) ||
+      !normalizedFooter.extensionStatusRow.knownKeys.includes(statusKey)
+    ) {
+      throw new Error(
+        `Recommended pi-footer config does not own status ${statusKey}`,
+      )
+    }
+  }
+
   const mcpRoot = join(packageRoot, "node_modules", "pi-mcp-adapter")
   const mcpManifestPath = join(mcpRoot, "package.json")
   const mcpManifest = parseJson(
@@ -440,8 +541,10 @@ try {
       "node_modules/@juicesharp/rpiv-ask-user-question/LICENSE",
       "node_modules/@narumitw/pi-btw/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
+      "node_modules/pi-footer/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
+      "examples/pi-footer.json",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
       "node_modules/remote-pi/service-templates/launchd.plist.template",
@@ -560,6 +663,10 @@ try {
   const fastModeEntry = resolve(fastModeRoot, fastModeEntryRelative)
   if (!extensionPaths.includes(fastModeEntry)) {
     throw new Error("Packed aggregate is missing the fast-mode extension entry")
+  }
+  const footerEntry = resolve(footerRoot, footerEntryRelative)
+  if (!extensionPaths.includes(footerEntry)) {
+    throw new Error("Packed aggregate is missing the pi-footer extension entry")
   }
   const remotePiEntry = resolve(remotePiRoot, "dist/index.js")
   if (!extensionPaths.includes(remotePiEntry)) {
