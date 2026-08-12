@@ -211,7 +211,11 @@ async function assertGeminiWebTransport(webAccessEntry) {
     )
   } finally {
     gemini.setGeminiFetchOverrideForTests(null)
-    await Promise.all([...dispatchers].map((dispatcher) => dispatcher.close()))
+    await Promise.all(
+      [...dispatchers]
+        .filter((dispatcher) => typeof dispatcher?.close === "function")
+        .map((dispatcher) => dispatcher.close()),
+    )
   }
 }
 
@@ -557,10 +561,12 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
   const mock = await startMockServer()
   try {
     const agentDir = join(stageDir, "agent")
+    const homeDir = join(stageDir, "home")
     const sessionDir = join(stageDir, "sessions")
     const workDir = join(stageDir, "work")
     await Promise.all([
       mkdir(agentDir, { recursive: true }),
+      mkdir(homeDir, { recursive: true }),
       mkdir(sessionDir, { recursive: true }),
       mkdir(workDir, { recursive: true }),
     ])
@@ -628,10 +634,10 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
     const existingNodeOptions = process.env.NODE_OPTIONS?.trim()
     const env = {
       ...process.env,
-      HOME: join(stageDir, "home"),
+      HOME: homeDir,
       PI_CODING_AGENT_DIR: agentDir,
       PI_WEB_ACCESS_JINA_MARKER: jinaMarker,
-      NODE_OPTIONS: `${existingNodeOptions ? `${existingNodeOptions} ` : ""}--import=${providerPreload}`,
+      NODE_OPTIONS: `${existingNodeOptions ? `${existingNodeOptions} ` : ""}--import=${pathToFileURL(providerPreload).href}`,
     }
     const baseArgs = [
       "--offline",
