@@ -102,14 +102,11 @@ function trimUrl(url: string): string {
 function linkifyUrls(markdown: string): string {
 	const lines = markdown.split("\n");
 	const out: string[] = [];
-	let inFence = false;
+	let fence: MarkdownFence | undefined;
 	for (const line of lines) {
-		if (/^```/.test(line)) {
-			inFence = !inFence;
-			out.push(line);
-			continue;
-		}
-		if (inFence) {
+		const scanned = scanMarkdownFence(line, fence);
+		fence = scanned.fence;
+		if (scanned.protected) {
 			out.push(line);
 			continue;
 		}
@@ -141,6 +138,7 @@ const CODE_FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
 const CODE_FENCE_CLOSE = /^ {0,3}(`+|~+)[ \t]*$/;
 
 type FenceLine = { blockquoteDepth: number; content: string };
+type MarkdownFence = { marker: string; blockquoteDepth: number };
 
 function parseFenceLine(line: string): FenceLine {
 	let content = line;
@@ -150,6 +148,26 @@ function parseFenceLine(line: string): FenceLine {
 		blockquoteDepth++;
 	}
 	return { blockquoteDepth, content };
+}
+
+function scanMarkdownFence(
+	line: string,
+	fence: MarkdownFence | undefined,
+): { protected: boolean; fence: MarkdownFence | undefined } {
+	const parsed = parseFenceLine(line);
+	if (fence && parsed.blockquoteDepth >= fence.blockquoteDepth) {
+		const close = parsed.content.match(CODE_FENCE_CLOSE)?.[1];
+		const closed =
+			parsed.blockquoteDepth === fence.blockquoteDepth &&
+			close?.[0] === fence.marker[0] &&
+			close.length >= fence.marker.length;
+		return { protected: true, fence: closed ? undefined : fence };
+	}
+	const marker = parsed.content.match(CODE_FENCE_OPEN)?.[1];
+	return {
+		protected: Boolean(marker),
+		fence: marker ? { marker, blockquoteDepth: parsed.blockquoteDepth } : undefined,
+	};
 }
 
 function replaceCircled(text: string): string {
@@ -205,7 +223,7 @@ function deCircledProse(prose: string): string {
 function deCircled(markdown: string): string {
 	const output: string[] = [];
 	let prose: string[] = [];
-	let fence: { marker: string; blockquoteDepth: number } | undefined;
+	let fence: MarkdownFence | undefined;
 	const flushProse = () => {
 		if (prose.length === 0) return;
 		output.push(deCircledProse(prose.join("\n")));
@@ -213,30 +231,15 @@ function deCircled(markdown: string): string {
 	};
 
 	for (const line of markdown.split("\n")) {
-		const parsed = parseFenceLine(line);
-		if (fence && parsed.blockquoteDepth >= fence.blockquoteDepth) {
-			output.push(line);
-			const close = parsed.content.match(CODE_FENCE_CLOSE)?.[1];
-			if (
-				parsed.blockquoteDepth === fence.blockquoteDepth &&
-				close?.[0] === fence.marker[0] &&
-				close.length >= fence.marker.length
-			) {
-				fence = undefined;
-			}
-			continue;
-		}
-		fence = undefined;
-
-		if (parsed.content.trim() === "") {
+		const scanned = scanMarkdownFence(line, fence);
+		fence = scanned.fence;
+		if (scanned.protected) {
 			flushProse();
 			output.push(line);
 			continue;
 		}
-		const open = parsed.content.match(CODE_FENCE_OPEN)?.[1];
-		if (open) {
+		if (parseFenceLine(line).content.trim() === "") {
 			flushProse();
-			fence = { marker: open, blockquoteDepth: parsed.blockquoteDepth };
 			output.push(line);
 			continue;
 		}
@@ -331,17 +334,18 @@ function renderDiagrams(
 function renderAdmonitions(markdown: string): string {
 	const lines = markdown.split("\n");
 	const out: string[] = [];
-	let inFence = false;
+	let fence: MarkdownFence | undefined;
 	let i = 0;
 	while (i < lines.length) {
 		const line = lines[i];
-		if (/^```/.test(line)) {
-			inFence = !inFence;
+		const scanned = scanMarkdownFence(line, fence);
+		fence = scanned.fence;
+		if (scanned.protected) {
 			out.push(line);
 			i++;
 			continue;
 		}
-		if (!inFence && /^>\s*\[\s*!/i.test(line)) {
+		if (/^>\s*\[\s*!/i.test(line)) {
 			const result = renderAdmonition(lines, i);
 			if (result) {
 				out.push(...result.output);

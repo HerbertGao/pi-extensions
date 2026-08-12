@@ -276,10 +276,7 @@ async function startMockProvider(workDir) {
 
 function probeSource(mouseLayoutPath, probeLog, targetPath) {
   return `import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
-import {
-  collapsedHintHitbox,
-  renderComponentTree,
-} from ${JSON.stringify(mouseLayoutPath)};
+import { collapsedHintHitbox } from ${JSON.stringify(mouseLayoutPath)};
 
 const STATE_KEY = Symbol.for("pi.ccstyle.real-pty-smoke-probe");
 const host = globalThis;
@@ -318,6 +315,15 @@ function plain(value) {
     .replace(/\\x1b\\[[0-?]*[ -/]*[@-~]/g, "")
     .replace(/\\x1b_[^\\x07]*\\x07/g, "")
     .slice(0, 260);
+}
+function renderComponentTree(component, width) {
+  if (!component || typeof component !== "object") return [];
+  try {
+    const lines = component.render?.(width);
+    if (Array.isArray(lines) && lines.length > 0) return lines;
+  } catch {}
+  if (!Array.isArray(component.children)) return [];
+  return component.children.flatMap((child) => renderComponentTree(child, width));
 }
 function roots() {
   const result = [];
@@ -811,7 +817,7 @@ async function resolvePackedPaths(installDir) {
   const paths = {
     aggregateRoot,
     ccEntry: join(ccRoot, "extensions", "index.ts"),
-    mouseLayout: join(ccRoot, "extensions", "renderer", "mouse-layout.ts"),
+    mouseLayout: join(ccRoot, "extensions", "renderer", "mouse", "layout.ts"),
     darkTheme: join(ccRoot, "themes", "cc-dark.json"),
     lightTheme: join(ccRoot, "themes", "cc-light.json"),
     subagentsEntry: join(subagentsRoot, "src", "index.ts"),
@@ -1074,8 +1080,10 @@ async function validateEvidence(events, runs, mockRequests) {
     "reinstall:compact",
   ]) {
     assert(
-      /Thought(?: for)?\b/.test(snapshotText(byLabel.get(label))),
-      `${label}: compact thinking label missing`,
+      /Ran for (?:\d+ms|\d+s|\d+m(?: \d+s)?)/.test(
+        snapshotText(byLabel.get(label)),
+      ),
+      `${label}: compact elapsed-time label missing`,
     )
   }
 

@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type { AutocompleteProvider } from "@earendil-works/pi-tui";
-import { createAgentAutocompleteProvider } from "../extensions/feature/agent-autocomplete.ts";
-import { createAutocompleteProvider as createSessionAutocompleteProvider } from "../extensions/feature/session-reference.ts";
+import agentAutocompleteExtension, {
+	createAgentAutocompleteProvider,
+} from "../extensions/feature/reference/subagent.ts";
+import { createAutocompleteProvider as createSessionAutocompleteProvider } from "../extensions/feature/reference/index.ts";
 
 const fffProvider: AutocompleteProvider = {
 	async getSuggestions(lines, cursorLine, cursorCol) {
@@ -42,6 +47,33 @@ const agents = [
 		filePath: "/agents/coder.md",
 	},
 ];
+
+test("agent discovery honors PI_CODING_AGENT_DIR and skips unreadable entries", async () => {
+	const root = mkdtempSync(join(tmpdir(), "pi-agent-autocomplete-"));
+	const previous = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = root;
+	mkdirSync(join(root, "agents"));
+	writeFileSync(join(root, "agents", "coder.md"), "---\ndisplay_name: Coder\n---\n");
+	mkdirSync(join(root, "agents", "broken.md"));
+	const events = new Map<string, Function>();
+	try {
+		agentAutocompleteExtension({
+			on(name: string, handler: Function) {
+				events.set(name, handler);
+			},
+		} as any);
+		const result = await events.get("before_agent_start")?.(
+			{ prompt: "please ask @coder", systemPrompt: "base" },
+			{},
+		);
+		assert.match(result?.systemPrompt ?? "", /"coder" \(Coder\)/);
+		assert.doesNotMatch(result?.systemPrompt ?? "", /broken/);
+	} finally {
+		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previous;
+		rmSync(root, { recursive: true, force: true });
+	}
+});
 
 test("agent and session autocomplete compose with an FFF provider that claims @ prefixes", async () => {
 	const sessions = createSessionAutocompleteProvider(

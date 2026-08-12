@@ -5,9 +5,9 @@ import {
 	visibleWidth,
 	type Keybinding,
 } from "@earendil-works/pi-tui";
-import { config } from "../config/config.ts";
-import { isLazyProxyTui } from "../utils/fullscreen-detect.ts";
-import { parseSgrMousePackets } from "./mouse-packets.ts";
+import { config } from "../../config/config.ts";
+import { isLazyProxyTui } from "../../utils/fullscreen-detect.ts";
+import { parseSgrMousePackets } from "./packets.ts";
 
 const ZENTUI_PAGE_UP_INPUT = /^\x1b\[5;9(?::[12])?~$|^\x1b\[57421;9(?::[12])?u$|^\x1b\[1;6A$/;
 const ZENTUI_PAGE_DOWN_INPUT = /^\x1b\[6;9(?::[12])?~$|^\x1b\[57422;9(?::[12])?u$|^\x1b\[1;6B$/;
@@ -16,43 +16,65 @@ const SCROLL_BOTTOM_SHORTCUT = "ctrl+end";
 /**
  * 当前安装的 tui 宿主。宿主放本模块（滚动按钮/调度依赖它），
  * 由 mouse-interaction 经 setToolMouseTui 维护；跨模块一律经绑定/setter 访问。
+ *
+ * 状态镜像到 globalThis（Symbol 槽）：jiti 转译下经 re-export 链读取的
+ * 模块级 let 绑定是初始值快照（死绑定，实测恒 null），函数调用才是活引用。
+ * 跨模块读取一律用 getToolMouseTui()，避免拿到加载时的快照。
  */
-export let toolMouseTui: any = null;
+const TOOL_MOUSE_TUI_SLOT = Symbol.for("pi.ccstyle.tool-mouse-tui");
+(globalThis as any)[TOOL_MOUSE_TUI_SLOT] ??= null;
+export function getToolMouseTui(): any {
+	return (globalThis as any)[TOOL_MOUSE_TUI_SLOT];
+}
 export function setToolMouseTui(tui: any): void {
-	toolMouseTui = tui;
+	(globalThis as any)[TOOL_MOUSE_TUI_SLOT] = tui;
 }
 
-export let scrollButtonVisible = false;
-export let scrollButtonHovered = false;
-export let scrollButtonWidget: any = null;
-let scrollButtonSyncScheduled = false;
-
+// 滚动按钮状态同 toolMouseTui：镜像到 globalThis（Symbol 槽），跨模块读取
+// 一律用 getter（jiti 转译下模块级 let 绑定是初始值快照）。
+const SCROLL_BUTTON_STATE_SLOT = Symbol.for("pi.ccstyle.scroll-button-state");
+type ScrollButtonState = { visible: boolean; hovered: boolean; widget: any };
+function scrollButtonState(): ScrollButtonState {
+	const host = globalThis as any;
+	return (host[SCROLL_BUTTON_STATE_SLOT] ??= { visible: false, hovered: false, widget: null });
+}
+export function getScrollButtonVisible(): boolean {
+	return scrollButtonState().visible;
+}
+export function getScrollButtonHovered(): boolean {
+	return scrollButtonState().hovered;
+}
+export function getScrollButtonWidget(): any {
+	return scrollButtonState().widget;
+}
 export function setScrollButtonVisible(visible: boolean): void {
-	scrollButtonVisible = visible;
+	scrollButtonState().visible = visible;
 }
 
 /** 返回是否发生变化（调用方据此决定是否需要重渲染）。 */
 export function setScrollButtonHovered(hovered: boolean): boolean {
-	if (hovered === scrollButtonHovered) return false;
-	scrollButtonHovered = hovered;
+	if (hovered === scrollButtonState().hovered) return false;
+	scrollButtonState().hovered = hovered;
 	return true;
 }
 
 export function setScrollButtonWidget(widget: any): void {
-	scrollButtonWidget = widget;
+	scrollButtonState().widget = widget;
 }
 
 /** teardown 全量清零（visible/hovered/widget/sync 调度）。 */
 export function resetScrollButtonState(): void {
-	scrollButtonVisible = false;
-	scrollButtonHovered = false;
-	scrollButtonWidget = null;
+	scrollButtonState().visible = false;
+	scrollButtonState().hovered = false;
+	scrollButtonState().widget = null;
 	scrollButtonSyncScheduled = false;
 }
 
+let scrollButtonSyncScheduled = false;
+
 export function toolMouseInteractionActive(): boolean {
 	if (config.mode === "off") return false;
-	if (isLazyProxyTui(toolMouseTui)) return true;
+	if (isLazyProxyTui(getToolMouseTui())) return true;
 	return true;
 }
 
@@ -78,17 +100,6 @@ function formatShortcut(shortcut: string): string {
 
 export function isScrollBottomInput(data: string): boolean {
 	return matchesKey(data, SCROLL_BOTTOM_SHORTCUT);
-}
-
-function wheelDirection(data: string): "up" | "down" | null {
-	const packets = parseSgrMousePackets(data);
-	for (const packet of packets ?? []) {
-		if (packet.final !== "M") continue;
-		const baseButton = packet.code & ~(4 | 8 | 16 | 32);
-		if (baseButton === 64) return "up";
-		if (baseButton === 65) return "down";
-	}
-	return null;
 }
 
 function isScrollNavigationInput(data: string): boolean {
@@ -127,9 +138,9 @@ function isAtTranscriptBottom(tui: any): boolean {
 }
 
 export function hideScrollButton(tui: any): void {
-	const changed = scrollButtonVisible || scrollButtonHovered;
-	scrollButtonVisible = false;
-	scrollButtonHovered = false;
+	const changed = getScrollButtonVisible() || getScrollButtonHovered();
+	setScrollButtonVisible(false);
+	setScrollButtonHovered(false);
 	if (changed) tui.requestRender?.();
 }
 
@@ -145,7 +156,7 @@ export function scheduleScrollButtonSync(tui: any, data: string): void {
 	const previousLines = tui.previousLines;
 	const check = (attempt: number) => {
 		scrollButtonSyncScheduled = false;
-		if (toolMouseTui !== tui) return;
+		if (getToolMouseTui() !== tui) return;
 		// Pi renders on its own frame timer. Inspect the resulting viewport before
 		// showing the button so empty or non-scrollable transcripts never flash it.
 		const rendered = tui.previousLines !== previousLines;
@@ -159,8 +170,8 @@ export function scheduleScrollButtonSync(tui: any, data: string): void {
 			return;
 		}
 		const nextVisible = !isAtTranscriptBottom(tui);
-		if (nextVisible !== scrollButtonVisible) {
-			scrollButtonVisible = nextVisible;
+		if (nextVisible !== getScrollButtonVisible()) {
+			setScrollButtonVisible(nextVisible);
 			tui.requestRender?.();
 		}
 	};
@@ -173,10 +184,10 @@ export function updateScrollButtonFromInput(tui: any, data: string): void {
 }
 
 export function renderScrollButton(width: number, theme: any): string[] {
-	if (!scrollButtonVisible || !fullscreenLazyTui(toolMouseTui)) return [];
+	if (!getScrollButtonVisible() || !fullscreenLazyTui(getToolMouseTui())) return [];
 	const shortcut = formatShortcut(SCROLL_BOTTOM_SHORTCUT);
 	const label = theme.fg(
-		scrollButtonHovered ? "text" : "accent",
+		getScrollButtonHovered() ? "text" : "accent",
 		`[ ↓ Back to bottom · ${shortcut} ]`,
 	);
 	const leftPad = Math.max(0, Math.floor((width - visibleWidth(label)) / 2));

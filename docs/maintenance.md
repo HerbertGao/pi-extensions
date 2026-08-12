@@ -12,13 +12,13 @@
 | ---------------------- | -------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`                                             | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                                |
 | `pi-subagents`         | `tintinweb/pi-subagents`   | `c83dd82` plus the sibling working-tree customization | The imported customization adds Claude Code/Agency Agents-compatible name colors across the tool header, widget, FleetView, and conversation viewer. |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `a7aaf6d` (`0.8.53`)                                  | Imported after upstream added an explicit MIT license; uses Pi 0.84's native fullscreen pipeline.                                                    |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `8372eca` (`0.8.54`)                                  | Tracks the upstream renderer/source layout; local Markdown normalization and compact-thinking lifecycle fixes remain focused customizations.         |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                       | Upstream package               | Imported version | Imported commit |
 | ----------------------------------- | ------------------------------ | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.53`         | `a7aaf6d`       |
+| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.54`         | `8372eca`       |
 | `@herbertgao/pi-copy-response`      | `@tifan/pi-copy-response`      | `0.2.6`          | `460d580`       |
 | `@herbertgao/pi-fixed-editor`       | `@tifan/pi-fixed-editor`       | `0.3.0`          | `5975a48`       |
 | `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `1.1.2`          | `460d580`       |
@@ -36,6 +36,9 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 ## Upstream contribution follow-ups
 
 - Extract the `pi-subagents` agent display-name/color customization from the maintained-fork delta into an isolated upstream-compatible change and propose it to `tintinweb/pi-subagents`. Keep the local implementation until upstream accepts an equivalent change.
+- Propose the `pi-cc-extensions` fence/inline-code-safe circled-number normalization and its focused Markdown regression tests to `minuque/pi-cc-extensions`; keep the local implementation until upstream accepts an equivalent change.
+- Propose the `pi-cc-extensions` renderer-first compact-thinking lifecycle bridge and package-entry teardown regression test to `minuque/pi-cc-extensions`; without the bridge, shutdown can leave a stale compact-thinking prototype wrapper beneath compact mode.
+- Split the post-`0.8.54` review fixes into focused upstream PRs: agent discovery resilience, Working footer lifecycle guards, renderer timer/cache/shutdown ownership, live mouse-state reads, Markdown fence protection, and diff ANSI/line-ending/write-metadata correctness. Keep the local regressions until upstream accepts equivalents.
 
 ## Bundled upstream companions
 

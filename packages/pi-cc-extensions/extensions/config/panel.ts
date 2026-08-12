@@ -7,9 +7,9 @@
 import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
 import { Input, SettingsList, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import type { CompactThinkingController } from "../feature/compact-thinking.ts";
-import { applyStartupHeader } from "../feature/pi-startup-header.ts";
-import type { ToolGroupingHooks } from "../renderer/tool-grouping.ts";
-import type { DiffIndicatorMode, DiffViewMode } from "../renderer/tool-diff/index.ts";
+import { applyStartupHeader } from "../feature/shell/startup-header.ts";
+import type { ToolGroupingHooks } from "../renderer/tool/grouping.ts";
+import type { DiffIndicatorMode, DiffViewMode } from "../renderer/tool/diff/index.ts";
 import {
 	config,
 	DEFAULT_CONFIG,
@@ -553,4 +553,6 @@ export async function showCcstylePanel(
 			},
 		};
 	});
+	// 面板卸下后主 transcript 重新挂载；再刷一次，吃掉打开期间扫树失败的切换。
+	hooks.refreshCurrentTranscript(ctx, toolGrouping);
 }

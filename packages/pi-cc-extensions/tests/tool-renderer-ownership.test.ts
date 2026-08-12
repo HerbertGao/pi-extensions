@@ -112,6 +112,21 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 			collapsedOutput.every((line: string) => visibleWidth(line) <= 80),
 			"collapsed output uses 80% of the viewport",
 		);
+
+		const read = new ToolExecutionComponent(
+			"read",
+			"cache-width-read",
+			{ path: "file.ts", offset: Number.MAX_SAFE_INTEGER, limit: Number.MAX_SAFE_INTEGER },
+			{},
+			undefined,
+			ui as any,
+			process.cwd(),
+		) as any;
+		const firstRead = read.render(40);
+		const cachedRead = read.render(40);
+		assert.ok(firstRead.every((line: string) => visibleWidth(line) <= 32));
+		assert.deepEqual(cachedRead, firstRead, "cache hits preserve the viewport clamp");
+
 		component.setExpanded(true);
 		assert.equal(component.children.includes(component.contentBox), true);
 		assert.equal(component.children.includes(component.selfRenderContainer), false);

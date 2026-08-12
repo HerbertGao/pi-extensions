@@ -23,8 +23,8 @@ const MAX_SUGGESTIONS = 2;
 const AGENT_NAME_PATTERN = /(?:^|[\t ])@((?:[^\s:@][^\s:]*)?)$/;
 
 function getAgentDir(): string {
-	const override = process.env.PI_CODING_AGENT_DIR;
-	return join(override ? override : homedir(), ".pi", "agent", "agents");
+	const root = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
+	return join(root, "agents");
 }
 
 function parseFrontmatter(content: string): Record<string, string> {
@@ -41,23 +41,34 @@ function parseFrontmatter(content: string): Record<string, string> {
 function loadAgents(): AgentInfo[] {
 	const dir = getAgentDir();
 	if (!existsSync(dir)) return [];
+	let files: string[];
+	try {
+		files = readdirSync(dir);
+	} catch {
+		return [];
+	}
 
-	return readdirSync(dir)
-		.filter((f) => f.endsWith(".md"))
-		.map((file) => {
+	const agents: AgentInfo[] = [];
+	for (const file of files) {
+		if (!file.endsWith(".md")) continue;
+		try {
 			const filePath = join(dir, file);
 			const content = readFileSync(filePath, "utf-8");
 			const fm = parseFrontmatter(content);
 			const name = file.replace(/\.md$/, "");
-			return {
+			agents.push({
 				name,
 				displayName: fm.display_name || name,
 				description: fm.description || "",
 				model: fm.model,
 				thinking: fm.thinking,
 				filePath,
-			};
-		});
+			});
+		} catch {
+			// One unreadable agent file must not break autocomplete or prompt submission.
+		}
+	}
+	return agents;
 }
 
 export function createAgentAutocompleteProvider(
@@ -184,7 +195,6 @@ export default function agentAutocompleteExtension(pi: ExtensionAPI): void {
 
 		const agentMap = new Map(agents.map((a) => [a.name, a]));
 		const agentList = mentions.map((n) => `"${n}" (${agentMap.get(n)!.displayName})`).join(", ");
-		const agentTypes = mentions.map((n) => `"${n}"`).join(" | ");
 
 		return {
 			systemPrompt:

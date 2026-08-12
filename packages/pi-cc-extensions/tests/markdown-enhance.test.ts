@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { default as enhance } from "../extensions/feature/markdown-enhance.ts";
+import { default as enhance } from "../extensions/renderer/markdown-enhance.ts";
 
 const transformers: Array<(md: string, ctx?: object) => string> = [];
 enhance({ registerMarkdownTransformer: (fn) => transformers.push(fn) } as never);
@@ -118,9 +118,22 @@ test("含括号 URL 保留（括号平衡）", () => {
 	);
 });
 
-test("代码块内 URL 不动", () => {
-	const out = run('```js\nconst u = "https://code.com/x";\n```\n外链 https://outside.com');
-	assert.ok(!out.includes("[https://code.com/x]"));
+test("代码块内 URL 与 admonition 不动", () => {
+	const out = run(
+		[
+			"~~~md",
+			"> [!NOTE] https://tilde.example",
+			"~~~",
+			"   ```md",
+			"> [!NOTE] https://indented.example",
+			"   ```",
+			"外链 https://outside.com",
+		].join("\n"),
+	);
+	assert.ok(out.includes("> [!NOTE] https://tilde.example"));
+	assert.ok(out.includes("> [!NOTE] https://indented.example"));
+	assert.ok(!out.includes("[https://tilde.example]"));
+	assert.ok(!out.includes("[https://indented.example]"));
 	assert.ok(out.includes("[https://outside.com](https://outside.com)"));
 });
 
@@ -192,4 +205,5 @@ test("未匹配与转义 backtick 不会隐藏后续 prose 或 code span", () =>
 
 test("inline code span 不跨空行段落边界", () => {
 	assert.strictEqual(run("`①\n\n②`"), "`(1)\n\n(2)`");
+	assert.strictEqual(run("> `③\n>\n> ④`"), "> `(3)\n>\n> (4)`");
 });

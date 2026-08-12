@@ -4,7 +4,7 @@ import {
 	type DiffIndicatorMode,
 	type DiffViewMode,
 	type ToolDisplayConfig,
-} from "../renderer/tool-diff/index.ts";
+} from "../renderer/tool/diff/index.ts";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -84,22 +84,6 @@ export function pickPositiveInt(value: unknown, fallback: number, min = 1, max =
 export function pickPositiveNumber(value: unknown, fallback: number, min = 1): number {
 	const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
 	return Number.isFinite(n) ? Math.max(min, n) : fallback;
-}
-
-export function nearestPreset(value: number, presets: readonly string[]): string {
-	const numeric = presets.map((p) => Number(p));
-	let best = presets[0] ?? String(value);
-	let bestDist = Number.POSITIVE_INFINITY;
-	for (let i = 0; i < numeric.length; i++) {
-		const dist = Math.abs((numeric[i] ?? 0) - value);
-		if (dist < bestDist) {
-			bestDist = dist;
-			best = presets[i] ?? best;
-		}
-	}
-	// Prefer exact match when value is already a preset.
-	const exact = presets.find((p) => Number(p) === value);
-	return exact ?? best;
 }
 
 export function normalizeConfig(input: unknown): Config {
