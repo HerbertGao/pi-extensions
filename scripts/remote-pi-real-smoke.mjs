@@ -2,25 +2,39 @@ import assert from "node:assert/strict"
 import { createPublicKey, randomBytes, verify } from "node:crypto"
 import { rm } from "node:fs/promises"
 import { createServer } from "node:http"
+import { createRequire } from "node:module"
+import { tmpdir } from "node:os"
 import { spawn } from "node:child_process"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { WebSocketServer } from "ws"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const childPath = join(root, "scripts", "remote-pi-real-smoke-child.mjs")
 
 async function runChild(mode, entry, relayUrl) {
   const childRoot = join(
-    process.platform === "win32" ? (process.env.TEMP ?? process.cwd()) : "/tmp",
+    process.platform === "darwin" ? "/tmp" : tmpdir(),
     `rp-${mode}-${randomBytes(8).toString("hex")}`,
   )
   try {
     return await new Promise((resolvePromise, reject) => {
+      const environmentNames = [
+        "PATH",
+        ...(process.platform === "win32" ? ["SystemRoot", "TEMP", "TMP"] : []),
+      ]
       const child = spawn(
         process.execPath,
         [childPath, mode, entry, relayUrl, childRoot],
-        { env: process.env, stdio: ["ignore", "pipe", "pipe"] },
+        {
+          env: Object.fromEntries(
+            environmentNames.flatMap((name) =>
+              process.env[name] === undefined
+                ? []
+                : [[name, process.env[name]]],
+            ),
+          ),
+          stdio: ["ignore", "pipe", "pipe"],
+        },
       )
       let stdout = ""
       let stderr = ""
@@ -65,6 +79,7 @@ async function runChild(mode, entry, relayUrl) {
 
 export async function runRemotePiRealSmoke({ remotePiEntry }) {
   assert.ok(remotePiEntry, "remotePiEntry is required")
+  const { WebSocketServer } = createRequire(remotePiEntry)("ws")
 
   let connections = 0
   let closes = 0
@@ -141,6 +156,7 @@ export async function runRemotePiRealSmoke({ remotePiEntry }) {
 
   try {
     const cancel = await runChild("cancel", remotePiEntry, relayUrl)
+    if (relayError) throw relayError
     assert.equal(cancel.stderr, "")
     const lifecycle = await runChild("lifecycle", remotePiEntry, relayUrl)
     if (relayError) throw relayError

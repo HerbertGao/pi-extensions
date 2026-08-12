@@ -42,7 +42,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 ## Bundled upstream companions
 
-The aggregate package also pins the following unmodified npm packages under their original names:
+The aggregate package also pins the following npm packages under their original names without modifying their upstream source. The generated bundled `remote-pi` manifest omits its Pi coding-agent/TUI dependencies so it uses the aggregate's single host versions:
 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
@@ -58,7 +58,7 @@ The aggregate package also pins the following unmodified npm packages under thei
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
 
-`remote-pi@0.7.0` is accepted for this personal aggregate only with a self-hosted relay restricted by Tailscale or an equivalent private network. Its relay sees routed plaintext, despite transport encryption. Re-audit before every pin change and remove these accepted exceptions when upstream fixes them: pairing URI/token data is currently persisted in Pi session data and can reach model context; local broker/supervisor IPC authenticates only through the OS-user boundary; cancelling first-time setup can retain the cwd lock until process exit; the setup wizard's “encrypted messages” wording overstates relay confidentiality. Do not test against or recommend the community relay.
+`remote-pi@0.7.0` is accepted for this personal aggregate only with a self-hosted relay restricted by Tailscale or an equivalent private network. Its relay sees routed plaintext, despite transport encryption. Re-audit before every pin change and remove these accepted exceptions when upstream fixes them: pairing URI/token data is currently persisted in Pi session data and can reach model context; local broker/supervisor IPC authenticates only through the OS-user boundary, and its Unix socket may use the process umask's default `0755` mode; cancelling first-time setup can retain the cwd lock until process exit; the setup wizard's “encrypted messages” wording overstates relay confidentiality. Do not test against or recommend the community relay.
 
 ## Remotes
 

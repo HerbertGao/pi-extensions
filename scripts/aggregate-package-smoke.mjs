@@ -398,24 +398,24 @@ try {
       "^0.84.1" ||
     sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.1"
   ) {
-    throw new Error("Aggregate remote-pi hosts must remain on Pi 0.84.1+")
+    throw new Error(
+      'Aggregate Pi host ranges must be exactly "^0.84.1"; update this check when the host is bumped',
+    )
   }
   const installedHosts = await Promise.all(
-    ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"].map(
-      async (hostDependency) => {
-        const hostManifestPath = join(
-          installDir,
-          "node_modules",
-          ...hostDependency.split("/"),
-          "package.json",
-        )
-        const hostManifest = parseJson(
-          await readFile(hostManifestPath, "utf8"),
-          hostManifestPath,
-        )
-        return { hostDependency, version: hostManifest.version }
-      },
-    ),
+    hostDependencies.map(async (hostDependency) => {
+      const hostManifestPath = join(
+        installDir,
+        "node_modules",
+        ...hostDependency.split("/"),
+        "package.json",
+      )
+      const hostManifest = parseJson(
+        await readFile(hostManifestPath, "utf8"),
+        hostManifestPath,
+      )
+      return { hostDependency, version: hostManifest.version }
+    }),
   )
   for (const { hostDependency, version } of installedHosts) {
     if (version !== "0.84.1") {

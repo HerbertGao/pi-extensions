@@ -45,6 +45,19 @@ const hasMeshNode = remotePi["_hasMeshNodeForTest"]
 const setNativeBindingError = storage["_setNativeBindingErrorForTest"]
 const setKeyringExpected = storage["_setKeyringExpectedForTest"]
 const setKeyringRetry = storage["_setKeyringRetryForTest"]
+for (const [name, hook] of Object.entries({
+  _getState: getState,
+  _hasMeshNodeForTest: hasMeshNode,
+  _setNativeBindingErrorForTest: setNativeBindingError,
+  _setKeyringExpectedForTest: setKeyringExpected,
+  _setKeyringRetryForTest: setKeyringRetry,
+})) {
+  assert.equal(
+    typeof hook,
+    "function",
+    `remote-pi test hook ${name} is missing`,
+  )
+}
 
 setNativeBindingError(new Error("aggregate smoke: no native keyring"))
 setKeyringExpected(false)
@@ -118,6 +131,30 @@ async function waitForRelaySockets(expected, attempts = 40) {
   if (attempts <= 1) assert.fail(`relay did not reach ${expected} open sockets`)
   await new Promise((resolve) => setTimeout(resolve, 25))
   return waitForRelaySockets(expected, attempts - 1)
+}
+
+async function waitForAuditDelivery(auditPath, recipient, attempts = 40) {
+  let audit = ""
+  try {
+    audit = readFileSync(auditPath, "utf8")
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error
+  }
+  const delivered = audit
+    .split("\n")
+    .slice(0, -1)
+    .filter(Boolean)
+    .map(JSON.parse)
+    .some(
+      (record) =>
+        record.to === recipient &&
+        record.delivered?.includes(recipient) &&
+        record.ack_status === "received",
+    )
+  if (delivered) return audit
+  if (attempts <= 1) assert.fail("delivered message is missing from audit log")
+  await new Promise((resolve) => setTimeout(resolve, 25))
+  return waitForAuditDelivery(auditPath, recipient, attempts - 1)
 }
 
 function assertNoServiceArtifacts() {
@@ -200,23 +237,23 @@ try {
     const sockPath = globalConfig.sessionSockPath(
       globalConfig.LOCAL_SESSION_NAME,
     )
-    assert.equal(
-      existsSync(sockPath),
-      true,
-      JSON.stringify({
-        sockPath,
-        sessionsDir: globalConfig.sessionsDir(),
-        entries: readdirSync(dirname(sockPath), { withFileTypes: true }).map(
-          (dirEntry) => ({
-            name: dirEntry.name,
-            socket: dirEntry.isSocket(),
-          }),
-        ),
-        probe: await remotePi.probeListPeers(sockPath, 100),
-      }),
-    )
+    if (!existsSync(sockPath)) {
+      assert.fail(
+        JSON.stringify({
+          sockPath,
+          sessionsDir: globalConfig.sessionsDir(),
+          entries: readdirSync(dirname(sockPath), { withFileTypes: true }).map(
+            (dirEntry) => ({
+              name: dirEntry.name,
+              socket: dirEntry.isSocket(),
+            }),
+          ),
+          probe: await remotePi.probeListPeers(sockPath, 100),
+        }),
+      )
+    }
     assert.equal(lstatSync(sockPath).isSocket(), true)
-    assert.equal(statSync(sockPath).mode & 0o002, 0)
+    assert.equal(statSync(sockPath).mode & 0o022, 0)
 
     await commands.get("remote-pi pair").handler("--ttl 10", ctx)
     const pairMessage = sentMessages.find(
@@ -238,35 +275,35 @@ try {
     assert.equal(selfResult.details.status, "refused")
 
     const secondPeer = new SessionPeer({ sockPath, name: "peer", cwd })
-    await secondPeer.start()
-    secondPeer.onMessage((message) => {
-      if (message.body?.kind === "request") {
-        void secondPeer.send(message.from, { ok: true }, message.id)
-      }
-    })
-    const secondAddress = secondPeer.address()
-    const livePeers = await tools.get("list_peers").execute("list-live", {})
-    assert.deepEqual(livePeers.details.peers, [secondAddress])
-    const delivered = await tools.get("agent_send").execute("send-live", {
-      to: secondAddress,
-      body: { secret: "audit-body-marker" },
-    })
-    assert.equal(delivered.details.status, "received")
-    const replied = await tools.get("agent_request").execute("request-live", {
-      to: secondAddress,
-      body: { kind: "request" },
-      timeout_ms: 1_000,
-    })
-    assert.deepEqual(replied.details, { ok: true })
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    const auditPath = globalConfig.sessionAuditPath(
-      globalConfig.LOCAL_SESSION_NAME,
-    )
-    assert.equal(
-      readFileSync(auditPath, "utf8").includes("audit-body-marker"),
-      false,
-    )
-    await secondPeer.leave()
+    try {
+      await secondPeer.start()
+      secondPeer.onMessage((message) => {
+        if (message.body?.kind === "request") {
+          void secondPeer.send(message.from, { ok: true }, message.id)
+        }
+      })
+      const secondAddress = secondPeer.address()
+      const livePeers = await tools.get("list_peers").execute("list-live", {})
+      assert.deepEqual(livePeers.details.peers, [secondAddress])
+      const delivered = await tools.get("agent_send").execute("send-live", {
+        to: secondAddress,
+        body: { secret: "audit-body-marker" },
+      })
+      assert.equal(delivered.details.status, "received")
+      const auditPath = globalConfig.sessionAuditPath(
+        globalConfig.LOCAL_SESSION_NAME,
+      )
+      const audit = await waitForAuditDelivery(auditPath, secondAddress)
+      assert.equal(audit.includes("audit-body-marker"), false)
+      const replied = await tools.get("agent_request").execute("request-live", {
+        to: secondAddress,
+        body: { kind: "request" },
+        timeout_ms: 1_000,
+      })
+      assert.deepEqual(replied.details, { ok: true })
+    } finally {
+      await secondPeer.leave()
+    }
 
     const protocolSock = join(root, "protocol.sock")
     const protocolPeer = new SessionPeer({
