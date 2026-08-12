@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.3
+
+### Patch Changes
+
+- [#27](https://github.com/HerbertGao/pi-extensions/pull/27) [`32bb76c`](https://github.com/HerbertGao/pi-extensions/commit/32bb76c117971de27db9c2b521d19df3ba9ea322) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Keep worktree-isolated agents inside their copy, preserve real Agent tool startup errors, and render unknown or failed Agent results without misleading completion status.
+
 ## 0.15.2
 
 ### Patch Changes

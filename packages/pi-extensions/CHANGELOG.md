@@ -1,5 +1,23 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.3
+
+### Patch Changes
+
+- [#28](https://github.com/HerbertGao/pi-extensions/pull/28) [`aa7e682`](https://github.com/HerbertGao/pi-extensions/commit/aa7e68296c40b044eefd871f90c8142f0aebea02) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync `pi-cc-extensions` with upstream 0.8.54, including the upstream renderer layout, live style-mode reshaping, stable compact-round timing, consistently folded Agent/Task cards, reload-safe mouse state, cleanup-safe compact-thinking coexistence, and focused renderer lifecycle/data-integrity fixes.
+
+- [#27](https://github.com/HerbertGao/pi-extensions/pull/27) [`32bb76c`](https://github.com/HerbertGao/pi-extensions/commit/32bb76c117971de27db9c2b521d19df3ba9ea322) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Keep worktree-isolated agents inside their copy, preserve real Agent tool startup errors, and render unknown or failed Agent results without misleading completion status.
+
+- [#20](https://github.com/HerbertGao/pi-extensions/pull/20) [`c8eb56c`](https://github.com/HerbertGao/pi-extensions/commit/c8eb56cf5b66b1df20b2e879ae6802d99e0edebb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled `pi-web-access` from 0.18.0 to 0.22.0, including bounded external fetched-content storage and the new search and fetch routing options.
+
+- [#26](https://github.com/HerbertGao/pi-extensions/pull/26) [`fabaaaa`](https://github.com/HerbertGao/pi-extensions/commit/fabaaaad0a414039a2958c49e1b61392338e2d37) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled `pi-mcp-adapter` from 2.21.2 to 2.23.0, including hardened binary-resource handling and improved OAuth flows for remote and headless environments.
+
+- [#29](https://github.com/HerbertGao/pi-extensions/pull/29) [`8dc9a45`](https://github.com/HerbertGao/pi-extensions/commit/8dc9a45c6844bbc621009d0fa6e75392e657d887) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `remote-pi@0.7.0` with its Pi extension and agent-network skill for private, self-hosted relay use.
+
+- Updated dependencies [[`aa7e682`](https://github.com/HerbertGao/pi-extensions/commit/aa7e68296c40b044eefd871f90c8142f0aebea02), [`32bb76c`](https://github.com/HerbertGao/pi-extensions/commit/32bb76c117971de27db9c2b521d19df3ba9ea322)]:
+  - @herbertgao/pi-cc-extensions@0.8.53
+  - @herbertgao/pi-subagents@0.15.3
+
 ## 2026.8.2
 
 ### Patch Changes
