@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
+import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -101,6 +102,59 @@ try {
     throw new Error(
       "Bundled pi-automode LICENSE.md is not the expected MIT text",
     )
+  }
+
+  const mcpRoot = join(packageRoot, "node_modules", "pi-mcp-adapter")
+  const mcpManifestPath = join(mcpRoot, "package.json")
+  const mcpManifest = parseJson(
+    await readFile(mcpManifestPath, "utf8"),
+    mcpManifestPath,
+  )
+  const expectedMcpVersion = sourceManifest.dependencies["pi-mcp-adapter"]
+  if (mcpManifest.version !== expectedMcpVersion) {
+    throw new Error(
+      `Expected bundled pi-mcp-adapter ${expectedMcpVersion}, got ${mcpManifest.version}`,
+    )
+  }
+  if (mcpManifest.license !== "MIT") {
+    throw new Error(
+      `Expected pi-mcp-adapter MIT license, got ${mcpManifest.license}`,
+    )
+  }
+  const mcpLicense = await readFile(join(mcpRoot, "LICENSE"), "utf8")
+  if (!mcpLicense.startsWith("MIT License")) {
+    throw new Error(
+      "Bundled pi-mcp-adapter LICENSE is not the expected MIT text",
+    )
+  }
+  const mcpEntryRelative = "./index.ts"
+  const mcpSkillsRelative = "./skills"
+  if (!mcpManifest.pi?.extensions?.includes(mcpEntryRelative)) {
+    throw new Error(
+      "Bundled pi-mcp-adapter no longer declares its expected Pi entry",
+    )
+  }
+  if (!mcpManifest.pi?.skills?.includes(mcpSkillsRelative)) {
+    throw new Error(
+      "Bundled pi-mcp-adapter no longer declares its expected skills",
+    )
+  }
+  if (mcpManifest.exports?.["./oauth"]?.import !== "./oauth.ts") {
+    throw new Error(
+      "Bundled pi-mcp-adapter no longer exports its OAuth public API",
+    )
+  }
+  if (mcpManifest.bin?.["pi-mcp-adapter"] !== "cli.js") {
+    throw new Error("Bundled pi-mcp-adapter no longer declares its CLI")
+  }
+  for (const [dependency, range] of Object.entries(
+    mcpManifest.dependencies ?? {},
+  )) {
+    if (sourceManifest.dependencies[dependency] !== range) {
+      throw new Error(
+        `Expected pi-mcp-adapter dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
+      )
+    }
   }
 
   const webAccessRoot = join(packageRoot, "node_modules", "pi-web-access")
@@ -316,6 +370,51 @@ try {
     )
   }
   await runPiAutomodeRealSmoke({ automodeEntry })
+
+  const mcpEntry = resolve(mcpRoot, mcpEntryRelative)
+  if (!extensionPaths.includes(mcpEntry)) {
+    throw new Error(
+      "Packed aggregate is missing the pi-mcp-adapter extension entry",
+    )
+  }
+  const mcpSkills = resolve(mcpRoot, mcpSkillsRelative)
+  if (!skillPaths.includes(mcpSkills)) {
+    throw new Error("Packed aggregate is missing the pi-mcp-adapter skills")
+  }
+  const mcpOAuthEntry = resolve(mcpRoot, "oauth.ts")
+  await Promise.all([stat(mcpOAuthEntry), stat(join(mcpRoot, "cli.js"))])
+  const previousAuthStore = process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE
+  process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE = "memory"
+  try {
+    const require = createRequire(mcpOAuthEntry)
+    const { createJiti } = await import(pathToFileURL(require.resolve("jiti")))
+    const jiti = createJiti(mcpOAuthEntry, { moduleCache: false })
+    const oauth = await jiti.import(mcpOAuthEntry)
+    const serverName = "aggregate-smoke"
+    const serverUrl = "https://mcp.example.test/server"
+    const tokens = { accessToken: "smoke-token" }
+    oauth.updateMcpOAuthTokensForUrl(serverName, serverUrl, tokens)
+    const present = oauth.inspectMcpOAuthTokensForUrl(serverName, serverUrl)
+    if (
+      present.status !== "present" ||
+      present.tokens.accessToken !== tokens.accessToken
+    ) {
+      throw new Error("pi-mcp-adapter OAuth token reuse failed")
+    }
+    const mismatched = oauth.inspectMcpOAuthTokensForUrl(
+      serverName,
+      "https://other.example.test/server",
+    )
+    if (mismatched.status !== "absent") {
+      throw new Error("pi-mcp-adapter OAuth tokens were not URL-bound")
+    }
+  } finally {
+    if (previousAuthStore === undefined) {
+      delete process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE
+    } else {
+      process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE = previousAuthStore
+    }
+  }
 
   const webAccessEntry = resolve(webAccessRoot, webAccessEntryRelative)
   if (!extensionPaths.includes(webAccessEntry)) {
