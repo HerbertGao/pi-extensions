@@ -14,7 +14,7 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 - `@juicesharp/rpiv-ask-user-question@2.4.0`
 - `@narumitw/pi-btw@0.50.0`
 - `@pi-plugins/fast-mode@0.1.9`
-- `pi-mcp-adapter@2.21.2`
+- `pi-mcp-adapter@2.23.0`
 - `pi-lens@3.8.74`
 - `pi-web-access@0.22.0`
 - `@czottmann/pi-automode@1.11.0`
