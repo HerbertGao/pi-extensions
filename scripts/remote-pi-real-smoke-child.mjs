@@ -197,12 +197,19 @@ try {
   await waitForRelaySockets(0)
 
   if (mode === "cancel") {
+    const setupCancellations = () =>
+      notifications.filter(({ message }) => message.includes("Setup cancelled"))
+        .length
+    const beforeExplicitSetup = setupCancellations()
     await commands.get("remote-pi setup").handler("", ctx)
+    assert.equal(setupCancellations(), beforeExplicitSetup + 1)
     assert.equal(
       existsSync(join(cwd, ".pi", "remote-pi", "config.json")),
       false,
     )
+    const beforeRootSetup = setupCancellations()
     await commands.get("remote-pi").handler("", ctx)
+    assert.equal(setupCancellations(), beforeRootSetup + 1)
     assert.equal(getState(), "idle")
     assert.equal(hasMeshNode(), false)
     assert.equal(
@@ -215,9 +222,6 @@ try {
     const released = await cwdLock.acquireCwdLock(cwd, "work")
     assert.equal(released.ok, true)
     released.release()
-    assert.ok(
-      notifications.some(({ message }) => message.includes("Setup cancelled")),
-    )
   } else {
     await commands.get("remote-pi").handler("", ctx)
     await waitForRelaySockets(1)
@@ -262,10 +266,6 @@ try {
     assert.ok(pairMessage?.details?.token)
     assert.ok(pairMessage.details.expiresAt > Date.now())
     assert.ok(pairMessage.details.expiresAt <= Date.now() + 11_000)
-    assert.equal(
-      JSON.stringify([sentMessages, sentUserMessages]).includes(identity.sk),
-      false,
-    )
     const [selfAddress] = await remotePi.probeListPeers(sockPath, 100)
     assert.ok(selfAddress)
     const selfResult = await tools.get("agent_send").execute("send-self", {
@@ -321,11 +321,16 @@ try {
       await protocolTarget.start()
       const protocolBroker = protocolPeer.localBroker()
       assert.ok(protocolBroker)
+      let malformedDelivered = false
+      let malformedWritten = false
       protocolTarget.onMessage((message) => {
         if (message.body?.kind === "malformed") {
-          protocolBroker.peers
-            .get(message.from)
-            ?.socket.write("{malformed-json}\n")
+          malformedDelivered = true
+          const sender = protocolBroker.peers.get(message.from)
+          if (sender) {
+            sender.socket.write("{malformed-json}\n")
+            malformedWritten = true
+          }
         }
       })
       protocolBroker.setRemoteRouter({
@@ -375,6 +380,8 @@ try {
           body: { kind: "malformed" },
           timeout_ms: 30,
         })
+      assert.equal(malformedDelivered, true)
+      assert.equal(malformedWritten, true)
       assert.match(malformed.content[0].text, /timed out/)
     } finally {
       await protocolTarget.leave()
@@ -407,6 +414,10 @@ try {
     assert.equal(getState(), "idle")
     assert.equal(hasMeshNode(), false)
     assert.equal(existsSync(sockPath), false)
+    assert.equal(
+      JSON.stringify([sentMessages, sentUserMessages]).includes(identity.sk),
+      false,
+    )
     assertNoServiceArtifacts()
   }
 } finally {
