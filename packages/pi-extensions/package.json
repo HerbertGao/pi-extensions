@@ -37,7 +37,8 @@
     "@ast-grep/napi": "^0.45.0",
     "@czottmann/pi-automode": "1.11.0",
     "@dietrichgebert/ponytail": "4.9.0",
-    "@earendil-works/pi-tui": "^0.82.1",
+    "@earendil-works/pi-coding-agent": "^0.84.1",
+    "@earendil-works/pi-tui": "^0.84.1",
     "@effect/platform-node": "4.0.0-beta.103",
     "@effect/platform-node-shared": "4.0.0-beta.103",
     "@herbertgao/pi-cc-extensions": "0.8.52",
@@ -56,10 +57,12 @@
     "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/core": "2.0.0",
     "@modelcontextprotocol/ext-apps": "^1.2.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@mozilla/readability": "^0.6.0",
     "@napi-rs/keyring": "^1.3.0",
     "@narumitw/pi-btw": "0.50.0",
     "@narumitw/pi-tui-kit": "^0.49.1",
+    "@noble/ed25519": "^3.1.0",
     "@pi-plugins/fast-mode": "0.1.9",
     "@shikijs/cli": "^4.0.2",
     "@sinclair/typebox": "^0.34.49",
@@ -81,14 +84,17 @@
     "pi-web-access": "0.22.0",
     "pidusage": "^4.0.1",
     "promise.try": "^2.0.1",
+    "qrcode-terminal": "^0.12.0",
     "recheck": "^4.5.0",
+    "remote-pi": "0.7.0",
     "smol-toml": "^1.6.1",
     "strip-json-comments": "^5.0.3",
     "turndown": "^7.2.0",
-    "typebox": "^1.1.24",
+    "typebox": "^1.1.38",
     "undici": "^8.9.0",
     "unpdf": "^1.6.2",
     "vscode-jsonrpc": "^9.0.0",
+    "ws": "^8.21.0",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "optionalDependencies": {
@@ -113,7 +119,8 @@
     "@pi-plugins/fast-mode",
     "pi-lens",
     "pi-mcp-adapter",
-    "pi-web-access"
+    "pi-web-access",
+    "remote-pi"
   ],
   "engines": {
     "node": ">=22.19.0"
@@ -139,6 +146,7 @@
       "./node_modules/pi-mcp-adapter/index.ts",
       "./node_modules/pi-lens/dist/index.js",
       "./node_modules/pi-web-access/index.ts",
+      "./node_modules/remote-pi/dist/index.js",
       "./node_modules/@czottmann/pi-automode/extensions/auto-mode.ts"
     ],
     "themes": [
@@ -148,7 +156,8 @@
     "skills": [
       "./node_modules/@dietrichgebert/ponytail/skills",
       "./node_modules/pi-mcp-adapter/skills",
-      "./node_modules/pi-lens/skills"
+      "./node_modules/pi-lens/skills",
+      "./node_modules/remote-pi/skills"
     ]
   }
 }
