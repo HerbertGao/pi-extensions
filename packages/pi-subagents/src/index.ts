@@ -1241,12 +1241,12 @@ Terse command-style prompts produce shallow, generic work.
         )
       },
 
-      renderResult(result, { expanded, isPartial }, theme) {
+      renderResult(result, { expanded, isPartial }, theme, renderContext) {
+        const resultText =
+          result.content[0]?.type === "text" ? result.content[0].text : ""
         const details = result.details as AgentDetails | undefined
-        if (!details) {
-          const text =
-            result.content[0]?.type === "text" ? result.content[0].text : ""
-          return new Text(text, 0, 0)
+        if (renderContext?.isError || !details?.status) {
+          return new Text(resultText, 0, 0)
         }
 
         // Helper: build "haiku · thinking: high · ↻5≤30 · 3 tool uses · 33.8k tokens" stats string
@@ -1301,8 +1301,6 @@ Terse command-style prompts produce shallow, generic work.
           line += " " + theme.fg("dim", "·") + " " + theme.fg("dim", duration)
 
           if (expanded) {
-            const resultText =
-              result.content[0]?.type === "text" ? result.content[0].text : ""
             if (resultText) {
               const lines = resultText.split("\n").slice(0, 50)
               for (const l of lines) {
@@ -1330,6 +1328,10 @@ Terse command-style prompts produce shallow, generic work.
           let line = theme.fg("dim", "■") + (s ? " " + s : "")
           line += "\n" + theme.fg("dim", "  ⎿  Stopped")
           return new Text(line, 0, 0)
+        }
+
+        if (details.status !== "error" && details.status !== "aborted") {
+          return new Text(resultText, 0, 0)
         }
 
         // ---- Error / Aborted (hard max_turns) ----
@@ -1598,23 +1600,22 @@ Terse command-style prompts produce shallow, generic work.
             }
           }
 
-          try {
-            id = manager.spawn(pi, ctx, subagentType, params.prompt, {
-              description: params.description,
-              model,
-              maxTurns: effectiveMaxTurns,
-              isolated,
-              inheritContext,
-              thinkingLevel: thinking,
-              isBackground: true,
-              isolation,
-              invocation: agentInvocation,
-              rootSessionId: ctx.sessionManager.getSessionId(),
-              ...bgCallbacks,
-            })
-          } catch (err) {
-            return textResult(err instanceof Error ? err.message : String(err))
-          }
+          // A throw here means the agent never started. Let it out: Pi marks a
+          // tool call failed only when execute throws, while a returned message
+          // reads to the model as a subagent that ran and reported this.
+          id = manager.spawn(pi, ctx, subagentType, params.prompt, {
+            description: params.description,
+            model,
+            maxTurns: effectiveMaxTurns,
+            isolated,
+            inheritContext,
+            thinkingLevel: thinking,
+            isBackground: true,
+            isolation,
+            invocation: agentInvocation,
+            rootSessionId: ctx.sessionManager.getSessionId(),
+            ...bgCallbacks,
+          })
 
           // Set output file + join mode synchronously after spawn, before the
           // event loop yields — onSessionCreated is async so this is safe.
@@ -1774,18 +1775,15 @@ Terse command-style prompts produce shallow, generic work.
             },
           )
           record = fgResult.record
-        } catch (err) {
+        } finally {
+          // A startup throw propagates as a failed tool call without leaving
+          // the spinner running or a finished agent in the widget.
           clearInterval(spinnerInterval)
-          return textResult(err instanceof Error ? err.message : String(err))
-        }
-
-        clearInterval(spinnerInterval)
-
-        // Clean up foreground agent from widget
-        if (fgId) {
-          agentActivity.delete(fgId)
-          widget.markFinished(fgId)
-          fleet.onAgentFinished(fgId)
+          if (fgId) {
+            agentActivity.delete(fgId)
+            widget.markFinished(fgId)
+            fleet.onAgentFinished(fgId)
+          }
         }
 
         // Get final token count

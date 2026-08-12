@@ -11,7 +11,7 @@
 | Local package set      | Upstream                   | Imported baseline                                     | Notes                                                                                                                                                |
 | ---------------------- | -------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`                                             | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                                |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `140324c` plus the sibling working-tree customization | The imported customization adds Claude Code/Agency Agents-compatible name colors across the tool header, widget, FleetView, and conversation viewer. |
+| `pi-subagents`         | `tintinweb/pi-subagents`   | `c83dd82` plus the sibling working-tree customization | The imported customization adds Claude Code/Agency Agents-compatible name colors across the tool header, widget, FleetView, and conversation viewer. |
 | `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `a7aaf6d` (`0.8.53`)                                  | Imported after upstream added an explicit MIT license; uses Pi 0.84's native fullscreen pipeline.                                                    |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
@@ -28,7 +28,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.4`          | `460d580`       |
 | `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.4.2`          | `460d580`       |
 | `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.1.0`          | `460d580`       |
-| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.15.0`         | `140324c`       |
+| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.15.0`         | `c83dd82`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. The workflow maintains one rolling GitHub Issue instead of opening duplicate reminders.

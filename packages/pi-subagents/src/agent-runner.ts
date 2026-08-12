@@ -414,6 +414,8 @@ export interface RunOptions {
   thinkingLevel?: ThinkingLevel
   /** Override working directory (e.g. for worktree isolation). */
   cwd?: string
+  /** Original checkout path when cwd is an isolated worktree copy. */
+  worktreeBase?: string
   /**
    * Where .pi config is discovered (project extensions, skills, pi settings,
    * agent memory). Default: same as the working directory. The manager sets
@@ -602,7 +604,7 @@ export async function runAgent(
   const parentSystemPrompt = ctx.getSystemPrompt()
 
   // Build prompt extras (memory, skill preloading)
-  const extras: PromptExtras = {}
+  const extras: PromptExtras = { worktreeBase: options.worktreeBase }
 
   // Resolve extensions/skills: isolated overrides to false
   const extensions = options.isolated ? false : config.extensions

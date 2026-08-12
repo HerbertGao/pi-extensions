@@ -10,6 +10,8 @@ export interface PromptExtras {
   memoryBlock?: string
   /** Preloaded skill contents to inject. */
   skillBlocks?: { name: string; content: string }[]
+  /** Original checkout path when cwd is an isolated worktree copy. */
+  worktreeBase?: string
 }
 
 /**
@@ -55,6 +57,12 @@ Platform: ${env.platform}`
   }
   const extrasSuffix =
     extraSections.length > 0 ? "\n\n" + extraSections.join("\n") : ""
+  const worktreeSection = extras?.worktreeBase
+    ? `\n\n<worktree_isolation>
+Your working directory is an isolated git worktree copy of ${extras.worktreeBase}.
+Work only inside it — never in ${extras.worktreeBase}, even if other instructions name that path as your working directory.
+</worktree_isolation>`
+    : ""
 
   if (config.promptMode === "append") {
     const identity = parentSystemPrompt || genericBase
@@ -88,6 +96,7 @@ You are operating as a sub-agent invoked to handle a specific task.
       "\n\n" +
       activeAgentTag +
       envBlock +
+      worktreeSection +
       customSection +
       extrasSuffix
     )
@@ -100,7 +109,12 @@ You have been invoked to handle a specific task autonomously.
 ${envBlock}`
 
   return (
-    activeAgentTag + replaceHeader + "\n\n" + config.systemPrompt + extrasSuffix
+    activeAgentTag +
+    replaceHeader +
+    worktreeSection +
+    "\n\n" +
+    config.systemPrompt +
+    extrasSuffix
   )
 }
 

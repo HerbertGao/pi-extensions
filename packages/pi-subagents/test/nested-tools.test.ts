@@ -426,6 +426,28 @@ describe("child-safe nested Agent tools", () => {
     }
   })
 
+  it.each([false, true])(
+    "propagates startup failures (run_in_background: %s)",
+    async (background) => {
+      const [agent] = tools()
+      const failure = new Error("child never started")
+      if (background)
+        spawn.mockImplementationOnce(() => {
+          throw failure
+        })
+      else spawnAndWait.mockRejectedValueOnce(failure)
+
+      await expect(
+        execute(agent, {
+          subagent_type: "scout",
+          description: "startup probe",
+          prompt: "Do work",
+          run_in_background: background,
+        }),
+      ).rejects.toThrow("child never started")
+    },
+  )
+
   it("hands the branch cap down to the child it spawns", async () => {
     const [agent] = tools("all", 1, 3)
     const result = await execute(agent, {
