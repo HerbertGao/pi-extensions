@@ -142,6 +142,7 @@ import {
   runAgent,
   SUBAGENT_TOOL_NAMES,
 } from "../src/agent-runner.js"
+import { buildAgentPrompt } from "../src/prompts.js"
 
 /** The most recent session built by `createSession` — read by `lastToolsPassed()`. */
 let lastSession: ReturnType<typeof createSession>["session"] | undefined
@@ -265,6 +266,25 @@ describe("agent-runner final output capture", () => {
         cwd: "/tmp/worktree",
         agentDir: "/mock/agent-dir",
       }),
+    )
+  })
+
+  it("forwards the worktree base into the prompt extras", async () => {
+    const { session } = createSession("ISOLATED")
+    createAgentSession.mockResolvedValue({ session })
+
+    await runAgent(ctx, "Explore", "Say ISOLATED", {
+      pi,
+      cwd: "/tmp/worktree",
+      worktreeBase: "/tmp/repo",
+    })
+
+    expect(buildAgentPrompt).toHaveBeenCalledWith(
+      expect.anything(),
+      "/tmp/worktree",
+      expect.anything(),
+      "parent prompt",
+      expect.objectContaining({ worktreeBase: "/tmp/repo" }),
     )
   })
 

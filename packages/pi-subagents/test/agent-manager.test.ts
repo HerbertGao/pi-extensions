@@ -836,7 +836,11 @@ describe("AgentManager — SpawnOptions.cwd passthrough (#96)", () => {
       mockCtx,
       "general-purpose",
       "test",
-      expect.objectContaining({ cwd: "/", configCwd: "/tmp" }),
+      expect.objectContaining({
+        cwd: "/",
+        configCwd: "/tmp",
+        worktreeBase: undefined,
+      }),
     )
   })
 
@@ -900,6 +904,7 @@ describe("AgentManager — SpawnOptions.cwd passthrough (#96)", () => {
       expect.objectContaining({
         cwd: "/wt/copy/packages/api",
         configCwd: "/tmp",
+        worktreeBase: "/",
       }),
     )
     expect(cleanupWorktree).toHaveBeenCalledWith("/", expect.anything(), "test")
@@ -928,6 +933,7 @@ describe("AgentManager — SpawnOptions.cwd passthrough (#96)", () => {
 
     const opts = vi.mocked(runAgent).mock.lastCall![3]
     expect(opts.cwd).toBe("/wt/copy")
+    expect(opts.worktreeBase).toBe("/tmp")
     expect(opts.configCwd).toBeUndefined()
   })
 
@@ -1344,7 +1350,9 @@ describe("AgentManager — resolved runs with a failed final turn map to error (
 
   it("an external stop still wins over a late failure resolution", async () => {
     manager = new AgentManager()
-    let resolveRun: ((v: unknown) => void) | undefined
+    let resolveRun:
+      | ((value: Awaited<ReturnType<typeof runAgent>>) => void)
+      | undefined
     const session = mockSession()
     vi.mocked(runAgent).mockImplementation(
       () =>

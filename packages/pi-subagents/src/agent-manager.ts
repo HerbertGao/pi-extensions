@@ -321,6 +321,7 @@ export class AgentManager {
       // stay undefined otherwise so plain worktree runs keep resolving config
       // (incl. relative extension paths and memory) inside the worktree copy.
       cwd: worktreeCwd ?? customCwd,
+      worktreeBase: worktreeCwd ? baseCwd : undefined,
       configCwd:
         options.configCwd ?? (customCwd !== undefined ? ctx.cwd : undefined),
       signal: record.abortController!.signal,

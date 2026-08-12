@@ -340,6 +340,43 @@ describe("buildAgentPrompt", () => {
     expect(prompt).not.toContain("Preloaded Skill")
   })
 
+  describe("worktree isolation block", () => {
+    const config = (promptMode: "append" | "replace"): AgentConfig => ({
+      name: "test-agent",
+      description: "Test",
+      builtinToolNames: [],
+      extensions: true,
+      skills: true,
+      systemPrompt: "Custom instructions.",
+      promptMode,
+      inheritContext: false,
+      runInBackground: false,
+      isolated: false,
+    })
+
+    it("is absent outside worktree isolation", () => {
+      const prompt = buildAgentPrompt(config("append"), "/workspace", env)
+      expect(prompt).not.toContain("<worktree_isolation>")
+    })
+
+    it("keeps both prompt modes in the worktree when inherited text names the checkout", () => {
+      for (const promptMode of ["replace", "append"] as const) {
+        const prompt = buildAgentPrompt(
+          config(promptMode),
+          "/repo-worktree",
+          env,
+          "Parent prompt names /repo as its working directory.",
+          { worktreeBase: "/repo" },
+        )
+        expect(prompt).toContain("isolated git worktree copy of /repo")
+        expect(prompt).toContain("Work only inside it — never in /repo")
+        expect(prompt.indexOf("<worktree_isolation>")).toBeGreaterThan(
+          prompt.indexOf("Working directory: /repo-worktree"),
+        )
+      }
+    })
+  })
+
   describe("active_agent tag", () => {
     it("tag is present at start of prompt in replace mode", () => {
       const config: AgentConfig = {
