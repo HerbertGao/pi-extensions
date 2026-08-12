@@ -1,11 +1,8 @@
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { isCompactAssistantComponent } from "./compact-mode.ts";
-import { ToolGroupComponent } from "./tool-grouping.ts";
-import {
-	isToolExecutionComponent,
-	stripTerminalSequencesPreservingLayout,
-} from "./mouse-packets.ts";
-import { scrollButtonWidget } from "./mouse-scroll.ts";
+import { isCompactAssistantComponent } from "../compact-mode.ts";
+import { ToolGroupComponent } from "../tool/grouping.ts";
+import { isToolExecutionComponent, stripTerminalSequencesPreservingLayout } from "./packets.ts";
+import { getScrollButtonWidget } from "./scroll.ts";
 
 export type ComponentRowHit = {
 	component: any;
@@ -13,19 +10,6 @@ export type ComponentRowHit = {
 	/** 内部工具命中时所属的展开 group；普通卡点击仍折叠整个 group。 */
 	group?: ToolGroupComponent;
 };
-
-/** 深度渲染组件树（容器 render 隐藏时回退 children）。 */
-export function renderComponentTree(component: any, width: number): string[] {
-	if (!component || typeof component !== "object") return [];
-	try {
-		const lines = component.render?.(width);
-		if (Array.isArray(lines) && lines.length > 0) return lines;
-	} catch {
-		// Fall through to children for hidden container renderers.
-	}
-	if (!Array.isArray(component.children)) return [];
-	return component.children.flatMap((child: any) => renderComponentTree(child, width));
-}
 
 /** 行内 [click to show more] 提示的命中列区间（1-based，含两端）。 */
 export function collapsedHintHitbox(line: string): { startCol: number; endCol: number } | null {
@@ -113,7 +97,7 @@ export function componentAtLocalRow(
 		// compact 摘要行整体作为可展开卡片（折叠摘要 / 展开内容）。
 		return { component, row: localRow };
 	}
-	if (component === scrollButtonWidget) {
+	if (component === getScrollButtonWidget()) {
 		return { component, row: localRow };
 	}
 	if (!Array.isArray(component.children)) return null;

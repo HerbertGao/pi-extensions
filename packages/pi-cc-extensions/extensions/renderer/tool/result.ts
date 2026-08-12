@@ -1,9 +1,9 @@
 import { Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { inspect } from "node:util";
-import { config } from "../config/config.ts";
-import { showMoreHintText } from "./show-more-hint.ts";
-import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../utils/tool-loading-icon.ts";
-import { sanitizeToolResultText } from "../utils/tool-result-sanitize.ts";
+import { config } from "../../config/config.ts";
+import { showMoreHintText } from "../show-more-hint.ts";
+import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
+import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
 
 const TOOL_VIEWPORT_WIDTH_RATIO = 0.8;
 
@@ -677,15 +677,6 @@ export function renderExpandedToolResult(
 	return new Text(theme.fg(color, renderCollapsedToolResult("Done")), 0, 0);
 }
 
-export function formatExpandHint(lineCount: number): string {
-	return ` (${lineCount} more line${lineCount === 1 ? "" : "s"} / click)`;
-}
-
-function expandHint(theme: any, lineCount: number, hovered = false): string {
-	// Keep interaction guidance neutral; it should not inherit success/error
-	// coloring from the tool result surrounding it.
-	return theme.fg(hovered ? "text" : "muted", formatExpandHint(lineCount));
-}
 const toolViewMarker = (id: number, section: ToolIoSection) =>
 	`_cc:v${id}:${section === "input" ? "i" : "o"}`;
 

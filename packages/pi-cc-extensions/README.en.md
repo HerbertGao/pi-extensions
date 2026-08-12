@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="pi-cc-extensions: a productivity extension suite for Pi">
+  <img src="./assets/readme/hero.en.svg" width="100%" alt="pi-cc-extensions: a productivity extension suite for Pi">
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Claude Code-style output, context inspection, and Agent / Session references.
+  Claude Code-style TUI output with some personal touches and handy utilities.
 </p>
 
 <p align="center">
@@ -37,11 +37,11 @@ Run `/reload` after installation.
 
 | Feature                      | Description                                                                                                                                       | Entry point |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| Claude Code-style output     | Tool summaries, expand/collapse, rich edit/write diffs, and`on` / `compact` / `off` modes                                                         | `/ccstyle`  |
-| Fullscreen mouse interaction | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
+| Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and`on` / `compact` / `off` modes                                                         | `/ccstyle`  |
+| Fullscreen mode          | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
 | Settings panel               | `Style / Diff / Thinking / Feature` tabs: startup header toggle and wheel step                                                                    | `/ccstyle`  |
 | Context inspection           | Usage breakdown and previews for the system prompt, tools, skills, and messages                                                                   | `/context`  |
-| Session references           | Search and inject effective context from previous Sessions or existing SubAgents                                                                  | `@session:` |
+| Session/Subagent references           | Search and inject effective context from previous Sessions or existing SubAgents                                                                  | `@` |
 | Theme                        | Bundled CC Dark and CC Light themes                                                                                                               | `/theme`    |
 
 ## Configuration
@@ -74,8 +74,6 @@ bun run typecheck
 ./test.bat # or pi -e .
 ```
 
-Run `/reload` after changing extensions.
-
 ## Compatibility
 
 - Node.js `>=22.19.0`, Pi `^0.84.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
@@ -96,4 +94,4 @@ Run `/reload` after changing extensions.
 ## Credits
 
 - Derived from [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) under the MIT license.
-- Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/tool-diff/ATTRIBUTION.md`](./extensions/tool-diff/ATTRIBUTION.md).
+- Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
