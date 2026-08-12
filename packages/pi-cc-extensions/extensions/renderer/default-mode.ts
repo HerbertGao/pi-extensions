@@ -336,8 +336,9 @@ function createCcstyleTool(
 					const mainWidth = Math.max(0, callWidth - visibleWidth(summary.detail));
 					cachedWidth = width;
 					// 纯文本先截断再着色（省略号不带 ANSI）；从头截断，与多 tool 一致
-					cachedLine = ` ${icon} ${theme.fg("toolTitle", headTruncateToWidth(summary.main, mainWidth))}${theme.fg("dim", summary.detail)}`;
-					return [truncateToWidth(cachedLine, viewportWidth, "")];
+					const line = ` ${icon} ${theme.fg("toolTitle", headTruncateToWidth(summary.main, mainWidth))}${theme.fg("dim", summary.detail)}`;
+					cachedLine = truncateToWidth(line, viewportWidth, "");
+					return [cachedLine];
 				},
 				invalidate() {},
 			};

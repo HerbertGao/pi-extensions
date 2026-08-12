@@ -87,7 +87,10 @@ export default function (pi: ExtensionAPI): void {
 	}
 
 	function buildWorkingMessage(): string {
-		const elapsed = Date.now() - (agentStartTime || turnStartTime);
+		if (!turnActive) return "";
+		const startedAt = agentStartTime || turnStartTime;
+		if (!startedAt) return "";
+		const elapsed = Date.now() - startedAt;
 		const tokens = tokenCount();
 		const parts: string[] = [];
 		if (tokens > 0) parts.push(`↓ ${formatCount(tokens)} tokens`);
@@ -185,7 +188,7 @@ export default function (pi: ExtensionAPI): void {
 		} else if (evt.type === "done") {
 			resetResponseTracking(evt.message);
 		} else if (evt.type === "error") {
-			resetResponseTracking(evt.error);
+			resetResponseTracking();
 		} else {
 			updateProviderUsage(evt.partial);
 		}

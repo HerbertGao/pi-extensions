@@ -37,7 +37,7 @@ Run `/reload` after installation.
 
 | Feature                      | Description                                                                                                                                       | Entry point |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and`on` / `compact` / `off` modes                                                         | `/ccstyle`  |
+| Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                         | `/ccstyle`  |
 | Fullscreen mode          | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
 | Settings panel               | `Style / Diff / Thinking / Feature` tabs: startup header toggle and wheel step                                                                    | `/ccstyle`  |
 | Context inspection           | Usage breakdown and previews for the system prompt, tools, skills, and messages                                                                   | `/context`  |

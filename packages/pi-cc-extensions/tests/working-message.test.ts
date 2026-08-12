@@ -45,6 +45,14 @@ test("working message appends token count and elapsed time while streaming", asy
 		false,
 	);
 
+	// A late provider event after turn_end must not render an epoch-sized timer.
+	const messageCount = messages.length;
+	await events.get("message_update")?.(
+		{ assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "late" } },
+		ctx,
+	);
+	assert.equal(messages.length, messageCount);
+
 	// Shutdown remains idempotent (undefined = Pi's default message).
 	await events.get("session_shutdown")?.({}, ctx);
 	assert.equal(messages.at(-1), undefined);
@@ -116,6 +124,21 @@ test("token count accumulates across deltas and resets on the next turn", async 
 		ctx,
 	);
 	assert.match(messages.at(-1) ?? "", /↓ 37 tokens/);
+
+	await events.get("message_update")?.(
+		{
+			assistantMessageEvent: {
+				type: "error",
+				error: { content: [{ type: "text", text: "wrong" }], usage: { output: 999 } },
+			},
+		},
+		ctx,
+	);
+	await events.get("message_update")?.(
+		{ assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "abcd" } },
+		ctx,
+	);
+	assert.match(messages.at(-1) ?? "", /↓ 1 tokens/);
 
 	// A new turn resets both estimated and provider counts.
 	await events.get("turn_end")?.({}, ctx);

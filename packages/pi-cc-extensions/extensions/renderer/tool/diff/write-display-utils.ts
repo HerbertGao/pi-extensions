@@ -3,7 +3,7 @@ export function splitWriteContentLines(content: string): string[] {
 		return [];
 	}
 
-	const normalized = content.replace(/\r/g, "");
+	const normalized = content.replace(/\r\n?/g, "\n");
 	const lines = normalized.split("\n");
 	if (lines.length > 0 && lines[lines.length - 1] === "") {
 		lines.pop();

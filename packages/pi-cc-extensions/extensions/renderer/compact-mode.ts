@@ -830,6 +830,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 				/* 无 UI */
 			}
 		}, 250);
+		roundTickTimer.unref?.();
 	};
 
 	/** 结束回合活动态；可选立即重绘。 */

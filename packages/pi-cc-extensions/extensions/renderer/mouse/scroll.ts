@@ -23,12 +23,10 @@ const SCROLL_BOTTOM_SHORTCUT = "ctrl+end";
  */
 const TOOL_MOUSE_TUI_SLOT = Symbol.for("pi.ccstyle.tool-mouse-tui");
 (globalThis as any)[TOOL_MOUSE_TUI_SLOT] ??= null;
-export let toolMouseTui: any = null;
 export function getToolMouseTui(): any {
 	return (globalThis as any)[TOOL_MOUSE_TUI_SLOT];
 }
 export function setToolMouseTui(tui: any): void {
-	toolMouseTui = tui;
 	(globalThis as any)[TOOL_MOUSE_TUI_SLOT] = tui;
 }
 
@@ -76,7 +74,7 @@ let scrollButtonSyncScheduled = false;
 
 export function toolMouseInteractionActive(): boolean {
 	if (config.mode === "off") return false;
-	if (isLazyProxyTui(toolMouseTui)) return true;
+	if (isLazyProxyTui(getToolMouseTui())) return true;
 	return true;
 }
 
@@ -158,7 +156,7 @@ export function scheduleScrollButtonSync(tui: any, data: string): void {
 	const previousLines = tui.previousLines;
 	const check = (attempt: number) => {
 		scrollButtonSyncScheduled = false;
-		if (toolMouseTui !== tui) return;
+		if (getToolMouseTui() !== tui) return;
 		// Pi renders on its own frame timer. Inspect the resulting viewport before
 		// showing the button so empty or non-scrollable transcripts never flash it.
 		const rendered = tui.previousLines !== previousLines;
@@ -186,7 +184,7 @@ export function updateScrollButtonFromInput(tui: any, data: string): void {
 }
 
 export function renderScrollButton(width: number, theme: any): string[] {
-	if (!getScrollButtonVisible() || !fullscreenLazyTui(toolMouseTui)) return [];
+	if (!getScrollButtonVisible() || !fullscreenLazyTui(getToolMouseTui())) return [];
 	const shortcut = formatShortcut(SCROLL_BOTTOM_SHORTCUT);
 	const label = theme.fg(
 		getScrollButtonHovered() ? "text" : "accent",

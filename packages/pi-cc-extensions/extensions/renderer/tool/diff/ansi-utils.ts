@@ -1,4 +1,5 @@
 const ANSI_SGR_PATTERN = /\x1b\[([0-9;]*)m/g;
+const ANSI_SGR_WITH_COLON_PATTERN = /\x1b\[([0-9;:]*)m/g;
 const STYLE_RESET_PARAMS = [39, 22, 23, 24, 25, 27, 28, 29, 59] as const;
 
 export { ANSI_SGR_PATTERN, STYLE_RESET_PARAMS };
@@ -108,6 +109,43 @@ export function filterSgrSequences(text: string, filter: (params: number[]) => n
 	});
 }
 
+function sanitizeColonSgr(rawParams: string): string {
+	const segments = rawParams.split(";");
+	const sanitized: string[] = [];
+	for (let index = 0; index < segments.length; index++) {
+		const segment = segments[index] ?? "";
+		if (segment.includes(":")) {
+			if (Number.parseInt(segment, 10) !== 48) sanitized.push(segment);
+			continue;
+		}
+		const param = Number.parseInt(segment, 10);
+		if (!Number.isFinite(param)) continue;
+		if (param === 0) {
+			sanitized.push(...STYLE_RESET_PARAMS.map(String));
+			continue;
+		}
+		if (param === 49 || (param >= 40 && param <= 47) || (param >= 100 && param <= 107)) {
+			continue;
+		}
+		if (param === 38 || param === 48) {
+			const mode = Number.parseInt(segments[index + 1] ?? "", 10);
+			const advance = mode === 5 ? 2 : mode === 2 ? 4 : 0;
+			if (advance > 0) {
+				if (param === 38) sanitized.push(...segments.slice(index, index + advance + 1));
+				index += advance;
+				continue;
+			}
+		}
+		sanitized.push(segment);
+	}
+	return sanitized.length > 0 ? `\x1b[${sanitized.join(";")}m` : "";
+}
+
 export function sanitizeAnsiForThemedOutput(text: string): string {
-	return filterSgrSequences(text, stripBackgroundSgrParams);
+	if (!text || !text.includes("\x1b[")) return text;
+	return text.replace(ANSI_SGR_WITH_COLON_PATTERN, (sequence, rawParams: string) =>
+		rawParams.includes(":")
+			? sanitizeColonSgr(rawParams)
+			: filterSgrSequences(sequence, stripBackgroundSgrParams),
+	);
 }

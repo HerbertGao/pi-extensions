@@ -17,6 +17,8 @@ import {
 	WriteExecutionMetadataStore,
 	type ToolDisplayConfig,
 } from "../extensions/renderer/tool/diff/index.ts";
+import { sanitizeAnsiForThemedOutput } from "../extensions/renderer/tool/diff/ansi-utils.ts";
+import { splitWriteContentLines } from "../extensions/renderer/tool/diff/write-display-utils.ts";
 import {
 	executeWriteWithMetadata,
 	MAX_COMPARABLE_WRITE_BYTES,
@@ -38,6 +40,22 @@ const theme = {
 function output(component: any, width = 100): string[] {
 	return component.render(width);
 }
+
+test("diff helpers preserve line boundaries and strip colon-form backgrounds", () => {
+	assert.deepEqual(splitWriteContentLines("first\r\nsecond\rthird\n"), [
+		"first",
+		"second",
+		"third",
+	]);
+	assert.equal(
+		sanitizeAnsiForThemedOutput("\x1b[38:2::1:2:3mfg\x1b[48:2::4:5:6mbg\x1b[0m"),
+		"\x1b[38:2::1:2:3mfgbg\x1b[39;22;23;24;25;27;28;29;59m",
+	);
+	assert.equal(
+		sanitizeAnsiForThemedOutput("\x1b[4:3mcurly\x1b[58:2::1:2:3munderline"),
+		"\x1b[4:3mcurly\x1b[58:2::1:2:3munderline",
+	);
+});
 
 test("rich diff routes only successful edit/write results in on mode", () => {
 	for (const mode of ["on", "off"] as const) {
@@ -320,6 +338,34 @@ test("write execution captures the 512000-byte boundary and degrades above it", 
 		assert.equal(store.get("large")?.fileExistedBeforeWrite, true);
 		assert.match(store.get("large")?.diffUnavailableReason ?? "", /exceeds/);
 		assert.equal(await readFile(path, "utf8"), "large replacement");
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
+test("a completed write retains metadata when abort arrives after disk mutation", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "ccstyle-write-abort-"));
+	const path = join(directory, "target.txt");
+	const store = new WriteExecutionMetadataStore();
+	let abortReads = 0;
+	const signal = {
+		get aborted() {
+			abortReads++;
+			return abortReads >= 4;
+		},
+	} as AbortSignal;
+	try {
+		await writeFile(path, "before");
+		const result = await executeWriteWithMetadata(
+			store,
+			"completed",
+			{ path, content: "你好" },
+			signal,
+			directory,
+		);
+		assert.equal(await readFile(path, "utf8"), "你好");
+		assert.equal(store.get("completed")?.previousContent, "before");
+		assert.match(result.content[0]?.text ?? "", /6 bytes/);
 	} finally {
 		await rm(directory, { recursive: true, force: true });
 	}

@@ -215,7 +215,7 @@ export default function (
 		}, 0);
 	});
 
-	pi.on("session_start", async (event, ctx) => {
+	pi.on("session_start", async (_event, ctx) => {
 		// 延迟到 session_start 注册 write override：加载阶段 getAllTools 不可用且其他扩展
 		// 尚未注册工具，无法检测外部 write 所有者（如 pi-spark），直接注册会与对方撞名。
 		// session_start 时所有扩展已加载完毕，installWriteOverride 内部会检测并让位。
@@ -236,7 +236,7 @@ export default function (
 		scheduleSessionRender(() => hooks.toolGrouping.refresh(getToolMouseTui()));
 	});
 
-	pi.on("session_compact", async (event, ctx) => {
+	pi.on("session_compact", async (_event, ctx) => {
 		const hooks = ensureTuiInstallation(ctx);
 		// Compaction rebuilds the transcript without session_start. Rebind after
 		// other TUI extensions may have replaced the root input dispatcher.
@@ -251,7 +251,7 @@ export default function (
 		});
 	});
 
-	pi.on("session_tree", async (event, ctx) => {
+	pi.on("session_tree", async (_event, ctx) => {
 		// 会话树重建后在当前帧和下一帧各同步一次，替换旧组件引用。
 		if (ctx?.mode !== "tui" || !ctx?.hasUI) return;
 		syncCompactMode(ctx);
@@ -268,7 +268,13 @@ export default function (
 		// 但 onTerminalInput 监听与 handleViewportInput 包装仍需释放。
 		teardownToolMouseInteraction(mouseOwner);
 		const current = installation;
-		if (!current || !current.defaultMode.isOwner()) return;
+		if (!current) return;
+		if (!current.defaultMode.isOwner()) {
+			// Replacement installers already disposed these owner-aware patches.
+			// Drop only this stale runtime's closure; global teardown belongs to the owner.
+			installation = undefined;
+			return;
+		}
 		current.defaultMode.shutdown();
 		current.toolGrouping.shutdown();
 		current.disposeToolExpandedBackground();

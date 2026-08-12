@@ -28,18 +28,19 @@ test("AgentRunSummary：bash 计数；read/edit/write 按路径去重；other �
 	summary.recordToolStart("read", { path: "a.ts" }); // 去重
 	summary.recordToolStart("read", { path: "b.ts" });
 	summary.recordToolStart("edit", { file_path: "c.ts" }); // file_path 别名
+	summary.recordToolStart("edit", { path: "", file_path: "fallback.ts" });
 	summary.recordToolStart("write", { path: "d.ts" });
 	summary.recordToolStart("write", { path: "d.ts" }); // 去重
 	summary.recordToolStart("grep", { pattern: "x" });
 	summary.recordToolResult(true);
 	summary.recordToolResult(false);
 
-	assert.equal(summary.toolCount, 9);
+	assert.equal(summary.toolCount, 10);
 	const data = summary.snapshot(61_000);
 	assert.deepEqual(data, {
 		commands: 2,
 		reads: 2,
-		edits: 1,
+		edits: 2,
 		writes: 1,
 		others: 1,
 		failed: 1,
