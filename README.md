@@ -39,6 +39,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.50.0`       | Parallel side questions outside main history. |
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.9`        | Priority service tier for selected models.    |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.23.0`       | MCP tools and skills.                         |
+| [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `3.8.74`       | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.22.0`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
@@ -49,6 +50,10 @@ These packages retain their original names and upstream maintainers. The aggrega
 This aggregate enables Remote Pi's extension and agent-network skill and carries its supervisor CLI/service templates, but it does not bundle the relay, mobile app, or Cockpit and does not install or activate the supervisor service automatically. Set `REMOTE_PI_RELAY` to a self-hosted relay restricted by Tailscale or another private network before first use. The relay can read routed content even over TLS/Tailscale; Remote Pi 0.7.0 is not end-to-end encrypted.
 
 Accepted 0.7.0 limitations are documented in the aggregate package README: short-lived pairing material is persisted in Pi session data and can enter model context, same-user local IPC is unauthenticated, and cancelled first-time setup may hold its cwd lock until Pi exits.
+
+## Recommended footer
+
+The aggregate enables `pi-footer` and ships [`packages/pi-extensions/examples/pi-footer.json`](packages/pi-extensions/examples/pi-footer.json), a compact recommended layout for the bundled extensions. It keeps Pi's path, Git, token/context, model, and thinking information, uses a gray `•` separator, and gives MCP, Auto mode, LSP, Ponytail, Remote Pi, and Subagents dedicated rows. Copy it to `~/.pi/agent/extensions/pi-footer.json`; the package never overwrites existing user configuration.
 
 ## Native fullscreen
 

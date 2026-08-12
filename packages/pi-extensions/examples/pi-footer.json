@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "enabled": true,
+  "preset": "pi-footer",
+  "lines": [
+    [
+      {
+        "id": "core-cwd",
+        "type": "cwd",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "cwdDisplayStyle": "full-home"
+        }
+      },
+      {
+        "id": "core-branch",
+        "type": "git-branch",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "hideWhenEmpty": true,
+          "gitBranchDisplayStyle": "round-brackets"
+        }
+      },
+      {
+        "id": "core-session",
+        "type": "session-name",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "hideWhenEmpty": true
+        }
+      }
+    ],
+    [
+      {
+        "id": "core-tokens",
+        "type": "tokens",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "tokenFormatStyle": "compact"
+        }
+      },
+      {
+        "id": "core-cache-read",
+        "type": "cache-read",
+        "enabled": true,
+        "options": {
+          "icon": "R",
+          "fg": "pi:dim",
+          "tokenFormatStyle": "compact",
+          "hideWhenZero": true
+        }
+      },
+      {
+        "id": "core-cache-write",
+        "type": "cache-write",
+        "enabled": true,
+        "options": {
+          "icon": "W",
+          "fg": "pi:dim",
+          "tokenFormatStyle": "compact",
+          "hideWhenZero": true
+        }
+      },
+      {
+        "id": "core-cache-hit",
+        "type": "cache-hit-rate",
+        "enabled": true,
+        "options": {
+          "icon": "CH",
+          "fg": "pi:dim",
+          "hideWhenZero": true,
+          "cacheHitSource": "turn"
+        }
+      },
+      {
+        "id": "core-cost",
+        "type": "cost",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "costFormatStyle": "compact",
+          "showSubscription": true
+        }
+      },
+      {
+        "id": "core-context",
+        "type": "context",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "contextConditionalColors": true,
+          "warningFg": "pi:warning",
+          "dangerFg": "pi:error"
+        }
+      },
+      {
+        "id": "core-context-slash",
+        "type": "separator",
+        "enabled": true,
+        "options": {
+          "separator": "custom",
+          "text": "/",
+          "fg": "pi:dim"
+        }
+      },
+      {
+        "id": "core-context-window",
+        "type": "context-window",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "contextConditionalColors": true,
+          "warningFg": "pi:warning",
+          "dangerFg": "pi:error",
+          "tokenFormatStyle": "compact"
+        }
+      },
+      {
+        "id": "core-flex",
+        "type": "flex-separator",
+        "enabled": true,
+        "options": {}
+      },
+      {
+        "id": "core-model",
+        "type": "model",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim"
+        }
+      },
+      {
+        "id": "core-thinking",
+        "type": "thinking-level",
+        "enabled": true,
+        "options": {
+          "raw": true,
+          "fg": "pi:dim",
+          "hideWhenEmpty": true
+        }
+      }
+    ],
+    [
+      {
+        "id": "status-mcp",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "mcp",
+          "icon": "🔌 ",
+          "hideWhenEmpty": true
+        }
+      },
+      {
+        "id": "status-auto",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "pi-automode",
+          "icon": "🤖 Auto ",
+          "trimValue": 2,
+          "preserveTrimStyles": true,
+          "hideWhenEmpty": true
+        }
+      }
+    ],
+    [
+      {
+        "id": "status-lsp",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "pi-lens-lsp",
+          "icon": "🧩 LSP ",
+          "trimValue": 4,
+          "preserveTrimStyles": true,
+          "hideWhenEmpty": true
+        }
+      },
+      {
+        "id": "status-ponytail",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "ponytail",
+          "trimValue": 2,
+          "preserveTrimStyles": false,
+          "hideWhenEmpty": true
+        }
+      }
+    ],
+    [
+      {
+        "id": "status-remote-session",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "remote-pi:session",
+          "hideWhenEmpty": true
+        }
+      },
+      {
+        "id": "status-remote-relay",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "remote-pi:relay",
+          "hideWhenEmpty": true
+        }
+      },
+      {
+        "id": "status-remote-peer",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "remote-pi:peer-active",
+          "hideWhenEmpty": true
+        }
+      },
+      {
+        "id": "status-subagents",
+        "type": "external-status",
+        "enabled": true,
+        "options": {
+          "externalStatusKey": "subagents",
+          "icon": "👥 ",
+          "hideWhenEmpty": true
+        }
+      }
+    ]
+  ],
+  "separator": "dot",
+  "separatorFg": "brightBlack",
+  "separatorBg": "default",
+  "iconMode": "text",
+  "minimalist": false,
+  "terminal": {
+    "widthMode": "full",
+    "colorLevel": "ansi256"
+  },
+  "extensionStatusRow": {
+    "hiddenKeys": [
+      "mcp",
+      "pi-automode",
+      "pi-lens-lsp",
+      "ponytail",
+      "remote-pi:peer-active",
+      "remote-pi:relay",
+      "remote-pi:session",
+      "subagents"
+    ],
+    "knownKeys": [
+      "mcp",
+      "pi-automode",
+      "pi-lens-lsp",
+      "ponytail",
+      "remote-pi:peer-active",
+      "remote-pi:relay",
+      "remote-pi:session",
+      "subagents"
+    ]
+  }
+}

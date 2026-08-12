@@ -39,6 +39,10 @@
       "repository": "https://github.com/nicobailon/pi-mcp-adapter"
     },
     {
+      "package": "pi-footer",
+      "repository": "https://github.com/wobondar/pi-footer"
+    },
+    {
       "package": "pi-lens",
       "repository": "https://github.com/apmantza/pi-lens"
     },
