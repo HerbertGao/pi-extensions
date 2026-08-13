@@ -673,8 +673,10 @@ try {
     throw new Error("Packed aggregate is missing the remote-pi extension entry")
   }
   const remotePiSkills = resolve(remotePiRoot, "skills")
-  if (!skillPaths.includes(remotePiSkills)) {
-    throw new Error("Packed aggregate is missing the remote-pi skills")
+  if (skillPaths.includes(remotePiSkills)) {
+    throw new Error(
+      "Packed aggregate must not statically register remote-pi skills; the extension deploys them globally",
+    )
   }
   const remotePiLicense = await readFile(join(remotePiRoot, "LICENSE"), "utf8")
   if (
