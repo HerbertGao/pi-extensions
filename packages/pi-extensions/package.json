@@ -161,8 +161,7 @@
     "skills": [
       "./node_modules/@dietrichgebert/ponytail/skills",
       "./node_modules/pi-mcp-adapter/skills",
-      "./node_modules/pi-lens/skills",
-      "./node_modules/remote-pi/skills"
+      "./node_modules/pi-lens/skills"
     ]
   }
 }
