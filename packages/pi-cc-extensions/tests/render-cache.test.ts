@@ -92,7 +92,7 @@ test("ExpandedToolIoView labels Input and Output sections", () => {
 	assert.ok(!updated.some((line) => line.includes("line one")));
 });
 
-test("ExpandedToolIoView wraps Input/Output at 80% of the viewport", () => {
+test("ExpandedToolIoView wraps Input/Output at the viewport width", () => {
 	const theme = {
 		fg(_color: string, text: string) {
 			return text;
@@ -101,10 +101,10 @@ test("ExpandedToolIoView wraps Input/Output at 80% of the viewport", () => {
 			return text;
 		},
 	};
-	const body = "x".repeat(79);
+	const body = "x".repeat(99);
 	const view = new ExpandedToolIoView(theme, `command: ${body}`, body, false, 1, 1);
 	const lines = view.render(100);
-	assert.ok(lines.every((line) => visibleWidth(line) <= 80));
+	assert.ok(lines.every((line) => visibleWidth(line) <= 100));
 	assert.ok(lines.find((line) => line.includes("Input"))?.includes(SHOW_MORE_LABEL));
 	assert.ok(lines.find((line) => line.includes("Output"))?.includes(SHOW_MORE_LABEL));
 });

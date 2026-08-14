@@ -6,8 +6,9 @@ import {
 	initTheme,
 } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import { Container, Spacer } from "@earendil-works/pi-tui";
+import { Container, Spacer, visibleWidth } from "@earendil-works/pi-tui";
 import { installToolGrouping, ToolGroupComponent } from "../extensions/renderer/tool/grouping.ts";
+import { toolViewportWidth } from "../extensions/renderer/tool/result.ts";
 
 initTheme("dark");
 const ui = { theme: { fg: (_color: string, text: string) => text }, requestRender() {} } as any;
@@ -75,6 +76,35 @@ test("mixed tools group across three empty separators while edit/write and conte
 		parent.addChild(assistant);
 		parent.addChild(tool("bash", "after-content"));
 		assert.equal(parent.children.at(-1).toolCallId, "after-content");
+	} finally {
+		hooks.shutdown();
+	}
+});
+
+test("tool summaries use the available window width", () => {
+	assert.equal(toolViewportWidth(137.9), 137);
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		const path =
+			"/Users/herbertgao/DongguProjects/shijingshan/ai-risk-platform-contracts/backend/app/modules/risk/services/contract_service.py";
+		parent.addChild(tool("read", "long-read", { path, offset: 1, limit: 240 }));
+		parent.addChild(tool("bash", "neighbor", { command: "pwd" }));
+		const group = parent.children[0] as ToolGroupComponent;
+		const wideRead = group
+			.render(180)
+			.map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+			.find((line) => line.includes("Read "));
+		assert.ok(wideRead?.includes(path), "wide windows keep paths beyond the old 96-char limit");
+		assert.match(wideRead, /\(offset=1, limit=240\)$/);
+
+		const narrowRead =
+			group
+				.render(80)
+				.find((line) => line.includes("Read "))
+				?.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "") ?? "";
+		assert.ok(visibleWidth(narrowRead) <= 80, "narrow windows still clip to their actual width");
+		assert.match(narrowRead, /…$/);
 	} finally {
 		hooks.shutdown();
 	}

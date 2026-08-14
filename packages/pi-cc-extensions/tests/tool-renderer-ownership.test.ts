@@ -107,10 +107,11 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 		const collapsedOutput = collapsedLines.filter((line: string) => line.includes("↳"));
 		assert.ok(collapsedCall);
 		assert.ok(collapsedOutput.length === 1);
-		assert.ok(visibleWidth(collapsedCall) <= 80, "collapsed input uses 80% of the viewport");
+		assert.ok(visibleWidth(collapsedCall) > 80, "collapsed input uses space beyond the old clamp");
+		assert.ok(visibleWidth(collapsedCall) <= 100, "collapsed input stays within the viewport");
 		assert.ok(
-			collapsedOutput.every((line: string) => visibleWidth(line) <= 80),
-			"collapsed output uses 80% of the viewport",
+			collapsedOutput.every((line: string) => visibleWidth(line) <= 100),
+			"collapsed output stays within the viewport",
 		);
 
 		const read = new ToolExecutionComponent(
@@ -124,7 +125,7 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 		) as any;
 		const firstRead = read.render(40);
 		const cachedRead = read.render(40);
-		assert.ok(firstRead.every((line: string) => visibleWidth(line) <= 32));
+		assert.ok(firstRead.every((line: string) => visibleWidth(line) <= 40));
 		assert.deepEqual(cachedRead, firstRead, "cache hits preserve the viewport clamp");
 
 		component.setExpanded(true);

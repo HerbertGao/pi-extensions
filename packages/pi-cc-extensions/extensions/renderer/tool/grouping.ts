@@ -147,11 +147,10 @@ export function paddedBackgroundRow(
 	return `${bgAnsi}${stable}\x1b[49m`;
 }
 
-function oneLine(value: unknown, max = 96): string {
-	const text = sanitizeToolResultText(String(value ?? ""), 4096)
+function oneLine(value: unknown): string {
+	return sanitizeToolResultText(String(value ?? ""), 4096)
 		.replace(/\s+/g, " ")
 		.trim();
-	return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 function humanizeToolName(name: string): string {
@@ -434,7 +433,7 @@ function ungroup(patch: Patch): void {
 	}
 }
 
-function normalizeGroup(patch: Patch, group: ToolGroupComponent): void {
+function normalizeGroup(group: ToolGroupComponent): void {
 	if (group.children.length > 1) return;
 	const parent = (group as any)[PARENT_KEY];
 	const index = parent?.children?.indexOf(group) ?? -1;
@@ -565,12 +564,12 @@ export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHook
 			const group = component?.[PARENT_KEY];
 			if (group instanceof ToolGroupComponent && (group as any)[PARENT_KEY] === this) {
 				group.removeTool(component);
-				normalizeGroup(patch, group);
+				normalizeGroup(group);
 				return;
 			}
 			const result = patch.original.removeChild.call(this, component);
 			if (component?.[PARENT_KEY] === this) delete component[PARENT_KEY];
-			if (this instanceof ToolGroupComponent) normalizeGroup(patch, this);
+			if (this instanceof ToolGroupComponent) normalizeGroup(this);
 			if (component instanceof ToolGroupComponent) {
 				for (const tool of component.releaseTools()) delete tool[PARENT_KEY];
 			}
