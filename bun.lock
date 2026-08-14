@@ -47,7 +47,7 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.8.3",
+      "version": "2026.8.4",
       "dependencies": {
         "@ast-grep/cli": "^0.45.0",
         "@ast-grep/napi": "^0.45.0",
@@ -76,8 +76,8 @@
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@mozilla/readability": "^0.6.0",
         "@napi-rs/keyring": "^1.3.0",
-        "@narumitw/pi-btw": "0.50.0",
-        "@narumitw/pi-tui-kit": "^0.49.1",
+        "@narumitw/pi-btw": "0.51.0",
+        "@narumitw/pi-tui-kit": "^0.54.0",
         "@noble/ed25519": "^3.1.0",
         "@pi-plugins/fast-mode": "0.1.9",
         "@shikijs/cli": "^4.0.2",
@@ -465,9 +465,9 @@
 
     "@napi-rs/keyring-win32-x64-msvc": ["@napi-rs/keyring-win32-x64-msvc@1.3.0", "", { "os": "win32", "cpu": "x64" }, "sha512-4DnCWXwDc0HRKwyRlG5y0VhKZW2tNRQfKKfyj6IX/KWfDNyq9hn4n+GL1auyDcOO/v8PwnhmYo2+rOOqCkvvOg=="],
 
-    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.50.0", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.49.1" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-KIjT9eEiElhZ+qjj0IiVFRWzzCwSk8sEdYtrGAWXgSEFb5NaNcCt1YFkJzG2z5fFv2IUJKhpU7hn5y4GAOJWgQ=="],
+    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.51.0", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.54.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-Io0AJ7qsYZtnjQBCPHHFLBWYhuZIFiH+bWPAxuqwP74V1+FZuatsLOxsEB9ed6dOTPe2JRARx2dukBA966UaZg=="],
 
-    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.49.3", "", { "dependencies": { "highlight.js": "11.11.1" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-ha4MybnoJgAiNpW83Ap7EftfOuO8oNf3mIY3baPO0RFrBPyAUuxSlz7hcs9qh+9daDUMxg3sRPsvzYqFsEQKHg=="],
+    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.54.0", "", { "dependencies": { "highlight.js": "11.11.1" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-TGpRAjOinHUaVMiU8SxKT3iytmg9KjggJ3YmTIGLiAOy7E4OsKFb9pOfJxmyTm9Nkutg90EcogTCUT9Zj0zDmA=="],
 
     "@noble/ed25519": ["@noble/ed25519@3.1.0", "", {}, "sha512-pfcObRY3CtvwfaG9Mt5XqZdKmAQppl37tHUeuBhDUbiwJBCVY4/A4lbMvb1xKhMDx96AqAqZpMWuBX1HulhX4g=="],
 
