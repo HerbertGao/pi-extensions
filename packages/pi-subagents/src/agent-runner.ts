@@ -365,7 +365,7 @@ export function setGraceTurns(n: number): void {
  * Try to find the right model for an agent type.
  * Priority: explicit option > config.model > parent model.
  */
-function resolveDefaultModel(
+export function resolveDefaultModel(
   parentModel: Model<any> | undefined,
   registry: {
     find(provider: string, modelId: string): Model<any> | undefined
@@ -946,7 +946,9 @@ export async function runAgent(
     ? SessionManager.create(
         effectiveCwd,
         configuredSessionDir ?? defaultSessionDir,
-        { parentSession: ctx.sessionManager.getSessionFile() },
+        {
+          parentSession: ctx.sessionManager.getSessionFile(),
+        },
       )
     : SessionManager.inMemory(effectiveCwd)
 
@@ -1126,6 +1128,8 @@ export async function resumeAgent(
   prompt: string,
   options: {
     onToolActivity?: (activity: ToolActivity) => void
+    /** Called at the end of each resumed agentic turn with the 1-based count. */
+    onTurnEnd?: (turnCount: number) => void
     onAssistantUsage?: (usage: {
       input: number
       output: number
@@ -1144,10 +1148,18 @@ export async function resumeAgent(
   const startLen = session.messages.length
   const collector = collectResponseText(session)
   const cleanupAbort = forwardAbortSignal(session, options.signal)
+  let turnCount = 0
 
   const unsubEvents =
-    options.onToolActivity || options.onAssistantUsage || options.onCompaction
+    options.onToolActivity ||
+    options.onTurnEnd ||
+    options.onAssistantUsage ||
+    options.onCompaction
       ? session.subscribe((event: AgentSessionEvent) => {
+          if (event.type === "turn_end") {
+            turnCount++
+            options.onTurnEnd?.(turnCount)
+          }
           if (event.type === "tool_execution_start")
             options.onToolActivity?.({
               type: "start",

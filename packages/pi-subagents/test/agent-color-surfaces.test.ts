@@ -8,7 +8,7 @@ import { FleetList, type FleetUICtx } from "../src/ui/fleet-list.js"
 
 const TYPE = "colored-reviewer"
 const DISPLAY_NAME = "Code Reviewer"
-const PURPLE_BACKGROUND = "\u001b[48;2;155;89;182m"
+const PURPLE_BACKGROUND = "\u001b[48;2;130;125;189m"
 
 const config: AgentConfig = {
   name: TYPE,
@@ -128,7 +128,15 @@ describe("custom agent color runtime surfaces", () => {
 
       expect(output).toContain(DISPLAY_NAME)
       expect(output).toContain(PURPLE_BACKGROUND)
-      expect(output).toContain("<toolSuccessBg>")
+      // The row tint is opened by the line itself and restored after the badge, so the
+      // line reads the same whether or not the caller paints one (HTML export does not).
+      expect(output.indexOf("<toolSuccessBg>")).toBeLessThan(
+        output.indexOf(PURPLE_BACKGROUND),
+      )
+      expect(output.split("<toolSuccessBg>")).toHaveLength(3) // opened once, restored after the badge
+      // Left open on purpose: Box pads to width and then wraps, so a reset here would
+      // leave the padding untinted. Nothing after the badge may close the background.
+      expect(output).not.toContain("\u001b[49m")
       expect(render({ isPartial: true, isError: false })).toContain(
         "<toolPendingBg>",
       )
@@ -144,7 +152,15 @@ describe("custom agent color runtime surfaces", () => {
         .render(120)
         .join("\n")
       expect(missingType).toContain("<toolTitle>*Agent*</toolTitle>")
-      expect(missingType).not.toContain("\u001b[48;2;155;89;182m")
+      expect(missingType).not.toContain(PURPLE_BACKGROUND)
+
+      // An agent without a color must render the pre-badge line byte for byte:
+      // no badge, and no row background of our own for HTML export to pick up.
+      registerAgents(new Map([[TYPE, { ...config, color: undefined }]]))
+      const uncolored = render({ isPartial: false, isError: false })
+      expect(uncolored.trimEnd()).toBe(
+        `▸ <toolTitle>*${DISPLAY_NAME}*</toolTitle>  <muted>Review this change</muted>`,
+      )
     } finally {
       await handlers.get("session_shutdown")?.({}, { hasUI: false, ui: {} })
     }

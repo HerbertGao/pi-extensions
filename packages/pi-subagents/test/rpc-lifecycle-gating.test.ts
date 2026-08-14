@@ -58,10 +58,17 @@ function makePi() {
   return { pi, tools, lifecycle, busHandlers }
 }
 
-function ctx() {
+function ctx(hasUI = false) {
   return {
-    hasUI: false,
-    ui: { setStatus: vi.fn(), setWidget: vi.fn(), notify: vi.fn() },
+    hasUI,
+    ui: {
+      setStatus: vi.fn(),
+      setWidget: vi.fn(),
+      notify: vi.fn(),
+      onTerminalInput: vi.fn(() => vi.fn()),
+      getEditorText: vi.fn(() => ""),
+      custom: vi.fn(),
+    },
     cwd: process.cwd(),
     model: undefined,
     modelRegistry: { find: vi.fn(), getAvailable: vi.fn(() => []) },
@@ -168,6 +175,40 @@ describe("issue #142: RPC handlers + subagents:ready are gated on session_start"
       `spawn succeeded, got: ${JSON.stringify(reply![1])}`,
     ).toBe(true)
     expect(reply![1].data.id).toBeTruthy()
+  })
+
+  it("renders an RPC-spawned agent in the native widget while it is running", async () => {
+    const { pi, lifecycle, busHandlers } = makePi()
+    const activeCtx = ctx(true)
+    subagentsExtension(pi)
+
+    await lifecycle.get("session_start")({}, activeCtx)
+
+    vi.mocked(runAgent).mockImplementation(() => new Promise(() => {}) as any) // keep agent running
+    try {
+      await busHandlers.get("subagents:rpc:spawn")!({
+        requestId: "req-widget",
+        type: "general-purpose",
+        prompt: "go",
+        options: { description: "visible RPC agent" },
+      })
+
+      await vi.waitFor(() => {
+        expect(activeCtx.ui.setWidget).toHaveBeenCalledWith(
+          "agents",
+          expect.any(Function),
+          {
+            placement: "aboveEditor",
+          },
+        )
+        expect(activeCtx.ui.setStatus).toHaveBeenCalledWith(
+          "subagents",
+          "1 running agent",
+        )
+      })
+    } finally {
+      await lifecycle.get("session_shutdown")()
+    }
   })
 
   it("is idempotent — a second session_start does not re-advertise or double-register", async () => {

@@ -123,7 +123,10 @@ describe("cross-extension RPC", () => {
         ctx,
         "Explore",
         "find it",
-        { description: "search", isBackground: true },
+        {
+          description: "search",
+          isBackground: true,
+        },
       )
     })
 
@@ -351,7 +354,9 @@ describe("cross-extension RPC", () => {
         ctx,
         "general-purpose",
         "x",
-        { model: fakeModel },
+        {
+          model: fakeModel,
+        },
       )
     })
 
@@ -372,7 +377,9 @@ describe("cross-extension RPC", () => {
         ctx,
         "general-purpose",
         "x",
-        { model: fakeModel },
+        {
+          model: fakeModel,
+        },
       )
     })
 
