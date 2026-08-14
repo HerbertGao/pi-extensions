@@ -11,7 +11,7 @@
 | Local package set      | Upstream                   | Imported baseline                                     | Notes                                                                                                                                                |
 | ---------------------- | -------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`                                             | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                                |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `c83dd82` plus the sibling working-tree customization | The imported customization adds Claude Code/Agency Agents-compatible name colors across the tool header, widget, FleetView, and conversation viewer. |
+| `pi-subagents`         | `tintinweb/pi-subagents`   | `4cc4738` plus the sibling working-tree customization | The imported customization adds Claude Code/Agency Agents-compatible name colors across the tool header, widget, FleetView, and conversation viewer. |
 | `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `6d83911` (`0.8.56`)                                  | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, and renderer-lifecycle fixes.                      |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
@@ -28,10 +28,10 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.4`          | `460d580`       |
 | `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.4.2`          | `460d580`       |
 | `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.1.0`          | `460d580`       |
-| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.15.0`         | `c83dd82`       |
+| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.15.1`         | `4cc4738`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
-`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. The workflow opens or reopens one rolling GitHub Issue only for npm release changes; unreleased commits remain visible in the workflow summary without opening the issue. Query errors fail the workflow without changing the issue state.
+`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
 
 ## Upstream contribution follow-ups
 
@@ -47,10 +47,10 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.4.0`  | `juicesharp/rpiv-mono`      |
+| `@juicesharp/rpiv-ask-user-question` | `2.5.0`  | `juicesharp/rpiv-mono`      |
 | `@narumitw/pi-btw`                   | `0.50.0` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
-| `pi-mcp-adapter`                     | `2.23.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.25.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.22.0` | `nicobailon/pi-web-access`  |
@@ -90,7 +90,7 @@ git diff master...HEAD
 For subagents, compare the recorded baseline before porting:
 
 ```bash
-git diff 2966cd5..tintinweb-upstream/master -- src test README.md package.json
+git diff 4cc4738..tintinweb-upstream/master -- src test README.md package.json
 ```
 
 Paths from that standalone repository map under `packages/pi-subagents/` here. Review package manifests and docs separately because this monorepo intentionally uses different npm scope, repository metadata, lockfile, and release tooling.
