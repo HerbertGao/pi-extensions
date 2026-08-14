@@ -31,7 +31,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.15.0`         | `c83dd82`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
-`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. The workflow opens or reopens one rolling GitHub Issue only for npm release changes; unreleased commits remain visible in the workflow summary without opening the issue. Query errors fail the workflow without changing the issue state.
+`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
 
 ## Upstream contribution follow-ups
 
