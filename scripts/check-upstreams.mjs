@@ -254,6 +254,15 @@ export function issueSyncAction(releaseUpdates, errors) {
   return "close"
 }
 
+export function findOpenTrackingIssue(issues) {
+  return issues.find(
+    (candidate) =>
+      !candidate.pull_request &&
+      candidate.title === issueTitle &&
+      candidate.state === "open",
+  )
+}
+
 async function syncIssue(report, action) {
   const repository = process.env.GITHUB_REPOSITORY
   if (!process.env.GITHUB_TOKEN || !repository) {
@@ -263,9 +272,7 @@ async function syncIssue(report, action) {
   const issues = await githubRequest(
     `/repos/${repository}/issues?state=all&per_page=100`,
   )
-  const issue = issues.find(
-    (candidate) => !candidate.pull_request && candidate.title === issueTitle,
-  )
+  const issue = findOpenTrackingIssue(issues)
 
   if (action === "open") {
     const body = JSON.stringify({
