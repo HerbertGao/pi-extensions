@@ -1,5 +1,13 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.54
+
+### Patch Changes
+
+- [#47](https://github.com/HerbertGao/pi-extensions/pull/47) [`3be5ed4`](https://github.com/HerbertGao/pi-extensions/commit/3be5ed48294b3b5a3306c9562c5ec93f52c13705) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync selected pi-cc-extensions 0.8.56 features: optional feature registration, streaming-safe Mermaid rendering, and lightweight admonition blocks.
+
+- [#36](https://github.com/HerbertGao/pi-extensions/pull/36) [`c56fb9e`](https://github.com/HerbertGao/pi-extensions/commit/c56fb9e6a4d426f136a5bf3e909c1e2e7a190ffc) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use the available terminal width for tool commands and paths instead of pre-truncating summaries to fixed 80% and 96-character limits.
+
 ## 0.8.53
 
 ### Patch Changes
