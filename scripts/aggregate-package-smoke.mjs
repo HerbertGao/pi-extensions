@@ -216,6 +216,47 @@ try {
     }
   }
 
+  const askRoot = join(
+    packageRoot,
+    "node_modules",
+    "@juicesharp",
+    "rpiv-ask-user-question",
+  )
+  const askManifestPath = join(askRoot, "package.json")
+  const askManifest = parseJson(
+    await readFile(askManifestPath, "utf8"),
+    askManifestPath,
+  )
+  const expectedAskVersion =
+    sourceManifest.dependencies["@juicesharp/rpiv-ask-user-question"]
+  if (askManifest.version !== expectedAskVersion) {
+    throw new Error(
+      `Expected bundled ask-user-question ${expectedAskVersion}, got ${askManifest.version}`,
+    )
+  }
+  if (askManifest.license !== "MIT") {
+    throw new Error(
+      `Expected ask-user-question MIT license, got ${askManifest.license}`,
+    )
+  }
+  const askEntryRelative = "./index.ts"
+  if (!askManifest.pi?.extensions?.includes(askEntryRelative)) {
+    throw new Error(
+      "Bundled ask-user-question no longer declares its expected Pi entry",
+    )
+  }
+  const expectedConfigRange =
+    askManifest.dependencies?.["@juicesharp/rpiv-config"]
+  if (
+    !expectedConfigRange ||
+    sourceManifest.dependencies["@juicesharp/rpiv-config"] !==
+      expectedConfigRange
+  ) {
+    throw new Error(
+      `Expected promoted rpiv-config ${expectedConfigRange}, got ${sourceManifest.dependencies["@juicesharp/rpiv-config"]}`,
+    )
+  }
+
   const mcpRoot = join(packageRoot, "node_modules", "pi-mcp-adapter")
   const mcpManifestPath = join(mcpRoot, "package.json")
   const mcpManifest = parseJson(
