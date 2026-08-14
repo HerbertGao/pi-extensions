@@ -39,7 +39,7 @@ pi install npm:@herbertgao/pi-cc-extensions
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- | ------------- |
 | Claude Code UI | 工具摘要、折叠展开、rich edit/write diff，以及 `on` / `compact` / `off` 三种模式                          | `/ccstyle`  |
 | Fullscreen mode  | 工具卡/group 点击展开与收起、预览、hover 高亮、回到底部按钮 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
-| 配置面板             | `Style / Diff / Thinking / Feature` 四页签，含启动头开关与滚轮步进                                       | `/ccstyle`  |
+| 配置面板             | `Style / Diff / Thinking / Feature` 四页签，含启动头、滚轮步进及可选功能开关                              | `/ccstyle`  |
 | 上下文检查           | 查看上下文占用，并预览 System prompt、Tools、Skills 和消息内容                                           | `/context`  |
 | Session/Subagent 引用         | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                                                      | `@` |
 | 主题                 | 随包提供内置 CC Dark、CC Light 主题                                                                      | `/theme`    |
@@ -62,9 +62,17 @@ pi install npm:@herbertgao/pi-cc-extensions
   "previewLines": 3,                       // thinking 预览行数，0 隐藏预览正文
   "animationIntervalMs": 90,               // thinking 标题动画间隔（毫秒）
   "showStartupHeader": true,               // 自定义启动头（logo + tips）开关
-  "scrollStepLines": 3                     // fullscreen 滚轮滚动步进行数
+  "scrollStepLines": 3,                    // fullscreen 滚轮滚动步进行数
+  "enableSessionReference": true,          // @ session 引用
+  "enableSubagentAutocomplete": true,      // @ subagent 自动补全
+  "enableContextCommand": true,            // /context 上下文检查
+  "enableAgentSummary": true,              // 每回合工具统计摘要
+  "enableWorkingMessage": true,            // Working... token/耗时展示
+  "enableAliases": true                    // /clear、/exit 别名
 }
 ```
+
+> **建议**：在 `/settings` 中将 Mermaid diagrams 设为 `final`，避免流式内容逐帧重绘。
 
 ## 本地开发
 

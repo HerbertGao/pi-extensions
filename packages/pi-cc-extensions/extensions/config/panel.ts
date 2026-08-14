@@ -64,6 +64,29 @@ function diffIndicatorDescription(mode: DiffIndicatorMode): string {
 	return "Vertical bar indicators on changed lines (default).";
 }
 
+function featureToggleSetting(
+	id: string,
+	label: string,
+	onDescription: string,
+	offDescription: string,
+	current: boolean,
+) {
+	const setting = {
+		id,
+		label,
+		description: current ? onDescription : offDescription,
+		currentValue: current ? "on" : "off",
+		values: ["on", "off"],
+	};
+	return {
+		setting,
+		apply(on: boolean): void {
+			setting.currentValue = on ? "on" : "off";
+			setting.description = on ? onDescription : offDescription;
+		},
+	};
+}
+
 function buildExcludeRenderersSubmenu(
 	onClose: () => void,
 	onLiveChange: () => void,
@@ -333,8 +356,66 @@ export async function showCcstylePanel(
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
 				buildNumberInputSubmenu(theme, scrollStepSetting, closeSubmenu),
 		};
+		const sessionReferenceToggle = featureToggleSetting(
+			"enableSessionReference",
+			"Session reference",
+			"@ session mentions search and inject referenced context after restart.",
+			"Session reference disabled.",
+			config.enableSessionReference,
+		);
+		const subagentAutocompleteToggle = featureToggleSetting(
+			"enableSubagentAutocomplete",
+			"Subagent autocomplete",
+			"@ subagent mentions suggest agents and delegation instructions after restart.",
+			"Subagent autocomplete disabled.",
+			config.enableSubagentAutocomplete,
+		);
+		const contextCommandToggle = featureToggleSetting(
+			"enableContextCommand",
+			"Context usage",
+			"/context shows context-window distribution after restart.",
+			"Context command disabled.",
+			config.enableContextCommand,
+		);
+		const agentSummaryToggle = featureToggleSetting(
+			"enableAgentSummary",
+			"Agent summary",
+			"Append per-round tool stats after each agent turn after restart.",
+			"Agent summary disabled.",
+			config.enableAgentSummary,
+		);
+		const workingMessageToggle = featureToggleSetting(
+			"enableWorkingMessage",
+			"Working message",
+			"Extend Working... with token count and elapsed time after restart.",
+			"Native Working... footer only.",
+			config.enableWorkingMessage,
+		);
+		const aliasesToggle = featureToggleSetting(
+			"enableAliases",
+			"Aliases",
+			"/clear and /exit aliases enabled after restart.",
+			"Aliases disabled.",
+			config.enableAliases,
+		);
+		const featureToggles: Record<string, { apply: (on: boolean) => void }> = {
+			enableSessionReference: sessionReferenceToggle,
+			enableSubagentAutocomplete: subagentAutocompleteToggle,
+			enableContextCommand: contextCommandToggle,
+			enableAgentSummary: agentSummaryToggle,
+			enableWorkingMessage: workingMessageToggle,
+			enableAliases: aliasesToggle,
+		};
 
 		const onSettingChange = (id: string, value: string) => {
+			const featureToggle = featureToggles[id];
+			if (featureToggle) {
+				(config as unknown as Record<string, boolean>)[id] = value === "on";
+				featureToggle.apply(value === "on");
+				saveConfig();
+				ctx.ui.notify(`Updated ${id}: ${value} (next restart)`, "info");
+				return;
+			}
 			switch (id) {
 				case "mode": {
 					// 选项值带 Experimental 标记，选择后还原为真实 mode 值。
@@ -450,7 +531,16 @@ export async function showCcstylePanel(
 			{
 				id: "feature",
 				label: "Feature",
-				items: [startupHeaderSetting, scrollStepSetting],
+				items: [
+					startupHeaderSetting,
+					scrollStepSetting,
+					sessionReferenceToggle.setting,
+					subagentAutocompleteToggle.setting,
+					contextCommandToggle.setting,
+					agentSummaryToggle.setting,
+					workingMessageToggle.setting,
+					aliasesToggle.setting,
+				],
 			},
 		];
 

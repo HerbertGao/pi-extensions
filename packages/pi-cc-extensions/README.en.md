@@ -39,7 +39,7 @@ Run `/reload` after installation.
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                         | `/ccstyle`  |
 | Fullscreen mode          | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
-| Settings panel               | `Style / Diff / Thinking / Feature` tabs: startup header toggle and wheel step                                                                    | `/ccstyle`  |
+| Settings panel               | `Style / Diff / Thinking / Feature` tabs with startup, wheel, and optional feature toggles                                                        | `/ccstyle`  |
 | Context inspection           | Usage breakdown and previews for the system prompt, tools, skills, and messages                                                                   | `/context`  |
 | Session/Subagent references           | Search and inject effective context from previous Sessions or existing SubAgents                                                                  | `@` |
 | Theme                        | Bundled CC Dark and CC Light themes                                                                                                               | `/theme`    |
@@ -62,9 +62,17 @@ Run `/reload` after installation.
   "previewLines": 3,                       // thinking preview lines; 0 hides the preview body
   "animationIntervalMs": 90,               // thinking title animation interval in ms
   "showStartupHeader": true,               // custom startup header (logo + tips) toggle
-  "scrollStepLines": 3                     // fullscreen mouse wheel scroll lines
+  "scrollStepLines": 3,                    // fullscreen mouse wheel scroll lines
+  "enableSessionReference": true,          // @ session references
+  "enableSubagentAutocomplete": true,      // @ subagent autocomplete
+  "enableContextCommand": true,            // /context inspection
+  "enableAgentSummary": true,              // per-turn tool summary
+  "enableWorkingMessage": true,            // Working... token/time details
+  "enableAliases": true                    // /clear and /exit aliases
 }
 ```
+
+> **Tip**: set Mermaid diagrams to `final` in `/settings` to avoid redrawing streaming content frame by frame.
 
 ## Local development
 

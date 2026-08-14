@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { config } from "./config/config.ts";
 
 // shell
 import piAliases from "./feature/shell/aliases.ts";
@@ -21,9 +22,9 @@ import markdownEnhance from "./renderer/markdown-enhance.ts";
 
 export default function (pi: ExtensionAPI): void {
 	// shell chrome
-	piAliases(pi);
+	if (config.enableAliases) piAliases(pi);
 	piStartupHeader(pi);
-	workingMessage(pi);
+	if (config.enableWorkingMessage) workingMessage(pi);
 
 	// Renderer 必须先注册 lifecycle handler，shutdown 时才能先解开外层 compact
 	// patch；bridge 让稍后安装的 thinking controller 仍可直接供 renderer query。
@@ -42,8 +43,8 @@ export default function (pi: ExtensionAPI): void {
 	compactThinking = installCompactThinking(pi, getCompactThinkingConfig());
 
 	// features
-	context(pi);
-	sessionReference(pi);
-	agentAutocomplete(pi);
-	agentSummary(pi);
+	if (config.enableContextCommand) context(pi);
+	if (config.enableSessionReference) sessionReference(pi);
+	if (config.enableSubagentAutocomplete) agentAutocomplete(pi);
+	if (config.enableAgentSummary) agentSummary(pi);
 }
