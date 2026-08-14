@@ -11,7 +11,7 @@ pi install npm:@herbertgao/pi-extensions
 The package bundles 11 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions`, plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
-- `@juicesharp/rpiv-ask-user-question@2.5.0`
+- `@juicesharp/rpiv-ask-user-question@2.5.2`
 - `@narumitw/pi-btw@0.51.0`
 - `@pi-plugins/fast-mode@0.1.9`
 - `pi-mcp-adapter@2.25.0`
