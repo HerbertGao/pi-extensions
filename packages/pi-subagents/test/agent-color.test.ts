@@ -10,7 +10,7 @@ const theme = {
 
 describe("resolveAgentColor", () => {
   it("resolves Claude Code names and Agency Agents aliases", () => {
-    expect(resolveAgentColor("purple")).toBe("#9B59B6")
+    expect(resolveAgentColor("purple")).toBe("#827DBD")
     expect(resolveAgentColor("neon-cyan")).toBe("#06B6D4")
     expect(resolveAgentColor("slate")).toBe("#64748B")
   })
@@ -28,19 +28,22 @@ describe("renderAgentNameLabel", () => {
       ...theme,
       bold: (text: string) => `\u001b[1m${text}\u001b[22m`,
     }
-    const dark = renderAgentNameLabel("Code Reviewer", "purple", ansiTheme, {
+    const badge = renderAgentNameLabel("Code Reviewer", "purple", ansiTheme, {
       bold: true,
     })
-    expect(dark).toContain("\u001b[48;2;155;89;182m")
-    expect(dark).toContain("\u001b[38;2;255;255;255m")
-    expect(dark).toContain(" Code Reviewer ")
-    expect(visibleWidth(dark)).toBe("Code Reviewer".length + 2)
+    expect(badge).toContain("\u001b[48;2;130;125;189m")
+    expect(badge).toContain(" Code Reviewer ")
+    expect(visibleWidth(badge)).toBe("Code Reviewer".length + 2)
 
-    const light = renderAgentNameLabel("Tester", "yellow", theme)
-    expect(light).toContain("\u001b[38;2;0;0;0m")
+    // Badge text follows the background's luminance: #827DBD is light enough for black,
+    // #1E3A8A is not. Both sit either side of the 0.179 WCAG threshold.
+    expect(badge).toContain("\u001b[38;2;0;0;0m")
+    expect(renderAgentNameLabel("Tester", "navy", theme)).toContain(
+      "\u001b[38;2;255;255;255m",
+    )
   })
 
-  it("uses effective xterm palette colors for 256-color contrast", () => {
+  it("judges contrast against the effective color in 256-color mode", () => {
     const ansiTheme = { ...theme, getColorMode: () => "256color" as const }
     const label = renderAgentNameLabel("Reviewer", "#C430C4", ansiTheme)
     expect(label).toContain("\u001b[48;5;170m")
@@ -55,6 +58,12 @@ describe("renderAgentNameLabel", () => {
       restoreBackground: "\u001b[48;2;1;2;3m",
     })
     expect(label).toMatch(/\u001b\[39m\u001b\[48;2;1;2;3m$/)
+  })
+
+  it("resets the background when the caller paints none", () => {
+    expect(renderAgentNameLabel("Reviewer", "purple", theme)).toMatch(
+      /\u001b\[39m\u001b\[49m$/,
+    )
   })
 
   it("preserves existing theme styling without a valid color", () => {

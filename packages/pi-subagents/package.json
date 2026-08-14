@@ -40,12 +40,16 @@
   "scripts": {
     "lint": "biome check src/ test/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.49",
     "croner": "^10.0.1",
     "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-istanbul": "^4.1.10"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": ">=0.80.0",
@@ -64,8 +68,8 @@
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.15.1",
+    "version": "0.16.0",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "4cc4738"
+    "commit": "bcbd602"
   }
 }
