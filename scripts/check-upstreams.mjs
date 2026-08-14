@@ -263,36 +263,41 @@ export function findOpenTrackingIssue(issues) {
   )
 }
 
-async function syncIssue(report, action) {
-  const repository = process.env.GITHUB_REPOSITORY
-  if (!process.env.GITHUB_TOKEN || !repository) {
-    throw new Error("--sync-issue requires GITHUB_TOKEN and GITHUB_REPOSITORY")
+async function findOpenTrackingIssueInRepository(repository, request) {
+  for (let page = 1; ; page += 1) {
+    // Pagination is sequential so the lookup stops as soon as it finds a match.
+    // oxlint-disable-next-line no-await-in-loop
+    const issues = await request(
+      `/repos/${repository}/issues?state=open&per_page=100&page=${page}`,
+    )
+    const issue = findOpenTrackingIssue(issues)
+    if (issue || issues.length < 100) return issue
   }
+}
 
-  const issues = await githubRequest(
-    `/repos/${repository}/issues?state=all&per_page=100`,
-  )
-  const issue = findOpenTrackingIssue(issues)
+export async function syncTrackingIssue(
+  repository,
+  report,
+  action,
+  request = githubRequest,
+) {
+  const issue = await findOpenTrackingIssueInRepository(repository, request)
 
   if (action === "open") {
-    const body = JSON.stringify({
-      title: issueTitle,
-      body: report,
-      state: "open",
-    })
+    const body = JSON.stringify({ title: issueTitle, body: report })
     if (issue) {
-      await githubRequest(`/repos/${repository}/issues/${issue.number}`, {
-        method: "PATCH",
-        body,
-      })
-    } else {
-      await githubRequest(`/repos/${repository}/issues`, {
-        method: "POST",
-        body,
-      })
+      const updated = await request(
+        `/repos/${repository}/issues/${issue.number}`,
+        { method: "PATCH", body },
+      )
+      if (updated.state === "open") return
     }
-  } else if (action === "close" && issue?.state === "open") {
-    await githubRequest(`/repos/${repository}/issues/${issue.number}`, {
+    await request(`/repos/${repository}/issues`, {
+      method: "POST",
+      body,
+    })
+  } else if (action === "close" && issue) {
+    await request(`/repos/${repository}/issues/${issue.number}`, {
       method: "PATCH",
       body: JSON.stringify({
         body: report,
@@ -301,6 +306,14 @@ async function syncIssue(report, action) {
       }),
     })
   }
+}
+
+async function syncIssue(report, action) {
+  const repository = process.env.GITHUB_REPOSITORY
+  if (!process.env.GITHUB_TOKEN || !repository) {
+    throw new Error("--sync-issue requires GITHUB_TOKEN and GITHUB_REPOSITORY")
+  }
+  await syncTrackingIssue(repository, report, action)
 }
 
 async function main() {
