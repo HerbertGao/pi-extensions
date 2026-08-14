@@ -114,19 +114,28 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 			"collapsed output stays within the viewport",
 		);
 
+		const readPath =
+			"/Users/example/projects/tool-width/packages/pi-cc-extensions/src/deeply/nested/renderer/contract_service.ts";
 		const read = new ToolExecutionComponent(
 			"read",
 			"cache-width-read",
-			{ path: "file.ts", offset: Number.MAX_SAFE_INTEGER, limit: Number.MAX_SAFE_INTEGER },
+			{ path: readPath, offset: Number.MAX_SAFE_INTEGER, limit: Number.MAX_SAFE_INTEGER },
 			{},
 			undefined,
 			ui as any,
 			process.cwd(),
 		) as any;
+		const wideRead = read.render(180);
+		assert.ok(
+			wideRead.some((line: string) => line.replace(/\x1b\[[0-9;]*m/g, "").includes(readPath)),
+			"wide single-tool summaries retain content beyond 96 characters",
+		);
 		const firstRead = read.render(40);
 		const cachedRead = read.render(40);
+		assert.ok(firstRead.some((line: string) => visibleWidth(line) > 32));
 		assert.ok(firstRead.every((line: string) => visibleWidth(line) <= 40));
-		assert.deepEqual(cachedRead, firstRead, "cache hits preserve the viewport clamp");
+		assert.deepEqual(cachedRead, firstRead);
+		assert.deepEqual(read.render(180), wideRead, "width changes invalidate stale cached output");
 
 		component.setExpanded(true);
 		assert.equal(component.children.includes(component.contentBox), true);
@@ -160,7 +169,7 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 			"background card title stays within its full-width row",
 		);
 		const plainCallLine = callLine.replace(/\x1b\[[0-9;]*m/g, "").trimEnd();
-		// input 摘要与多 tool 一致：从头截断（保留开头，省略尾部），上限 96 字符
+		// input 摘要与多 tool 一致：按实际渲染宽度从头截断（保留开头，省略尾部）
 		assert.match(plainCallLine, /✓ Bash .*…$/);
 		assert.doesNotMatch(plainCallLine, /compositor\.ts'$/);
 		assert.doesNotMatch(callLine, /\x1b\[0m/, "tool title must not reset the card background");

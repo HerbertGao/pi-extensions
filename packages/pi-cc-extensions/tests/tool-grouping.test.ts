@@ -126,13 +126,14 @@ test("expanded native cards align nested trees through interleaved ANSI padding"
 		});
 		group.setExpanded(true);
 		read.render = (width: number) => {
-			assert.equal(width, 98, "native card uses the full padded panel width");
+			assert.equal(width, 98, "native card uses the full panel inner width");
 			return [
-				"\x1b[48;2;20;20;20m  ✓ Read sample.ts\x1b[0m",
+				`\x1b[48;2;20;20;20m  ⠋ Read ${"x".repeat(width - 13)}END \x1b[0m`,
 				"\x1b[48;2;20;20;20m \x1b[39m ├ Input\x1b[0m",
 				"\x1b[48;2;20;20;20m \x1b[39m │ path: sample.ts\x1b[0m",
 				"\x1b[48;2;20;20;20m \x1b[39m └ Output\x1b[0m",
 				"\x1b[48;2;20;20;20m \x1b[39m   ok\x1b[0m",
+				`  Output ${"x".repeat(width - 13)}END `,
 			];
 		};
 		const rendered = group.render(100);
@@ -145,20 +146,37 @@ test("expanded native cards align nested trees through interleaved ANSI padding"
 			/^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read/,
 			"panel starts directly with the loading tool",
 		);
-		assert.equal(
-			stripAnsi(rendered.at(-1) ?? "").length,
-			100,
-			"bottom padding covers the full width",
+		assert.ok(
+			rendered.slice(2).every((line) => visibleWidth(line) === 100),
+			"expanded content and bottom padding cover exactly the parent width",
 		);
+		assert.equal(group.childAtRow(2, 100)?.component, read);
+		assert.equal(group.childAtRow(7, 100)?.component, read);
+		assert.equal(group.childAtRow(8, 100)?.component, bash, "hit testing shares render width");
 		const expanded = rendered.map(stripAnsi).join("\n");
 		assert.match(
 			expanded,
-			/^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read sample\.ts\s*$/m,
-			"expanded branch matches collapsed position",
+			/^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read x+END  $/m,
+			"child status is replaced without clipping its full-width title",
 		);
 		assert.match(expanded, /^ │ ├ Input\s*$/m, "nested tree aligns with the status dot");
 		assert.match(expanded, /^ │ │ path: sample\.ts\s*$/m);
 		assert.match(expanded, /^ │   ok\s*$/m, "output content retains its relative indent");
+		assert.equal(
+			expanded.match(/END {2}$/gm)?.length,
+			2,
+			"group prefix replacement preserves title and output trailing content",
+		);
+
+		const tinyParent = new Container() as any;
+		tinyParent.addChild(tool("read", "tiny-read"));
+		tinyParent.addChild(tool("bash", "tiny-bash"));
+		const tinyGroup = tinyParent.children[0] as ToolGroupComponent;
+		tinyGroup.setExpanded(true);
+		assert.ok(
+			tinyGroup.render(1).every((line) => visibleWidth(line) <= 1),
+			"one-column groups never overflow",
+		);
 	} finally {
 		hooks.shutdown();
 	}

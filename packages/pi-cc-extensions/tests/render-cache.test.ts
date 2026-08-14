@@ -104,6 +104,7 @@ test("ExpandedToolIoView wraps Input/Output at the viewport width", () => {
 	const body = "x".repeat(99);
 	const view = new ExpandedToolIoView(theme, `command: ${body}`, body, false, 1, 1);
 	const lines = view.render(100);
+	assert.ok(lines.some((line) => visibleWidth(line) > 80));
 	assert.ok(lines.every((line) => visibleWidth(line) <= 100));
 	assert.ok(lines.find((line) => line.includes("Input"))?.includes(SHOW_MORE_LABEL));
 	assert.ok(lines.find((line) => line.includes("Output"))?.includes(SHOW_MORE_LABEL));
