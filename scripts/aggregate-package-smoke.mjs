@@ -294,6 +294,113 @@ try {
     ),
   )
 
+  // Exercise the published ask-user-question state seams as well as its manifest:
+  // Slack-style bindings must keep newline ahead of submit, while submit still
+  // confirms both a custom answer and a multi-select Next row. The headless
+  // editors must not consume submit, and expanded paste markers must survive the
+  // draft mirror path used when a dialog is restored.
+  const askRequire = createRequire(join(askRoot, askEntryRelative))
+  const { createJiti: createAskJiti } = await import(
+    pathToFileURL(askRequire.resolve("jiti"))
+  )
+  const askJiti = createAskJiti(askManifestPath, { moduleCache: false })
+  const { routeKey } = await askJiti.import(
+    join(askRoot, "state", "key-router.ts"),
+  )
+  const { Editor } = await askJiti.import("@earendil-works/pi-tui")
+  const keyMap = {
+    "tui.select.confirm": "enter",
+    "tui.input.submit": "ctrl+enter",
+    "tui.input.newLine": "enter",
+  }
+  const keybindings = {
+    matches(data, name) {
+      return keyMap[name] === data
+    },
+  }
+  const baseState = {
+    currentTab: 0,
+    optionIndex: 0,
+    inputMode: false,
+    notesVisible: false,
+    answers: new Map(),
+    multiSelectChecked: new Set(),
+    customDraftsByTab: new Map(),
+    notesByTab: new Map(),
+    submitChoiceIndex: 0,
+    notesDraft: "",
+    collapsed: false,
+  }
+  const singleQuestion = {
+    question: "Pick one",
+    multiSelect: false,
+    options: [{ label: "Yes" }],
+  }
+  const singleRuntime = {
+    keybindings,
+    inputBuffer: "draft",
+    canMoveInputUp: false,
+    canMoveInputDown: false,
+    questions: [singleQuestion],
+    isMulti: false,
+    currentItem: { kind: "option", label: "Yes" },
+    items: [{ kind: "option", label: "Yes" }],
+    collapseKey: "off",
+  }
+  if (
+    routeKey("enter", { ...baseState, inputMode: true }, singleRuntime).kind !==
+    "ignore"
+  ) {
+    throw new Error("ask-user-question newline must not submit an inline draft")
+  }
+  if (
+    routeKey("ctrl+enter", { ...baseState, inputMode: true }, singleRuntime)
+      .kind !== "confirm"
+  ) {
+    throw new Error(
+      "ask-user-question submit binding must confirm an inline draft",
+    )
+  }
+  const multiQuestion = {
+    question: "Pick several",
+    multiSelect: true,
+    options: [{ label: "Yes" }],
+  }
+  const multiRuntime = {
+    ...singleRuntime,
+    questions: [multiQuestion],
+    currentItem: { kind: "next", label: "Next" },
+    items: [{ kind: "next", label: "Next" }],
+  }
+  if (
+    routeKey("ctrl+enter", baseState, multiRuntime).kind !== "multi_confirm"
+  ) {
+    throw new Error(
+      "ask-user-question submit binding must confirm a multi-select",
+    )
+  }
+  const editor = new Editor(
+    { requestRender() {} },
+    { borderColor: (text) => text },
+  )
+  let submits = 0
+  editor.onSubmit = () => submits++
+  editor.setText("draft")
+  editor.disableSubmit = true
+  editor.handleInput("\r")
+  if (submits !== 0 || editor.getText() !== "draft") {
+    throw new Error("ask-user-question headless editor consumed submit")
+  }
+  const pasted = "x".repeat(1001)
+  const pasteEditor = new Editor(
+    { requestRender() {} },
+    { borderColor: (text) => text },
+  )
+  pasteEditor.handleInput(`\u001b[200~${pasted}\u001b[201~`)
+  if (pasteEditor.getExpandedText() !== pasted) {
+    throw new Error("ask-user-question lost expanded paste-marker text")
+  }
+
   const mcpRoot = join(packageRoot, "node_modules", "pi-mcp-adapter")
   const mcpManifestPath = join(mcpRoot, "package.json")
   const mcpManifest = parseJson(
