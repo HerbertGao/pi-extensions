@@ -5,10 +5,8 @@ import { showMoreHintText } from "../show-more-hint.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
 
-const TOOL_VIEWPORT_WIDTH_RATIO = 0.8;
-
 export function toolViewportWidth(width: number): number {
-	return Math.max(1, Math.floor(width * TOOL_VIEWPORT_WIDTH_RATIO));
+	return Math.max(1, Math.floor(width));
 }
 
 /** 与默认工具结果相同的一级缩进包装。 */
@@ -23,7 +21,7 @@ export function insetComponent(component: any): any {
 	};
 }
 
-export function oneLine(value: unknown, max = 72): string {
+export function oneLine(value: unknown, max = 4096): string {
 	const text = sanitizeToolResultText(String(value ?? ""))
 		.replace(/\s+/g, " ")
 		.trim();

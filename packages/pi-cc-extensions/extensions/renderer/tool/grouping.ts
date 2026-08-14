@@ -96,7 +96,7 @@ function visibleLines(lines: string[]): string[] {
 
 function stripLeadingStatusIcon(line: string): string {
 	return line.replace(
-		/^((?:\x1b\[[0-9;]*m|[ \t]|[├└│─])*)(?:\x1b\[[0-9;]*m)*(?:[✓✗●○■⬤•·])(?:\x1b\[[0-9;]*m)*\s+/,
+		/^((?:\x1b\[[0-9;]*m|[ \t]|[├└│─])*)(?:\x1b\[[0-9;]*m)*(?:[✓✗●○■⬤•·⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏])(?:\x1b\[[0-9;]*m)*\s+/,
 		"$1",
 	);
 }
@@ -127,6 +127,10 @@ function stripLeadingSpaces(line: string, count: number): string {
 }
 
 /** 生成一行铺满 width 的 slot 背景行；bgAnsiOverride 可替换背景 ANSI（用于提亮等）。 */
+function panelInnerWidth(width: number): number {
+	return Math.max(0, Math.floor(width) - 2);
+}
+
 export function paddedBackgroundRow(
 	theme: any,
 	slot: string,
@@ -134,9 +138,12 @@ export function paddedBackgroundRow(
 	width: number,
 	bgAnsiOverride?: string,
 ): string {
-	const innerWidth = Math.max(0, width - 2);
+	const safeWidth = Math.max(0, Math.floor(width));
+	const leftPadding = safeWidth > 0 ? " " : "";
+	const rightPadding = safeWidth > 1 ? " " : "";
+	const innerWidth = panelInnerWidth(width);
 	const clipped = truncateToWidth(stripBackgroundAnsi(content), innerWidth, "");
-	const row = ` ${clipped}${" ".repeat(Math.max(0, innerWidth - visibleWidth(clipped)))} `;
+	const row = `${leftPadding}${clipped}${" ".repeat(Math.max(0, innerWidth - visibleWidth(clipped)))}${rightPadding}`;
 	const bgAnsi =
 		bgAnsiOverride ||
 		(typeof theme?.bg === "function"
@@ -147,11 +154,10 @@ export function paddedBackgroundRow(
 	return `${bgAnsi}${stable}\x1b[49m`;
 }
 
-function oneLine(value: unknown, max = 96): string {
-	const text = sanitizeToolResultText(String(value ?? ""), 4096)
+function oneLine(value: unknown): string {
+	return sanitizeToolResultText(String(value ?? ""), 4096)
 		.replace(/\s+/g, " ")
 		.trim();
-	return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 function humanizeToolName(name: string): string {
@@ -264,6 +270,10 @@ function toolNameList(tools: any[]): string {
 
 let nextGroupId = 1;
 
+function groupChildWidth(width: number): number {
+	return Math.max(1, panelInnerWidth(width));
+}
+
 export class ToolGroupComponent extends Container {
 	readonly toolCallId = `ccstyle-tool-group-${nextGroupId++}`;
 	readonly toolName = "Tool group";
@@ -311,7 +321,7 @@ export class ToolGroupComponent extends Container {
 
 	/**
 	 * 展开时按局部行定位内部组件（null = 行属于 group 自身：空行/头行/尾行）。
-	 * 行数计算与 render 保持一致：宽度 width-2 + 空行过滤。
+	 * 行数计算与 render 保持一致：预留背景 padding、分支和状态前缀后再过滤空行。
 	 */
 	childAtRow(localRow: number, width: number): { component: any; row: number } | null {
 		if (!this._expanded || localRow < 2) return null;
@@ -319,7 +329,7 @@ export class ToolGroupComponent extends Container {
 		for (const tool of this.children) {
 			let lines: string[] = [];
 			try {
-				const rendered = tool.render?.(Math.max(1, width - 2));
+				const rendered = tool.render?.(groupChildWidth(width));
 				if (Array.isArray(rendered)) lines = visibleLines(rendered.map((line) => String(line)));
 			} catch {
 				lines = [];
@@ -386,7 +396,7 @@ export class ToolGroupComponent extends Container {
 				);
 				continue;
 			}
-			const rendered = visibleLines(tool.render(Math.max(1, width - 2)));
+			const rendered = visibleLines(tool.render(groupChildWidth(width)));
 			if (rendered.length) {
 				rendered[0] = stripLeadingStatusIcon(rendered[0])
 					.replace(/^ +/, "")
@@ -434,7 +444,7 @@ function ungroup(patch: Patch): void {
 	}
 }
 
-function normalizeGroup(patch: Patch, group: ToolGroupComponent): void {
+function normalizeGroup(group: ToolGroupComponent): void {
 	if (group.children.length > 1) return;
 	const parent = (group as any)[PARENT_KEY];
 	const index = parent?.children?.indexOf(group) ?? -1;
@@ -565,12 +575,12 @@ export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHook
 			const group = component?.[PARENT_KEY];
 			if (group instanceof ToolGroupComponent && (group as any)[PARENT_KEY] === this) {
 				group.removeTool(component);
-				normalizeGroup(patch, group);
+				normalizeGroup(group);
 				return;
 			}
 			const result = patch.original.removeChild.call(this, component);
 			if (component?.[PARENT_KEY] === this) delete component[PARENT_KEY];
-			if (this instanceof ToolGroupComponent) normalizeGroup(patch, this);
+			if (this instanceof ToolGroupComponent) normalizeGroup(this);
 			if (component instanceof ToolGroupComponent) {
 				for (const tool of component.releaseTools()) delete tool[PARENT_KEY];
 			}

@@ -158,11 +158,10 @@ function singleToolCallSummary(
 	const name = toolName.toLowerCase();
 	const value = (fallback: string, ...keys: string[]) => {
 		const found = keys.map((key) => args[key]).find((item) => typeof item === "string" && item);
-		// 与多 tool 摘要对齐：从头截断，上限 96 字符（tool-grouping oneLine 默认值）。
-		return `${title} ${oneLine(found || fallback, 96)}`;
+		return `${title} ${oneLine(found || fallback)}`;
 	};
 	if (AGENT_FAMILY_TOOL_NAMES.has(toolName) && args.agent_id) {
-		return { main: `${title} ${oneLine(args.agent_id, 96)}`, detail: "" };
+		return { main: `${title} ${oneLine(args.agent_id)}`, detail: "" };
 	}
 	// Agents 走 ccstyle wrapper；Agent 保留专用渲染器。
 	if (name === "agents") {
@@ -203,7 +202,7 @@ function singleToolCallSummary(
 			args.limit !== undefined ? `limit=${args.limit}` : "",
 		].filter(Boolean);
 		return {
-			main: `${title}${args.path ? ` ${oneLine(args.path, 96)}` : ""}`,
+			main: `${title}${args.path ? ` ${oneLine(args.path)}` : ""}`,
 			detail: details.length ? ` (${details.join(", ")})` : "",
 		};
 	}
@@ -223,7 +222,7 @@ function singleToolCallSummary(
 	return {
 		main:
 			preferred !== undefined && preferred !== null && typeof preferred !== "object"
-				? `${title} ${oneLine(preferred, 96)}`
+				? `${title} ${oneLine(preferred)}`
 				: title,
 		detail: "",
 	};
