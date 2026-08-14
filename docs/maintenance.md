@@ -52,7 +52,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
 | `pi-mcp-adapter`                     | `2.25.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
+| `pi-lens`                            | `4.0.0`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.22.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
