@@ -50,7 +50,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@juicesharp/rpiv-ask-user-question` | `2.4.0`  | `juicesharp/rpiv-mono`      |
 | `@narumitw/pi-btw`                   | `0.50.0` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
-| `pi-mcp-adapter`                     | `2.23.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.25.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `3.8.74` | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.22.0` | `nicobailon/pi-web-access`  |
