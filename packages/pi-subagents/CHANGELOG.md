@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.4
+
+### Patch Changes
+
+- [#45](https://github.com/HerbertGao/pi-extensions/pull/45) [`97bad4e`](https://github.com/HerbertGao/pi-extensions/commit/97bad4e05f7398d9910786e8d614ffd4943cac8c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Link persisted subagent sessions to their parent Pi session and advance the reviewed upstream baseline to 0.15.1.
+
+- [#52](https://github.com/HerbertGao/pi-extensions/pull/52) [`b12ab55`](https://github.com/HerbertGao/pi-extensions/commit/b12ab5597059ff2020e2108f8e8de85ce64e49c7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync the applicable pi-subagents 0.16.0 fixes and advance the reviewed upstream baseline to bcbd602.
+
 ## 0.15.3
 
 ### Patch Changes

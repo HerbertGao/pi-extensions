@@ -1,5 +1,31 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.5
+
+### Patch Changes
+
+- [#45](https://github.com/HerbertGao/pi-extensions/pull/45) [`97bad4e`](https://github.com/HerbertGao/pi-extensions/commit/97bad4e05f7398d9910786e8d614ffd4943cac8c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Link persisted subagent sessions to their parent Pi session and advance the reviewed upstream baseline to 0.15.1.
+
+- [#34](https://github.com/HerbertGao/pi-extensions/pull/34) [`7f7d959`](https://github.com/HerbertGao/pi-extensions/commit/7f7d9591fd61593fde96b5c2ae47db973505dcad) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Avoid registering remote-pi's agent-network skill twice; the extension deploys it to the shared global skill directory.
+
+- [#47](https://github.com/HerbertGao/pi-extensions/pull/47) [`3be5ed4`](https://github.com/HerbertGao/pi-extensions/commit/3be5ed48294b3b5a3306c9562c5ec93f52c13705) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync selected pi-cc-extensions 0.8.56 features: optional feature registration, streaming-safe Mermaid rendering, and lightweight admonition blocks.
+
+- [#52](https://github.com/HerbertGao/pi-extensions/pull/52) [`b12ab55`](https://github.com/HerbertGao/pi-extensions/commit/b12ab5597059ff2020e2108f8e8de85ce64e49c7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync the applicable pi-subagents 0.16.0 fixes and advance the reviewed upstream baseline to bcbd602.
+
+- [#53](https://github.com/HerbertGao/pi-extensions/pull/53) [`0227afc`](https://github.com/HerbertGao/pi-extensions/commit/0227afc9c2d253a65a7d3231dcfe6d6b27ce6593) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled ask-user-question companion to 2.5.2 and coordinate its rpiv-config range.
+
+- [#44](https://github.com/HerbertGao/pi-extensions/pull/44) [`2b93106`](https://github.com/HerbertGao/pi-extensions/commit/2b931068bc17bfee3b1dabfc9b27f5937743da33) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled ask-user-question extension and its rpiv-config dependency to 2.5.0.
+
+- [#43](https://github.com/HerbertGao/pi-extensions/pull/43) [`229cf04`](https://github.com/HerbertGao/pi-extensions/commit/229cf049e7ad777c002291c3e381884d092a78da) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-mcp-adapter to 2.25.0.
+
+- [#46](https://github.com/HerbertGao/pi-extensions/pull/46) [`4baef21`](https://github.com/HerbertGao/pi-extensions/commit/4baef2171414910dabd8e6ff252f720f64797455) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-btw to 0.51.0 and its promoted pi-tui-kit dependency to ^0.54.0 for searchable thread selection.
+
+- [#54](https://github.com/HerbertGao/pi-extensions/pull/54) [`0986a1b`](https://github.com/HerbertGao/pi-extensions/commit/0986a1bd1c62959d614e23914cb34b164320d61a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-lens companion to 4.0.0 and promote its Pi 0.84.1/minimatch runtime ranges.
+
+- Updated dependencies [[`97bad4e`](https://github.com/HerbertGao/pi-extensions/commit/97bad4e05f7398d9910786e8d614ffd4943cac8c), [`3be5ed4`](https://github.com/HerbertGao/pi-extensions/commit/3be5ed48294b3b5a3306c9562c5ec93f52c13705), [`b12ab55`](https://github.com/HerbertGao/pi-extensions/commit/b12ab5597059ff2020e2108f8e8de85ce64e49c7), [`c56fb9e`](https://github.com/HerbertGao/pi-extensions/commit/c56fb9e6a4d426f136a5bf3e909c1e2e7a190ffc)]:
+  - @herbertgao/pi-subagents@0.15.4
+  - @herbertgao/pi-cc-extensions@0.8.54
+
 ## 2026.8.4
 
 ### Patch Changes
