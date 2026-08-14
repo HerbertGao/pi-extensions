@@ -64,8 +64,8 @@
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.15.0",
+    "version": "0.15.1",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "c83dd82"
+    "commit": "4cc4738"
   }
 }
