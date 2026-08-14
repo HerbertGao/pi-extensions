@@ -560,9 +560,14 @@ try {
     }),
   )
   for (const { hostDependency, version } of installedHosts) {
-    if (version !== "0.84.1") {
+    // `^0.84.1` legitimately resolves to later 0.84.x patches (the registry
+    // currently serves 0.84.2). Keep the minor line pinned while accepting
+    // compatible security/bug-fix releases; bump the source range and this
+    // guard together when Pi moves to a new minor line.
+    const patch = /^0\.84\.(\d+)$/.exec(version)?.[1]
+    if (patch === undefined || Number(patch) < 1) {
       throw new Error(
-        `Expected remote-pi ${hostDependency} host 0.84.1, got ${version}`,
+        `Expected remote-pi ${hostDependency} host compatible with ^0.84.1, got ${version}`,
       )
     }
   }
