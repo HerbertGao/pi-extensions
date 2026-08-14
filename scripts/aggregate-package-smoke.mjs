@@ -257,6 +257,43 @@ try {
     )
   }
 
+  const lensRoot = join(packageRoot, "node_modules", "pi-lens")
+  const lensManifestPath = join(lensRoot, "package.json")
+  const lensManifest = parseJson(
+    await readFile(lensManifestPath, "utf8"),
+    lensManifestPath,
+  )
+  const expectedLensVersion = sourceManifest.dependencies["pi-lens"]
+  if (lensManifest.version !== expectedLensVersion) {
+    throw new Error(
+      `Expected bundled pi-lens ${expectedLensVersion}, got ${lensManifest.version}`,
+    )
+  }
+  if (lensManifest.license !== "MIT") {
+    throw new Error(`Expected pi-lens MIT license, got ${lensManifest.license}`)
+  }
+  if (!lensManifest.pi?.extensions?.includes("./dist/index.js")) {
+    throw new Error("Bundled pi-lens no longer declares its expected Pi entry")
+  }
+  if (!lensManifest.pi?.skills?.includes("../../skills")) {
+    throw new Error("Bundled pi-lens no longer declares its skills")
+  }
+  // These ranges changed in 4.0.0 and must be promoted exactly. The aggregate
+  // intentionally keeps its existing broader typebox range for other companions.
+  for (const dependency of ["@earendil-works/pi-tui", "minimatch"]) {
+    const range = lensManifest.dependencies?.[dependency]
+    if (!range || sourceManifest.dependencies[dependency] !== range) {
+      throw new Error(
+        `Expected promoted pi-lens dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
+      )
+    }
+  }
+  await Promise.all(
+    ["dist/index.js", "skills", "LICENSE"].map((path) =>
+      stat(join(lensRoot, path)),
+    ),
+  )
+
   const mcpRoot = join(packageRoot, "node_modules", "pi-mcp-adapter")
   const mcpManifestPath = join(mcpRoot, "package.json")
   const mcpManifest = parseJson(
