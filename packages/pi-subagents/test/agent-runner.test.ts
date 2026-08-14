@@ -195,7 +195,10 @@ const ctx = {
   model: undefined,
   modelRegistry: { find: vi.fn(), getAvailable: vi.fn(() => []) },
   getSystemPrompt: vi.fn(() => "parent prompt"),
-  sessionManager: { getBranch: vi.fn(() => []) },
+  sessionManager: {
+    getBranch: vi.fn(() => []),
+    getSessionFile: vi.fn(() => "/sessions/parent.jsonl"),
+  },
 } as any
 
 const pi = {} as any
@@ -885,7 +888,7 @@ describe("agent-runner session persistence", () => {
     )
   })
 
-  it("uses pi's normal persistent session location when persistSession is true", async () => {
+  it("uses pi's normal persistent session location and links to the parent session", async () => {
     vi.mocked(getAgentConfig).mockReturnValueOnce(
       makeAgentConfig({ persistSession: true }),
     )
@@ -899,6 +902,7 @@ describe("agent-runner session persistence", () => {
     expect(sessionManagerCreate).toHaveBeenCalledWith(
       "/tmp",
       "/normal/pi/sessions",
+      { parentSession: "/sessions/parent.jsonl" },
     )
     expect(createAgentSession).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -923,6 +927,7 @@ describe("agent-runner session persistence", () => {
     expect(sessionManagerCreate).toHaveBeenCalledWith(
       "/repo",
       "/repo/.seams/pi-sessions/seam-plan-reviewer",
+      { parentSession: "/sessions/parent.jsonl" },
     )
   })
 })

@@ -946,6 +946,7 @@ export async function runAgent(
     ? SessionManager.create(
         effectiveCwd,
         configuredSessionDir ?? defaultSessionDir,
+        { parentSession: ctx.sessionManager.getSessionFile() },
       )
     : SessionManager.inMemory(effectiveCwd)
 
