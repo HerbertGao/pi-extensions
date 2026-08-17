@@ -796,7 +796,15 @@ try {
     throw new Error("Packed aggregate is missing the pi-mcp-adapter skills")
   }
   const mcpOAuthEntry = resolve(mcpRoot, "oauth.ts")
-  await Promise.all([stat(mcpOAuthEntry), stat(join(mcpRoot, "cli.js"))])
+  const mcpRequestHeadersCommandEntry = resolve(
+    mcpRoot,
+    "request-headers-command.ts",
+  )
+  await Promise.all([
+    stat(mcpOAuthEntry),
+    stat(join(mcpRoot, "cli.js")),
+    stat(mcpRequestHeadersCommandEntry),
+  ])
   const previousAuthStore = process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE
   process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE = "memory"
   try {
