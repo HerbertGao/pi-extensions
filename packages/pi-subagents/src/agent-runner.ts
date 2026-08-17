@@ -958,18 +958,21 @@ export async function runAgent(
   type SessionOptions = NonNullable<Parameters<typeof createAgentSession>[0]>
   const parentModelRuntime = (
     ctx.modelRegistry as unknown as {
-      runtime?: SessionOptions["modelRuntime"] | null
+      runtime?: unknown
     }
   ).runtime
   const sessionOpts: SessionOptions & {
     modelRegistry: ExtensionContext["modelRegistry"]
+    modelRuntime?: unknown
   } = {
     cwd: effectiveCwd,
     agentDir,
     sessionManager,
     settingsManager,
     modelRegistry: ctx.modelRegistry,
-    ...(parentModelRuntime != null && { modelRuntime: parentModelRuntime }),
+    ...(parentModelRuntime != null && {
+      modelRuntime: parentModelRuntime as never,
+    }),
     model,
     tools: sessionTools,
     customTools: nestedTools,
