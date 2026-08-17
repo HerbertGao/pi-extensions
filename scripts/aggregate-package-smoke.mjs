@@ -606,6 +606,33 @@ try {
       `Expected pi-tui-kit dependency ${expectedTuiKitRange}, got ${sourceManifest.dependencies["@narumitw/pi-tui-kit"]}`,
     )
   }
+  const btwRequire = createRequire(join(btwRoot, btwEntryRelative))
+  const { createJiti: createBtwJiti } = await import(
+    pathToFileURL(btwRequire.resolve("jiti"))
+  )
+  const btwJiti = createBtwJiti(btwManifestPath, { moduleCache: false })
+  const btwSettings = await btwJiti.import(join(btwRoot, "src", "settings.ts"))
+  const btwSettingsPath = join(stageDir, "pi-btw-settings.json")
+  await btwSettings.updateBtwSettings(
+    { thinkingLevel: "high", rememberThinkingLevelChanges: true },
+    { settingsPath: btwSettingsPath },
+  )
+  await btwSettings.updateBtwSettings(
+    { thinkingLevel: undefined },
+    { settingsPath: btwSettingsPath },
+  )
+  const sameAsMainSettings = parseJson(
+    await readFile(btwSettingsPath, "utf8"),
+    btwSettingsPath,
+  )
+  if (
+    Object.hasOwn(sameAsMainSettings, "thinkingLevel") ||
+    sameAsMainSettings.rememberThinkingLevelChanges !== true
+  ) {
+    throw new Error(
+      "pi-btw Same as main thread did not remove only the fixed thinking level",
+    )
+  }
 
   const ponytailRoot = join(
     packageRoot,
