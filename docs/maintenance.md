@@ -12,13 +12,13 @@
 | ---------------------- | -------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`                                                  | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                               |
 | `pi-subagents`         | `tintinweb/pi-subagents`   | `bcbd602` (`0.16.0`) plus local fork compatibility patches | Upstream now includes the submitted agent-color work; the local fork still preserves warning recovery, runtime compatibility, and package identity. |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `6d83911` (`0.8.56`)                                       | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, and renderer-lifecycle fixes.                     |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `268e017` (`0.8.60`)                                       | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, and renderer-lifecycle fixes.                     |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                       | Upstream package               | Imported version | Imported commit |
 | ----------------------------------- | ------------------------------ | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.56`         | `6d83911`       |
+| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.60`         | `268e017`       |
 | `@herbertgao/pi-copy-response`      | `@tifan/pi-copy-response`      | `0.2.6`          | `460d580`       |
 | `@herbertgao/pi-fixed-editor`       | `@tifan/pi-fixed-editor`       | `0.3.0`          | `5975a48`       |
 | `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `1.1.2`          | `460d580`       |
