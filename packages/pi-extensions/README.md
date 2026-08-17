@@ -17,7 +17,7 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 - `pi-mcp-adapter@2.25.0`
 - `pi-footer@0.5.1`
 - `pi-lens@4.0.0`
-- `pi-web-access@0.22.0`
+- `pi-web-access@0.23.0`
 - `remote-pi@0.7.0`
 - `@czottmann/pi-automode@1.11.0`
 
