@@ -31,6 +31,7 @@ const piCli = join(
 const contentMarker = "RESTOREDEXTERNALCACHEMARKER"
 const jinaMarker = "JINAINLINECACHEMARKER"
 const geminiMarker = "GEMINIWEBTRANSPORTMARKER"
+const firecrawlMarker = "FIRECRAWLSEARCHMARKER"
 const pdfMarker = "PDFEXTRACTIONMARKER"
 const imagePng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -107,7 +108,15 @@ function inspectRegistration(webAccessEntry, agentDir) {
     0,
     `Registration inspection failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
   )
-  return JSON.parse(result.stdout.trim().split("\n").at(-1))
+  const output = result.stdout.trim().split("\n").at(-1) ?? ""
+  try {
+    return JSON.parse(output)
+  } catch (error) {
+    throw new Error(
+      `Registration inspection returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    )
+  }
 }
 
 async function assertRegistrationGates({
@@ -269,6 +278,7 @@ async function assertCacheLimits(webAccessEntry, agentDir, cacheDir) {
         const path = join(cacheDir, name)
         await writeFile(path, "", { mode: 0o600 })
         await truncate(path, 70 * 1024 * 1024)
+        return path
       }),
     )
     storage.pruneExpiredFetchCache()
@@ -369,6 +379,29 @@ async function startMockServer() {
       try {
         const body = JSON.parse(raw)
         requests.push({ path: request.url, body })
+
+        if (request.url === "/firecrawl/v2/search") {
+          assert.equal(
+            request.headers.authorization,
+            "Bearer smoke-firecrawl-key",
+          )
+          const address = server.address()
+          assert.ok(address && typeof address === "object")
+          response.writeHead(200, { "content-type": "application/json" })
+          response.end(
+            JSON.stringify({
+              success: true,
+              data: [
+                {
+                  title: "Firecrawl smoke",
+                  url: `http://127.0.0.1:${address.port}/page-a`,
+                  markdown: firecrawlMarker,
+                },
+              ],
+            }),
+          )
+          return
+        }
 
         if (request.url === "/responses") {
           const address = server.address()
@@ -539,10 +572,125 @@ function runPi(args, options) {
 }
 
 function parseEvents(stdout) {
-  return stdout
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line))
+  const events = []
+  for (const line of stdout.split("\n")) {
+    if (line.trim() === "") continue
+    try {
+      events.push(JSON.parse(line))
+    } catch (error) {
+      throw new Error(
+        `Pi web smoke returned invalid event JSON: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      )
+    }
+  }
+  return events
+}
+
+async function assertNewReleaseFeatures({
+  webAccessEntry,
+  agentDir,
+  configPath,
+  baseConfig,
+  firecrawlPort,
+}) {
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR
+  process.env.PI_CODING_AGENT_DIR = agentDir
+  try {
+    await writeJson(configPath, {
+      ...baseConfig,
+      authFetch: {
+        smoke: { hosts: ["example.com"], cache: "off" },
+      },
+      firecrawlBaseUrl: `http://127.0.0.1:${firecrawlPort}/firecrawl`,
+      firecrawlApiKey: "smoke-firecrawl-key",
+    })
+    const jiti = await createPackageJiti(webAccessEntry)
+    const authFetch = await jiti.import(
+      join(dirname(webAccessEntry), "auth-fetch.ts"),
+    )
+    const profile = authFetch.resolveAuthFetchProfile("smoke")
+    assert.deepEqual(profile, {
+      name: "smoke",
+      hosts: ["example.com"],
+      redirects: "same-origin",
+      cache: "off",
+    })
+    assert.equal(
+      authFetch.assertAuthFetchUrl(profile, "https://sub.example.com/private")
+        .hostname,
+      "sub.example.com",
+    )
+    assert.throws(
+      () => authFetch.assertAuthFetchUrl(profile, "http://example.com"),
+      /HTTPS URL/,
+    )
+    assert.throws(
+      () => authFetch.assertAuthFetchUrl(profile, "https://other.example"),
+      /not allowed/,
+    )
+    assert.throws(
+      () =>
+        authFetch.authFetchRedirectGuard(
+          profile,
+          new URL("https://example.com/start"),
+          new URL("https://other.example/next"),
+        ),
+      /cross-origin redirect/,
+    )
+
+    const fetchParams = await jiti.import(
+      join(dirname(webAccessEntry), "fetch-params.ts"),
+    )
+    const normalized = fetchParams.normalizeFetchContentParams({
+      url: "https://example.com/video.mp4",
+      timestamp: "1:00",
+      frames: 12,
+      auth: "smoke",
+    })
+    assert.deepEqual(normalized.options, {
+      timestamp: "1:00",
+      frames: 12,
+      auth: "smoke",
+    })
+    assert.equal(
+      fetchParams.normalizeFetchContentParams({ frames: 13 }).options.frames,
+      undefined,
+    )
+    assert.throws(
+      () => fetchParams.normalizeFetchContentParams({ auth: "   " }),
+      /auth must be/,
+    )
+
+    const firecrawl = await jiti.import(
+      join(dirname(webAccessEntry), "firecrawl.ts"),
+    )
+    assert.equal(firecrawl.isFirecrawlAvailable(), true)
+    const search = await firecrawl.searchWithFirecrawl("firecrawl smoke", {
+      includeContent: true,
+      numResults: 1,
+      ssrf: { allowRanges: ["127.0.0.0/8"], trustEnvProxy: false },
+    })
+    assert.deepEqual(search.results, [
+      {
+        title: "Firecrawl smoke",
+        url: `http://127.0.0.1:${firecrawlPort}/page-a`,
+        snippet: "",
+      },
+    ])
+    assert.deepEqual(search.inlineContent, [
+      {
+        url: `http://127.0.0.1:${firecrawlPort}/page-a`,
+        title: "Firecrawl smoke",
+        content: firecrawlMarker,
+        error: null,
+      },
+    ])
+  } finally {
+    await writeJson(configPath, baseConfig)
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir
+  }
 }
 
 async function findSessionFile(sessionDir) {
@@ -625,6 +773,14 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
       baseConfig,
     })
     await assertGeminiWebTransport(resolvedWebAccessEntry)
+
+    await assertNewReleaseFeatures({
+      webAccessEntry: resolvedWebAccessEntry,
+      agentDir,
+      configPath,
+      baseConfig,
+      firecrawlPort: mock.port,
+    })
 
     const providerPreload = join(
       root,
