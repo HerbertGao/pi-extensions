@@ -40,7 +40,7 @@ pi install npm:@herbertgao/pi-cc-extensions
 | Claude Code UI | 工具摘要、折叠展开、rich edit/write diff，以及 `on` / `compact` / `off` 三种模式                          | `/ccstyle`  |
 | Fullscreen mode  | 工具卡/group 点击展开与收起、预览、hover 高亮、回到底部按钮 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
 | 配置面板             | `Style / Diff / Thinking / Feature` 四页签，含启动头、滚轮步进及可选功能开关                              | `/ccstyle`  |
-| 上下文检查           | 查看上下文占用，并预览 System prompt、Tools、Skills 和消息内容                                           | `/context`  |
+| 上下文检查           | 查看上下文占用，并预览 System prompt、Tools、Tool results、Skills 和消息内容                              | `/context`  |
 | Session/Subagent 引用         | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                                                      | `@` |
 | 主题                 | 随包提供内置 CC Dark、CC Light 主题                                                                      | `/theme`    |
 

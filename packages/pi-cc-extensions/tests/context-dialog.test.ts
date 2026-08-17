@@ -8,6 +8,9 @@ import {
 	escCloseHitbox,
 	hasActiveTextPreview,
 	showTextPreview,
+	capParts,
+	collectContextBreakdown,
+	resolveUsedTokens,
 } from "../extensions/feature/context.ts";
 
 initTheme("dark");
@@ -50,7 +53,47 @@ test("escCloseHitbox hitbox is 5 columns wide and flush to the right content edg
 	}
 });
 
-/** showTextPreview 自定义 UI 的最小 harness：捕获 component，theme 可注入，可选挂载回调。 */
+test("context usage reconciles provider tokens and caps variable parts", () => {
+	assert.equal(resolveUsedTokens({ tokens: 500, percent: 50 }, 600, 1000), 500);
+	assert.equal(resolveUsedTokens({ tokens: 10, percent: 50 }, 600, 1000), 500);
+	assert.deepEqual(
+		capParts(
+			[
+				{ label: "System prompt", tokens: 50, color: "accent" },
+				{ label: "Tools", tokens: 100, color: "success" },
+				{ label: "Context", tokens: 100, color: "warning" },
+			],
+			100,
+			1,
+		).map((part) => part.tokens),
+		[50, 25, 25],
+	);
+});
+
+test("context breakdown exposes tool results for preview", () => {
+	const breakdown = collectContextBreakdown({
+		getSystemPrompt: () => "system",
+		getSystemPromptOptions: () => ({ selectedTools: [] }),
+		sessionManager: {
+			buildContextEntries: () => [
+				{
+					type: "message",
+					message: {
+						role: "toolResult",
+						toolCallId: "tool-1",
+						toolName: "read",
+						content: [{ type: "text", text: "TOOL_RESULT_PREVIEW" }],
+						isError: false,
+						timestamp: Date.now(),
+					},
+				},
+			],
+		},
+	} as never);
+	assert.match(breakdown.toolResults, /TOOL_RESULT_PREVIEW/);
+	assert.ok(breakdown.parts.some((part) => part.label === "Tool results" && part.tokens > 0));
+});
+
 /** showTextPreview 自定义 UI 的最小 harness：捕获 component（挂载后实时可读），theme 可注入，可选挂载回调。 */
 function textPreviewHarness(
 	theme: any = { fg: (_color: string, text: string) => text, bold: (text: string) => text },

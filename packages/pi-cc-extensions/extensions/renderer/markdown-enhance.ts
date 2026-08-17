@@ -80,14 +80,20 @@ function renderAdmonition(lines: string[], i: number): { output: string[]; next:
 // 裸 URL 转可点击超链接
 // ============================================================================
 
-const URL_RE = /(?<!<)(?<!\]\()https?:\/\/[^\s<>'"|，。；：！？、」』】]+/g;
-const TRIM_URL_RE = /[.,;:!?】」』"'》]+$/;
+const URL_RE = /(?<!<)(?<!\]\()https?:\/\/[^\s<>'"|，。；：！？、」』】（）【】《》『』「」]+/g;
+const TRIM_URL_RE = /[.,;:!?】」』"'》）}]+$/;
 
 /** 去掉 URL 尾部标点；括号按平衡保留（如 Wikipedia 链接含括号）。 */
 function trimUrl(url: string): string {
 	let t = url.replace(TRIM_URL_RE, "");
-	while (t.endsWith(")") && (t.match(/\(/g)?.length ?? 0) < (t.match(/\)/g)?.length ?? 0)) {
-		t = t.slice(0, -1);
+	while (true) {
+		if (t.endsWith(")") && (t.match(/\(/g)?.length ?? 0) < (t.match(/\)/g)?.length ?? 0)) {
+			t = t.slice(0, -1);
+		} else if (t.endsWith("]") && (t.match(/\[/g)?.length ?? 0) < (t.match(/\]/g)?.length ?? 0)) {
+			t = t.slice(0, -1);
+		} else {
+			break;
+		}
 	}
 	return t;
 }
@@ -247,6 +253,41 @@ function deCircled(markdown: string): string {
 }
 
 // ============================================================================
+// 跨行链接规整
+// ============================================================================
+
+const MULTILINE_LINK_RE = /\[([^\]\n]*(?:\n[^\]\n]*)+)\](?=\()/g;
+
+/** 防止 Markdown 跨行链接把行尾填充空格纳入 OSC 8 点击区。 */
+function normalizeMultilineLinks(markdown: string): string {
+	const out: string[] = [];
+	let prose: string[] = [];
+	let fence: MarkdownFence | undefined;
+	const flush = () => {
+		if (prose.length === 0) return;
+		out.push(
+			prose.join("\n").replace(MULTILINE_LINK_RE, (_match, label: string) => {
+				const normalized = label.replace(/[ \t]*\n[ \t]*/g, " ").trim();
+				return `[${normalized}]`;
+			}),
+		);
+		prose = [];
+	};
+	for (const line of markdown.split("\n")) {
+		const scanned = scanMarkdownFence(line, fence);
+		fence = scanned.fence;
+		if (scanned.protected) {
+			flush();
+			out.push(line);
+		} else {
+			prose.push(line);
+		}
+	}
+	flush();
+	return out.join("\n");
+}
+
+// ============================================================================
 // 注册
 // ============================================================================
 
@@ -255,8 +296,9 @@ export default function (pi: ExtensionAPI): void {
 	// 所以三个转换合并为一次注册，内部按序链式执行。
 	pi.registerMarkdownTransformer((markdown, context) => {
 		const { messageType, isStreaming = false } = context ?? {};
-		// 与官方推荐一致：thinking 块与流式中间态不转换
-		if (messageType === "assistant-thinking" || isStreaming) return markdown;
+		if (messageType === "assistant-thinking") return markdown;
+		markdown = normalizeMultilineLinks(markdown);
+		if (isStreaming) return markdown;
 		// 0. 圈数字转半角括号（Nerd Font 补丁字形缺陷规避）
 		markdown = deCircled(markdown);
 		// 1. Mermaid 方言渲染

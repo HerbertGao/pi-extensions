@@ -12,7 +12,7 @@ export type ContextPart = {
 	color: "accent" | "success" | "warning" | "muted" | "dim";
 };
 
-type PreviewKey = "systemPrompt" | "tools" | "contextFiles" | "skills";
+type PreviewKey = "systemPrompt" | "tools" | "toolResults" | "contextFiles" | "skills";
 
 type ContextPreview = {
 	key: PreviewKey;
@@ -303,6 +303,48 @@ export function scaleParts(parts: ContextPart[], target: number): ContextPart[] 
 	return scaled;
 }
 
+export function resolveUsedTokens(
+	usage: { tokens: number | null; percent: number | null } | undefined,
+	estimated: number,
+	contextWindow: number,
+): number {
+	const reported = usage?.tokens;
+	const fromPercent =
+		usage?.percent !== null && usage?.percent !== undefined && contextWindow > 0
+			? Math.round((usage.percent / 100) * contextWindow)
+			: undefined;
+	let resolved = reported ?? fromPercent ?? estimated;
+	if (reported !== null && reported !== undefined && fromPercent !== undefined) {
+		const tolerance = Math.max(32, Math.round(contextWindow * 0.001));
+		if (Math.abs(reported - fromPercent) > tolerance) resolved = fromPercent;
+	}
+	if (estimated > 0 && resolved < estimated * 0.25) return estimated;
+	return resolved;
+}
+
+export function capParts(parts: ContextPart[], target: number, fixedPrefix = 0): ContextPart[] {
+	const fixed = parts.slice(0, fixedPrefix);
+	const variable = parts.slice(fixedPrefix);
+	const fixedTokens = fixed.reduce((sum, part) => sum + part.tokens, 0);
+	const variableTarget = Math.max(0, target - fixedTokens);
+	const estimated = variable.reduce((sum, part) => sum + part.tokens, 0);
+	if (estimated <= variableTarget || estimated === 0) return parts;
+	if (variableTarget === 0) return [...fixed, ...variable.map((part) => ({ ...part, tokens: 0 }))];
+	let previous = 0;
+	let cumulative = 0;
+	const capped = variable.map((part, index) => {
+		cumulative += part.tokens;
+		const next =
+			index === variable.length - 1
+				? variableTarget
+				: Math.round((cumulative / estimated) * variableTarget);
+		const tokens = next - previous;
+		previous = next;
+		return { ...part, tokens };
+	});
+	return [...fixed, ...capped];
+}
+
 export function formatTokens(tokens: number): string {
 	if (tokens < 1_000) return String(tokens);
 	if (tokens < 100_000) return `${(tokens / 1_000).toFixed(1)}k`;
@@ -326,13 +368,14 @@ type ContextBreakdown = {
 	parts: ContextPart[];
 	options: SystemPromptOptions;
 	systemPrompt: string;
+	toolResults: string;
 };
 
 /**
  * Single pass over prompt options + session entries. Returns options/systemPrompt
  * so the /context UI does not re-fetch or re-stringify the same sources.
  */
-function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBreakdown {
+export function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBreakdown {
 	const options = (ctx.getSystemPromptOptions?.() ?? {}) as SystemPromptOptions;
 	const systemPrompt = typeof ctx.getSystemPrompt === "function" ? ctx.getSystemPrompt() : "";
 
@@ -361,12 +404,16 @@ function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBreakdown
 	let assistant = 0;
 	let toolResults = 0;
 	let summaries = 0;
+	const toolResultPreview: string[] = [];
 	for (const entry of ctx.sessionManager.buildContextEntries()) {
 		if (entry.type === "message") {
 			const tokens = estimateTokens(entry.message);
 			if (entry.message.role === "user") user += tokens;
 			else if (entry.message.role === "assistant") assistant += tokens;
 			else toolResults += tokens;
+			if (entry.message.role === "toolResult") {
+				toolResultPreview.push(`## Tool result\n\n${JSON.stringify(entry.message, null, 2)}`);
+			}
 		} else if (entry.type === "compaction" || entry.type === "branch_summary") {
 			summaries += tokenEstimate(entry);
 		}
@@ -388,6 +435,7 @@ function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBreakdown
 		parts: parts.filter((part) => part.tokens > 0),
 		options,
 		systemPrompt,
+		toolResults: toolResultPreview.join("\n\n") || "No tool results in the current context.",
 	};
 }
 
@@ -398,10 +446,25 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 			const usage = ctx.getContextUsage();
 			const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
 			const breakdown = collectContextBreakdown(ctx);
-			const used = usage?.tokens ?? breakdown.parts.reduce((sum, part) => sum + part.tokens, 0);
-			const parts = scaleParts(breakdown.parts, used);
+			const estimated = breakdown.parts.reduce((sum, part) => sum + part.tokens, 0);
+			const fixedParts = breakdown.parts.filter(
+				(part) => part.label === "System prompt" || part.label === "Tools",
+			);
+			const variableParts = breakdown.parts.filter(
+				(part) => part.label !== "System prompt" && part.label !== "Tools",
+			);
+			const orderedParts = [...fixedParts, ...variableParts];
+			const fixedTokens = fixedParts.reduce((sum, part) => sum + part.tokens, 0);
+			const used = Math.max(resolveUsedTokens(usage, estimated, contextWindow), fixedTokens);
+			const parts = capParts(orderedParts, used, fixedParts.length);
+			const attributed = parts.reduce((sum, part) => sum + part.tokens, 0);
+			const other = Math.max(0, used - attributed);
 			const free = Math.max(0, contextWindow - used);
-			const allParts = [...parts, { label: "Free space", tokens: free, color: "dim" as const }];
+			const allParts = [
+				...parts,
+				{ label: "Other", tokens: other, color: "muted" as const },
+				{ label: "Free space", tokens: free, color: "dim" as const },
+			];
 
 			if (ctx.mode !== "tui") {
 				const lines = allParts.map((part) => `${part.label}: ${formatTokens(part.tokens)} tokens`);
@@ -455,6 +518,12 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 					label: "Tools",
 					title: "Tools",
 					content: toolContent.join("\n\n") || "No active tools.",
+				},
+				{
+					key: "toolResults",
+					label: "Tool results",
+					title: "Tool Results",
+					content: breakdown.toolResults,
 				},
 				{
 					key: "contextFiles",
