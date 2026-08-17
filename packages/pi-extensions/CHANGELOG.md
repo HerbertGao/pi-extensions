@@ -1,5 +1,31 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.6
+
+### Patch Changes
+
+- [#72](https://github.com/HerbertGao/pi-extensions/pull/72) [`5a133d4`](https://github.com/HerbertGao/pi-extensions/commit/5a133d4753532beef884b093638bceacf0545629) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bypass Git signing for internal worktree preservation commits so interactive signers cannot time out and discard agent changes.
+
+- [#73](https://github.com/HerbertGao/pi-extensions/pull/73) [`553f466`](https://github.com/HerbertGao/pi-extensions/commit/553f4662b968cacaf969c1f4e588d29403c54bfc) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use the primary text color across selected FleetView rows while preserving configured agent badges, and record the reviewed post-0.16.1 upstream range.
+
+- [#67](https://github.com/HerbertGao/pi-extensions/pull/67) [`5ec4a6d`](https://github.com/HerbertGao/pi-extensions/commit/5ec4a6dd8c0e1c385363d91ea88e519e92119150) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions through 0.8.60, including context token reconciliation, tool-result previews, and multiline Markdown link hitboxes while preserving local renderer patches.
+
+- [#66](https://github.com/HerbertGao/pi-extensions/pull/66) [`af56b15`](https://github.com/HerbertGao/pi-extensions/commit/af56b159ce7081daf191d12da6afe3155e2b52b0) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync the applicable pi-subagents 0.16.1 compatibility fix and advance the reviewed upstream baseline to bb47763 while preserving the local fork behavior.
+
+- [#70](https://github.com/HerbertGao/pi-extensions/pull/70) [`99ed1f7`](https://github.com/HerbertGao/pi-extensions/commit/99ed1f70d72037edff690d7007201a33ddabda60) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled ask-user-question from 2.5.2 to 2.6.0, including interactive terminal attention and the coordinated rpiv-config 2.6 range.
+
+- [#63](https://github.com/HerbertGao/pi-extensions/pull/63) [`dcdb52e`](https://github.com/HerbertGao/pi-extensions/commit/dcdb52e76faf5b1d123573c988e49251cc3c20e5) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-mcp-adapter from 2.25.0 to 2.26.0, including fail-closed request-header commands and provider-safe direct-tool collision handling.
+
+- [#71](https://github.com/HerbertGao/pi-extensions/pull/71) [`2641ece`](https://github.com/HerbertGao/pi-extensions/commit/2641ecef5f07f6cbc02f3f889413ef9215dc0c08) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-btw from 0.51.0 to 0.52.0, adding the Same as main thread thinking-level option while retaining fixed-level persistence.
+
+- [#69](https://github.com/HerbertGao/pi-extensions/pull/69) [`c0a453a`](https://github.com/HerbertGao/pi-extensions/commit/c0a453a0119176ffbb06a8e7bbb2803d62d63541) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-lens from 4.0.0 to 4.0.1, including TypeScript LSP stability, transient tool-availability recovery, and runner reporting fixes.
+
+- [#64](https://github.com/HerbertGao/pi-extensions/pull/64) [`9cc5bb0`](https://github.com/HerbertGao/pi-extensions/commit/9cc5bb0562f6bf6d5c205e8e7c67da7dc5719cca) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-web-access from 0.22.0 to 0.23.0, including opt-in authenticated fetch profiles and Firecrawl search support.
+
+- Updated dependencies [[`5a133d4`](https://github.com/HerbertGao/pi-extensions/commit/5a133d4753532beef884b093638bceacf0545629), [`553f466`](https://github.com/HerbertGao/pi-extensions/commit/553f4662b968cacaf969c1f4e588d29403c54bfc), [`5ec4a6d`](https://github.com/HerbertGao/pi-extensions/commit/5ec4a6dd8c0e1c385363d91ea88e519e92119150), [`af56b15`](https://github.com/HerbertGao/pi-extensions/commit/af56b159ce7081daf191d12da6afe3155e2b52b0)]:
+  - @herbertgao/pi-subagents@0.15.5
+  - @herbertgao/pi-cc-extensions@0.8.55
+
 ## 2026.8.5
 
 ### Patch Changes
