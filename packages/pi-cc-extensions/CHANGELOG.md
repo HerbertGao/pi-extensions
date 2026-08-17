@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.55
+
+### Patch Changes
+
+- [#67](https://github.com/HerbertGao/pi-extensions/pull/67) [`5ec4a6d`](https://github.com/HerbertGao/pi-extensions/commit/5ec4a6dd8c0e1c385363d91ea88e519e92119150) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions through 0.8.60, including context token reconciliation, tool-result previews, and multiline Markdown link hitboxes while preserving local renderer patches.
+
 ## 0.8.54
 
 ### Patch Changes

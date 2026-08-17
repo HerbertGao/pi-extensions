@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.5
+
+### Patch Changes
+
+- [#72](https://github.com/HerbertGao/pi-extensions/pull/72) [`5a133d4`](https://github.com/HerbertGao/pi-extensions/commit/5a133d4753532beef884b093638bceacf0545629) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bypass Git signing for internal worktree preservation commits so interactive signers cannot time out and discard agent changes.
+
+- [#73](https://github.com/HerbertGao/pi-extensions/pull/73) [`553f466`](https://github.com/HerbertGao/pi-extensions/commit/553f4662b968cacaf969c1f4e588d29403c54bfc) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use the primary text color across selected FleetView rows while preserving configured agent badges, and record the reviewed post-0.16.1 upstream range.
+
+- [#66](https://github.com/HerbertGao/pi-extensions/pull/66) [`af56b15`](https://github.com/HerbertGao/pi-extensions/commit/af56b159ce7081daf191d12da6afe3155e2b52b0) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync the applicable pi-subagents 0.16.1 compatibility fix and advance the reviewed upstream baseline to bb47763 while preserving the local fork behavior.
+
 ## 0.15.4
 
 ### Patch Changes
