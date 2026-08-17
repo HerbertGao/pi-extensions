@@ -19,7 +19,7 @@ import {
   truncateToWidth,
   visibleWidth,
 } from "@earendil-works/pi-tui"
-import { renderAgentName } from "../agent-color.js"
+import { hasAgentBadge, renderAgentName } from "../agent-color.js"
 import type { AgentManager } from "../agent-manager.js"
 import type { AgentRecord } from "../types.js"
 import { getLifetimeTotal } from "../usage.js"
@@ -476,15 +476,24 @@ export class FleetList {
     width: number,
     theme: Theme,
   ): string {
-    const left = `  ${this.bullet(rosterIndex, sel, theme)} ${renderAgentName(record.type, theme, { fallbackColor: "muted" })}  ${record.description}`
+    const selected = rosterIndex === sel
+    const name = renderAgentName(
+      record.type,
+      theme,
+      selected
+        ? { fallbackColor: "text", bold: hasAgentBadge(record.type) }
+        : { fallbackColor: "muted" },
+    )
+    const description = selected
+      ? theme.fg("text", record.description)
+      : record.description
+    const left = `  ${this.bullet(rosterIndex, sel, theme)} ${name}  ${description}`
     const tokens = getLifetimeTotal(
       this.agentActivity.get(record.id)?.lifetimeUsage ?? record.lifetimeUsage,
     )
     const elapsedMs = (record.completedAt ?? Date.now()) - record.startedAt // freezes once finished
-    const right = theme.fg(
-      "dim",
-      `${formatFleetElapsed(elapsedMs)} · ${formatFleetTokens(tokens)}`,
-    )
+    const stats = `${formatFleetElapsed(elapsedMs)} · ${formatFleetTokens(tokens)}`
+    const right = selected ? theme.fg("text", stats) : theme.fg("dim", stats)
     return rightAlign(left, right, width)
   }
 }

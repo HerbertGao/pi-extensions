@@ -1,7 +1,8 @@
 import { Editor, visibleWidth } from "@earendil-works/pi-tui"
 import { describe, expect, it, vi } from "vitest"
 import type { AgentManager } from "../src/agent-manager.js"
-import type { AgentRecord } from "../src/types.js"
+import { registerAgents } from "../src/agent-types.js"
+import type { AgentConfig, AgentRecord } from "../src/types.js"
 import { getDisplayName } from "../src/ui/agent-widget.js"
 import {
   FleetList,
@@ -23,6 +24,23 @@ const DOWN_RELEASE = "\x1b[1;1:3B"
 const theme = {
   fg: (c: string, s: string) => `<${c}>${s}</${c}>`,
   bold: (s: string) => `*${s}*`,
+}
+
+const BADGED_TYPE = "colored-reviewer"
+const PURPLE_BACKGROUND = "\u001b[48;2;130;125;189m"
+const BADGED_CONFIG: AgentConfig = {
+  name: BADGED_TYPE,
+  displayName: "Code Reviewer",
+  color: "purple",
+  description: "Reviews code",
+  extensions: false,
+  skills: false,
+  systemPrompt: "Review code.",
+  promptMode: "replace",
+}
+
+function plain(row: string): string {
+  return row.replace(/\u001b\[[0-9;]*m/g, "").replace(/<\/?[a-zA-Z]+>|\*/g, "")
 }
 
 /** A no-op session so a record is "openable" by default (the list hides session-less agents). */
@@ -215,6 +233,50 @@ describe("FleetList navigation", () => {
     h.press(DOWN_RELEASE)
     expect(h.render().find((l) => l.includes("one"))).toContain("●")
     expect(h.render().find((l) => l.includes("two"))).toContain("○")
+  })
+
+  it("renders the whole selected row in the theme's primary text color", () => {
+    const h = harness([
+      makeRecord({ id: "a1", description: "one" }),
+      makeRecord({ id: "a2", description: "two" }),
+    ])
+    h.press(DOWN)
+    h.press(DOWN)
+    const selected = h.render().find((line) => line.includes("one"))!
+    expect(selected).toContain("<accent>●</accent>")
+    expect(selected).toContain("<text>one</text>")
+    expect(selected).toMatch(/<text>\d+s · ↓ [\d.]+k? tokens<\/text>/)
+    expect(selected).toContain(
+      `<text>${getDisplayName("general-purpose")}</text>`,
+    )
+
+    const unselected = h.render().find((line) => line.includes("two"))!
+    expect(unselected).toContain("<dim>○</dim>")
+    expect(unselected).toMatch(/<dim>\d+s · ↓ [\d.]+k? tokens<\/dim>/)
+    expect(unselected).not.toContain("<text>")
+  })
+
+  it("keeps a configured color badge bold and column-stable when selected", () => {
+    registerAgents(new Map([[BADGED_TYPE, BADGED_CONFIG]]))
+    try {
+      const h = harness([
+        makeRecord({ id: "a1", type: BADGED_TYPE, description: "one" }),
+        makeRecord({ id: "a2", type: BADGED_TYPE, description: "two" }),
+      ])
+      h.press(DOWN)
+      const before = h.render().find((line) => line.includes("one"))!
+      expect(before).toContain(PURPLE_BACKGROUND)
+      expect(before).toContain(` ${BADGED_CONFIG.displayName} `)
+
+      h.press(DOWN)
+      const selected = h.render().find((line) => line.includes("one"))!
+      expect(selected).toContain(PURPLE_BACKGROUND)
+      expect(selected).toContain(`* ${BADGED_CONFIG.displayName} *`)
+      expect(selected).not.toContain(`<text>${BADGED_CONFIG.displayName}`)
+      expect(plain(selected).indexOf("one")).toBe(plain(before).indexOf("one"))
+    } finally {
+      registerAgents(new Map())
+    }
   })
 
   it("moves selection down/up and clamps at the ends", () => {
