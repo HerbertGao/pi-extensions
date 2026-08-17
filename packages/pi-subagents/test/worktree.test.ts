@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { execFileSync } from "node:child_process"
 import {
   existsSync,
@@ -6,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs"
-import { tmpdir } from "node:os"
+import { platform, tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
@@ -242,6 +244,48 @@ describe("worktree", () => {
       expect(result.branch).toBe("pi-agent-hooked-1")
 
       // Cleanup branch
+      try {
+        execFileSync("git", ["branch", "-D", result.branch!], {
+          cwd: repoDir,
+          stdio: "pipe",
+        })
+      } catch {
+        /* ignore */
+      }
+    })
+
+    it("bypasses configured commit signing for preservation commits", () => {
+      const isWindows = platform() === "win32"
+      const signerMarker = join(repoDir, "signer-invoked")
+      const signerPath = join(repoDir, isWindows ? "signer.cmd" : "signer.sh")
+      writeFileSync(
+        signerPath,
+        isWindows
+          ? `@echo invoked>"${signerMarker}"\r\nexit /b 1\r\n`
+          : `#!/bin/sh\nprintf invoked > "${signerMarker}"\nexit 1\n`,
+        { mode: 0o755 },
+      )
+      for (const [key, value] of [
+        ["commit.gpgsign", "true"],
+        ["gpg.format", "ssh"],
+        ["gpg.ssh.program", signerPath],
+        ["user.signingkey", "test-signing-key"],
+      ]) {
+        execFileSync("git", ["config", key, value], {
+          cwd: repoDir,
+          stdio: "pipe",
+        })
+      }
+
+      const wt = createWorktree(repoDir, "signed-1")!
+      expect(wt).toBeDefined()
+      writeFileSync(join(wt.path, "signed-file.txt"), "agent wrote this")
+
+      const result = cleanupWorktree(repoDir, wt, "signing must not block")
+      expect(result.hasChanges).toBe(true)
+      expect(result.branch).toBe("pi-agent-signed-1")
+      expect(existsSync(signerMarker)).toBe(false)
+
       try {
         execFileSync("git", ["branch", "-D", result.branch!], {
           cwd: repoDir,
