@@ -289,9 +289,13 @@ try {
     }
   }
   await Promise.all(
-    ["dist/index.js", "skills", "LICENSE"].map((path) =>
-      stat(join(lensRoot, path)),
-    ),
+    [
+      "dist/index.js",
+      "dist/clients/dispatch/runners/utils/toolchain-availability.js",
+      "skills",
+      "skills/pi-lens-write-ast-grep-rule/reference.md",
+      "LICENSE",
+    ].map((path) => stat(join(lensRoot, path))),
   )
 
   // Exercise the published ask-user-question state seams as well as its manifest:
