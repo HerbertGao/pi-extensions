@@ -40,7 +40,7 @@ Run `/reload` after installation.
 | Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                         | `/ccstyle`  |
 | Fullscreen mode          | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
 | Settings panel               | `Style / Diff / Thinking / Feature` tabs with startup, wheel, and optional feature toggles                                                        | `/ccstyle`  |
-| Context inspection           | Usage breakdown and previews for the system prompt, tools, skills, and messages                                                                   | `/context`  |
+| Context inspection           | Usage breakdown and previews for the system prompt, tools, tool results, skills, and messages                                                   | `/context`  |
 | Session/Subagent references           | Search and inject effective context from previous Sessions or existing SubAgents                                                                  | `@` |
 | Theme                        | Bundled CC Dark and CC Light themes                                                                                                               | `/theme`    |
 

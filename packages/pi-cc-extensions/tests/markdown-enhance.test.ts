@@ -3,7 +3,9 @@ import assert from "node:assert";
 import { default as enhance } from "../extensions/renderer/markdown-enhance.ts";
 
 const transformers: Array<(md: string, ctx?: object) => string> = [];
-enhance({ registerMarkdownTransformer: (fn) => transformers.push(fn) } as never);
+enhance({
+	registerMarkdownTransformer: (fn: (md: string, ctx?: object) => string) => transformers.push(fn),
+} as never);
 const run = (
 	md: string,
 	ctx = { messageType: "assistant", isStreaming: false, availableWidth: 100 },
@@ -106,6 +108,26 @@ test("已有链接/图片保护", () => {
 	const out = run("链接 [点我](https://example.com) 图片 ![图](https://img.com/a.png)");
 	assert.ok(out.includes("[点我](https://example.com)"));
 	assert.ok(out.includes("![图](https://img.com/a.png)"));
+});
+
+test("跨行链接归一化并保留代码块", () => {
+	const input = [
+		"[跨行",
+		"链接](https://example.com/docs)",
+		"",
+		"~~~md",
+		"[代码",
+		"链接](https://example.com/code)",
+		"~~~",
+	].join("\n");
+	const out = run(input);
+	assert.ok(out.includes("[跨行 链接](https://example.com/docs)"), JSON.stringify(out));
+	assert.ok(out.includes("[代码\n链接](https://example.com/code)"), JSON.stringify(out));
+});
+
+test("IPv6 URL 保留方括号", () => {
+	const out = run("访问 https://[::1]/health");
+	assert.ok(out.includes("[https://[::1]/health](https://[::1]/health)"), JSON.stringify(out));
 });
 
 test("含括号 URL 保留（括号平衡）", () => {
