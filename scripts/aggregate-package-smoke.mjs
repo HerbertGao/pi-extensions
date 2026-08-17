@@ -308,6 +308,85 @@ try {
     pathToFileURL(askRequire.resolve("jiti"))
   )
   const askJiti = createAskJiti(askManifestPath, { moduleCache: false })
+  const askToolModule = await askJiti.import(
+    join(askRoot, "ask-user-question.ts"),
+  )
+  if (askToolModule.BEL !== "\x07") {
+    throw new Error("ask-user-question terminal attention is not standard BEL")
+  }
+  let askTool
+  askToolModule.registerAskUserQuestionTool({
+    registerTool(tool) {
+      askTool = tool
+    },
+    events: { emit() {} },
+  })
+  if (!askTool) {
+    throw new Error("ask-user-question did not register its tool")
+  }
+  const askParams = {
+    questions: [
+      {
+        question: "Pick one",
+        header: "Choice",
+        options: [
+          { label: "A", description: "First" },
+          { label: "B", description: "Second" },
+        ],
+      },
+    ],
+  }
+  const runAskAttention = async (isTTY) => {
+    const originalIsTTY = Object.getOwnPropertyDescriptor(
+      process.stdout,
+      "isTTY",
+    )
+    const originalWrite = process.stdout.write
+    const writes = []
+    Object.defineProperty(process.stdout, "isTTY", {
+      value: isTTY,
+      configurable: true,
+    })
+    process.stdout.write = (chunk) => {
+      writes.push(String(chunk))
+      return true
+    }
+    try {
+      await askTool.execute(
+        "aggregate-bell",
+        askParams,
+        new AbortController().signal,
+        undefined,
+        {
+          hasUI: true,
+          mode: "rpc",
+          ui: {
+            select: async () => undefined,
+            input: async () => undefined,
+          },
+        },
+      )
+    } finally {
+      process.stdout.write = originalWrite
+      if (originalIsTTY) {
+        Object.defineProperty(process.stdout, "isTTY", originalIsTTY)
+      } else {
+        delete process.stdout.isTTY
+      }
+    }
+    return writes
+  }
+  const ttyWrites = await runAskAttention(true)
+  if (ttyWrites.length !== 1 || ttyWrites[0] !== "\x07") {
+    throw new Error(
+      `ask-user-question TTY attention must emit one BEL, got ${JSON.stringify(ttyWrites)}`,
+    )
+  }
+  if ((await runAskAttention(false)).length !== 0) {
+    throw new Error(
+      "ask-user-question emitted terminal attention outside a TTY",
+    )
+  }
   const { routeKey } = await askJiti.import(
     join(askRoot, "state", "key-router.ts"),
   )
