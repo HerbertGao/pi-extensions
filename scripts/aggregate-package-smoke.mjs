@@ -571,6 +571,57 @@ try {
     }
   }
 
+  const mcpRequire = createRequire(join(mcpRoot, mcpEntryRelative))
+  const { createJiti: createMcpJiti } = await import(
+    pathToFileURL(mcpRequire.resolve("jiti"))
+  )
+  const mcpJiti = createMcpJiti(mcpManifestPath, { moduleCache: false })
+  const { ensureToolCallApproved } = await mcpJiti.import(
+    join(mcpRoot, "tool-approval.ts"),
+  )
+  let approvalPrompts = 0
+  const approvalState = {
+    config: { mcpServers: { smoke: { approveTools: true } } },
+    approvedToolCalls: new Map(),
+    toolMetadata: new Map(),
+    ui: {
+      select: async () => {
+        approvalPrompts++
+        return "Allow for session"
+      },
+    },
+  }
+  const approvalTool = { name: "mcp_smoke_write", originalName: "write" }
+  await ensureToolCallApproved(approvalState, "smoke", approvalTool, {
+    path: "a.txt",
+    content: "first",
+  })
+  await ensureToolCallApproved(approvalState, "smoke", approvalTool, {
+    content: "first",
+    path: "a.txt",
+  })
+  await ensureToolCallApproved(approvalState, "smoke", approvalTool, {
+    path: "a.txt",
+    content: "changed",
+  })
+  if (approvalPrompts !== 2 || approvalState.approvedToolCalls.size !== 2) {
+    throw new Error(
+      "pi-mcp-adapter approvals were not scoped to normalized tool arguments",
+    )
+  }
+
+  const mcpCommandsSource = await readFile(join(mcpRoot, "commands.ts"), "utf8")
+  if (
+    !/return ctx\.hasUI && ctx\.mode === ["']tui["'];/.test(
+      mcpCommandsSource,
+    ) ||
+    !/export async function openMcpPanel[\s\S]*?if \(!canRenderPanel\(ctx\)\) \{[\s\S]*?await showStatus\(state, ctx\);/.test(
+      mcpCommandsSource,
+    )
+  ) {
+    throw new Error("pi-mcp-adapter RPC panel lost its text fallback guard")
+  }
+
   const webAccessRoot = join(packageRoot, "node_modules", "pi-web-access")
   const webAccessManifestPath = join(webAccessRoot, "package.json")
   const webAccessManifest = parseJson(
