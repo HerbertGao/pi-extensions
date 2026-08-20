@@ -5,6 +5,7 @@ import {
   type AgentActivity,
   AgentWidget,
   fgPreservingNestedStyles,
+  formatCost,
   formatSessionTokens,
 } from "../src/ui/agent-widget.js"
 
@@ -207,6 +208,58 @@ describe("AgentWidget", () => {
       listAgents: () => [makeRecord("background", { isBackground: true })],
     }
     expect(renderLines(manager, "background", () => "off")).toBe("")
+  })
+})
+
+describe("AgentWidget cost display", () => {
+  const theme = {
+    fg: (_color: string, text: string) => text,
+    bold: (text: string) => text,
+  }
+
+  function render(showCost: boolean, cost: number): string {
+    const record = {
+      id: "scheduled",
+      type: "general-purpose",
+      description: "scheduled agent",
+      status: "running",
+      toolUses: 1,
+      startedAt: Date.now(),
+      lifetimeUsage: { input: 1000, output: 200, cacheWrite: 0, cost },
+      compactionCount: 0,
+    }
+    const widget = new AgentWidget(
+      { listAgents: () => [record] } as any,
+      new Map(),
+      () => "all",
+      () => showCost,
+    )
+    let factory: any
+    widget.setUICtx({
+      setStatus: () => {},
+      setWidget: (_key, content) => {
+        factory = content
+      },
+    } as any)
+    widget.update()
+    return factory(
+      { terminal: { columns: 200 }, requestRender: () => {} },
+      theme,
+    )
+      .render()
+      .join("\n")
+  }
+
+  it("formats estimates and hides missing costs", () => {
+    expect(formatCost(0.0042)).toBe("~$0.0042")
+    expect(formatCost(0)).toBe("")
+    expect(formatCost(0.00002)).toBe("<$0.0001")
+  })
+
+  it("shows cost only when enabled and priced", () => {
+    expect(render(true, 0.0042)).toContain("~$0.0042")
+    expect(render(false, 0.0042)).not.toContain("$")
+    expect(render(true, 0)).not.toContain("$")
   })
 })
 

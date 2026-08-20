@@ -579,3 +579,44 @@ describe("FleetList overlay lifecycle", () => {
     ).toBe(false)
   })
 })
+
+describe("FleetList cost display", () => {
+  const theme = {
+    fg: (_color: string, text: string) => text,
+    bold: (text: string) => text,
+  }
+
+  function row(showCost: boolean, cost: number): string {
+    const record = makeRecord({
+      lifetimeUsage: { input: 13100, output: 0, cacheWrite: 0, cost },
+    })
+    const fleet = new FleetList(
+      fakeManager([record]),
+      new Map(),
+      () => showCost,
+    )
+    let factory: any
+    fleet.setUICtx({
+      setWidget: (_key: string, content: any) => {
+        factory = content
+      },
+      onTerminalInput: () => () => {},
+      getEditorText: () => "",
+      notify: () => {},
+      custom: (() => new Promise(() => {})) as any,
+    } as any)
+    fleet.update()
+    return factory(
+      { requestRender: () => {}, terminal: { columns: 120, rows: 40 } },
+      theme,
+    )
+      .render(120)
+      .join("\n")
+  }
+
+  it("shows cost only when enabled and priced", () => {
+    expect(row(true, 0.0042)).toContain("~$0.0042")
+    expect(row(false, 0.0042)).not.toContain("$")
+    expect(row(true, 0)).not.toContain("$")
+  })
+})
