@@ -19,6 +19,23 @@ export interface SubagentsSettings {
   graceTurns?: number
   defaultJoinMode?: JoinMode
   /**
+   * Whether a top-level `Agent` spawn that doesn't say runs detached.
+   * Defaults to `true`, following Claude Code, where the agent backgrounds
+   * unless the caller passes `run_in_background: false`. Set `false` to restore
+   * the previous behaviour, where an unqualified spawn blocked the turn and
+   * returned its result inline.
+   *
+   * Top-level only. Nested spawns (a subagent spawning its own) always default
+   * to foreground regardless of this setting — see `nested-tools.ts`, where a
+   * detached child would be killed by `abortOwnedChildren` when its parent
+   * settles, with no notification path to deliver its result.
+   *
+   * An explicit `run_in_background` on the call, or in the agent file's
+   * frontmatter, overrides this in both directions; the setting only decides
+   * what "unspecified" means.
+   */
+  backgroundByDefault?: boolean
+  /**
    * Master switch for the schedule subagent feature. Defaults to `true`.
    * When `false`: the `Agent` tool's `schedule` param + its guideline are
    * stripped from the tool spec at registration (zero LLM-context cost), the
@@ -102,6 +119,29 @@ export interface SubagentsSettings {
    */
   outputTranscript?: boolean
   /**
+   * Whether `isolation: "worktree"` may create a worktree at all. Defaults to
+   * `true`. Set `false` on a repo where worktrees are too slow or too large to
+   * be worth it (#184): a requested worktree is then dropped and the agent runs
+   * in the main checkout.
+   *
+   * The drop is deliberately silent — there is no per-result note, because the
+   * setting exists for projects whose model asks for a worktree on every call,
+   * where a note would be noise on every result. What keeps the orchestrator
+   * from claiming a `pi-agent-*` branch anyway is that it is never told the
+   * capability exists: `isolationParam` (invocation-config.ts) drops the field
+   * from both tool schemas, and `isolationGuideline` (index.ts) drops the
+   * matching prose from the full and compact descriptions — a custom one opts
+   * in via the `{{isolationGuideline}}` placeholder. Anything that
+   * reintroduces the prose has to reintroduce a note with it.
+   *
+   * Deliberately a downgrade rather than an error. The fail-loud rule covers
+   * worktrees that *cannot* be created; this is the user declining one, and
+   * throwing would reject exactly the calls that the `isolation: "off"` value
+   * exists to tolerate. Enforced below the tool boundary, so it also covers the
+   * scheduler and the unvalidated cross-extension RPC path.
+   */
+  worktreeIsolation?: boolean
+  /**
    * Hard ceiling on nested subagent delegation, counted from the main session:
    * main = 0, its subagents = 1, their children = 2. Defaults to `2`; `0` or `1`
    * disables nesting project-wide. Read when a subagent session is built, so a
@@ -123,6 +163,43 @@ export interface SubagentsSettings {
    * meaning one thing here and another in the resolver.
    */
   fallbackSubagent?: string
+  /**
+   * Whether this extension's tool results carry a `usage` field, so subagent
+   * spend reaches the parent session's own accounting. Defaults to `false`.
+   *
+   * Subagents run in their own pi sessions, so by default the parent's footer,
+   * statusline and `/cost` show only what the main model spent — a session that
+   * delegated most of its work reads as nearly free. Pi folds
+   * `toolResult.usage` into `getSessionStats()`, so attaching it makes those
+   * surfaces count subagents too, under `/cost`'s "Tools/summaries" bucket.
+   *
+   * Off by default because it changes numbers the user may already be tracking
+   * (a statusline reading session cost will step up), not because the numbers
+   * are wrong.
+   *
+   * Three properties of what gets reported:
+   *   - Tokens exclude `cacheRead`, for the reason in `usage.ts` — the parent's
+   *     token total therefore rises by billed tokens only.
+   *   - Cost is pi's own per-message `usage.cost.total`; we price nothing, and
+   *     a model pi has no rates for contributes 0.
+   *   - The context-window percentage is untouched. Pi derives it from assistant
+   *     messages alone (`getContextUsage`), so a delegating session's context
+   *     does not appear to fill up faster.
+   */
+  reportUsage?: boolean
+  /**
+   * Whether the subagent surfaces show an estimated dollar cost next to their
+   * token counts (widget, FleetView, conversation viewer, foreground results,
+   * completion notifications). Defaults to `false`. Applied live.
+   *
+   * Rendered as `~$0.0042` — the tilde marks it as pi's reported estimate
+   * rather than a billed figure, and it is omitted entirely when the model has
+   * no pricing data, so a local model shows tokens and no dollars.
+   *
+   * Independent of `reportUsage`: this one is what a human reads, that one is
+   * what the parent session counts.
+   */
+  showCost?: boolean
 }
 
 export type ToolDescriptionMode = "full" | "compact" | "custom"
@@ -133,6 +210,7 @@ export interface SettingsAppliers {
   setDefaultMaxTurns: (n: number) => void
   setGraceTurns: (n: number) => void
   setDefaultJoinMode: (mode: JoinMode) => void
+  setBackgroundByDefault: (b: boolean) => void
   setSchedulingEnabled: (b: boolean) => void
   setScopeModels: (enabled: boolean) => void
   setStrictAgentFiles: (b: boolean) => void
@@ -141,8 +219,11 @@ export interface SettingsAppliers {
   setFleetView: (b: boolean) => void
   setWidgetMode: (mode: WidgetMode) => void
   setOutputTranscript: (b: boolean) => void
+  setWorktreeIsolation: (b: boolean) => void
   setMaxSubagentDepth: (n: number) => void
   setFallbackSubagent: (v: string | undefined) => void
+  setReportUsage: (b: boolean) => void
+  setShowCost: (b: boolean) => void
 }
 
 /** Emit callback — a subset of `pi.events.emit` to keep helpers testable. */
@@ -208,6 +289,9 @@ function sanitize(raw: unknown): SubagentsSettings {
   ) {
     out.defaultJoinMode = r.defaultJoinMode as JoinMode
   }
+  if (typeof r.backgroundByDefault === "boolean") {
+    out.backgroundByDefault = r.backgroundByDefault
+  }
   if (typeof r.schedulingEnabled === "boolean") {
     out.schedulingEnabled = r.schedulingEnabled
   }
@@ -237,6 +321,15 @@ function sanitize(raw: unknown): SubagentsSettings {
   }
   if (typeof r.outputTranscript === "boolean") {
     out.outputTranscript = r.outputTranscript
+  }
+  if (typeof r.worktreeIsolation === "boolean") {
+    out.worktreeIsolation = r.worktreeIsolation
+  }
+  if (typeof r.reportUsage === "boolean") {
+    out.reportUsage = r.reportUsage
+  }
+  if (typeof r.showCost === "boolean") {
+    out.showCost = r.showCost
   }
   if (r.fallbackSubagent === false) {
     // The only non-string spelling worth accepting: a boolean would otherwise be
@@ -322,6 +415,8 @@ export function applySettings(
   if (typeof s.fallbackSubagent === "string")
     appliers.setFallbackSubagent(s.fallbackSubagent)
   if (s.defaultJoinMode) appliers.setDefaultJoinMode(s.defaultJoinMode)
+  if (typeof s.backgroundByDefault === "boolean")
+    appliers.setBackgroundByDefault(s.backgroundByDefault)
   if (typeof s.schedulingEnabled === "boolean")
     appliers.setSchedulingEnabled(s.schedulingEnabled)
   if (typeof s.scopeModels === "boolean") appliers.setScopeModels(s.scopeModels)
@@ -335,6 +430,10 @@ export function applySettings(
   if (s.widgetMode) appliers.setWidgetMode(s.widgetMode)
   if (typeof s.outputTranscript === "boolean")
     appliers.setOutputTranscript(s.outputTranscript)
+  if (typeof s.worktreeIsolation === "boolean")
+    appliers.setWorktreeIsolation(s.worktreeIsolation)
+  if (typeof s.reportUsage === "boolean") appliers.setReportUsage(s.reportUsage)
+  if (typeof s.showCost === "boolean") appliers.setShowCost(s.showCost)
 }
 
 /**

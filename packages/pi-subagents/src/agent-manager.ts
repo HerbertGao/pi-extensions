@@ -24,19 +24,25 @@ import type {
   SubagentType,
   ThinkingLevel,
 } from "./types.js"
-import { addUsage } from "./usage.js"
-import { cleanupWorktree, createWorktree, pruneWorktrees } from "./worktree.js"
+import { addUsage, type LifetimeUsage } from "./usage.js"
+import {
+  cleanupWorktree,
+  createWorktree,
+  isWorktreeIsolationEnabled,
+  pruneWorktrees,
+} from "./worktree.js"
 
 export type OnAgentComplete = (record: AgentRecord) => void
 export type OnAgentStart = (record: AgentRecord) => void
 export type OnAgentCompact = (record: AgentRecord, info: CompactionInfo) => void
+export type OnAgentUsage = (record: AgentRecord, usage: LifetimeUsage) => void
 export type CompactionInfo = {
   reason: "manual" | "threshold" | "overflow"
   tokensBefore: number
 }
 
 /** Default max concurrent background agents. */
-const DEFAULT_MAX_CONCURRENT = 4
+const DEFAULT_MAX_CONCURRENT = 10
 
 /**
  * Validate a caller-supplied SpawnOptions.cwd. `undefined`/`null` mean "unset"
@@ -125,11 +131,7 @@ interface SpawnOptions {
   /** Called at the end of each agentic turn with the cumulative count. */
   onTurnEnd?: (turnCount: number) => void
   /** Called once per assistant message_end with that message's usage delta. */
-  onAssistantUsage?: (usage: {
-    input: number
-    output: number
-    cacheWrite: number
-  }) => void
+  onAssistantUsage?: (usage: LifetimeUsage) => void
   /** Called when the session successfully compacts. */
   onCompaction?: (info: CompactionInfo) => void
   /** Nesting depth: top-level subagent = 1. */
@@ -158,11 +160,7 @@ interface ResumeOptions {
   /** Called at the end of each resumed agentic turn with the cumulative count. */
   onTurnEnd?: (turnCount: number) => void
   /** Called once per assistant message_end with that message's usage delta. */
-  onAssistantUsage?: (usage: {
-    input: number
-    output: number
-    cacheWrite: number
-  }) => void
+  onAssistantUsage?: (usage: LifetimeUsage) => void
   /** Called when the session successfully compacts. */
   onCompaction?: (info: CompactionInfo) => void
   /**
@@ -176,12 +174,38 @@ interface ResumeOptions {
   onStarted?: () => void
 }
 
+const CHILD_SHUTDOWN_TIMEOUT_MS = 3_000
+
+async function shutdownChildSession(
+  session: AgentSession | undefined,
+): Promise<void> {
+  try {
+    const runner = session?.extensionRunner
+    if (runner?.hasHandlers?.("session_shutdown")) {
+      await Promise.race([
+        runner.emit({ type: "session_shutdown", reason: "quit" }),
+        new Promise<void>((resolve) =>
+          setTimeout(resolve, CHILD_SHUTDOWN_TIMEOUT_MS).unref(),
+        ),
+      ])
+    }
+  } catch {
+    /* best-effort lifecycle cleanup */
+  }
+  try {
+    session?.dispose?.()
+  } catch {
+    /* ignore */
+  }
+}
+
 export class AgentManager {
   private agents = new Map<string, AgentRecord>()
   private cleanupInterval: ReturnType<typeof setInterval>
   private onComplete?: OnAgentComplete
   private onStart?: OnAgentStart
   private onCompact?: OnAgentCompact
+  private onUsage?: OnAgentUsage
   private maxConcurrent: number
   /** Base repos worktrees were created from — so dispose() can prune them all,
    *  not just the parent repo (caller-supplied cwd can target other repos). */
@@ -197,10 +221,12 @@ export class AgentManager {
     maxConcurrent = DEFAULT_MAX_CONCURRENT,
     onStart?: OnAgentStart,
     onCompact?: OnAgentCompact,
+    onUsage?: OnAgentUsage,
   ) {
     this.onComplete = onComplete
     this.onStart = onStart
     this.onCompact = onCompact
+    this.onUsage = onUsage
     this.maxConcurrent = maxConcurrent
     // Cleanup completed agents after 10 minutes (but keep sessions for resume)
     this.cleanupInterval = setInterval(() => this.cleanup(), 60_000)
@@ -302,7 +328,7 @@ export class AgentManager {
     // fail loud if not possible (no silent fallback to main tree). Done
     // BEFORE state mutation so a throw doesn't leave the record half-running.
     let worktreeCwd: string | undefined
-    if (options.isolation === "worktree") {
+    if (options.isolation === "worktree" && isWorktreeIsolationEnabled()) {
       const wt = createWorktree(baseCwd, id)
       if (!wt) {
         throw new Error(
@@ -365,6 +391,7 @@ export class AgentManager {
       onTextDelta: options.onTextDelta,
       onAssistantUsage: (usage) => {
         addUsage(record.lifetimeUsage, usage)
+        this.onUsage?.(record, usage)
         options.onAssistantUsage?.(usage)
       },
       onCompaction: (info) => {
@@ -662,6 +689,7 @@ export class AgentManager {
         onTurnEnd: options?.onTurnEnd,
         onAssistantUsage: (usage) => {
           addUsage(record.lifetimeUsage, usage)
+          this.onUsage?.(record, usage)
           options?.onAssistantUsage?.(usage)
         },
         onCompaction: (info) => {
@@ -766,6 +794,7 @@ export class AgentManager {
       onTurnEnd: options.onTurnEnd,
       onAssistantUsage: (usage) => {
         addUsage(record.lifetimeUsage, usage)
+        this.onUsage?.(record, usage)
         options.onAssistantUsage?.(usage)
       },
       onCompaction: (info) => {
@@ -851,9 +880,10 @@ export class AgentManager {
 
   /** Dispose a record's session and remove it from the map. */
   private removeRecord(id: string, record: AgentRecord): void {
-    record.session?.dispose?.()
+    const session = record.session
     record.session = undefined
     this.agents.delete(id)
+    void shutdownChildSession(session)
   }
 
   private cleanup() {
@@ -926,14 +956,13 @@ export class AgentManager {
     }
   }
 
-  dispose() {
+  async dispose(): Promise<void> {
     clearInterval(this.cleanupInterval)
     // Clear queue
     this.queue = []
-    for (const record of this.agents.values()) {
-      record.session?.dispose()
-    }
+    const sessions = [...this.agents.values()].map((record) => record.session)
     this.agents.clear()
+    await Promise.all(sessions.map((session) => shutdownChildSession(session)))
     // Prune any orphaned git worktrees (crash recovery)
     try {
       pruneWorktrees(process.cwd())

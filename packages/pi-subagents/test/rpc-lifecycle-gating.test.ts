@@ -211,6 +211,47 @@ describe("issue #142: RPC handlers + subagents:ready are gated on session_start"
     }
   })
 
+  it("shows live tool activity for an RPC-spawned agent", async () => {
+    const { pi, lifecycle, busHandlers } = makePi()
+    const activeCtx = ctx(true)
+    let onToolActivity:
+      | ((activity: { type: "start" | "end"; toolName: string }) => void)
+      | undefined
+    vi.mocked(runAgent).mockImplementation((_ctx, _type, _prompt, options) => {
+      onToolActivity = options.onToolActivity
+      options.onSessionCreated?.({ subscribe: () => vi.fn() } as any)
+      return new Promise(() => {}) as any
+    })
+    subagentsExtension(pi)
+
+    await lifecycle.get("session_start")({}, activeCtx)
+    await busHandlers.get("subagents:rpc:spawn")!({
+      requestId: "req-activity",
+      type: "general-purpose",
+      prompt: "go",
+      options: { description: "rpc activity test", isBackground: true },
+    })
+    await vi.waitFor(() => expect(onToolActivity).toBeTypeOf("function"))
+    onToolActivity!({ type: "start", toolName: "bash" })
+
+    const factory = activeCtx.ui.setWidget.mock.calls
+      .filter((call: any[]) => call[0] === "agents" && call[1])
+      .at(-1)?.[1]
+    const lines = factory(
+      { terminal: { columns: 120 }, requestRender: vi.fn() },
+      {
+        fg: (_color: string, text: string) => text,
+        bold: (text: string) => text,
+      },
+    )
+      .render()
+      .join("\n")
+    expect(lines).toContain("running command…")
+    expect(lines).not.toContain("thinking…")
+
+    await lifecycle.get("session_shutdown")()
+  })
+
   it("is idempotent — a second session_start does not re-advertise or double-register", async () => {
     const { pi, lifecycle } = makePi()
     subagentsExtension(pi)

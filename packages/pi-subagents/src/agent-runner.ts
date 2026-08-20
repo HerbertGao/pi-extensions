@@ -41,6 +41,7 @@ import {
 import { buildAgentPrompt, type PromptExtras } from "./prompts.js"
 import { preloadSkills } from "./skill-loader.js"
 import type { SubagentType, ThinkingLevel } from "./types.js"
+import type { LifetimeUsage } from "./usage.js"
 
 /**
  * Tool names registered by THIS extension. Single source of truth so the
@@ -349,6 +350,15 @@ export function setDefaultMaxTurns(n: number | undefined): void {
   defaultMaxTurns = normalizeMaxTurns(n)
 }
 
+export function resolveEffectiveMaxTurns(
+  type: string,
+  explicit?: number,
+): number | undefined {
+  return normalizeMaxTurns(
+    explicit ?? getAgentConfig(type)?.maxTurns ?? defaultMaxTurns,
+  )
+}
+
 /** Additional turns allowed after the soft limit steer message. */
 let graceTurns = 5
 
@@ -442,11 +452,7 @@ export interface RunOptions {
    * Lets callers maintain a lifetime accumulator that survives compaction
    * (which replaces session.state.messages and resets stats-derived sums).
    */
-  onAssistantUsage?: (usage: {
-    input: number
-    output: number
-    cacheWrite: number
-  }) => void
+  onAssistantUsage?: (usage: LifetimeUsage) => void
   /**
    * Called when the session successfully compacts. `tokensBefore` is upstream's
    * pre-compaction context size estimate. Aborted compactions don't fire.
@@ -1030,9 +1036,7 @@ export async function runAgent(
 
   // Track turns for graceful max_turns enforcement
   let turnCount = 0
-  const maxTurns = normalizeMaxTurns(
-    options.maxTurns ?? agentConfig?.maxTurns ?? defaultMaxTurns,
-  )
+  const maxTurns = resolveEffectiveMaxTurns(type, options.maxTurns)
   let softLimitReached = false
   let aborted = false
 
@@ -1079,6 +1083,8 @@ export async function runAgent(
           input: u.input ?? 0,
           output: u.output ?? 0,
           cacheWrite: u.cacheWrite ?? 0,
+          cacheRead: u.cacheRead ?? 0,
+          cost: u.cost?.total ?? 0,
         })
     }
     if (event.type === "compaction_end" && !event.aborted && event.result) {
@@ -1133,11 +1139,7 @@ export async function resumeAgent(
     onToolActivity?: (activity: ToolActivity) => void
     /** Called at the end of each resumed agentic turn with the 1-based count. */
     onTurnEnd?: (turnCount: number) => void
-    onAssistantUsage?: (usage: {
-      input: number
-      output: number
-      cacheWrite: number
-    }) => void
+    onAssistantUsage?: (usage: LifetimeUsage) => void
     onCompaction?: (info: {
       reason: "manual" | "threshold" | "overflow"
       tokensBefore: number
@@ -1180,6 +1182,8 @@ export async function resumeAgent(
                 input: u.input ?? 0,
                 output: u.output ?? 0,
                 cacheWrite: u.cacheWrite ?? 0,
+                cacheRead: u.cacheRead ?? 0,
+                cost: u.cost?.total ?? 0,
               })
           }
           if (

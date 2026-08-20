@@ -24,7 +24,7 @@
     },
     "packages/pi-cc-extensions": {
       "name": "@herbertgao/pi-cc-extensions",
-      "version": "0.8.54",
+      "version": "0.8.55",
       "dependencies": {
         "@shikijs/cli": "^4.0.2",
         "grok-mermaid": "^0.2.2",
@@ -47,7 +47,7 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.8.5",
+      "version": "2026.8.6",
       "dependencies": {
         "@ast-grep/cli": "^0.45.0",
         "@ast-grep/napi": "^0.45.0",
@@ -160,19 +160,19 @@
     },
     "packages/pi-subagents": {
       "name": "@herbertgao/pi-subagents",
-      "version": "0.15.4",
+      "version": "0.15.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.49",
         "croner": "^10.0.1",
-        "nanoid": "^5.0.0",
+        "nanoid": "^5.1.16",
       },
       "devDependencies": {
         "@vitest/coverage-istanbul": "^4.1.10",
       },
       "peerDependencies": {
-        "@earendil-works/pi-ai": ">=0.80.0",
-        "@earendil-works/pi-coding-agent": ">=0.80.0",
-        "@earendil-works/pi-tui": ">=0.80.0",
+        "@earendil-works/pi-ai": ">=0.81.0",
+        "@earendil-works/pi-coding-agent": ">=0.81.0",
+        "@earendil-works/pi-tui": ">=0.81.0",
       },
     },
     "packages/pi-titlebar-spinner": {
