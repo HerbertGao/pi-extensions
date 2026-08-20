@@ -101,6 +101,52 @@ test("edit rich diff is width-safe and honors collapsed/expanded limits", () => 
 	assert.ok(output(expanded, 32).length > collapsedLines.length);
 });
 
+test("write uses its own live collapsed limit and keeps expanded content", () => {
+	const content = Array.from({ length: 12 }, (_, index) => `const value${index} = ${index}`).join(
+		"\n",
+	);
+	let display: ToolDisplayConfig = {
+		...DEFAULT_TOOL_DISPLAY_CONFIG,
+		editDiffCollapsedLines: 80,
+		writeDiffCollapsedLines: 0,
+	};
+	const collapsed = renderWriteDiffResult(
+		content,
+		{ expanded: false, filePath: "sample.ts", fileExistedBeforeWrite: false },
+		() => display,
+		theme,
+		"",
+	);
+
+	const statsOnly = output(collapsed, 80);
+	assert.equal(statsOnly.length, 1);
+	assert.match(statsOnly[0] ?? "", /created.*click to show more/);
+
+	display = { ...display, writeDiffCollapsedLines: 2 };
+	const twoLines = output(collapsed, 80);
+	assert.ok(twoLines.length > statsOnly.length);
+	display = { ...display, writeDiffCollapsedLines: 3 };
+	const threeLines = output(collapsed, 80);
+	assert.notDeepEqual(threeLines, twoLines, "write limit must invalidate the render cache");
+
+	display = { ...display, editDiffCollapsedLines: 1 };
+	assert.deepEqual(
+		output(collapsed, 80),
+		threeLines,
+		"edit collapsed limit must not change write output",
+	);
+
+	display = { ...display, writeDiffCollapsedLines: 0 };
+	const expanded = renderWriteDiffResult(
+		content,
+		{ expanded: true, filePath: "sample.ts", fileExistedBeforeWrite: false },
+		() => display,
+		theme,
+		"",
+	);
+	assert.ok(output(expanded, 80).some((line) => line.includes("value0")));
+});
+
 test("edit/write collapsed diff hints switch from muted to white text on hover", () => {
 	let hovered = false;
 	const hoverTheme = {
@@ -291,7 +337,26 @@ test("write create and overwrite render distinct rich diffs", () => {
 		store,
 	);
 	assert.match(output(create).join("\n"), /created/);
-	const overwriteText = output(overwrite).join("\n");
+	assert.match(output(create).join("\n"), /more/);
+	assert.doesNotMatch(
+		output(create).join("\n"),
+		/\n[^\n]*new[^\n]*$/,
+		"collapsed create has no body",
+	);
+	const overwriteCollapsed = output(overwrite).join("\n");
+	assert.match(overwriteCollapsed, /overwritten/);
+	assert.match(overwriteCollapsed, /more/);
+	assert.doesNotMatch(overwriteCollapsed, /\bold\b/, "collapsed overwrite has no body");
+
+	const overwriteExpanded = renderRichToolResult(
+		"write",
+		{ content: [{ type: "text", text: "ok" }] },
+		{ expanded: true },
+		theme,
+		{ toolCallId: "overwrite", args: { path: "old.ts", content: "new\n" } },
+		store,
+	);
+	const overwriteText = output(overwriteExpanded).join("\n");
 	assert.match(overwriteText, /overwritten/);
 	assert.match(overwriteText, /old/);
 	assert.match(overwriteText, /new/);
