@@ -32,6 +32,7 @@ const contentMarker = "RESTOREDEXTERNALCACHEMARKER"
 const jinaMarker = "JINAINLINECACHEMARKER"
 const geminiMarker = "GEMINIWEBTRANSPORTMARKER"
 const firecrawlMarker = "FIRECRAWLSEARCHMARKER"
+const rscMarker = "RSCEXTRACTIONMARKER"
 const pdfMarker = "PDFEXTRACTIONMARKER"
 const imagePng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -228,6 +229,71 @@ async function assertGeminiWebTransport(webAccessEntry) {
   }
 }
 
+async function assertCredentialRedirects(webAccessEntry) {
+  const utils = await (
+    await createPackageJiti(webAccessEntry)
+  ).import(join(dirname(webAccessEntry), "utils.ts"))
+  assert.throws(
+    () =>
+      utils.resolveApiBaseUrl({
+        configKey: "smokeBaseUrl",
+        configuredValue: "http://api.example.test",
+        defaultValue: "https://api.example.test",
+        environmentKey: "SMOKE_BASE_URL",
+        environmentValue: undefined,
+      }),
+    /must be an absolute HTTPS URL/,
+  )
+
+  const originalFetch = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (input, init) => {
+    const headers = new Headers(init?.headers)
+    calls.push({
+      url: String(input),
+      authorization: headers.get("authorization"),
+      apiKey: headers.get("x-api-key"),
+      accept: headers.get("accept"),
+    })
+    return calls.length === 1
+      ? new Response(null, {
+          status: 302,
+          headers: { location: "https://redirect.example.test/final" },
+        })
+      : new Response("redirected")
+  }
+  try {
+    const response = await utils.fetchWithCredentialRedirects(
+      "https://origin.example.test/start",
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: "Bearer redirect-secret",
+          "X-Api-Key": "redirect-secret",
+        },
+      },
+      ["authorization", "x-api-key"],
+    )
+    assert.equal(await response.text(), "redirected")
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+  assert.deepEqual(calls, [
+    {
+      url: "https://origin.example.test/start",
+      authorization: "Bearer redirect-secret",
+      apiKey: "redirect-secret",
+      accept: "application/json",
+    },
+    {
+      url: "https://redirect.example.test/final",
+      authorization: null,
+      apiKey: null,
+      accept: "application/json",
+    },
+  ])
+}
+
 async function assertCacheLimits(webAccessEntry, agentDir, cacheDir) {
   const previousAgentDir = process.env.PI_CODING_AGENT_DIR
   process.env.PI_CODING_AGENT_DIR = agentDir
@@ -359,6 +425,21 @@ async function startMockServer() {
       )
       return
     }
+    if (request.url === "/rsc-page") {
+      const flight = `1:${JSON.stringify([
+        "$",
+        "main",
+        null,
+        {
+          children: ["$", "p", null, { children: `${rscMarker} `.repeat(40) }],
+        },
+      ])}\n`
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" })
+      response.end(
+        `<!doctype html><html><head><title>RSC Smoke</title></head><body><p>Loading...</p><script>self.__next_f.push([1,${JSON.stringify(flight)}])</script></body></html>`,
+      )
+      return
+    }
     if (request.url === "/image.png") {
       response.writeHead(200, { "content-type": "image/png" })
       response.end(imagePng)
@@ -445,9 +526,13 @@ async function startMockServer() {
           .filter((message) => message.role === "tool").length
         const address = server.address()
         assert.ok(address && typeof address === "object")
-        const urls = ["page-a", "page-b", "image.png", pdfPath.slice(1)].map(
-          (path) => `http://127.0.0.1:${address.port}/${path}`,
-        )
+        const urls = [
+          "page-a",
+          "page-b",
+          "rsc-page",
+          "image.png",
+          pdfPath.slice(1),
+        ].map((path) => `http://127.0.0.1:${address.port}/${path}`)
 
         let name
         let args
@@ -478,7 +563,7 @@ async function startMockServer() {
           args = { urls }
         } else if (prompt.startsWith("RUN_MEDIA_GATES") && toolResults === 0) {
           name = "fetch_content"
-          args = { urls: urls.slice(2) }
+          args = { urls: urls.slice(-2) }
         } else if (
           prompt.startsWith("RESTORE_WEB_SMOKE") &&
           toolResults === 0
@@ -773,6 +858,7 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
       baseConfig,
     })
     await assertGeminiWebTransport(resolvedWebAccessEntry)
+    await assertCredentialRedirects(resolvedWebAccessEntry)
 
     await assertNewReleaseFeatures({
       webAccessEntry: resolvedWebAccessEntry,
@@ -859,9 +945,10 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
     assert.equal(fetchEnd?.isError, false)
     assert.equal(
       fetchEnd.result.details.successful,
-      4,
+      5,
       JSON.stringify(fetchEnd.result, null, 2),
     )
+    assert.match(resultText(fetchEnd), /RSC Smoke/)
     assert.match(resultText(fetchEnd), /image\.png/)
     const sessionFile = await findSessionFile(sessionDir)
     const sessionJsonl = await readFile(sessionFile, "utf8")
@@ -900,6 +987,7 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
       )
     ).find((contents) => contents.includes(mock.pdfPath))
     assert.ok(fetchCache, "fetch_content cache did not include the PDF result")
+    assert.match(fetchCache, new RegExp(rscMarker))
     const pdfResult = JSON.parse(fetchCache).urls.find(({ url }) =>
       url.endsWith(mock.pdfPath),
     )

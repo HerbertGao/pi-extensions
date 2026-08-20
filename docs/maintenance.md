@@ -62,7 +62,7 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-mcp-adapter`                     | `2.26.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `4.0.1`  | `apmantza/pi-lens`          |
-| `pi-web-access`                      | `0.23.0` | `nicobailon/pi-web-access`  |
+| `pi-web-access`                      | `0.24.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
 
