@@ -147,6 +147,21 @@ describe("settings persistence", () => {
     expect(loadSettings(projectDir)).toEqual({}) // non-boolean dropped
   })
 
+  it("round-trips reportUsage and showCost; drops non-boolean values", () => {
+    saveSettings({ reportUsage: true, showCost: true }, projectDir)
+    expect(loadSettings(projectDir)).toEqual({
+      reportUsage: true,
+      showCost: true,
+    })
+    saveSettings({ reportUsage: false, showCost: false }, projectDir)
+    expect(loadSettings(projectDir)).toEqual({
+      reportUsage: false,
+      showCost: false,
+    })
+    writeProject({ reportUsage: "on", showCost: 1 } as any)
+    expect(loadSettings(projectDir)).toEqual({})
+  })
+
   it("sanitize drops non-boolean schedulingEnabled silently", async () => {
     writeProject({ schedulingEnabled: "yes" } as any)
     expect(loadSettings(projectDir)).toEqual({})
@@ -474,6 +489,8 @@ describe("settings persistence", () => {
         setOutputTranscript: vi.fn(),
         setMaxSubagentDepth: vi.fn(),
         setFallbackSubagent: vi.fn(),
+        setReportUsage: vi.fn(),
+        setShowCost: vi.fn(),
       }
     })
 
@@ -488,6 +505,18 @@ describe("settings persistence", () => {
       expect(appliers.setStrictAgentFiles).not.toHaveBeenCalled()
       expect(appliers.setDisableDefaultAgents).not.toHaveBeenCalled()
       expect(appliers.setToolDescriptionMode).not.toHaveBeenCalled()
+      expect(appliers.setReportUsage).not.toHaveBeenCalled()
+      expect(appliers.setShowCost).not.toHaveBeenCalled()
+    })
+
+    it("applies reportUsage and showCost", () => {
+      applySettings({ reportUsage: true, showCost: true }, appliers)
+      expect(appliers.setReportUsage).toHaveBeenCalledWith(true)
+      expect(appliers.setShowCost).toHaveBeenCalledWith(true)
+
+      applySettings({ reportUsage: false, showCost: false }, appliers)
+      expect(appliers.setReportUsage).toHaveBeenCalledWith(false)
+      expect(appliers.setShowCost).toHaveBeenCalledWith(false)
     })
 
     it("applies fallbackSubagent through to the registry", () => {

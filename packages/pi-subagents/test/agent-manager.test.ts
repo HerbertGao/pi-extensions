@@ -15,6 +15,7 @@ vi.mock("../src/worktree.js", () => ({
   createWorktree: vi.fn(),
   cleanupWorktree: vi.fn(() => ({ hasChanges: false })),
   pruneWorktrees: vi.fn(),
+  isWorktreeIsolationEnabled: vi.fn(() => true),
 }))
 
 import { resumeAgent, runAgent } from "../src/agent-runner.js"

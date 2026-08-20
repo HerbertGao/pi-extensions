@@ -46,15 +46,15 @@
   "dependencies": {
     "@sinclair/typebox": "^0.34.49",
     "croner": "^10.0.1",
-    "nanoid": "^5.0.0"
+    "nanoid": "^5.1.16"
   },
   "devDependencies": {
     "@vitest/coverage-istanbul": "^4.1.10"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": ">=0.80.0",
-    "@earendil-works/pi-coding-agent": ">=0.80.0",
-    "@earendil-works/pi-tui": ">=0.80.0"
+    "@earendil-works/pi-ai": ">=0.81.0",
+    "@earendil-works/pi-coding-agent": ">=0.81.0",
+    "@earendil-works/pi-tui": ">=0.81.0"
   },
   "engines": {
     "node": ">=22.19.0"
@@ -68,8 +68,8 @@
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.16.1",
+    "version": "0.18.0",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "bb47763"
+    "commit": "3f9d35cd078d18a141eb5a6d8f4fc5010d756280"
   }
 }

@@ -80,15 +80,18 @@ describe("status note reaches the parent through the real handlers", () => {
     const { pi, tools } = makePi()
     subagentsExtension(pi)
 
-    const res = await tools
-      .get("Agent")
-      .execute(
-        "tc1",
-        { prompt: "go", description: "d", subagent_type: "general-purpose" },
-        undefined,
-        undefined,
-        ctx(),
-      )
+    const res = await tools.get("Agent").execute(
+      "tc1",
+      {
+        prompt: "go",
+        description: "d",
+        subagent_type: "general-purpose",
+        run_in_background: false,
+      },
+      undefined,
+      undefined,
+      ctx(),
+    )
 
     const out = textOf(res)
     // Exact lead clause, not just "turn limit": a steered/aborted mix-up would
@@ -125,15 +128,18 @@ describe("status note reaches the parent through the real handlers", () => {
     subagentsExtension(pi)
 
     const parent = new AbortController()
-    const call = tools
-      .get("Agent")
-      .execute(
-        "tc-stop",
-        { prompt: "go", description: "d", subagent_type: "general-purpose" },
-        parent.signal,
-        undefined,
-        ctx(),
-      )
+    const call = tools.get("Agent").execute(
+      "tc-stop",
+      {
+        prompt: "go",
+        description: "d",
+        subagent_type: "general-purpose",
+        run_in_background: false,
+      },
+      parent.signal,
+      undefined,
+      ctx(),
+    )
 
     // The manager only wires addEventListener("abort", …) and never checks
     // signal.aborted upfront (agent-manager.ts:240-243), so aborting before the

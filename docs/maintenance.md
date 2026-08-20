@@ -8,11 +8,11 @@
 
 ## Source baselines
 
-| Local package set      | Upstream                   | Imported baseline                                  | Notes                                                                                                                                               |
-| ---------------------- | -------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`                                          | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                               |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `bb47763` (`0.16.1`) + selected `285b692` UI patch | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces. |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `268e017` (`0.8.60`)                               | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, and renderer-lifecycle fixes.                     |
+| Local package set      | Upstream                   | Imported baseline    | Notes                                                                                                                                               |
+| ---------------------- | -------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`            | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                               |
+| `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`) | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces. |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `268e017` (`0.8.60`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, and renderer-lifecycle fixes.                     |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
@@ -28,19 +28,21 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.4`          | `460d580`       |
 | `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.4.2`          | `460d580`       |
 | `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.1.0`          | `460d580`       |
-| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.16.1`         | `bb47763`       |
+| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.18.0`         | `3f9d35c`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
 
-### pi-subagents post-0.16.1 review
+### pi-subagents 0.18.0 review
 
-The range `bb47763..285b692` was reviewed commit by commit:
+The released range `bb47763..3f9d35c` was reviewed commit by commit:
 
-- `5f8deda` (`@handle message`) is **deferred**. It is a large opt-in feature spanning handle allocation, tombstones, cloned model turns, persisted-session resume, settings, prompt interception, and autocomplete ownership. Porting it safely requires reconciliation with this fork's parent-session links, nested delegation ownership, fallback/runtime compatibility, malformed-agent recovery, and the existing composed `@` provider. A whole-tree copy would discard those guarantees; no mention lifecycle code or settings are shipped by this review.
-- `285b692` (selected FleetView row) is **ported**. Selected rows use the theme's primary text color for the name, description, and stats; the accent bullet and configured agent badge remain intact and column-stable.
+- `5f8deda` and its `b4de91e` / `49ffd5c` / `42460ca` follow-ups (`@handle` mentions) remain **deferred**. The feature still conflicts with this fork's parent-session links, nested ownership, fallback/runtime compatibility, malformed-agent recovery, and composed `@` provider; no mention lifecycle code or settings are shipped.
+- `285b692` (selected FleetView row) remains **ported**, preserving the configured badge and stable columns.
+- `1b82530` worktree controls are **ported**, including `isolation: off` and the project-wide worktree switch while retaining unsigned preservation commits.
+- The 0.18.0 background default, usage/cost reporting, RPC activity, child-session shutdown, nanoid security update, and nested print-mode coverage are **ported**. Nested delegation continues to default to foreground so a parent cannot finish before collecting its child.
 
-The repository review cursor advances to `285b692`. Package `x-upstream` remains the published `0.16.1` commit `bb47763`; unpublished commits are never represented as an npm version baseline.
+Both package provenance and the repository review cursor advance to the released `0.18.0` tag at `3f9d35c`.
 
 ## Upstream contribution follow-ups
 

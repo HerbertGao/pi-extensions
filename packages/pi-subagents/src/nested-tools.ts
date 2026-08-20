@@ -16,7 +16,10 @@ import {
   resolveTypeIn,
 } from "./agent-types.js"
 import { loadCustomAgents } from "./custom-agents.js"
-import { resolveAgentInvocationConfig } from "./invocation-config.js"
+import {
+  isolationParam,
+  resolveAgentInvocationConfig,
+} from "./invocation-config.js"
 import { resolveModel } from "./model-resolver.js"
 import { checkModelScope } from "./model-scope.js"
 import {
@@ -38,6 +41,7 @@ import type {
   ThinkingLevel,
 } from "./types.js"
 import { addUsage } from "./usage.js"
+import { isWorktreeIsolationEnabled } from "./worktree.js"
 
 /**
  * Hard ceiling on nesting for every branch: main session = 0, its subagents = 1,
@@ -212,7 +216,12 @@ export function createNestedSubagentTools(
         Type.String({ description: "Optional thinking level." }),
       ),
       max_turns: Type.Optional(Type.Number({ minimum: 1 })),
-      run_in_background: Type.Optional(Type.Boolean()),
+      run_in_background: Type.Optional(
+        Type.Boolean({
+          description:
+            "Defaults to false for nested spawns — the call blocks and returns the child's result inline. Set true only for work you will collect later with get_subagent_result; a detached child is stopped when you finish.",
+        }),
+      ),
       resume: Type.Optional(
         Type.String({
           description: "Resume a nested agent owned by this parent.",
@@ -220,7 +229,7 @@ export function createNestedSubagentTools(
       ),
       isolated: Type.Optional(Type.Boolean()),
       inherit_context: Type.Optional(Type.Boolean()),
-      isolation: Type.Optional(Type.Literal("worktree")),
+      ...isolationParam(isWorktreeIsolationEnabled()),
     }),
     execute: async (_toolCallId, params, signal, _onUpdate, ctx) => {
       if (params.resume) {
@@ -277,7 +286,12 @@ export function createNestedSubagentTools(
       }
 
       const config = getAgentConfigIn(registry, resolvedType)
-      const invocation = resolveAgentInvocationConfig(config, params)
+      // Foreground regardless of `backgroundByDefault` — see the reasoning on
+      // ResolveOptions. An explicit `true` here still opts in.
+      const invocation = resolveAgentInvocationConfig(config, params, {
+        worktreeAllowed: isWorktreeIsolationEnabled(),
+        defaultRunInBackground: false,
+      })
       let model = ctx.model
       if (invocation.modelInput) {
         const resolvedModel = resolveModel(

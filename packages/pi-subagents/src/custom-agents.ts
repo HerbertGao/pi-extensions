@@ -6,7 +6,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { basename, join } from "node:path"
 import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent"
 import { BUILTIN_TOOL_NAMES } from "./agent-types.js"
-import type { AgentConfig, MemoryScope, ThinkingLevel } from "./types.js"
+import type {
+  AgentConfig,
+  IsolationMode,
+  MemoryScope,
+  ThinkingLevel,
+} from "./types.js"
 
 interface WarningState {
   previous: Set<string>
@@ -124,7 +129,7 @@ function loadFromDir(
           : undefined,
       isolated: fm.isolated != null ? fm.isolated === true : undefined,
       memory: parseMemory(fm.memory),
-      isolation: fm.isolation === "worktree" ? "worktree" : undefined,
+      isolation: parseIsolation(fm.isolation),
       enabled: fm.enabled !== false, // default true; explicitly false disables
       source,
       sourcePath: path,
@@ -267,6 +272,25 @@ function csvListOptional(val: unknown): string[] | undefined {
  */
 function parseMemory(val: unknown): MemoryScope | undefined {
   if (val === "user" || val === "project" || val === "local") return val
+  return undefined
+}
+
+/**
+ * Parse the `isolation` frontmatter field.
+ *
+ * `off` is kept as a value rather than folded into `undefined` because the two
+ * do not mean the same thing here: agent config outranks tool-call params, so
+ * `off` vetoes a caller's `worktree` while an absent field lets it through.
+ *
+ * pi's frontmatter parser is not YAML 1.1 — bare `off` and `no` arrive as
+ * strings and only `false` becomes a boolean — so all three spellings are
+ * accepted rather than leaving an author's intent silently dropped. Anything
+ * else stays `undefined`, as before.
+ */
+function parseIsolation(val: unknown): IsolationMode | undefined {
+  if (val === "worktree") return "worktree"
+  if (val === "off" || val === "none" || val === "no" || val === false)
+    return "off"
   return undefined
 }
 
