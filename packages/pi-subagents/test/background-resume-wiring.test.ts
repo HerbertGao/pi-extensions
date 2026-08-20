@@ -323,7 +323,7 @@ describe("Agent tool — background resume wiring", () => {
     await lifecycle.get("session_shutdown")?.({}, ctx)
   })
 
-  it("still resumes in the foreground when run_in_background is not set", async () => {
+  it("still resumes in the foreground when run_in_background is false", async () => {
     const { pi, tools, lifecycle } = makePi()
     subagentsExtension(pi)
     const ctx = makeCtx(cwd)
@@ -337,6 +337,7 @@ describe("Agent tool — background resume wiring", () => {
         description: "Keep going",
         subagent_type: "general-purpose",
         resume: id,
+        run_in_background: false,
       },
       undefined,
       undefined,

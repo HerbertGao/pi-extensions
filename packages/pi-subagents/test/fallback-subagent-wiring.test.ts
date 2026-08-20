@@ -269,19 +269,22 @@ describe("fallbackSubagent gates dispatch through the real Agent tool", () => {
     const { tools } = boot()
     vi.mocked(runAgent).mockResolvedValue({
       responseText: "first",
-      session: { dispose: vi.fn() } as any,
+      session: { dispose: vi.fn(), messages: [] } as any,
       aborted: false,
       steered: false,
     })
-    const spawned = await tools
-      .get("Agent")
-      .execute(
-        "tc-6",
-        { prompt: "start", description: "live agent", subagent_type: "scout" },
-        undefined,
-        undefined,
-        ctx(),
-      )
+    const spawned = await tools.get("Agent").execute(
+      "tc-6",
+      {
+        prompt: "start",
+        description: "live agent",
+        subagent_type: "scout",
+        run_in_background: false,
+      },
+      undefined,
+      undefined,
+      ctx(),
+    )
     const id =
       /Agent ID: (\S+)/.exec(textOf(spawned))?.[1] ??
       (spawned as any).details?.agentId

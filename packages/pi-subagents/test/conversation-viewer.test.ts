@@ -79,6 +79,36 @@ beforeEach(() => {
   wrapOverride = null
 })
 
+describe("ConversationViewer cost display", () => {
+  function header(showCost: boolean, cost: number): string {
+    const record = mockRecord({
+      lifetimeUsage: { input: 1000, output: 200, cacheWrite: 0, cost },
+    } as Partial<AgentRecord>)
+    const viewer = new ConversationViewer(
+      mockTui(30, 200),
+      mockSession([]),
+      record,
+      undefined,
+      {
+        fg: (_color: string, text: string) => text,
+        bold: (text: string) => text,
+      } as any,
+      vi.fn(),
+      undefined,
+      undefined,
+      undefined,
+      showCost,
+    )
+    return viewer.render(200).join("\n")
+  }
+
+  it("shows cost beside tokens only when enabled and priced", () => {
+    expect(header(true, 0.0042)).toContain("~$0.0042")
+    expect(header(false, 0.0042)).not.toContain("$")
+    expect(header(true, 0)).not.toContain("$")
+  })
+})
+
 describe("ConversationViewer", () => {
   describe("render width safety", () => {
     const widths = [40, 80, 120, 216]

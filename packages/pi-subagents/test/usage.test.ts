@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
+  addUsage,
+  getLifetimeCost,
   getLifetimeTotal,
   getSessionContextPercent,
   getSessionTokens,
+  PendingUsagePool,
 } from "../src/usage.js"
 
 // Regression for issue #38 — token semantics + context indicator
@@ -137,6 +140,88 @@ describe("usage", () => {
       expect(usage.input + usage.output + usage.cacheWrite).toBe(
         getLifetimeTotal(usage),
       )
+    })
+  })
+
+  describe("cost accumulation", () => {
+    it("sums cost without adding it or cache reads to the display token total", () => {
+      const usage = { input: 0, output: 0, cacheWrite: 0 }
+      addUsage(usage, {
+        input: 100,
+        output: 50,
+        cacheWrite: 10,
+        cacheRead: 900,
+        cost: 0.002,
+      })
+      addUsage(usage, {
+        input: 200,
+        output: 80,
+        cacheWrite: 20,
+        cacheRead: 1800,
+        cost: 0.004,
+      })
+
+      expect(getLifetimeCost(usage)).toBeCloseTo(0.006, 10)
+      expect(getLifetimeTotal(usage)).toBe(460)
+      expect(usage.cacheRead).toBe(2700)
+    })
+
+    it("leaves zero cost absent and reads missing cost as zero", () => {
+      const usage: {
+        input: number
+        output: number
+        cacheWrite: number
+        cost?: number
+      } = { input: 0, output: 0, cacheWrite: 0 }
+      addUsage(usage, { input: 10, output: 5, cacheWrite: 0, cost: 0 })
+      expect(usage.cost).toBeUndefined()
+      expect(getLifetimeCost(usage)).toBe(0)
+      expect(getLifetimeCost(undefined)).toBe(0)
+    })
+  })
+
+  describe("PendingUsagePool", () => {
+    it("drains a complete Pi Usage once", () => {
+      const pool = new PendingUsagePool()
+      pool.add({
+        input: 100,
+        output: 50,
+        cacheWrite: 10,
+        cacheRead: 900,
+        cost: 0.01,
+      })
+      pool.add({
+        input: 200,
+        output: 80,
+        cacheWrite: 20,
+        cacheRead: 1800,
+        cost: 0.02,
+      })
+
+      expect(pool.drain()).toEqual({
+        input: 300,
+        output: 130,
+        cacheRead: 2700,
+        cacheWrite: 30,
+        totalTokens: 3160,
+        cost: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          total: 0.03,
+        },
+      })
+      expect(pool.drain()).toBeUndefined()
+    })
+
+    it("reports unpriced tokens but ignores a zero-spend message", () => {
+      const pool = new PendingUsagePool()
+      pool.add({ input: 100, output: 50, cacheWrite: 10, cost: 0 })
+      expect(pool.drain()?.totalTokens).toBe(160)
+
+      pool.add({ input: 0, output: 0, cacheWrite: 0, cost: 0 })
+      expect(pool.drain()).toBeUndefined()
     })
   })
 })

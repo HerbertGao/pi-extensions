@@ -18,13 +18,18 @@ import {
 import { renderAgentName } from "../agent-color.js"
 import { extractText } from "../context.js"
 import type { AgentRecord } from "../types.js"
-import { getLifetimeTotal, getSessionContextPercent } from "../usage.js"
+import {
+  getLifetimeCost,
+  getLifetimeTotal,
+  getSessionContextPercent,
+} from "../usage.js"
 import type { Theme } from "./agent-widget.js"
 import {
   type AgentActivity,
   buildInvocationTags,
   describeActivity,
   fgPreservingNestedStyles,
+  formatCost,
   formatDuration,
   formatSessionTokens,
   getPromptModeLabel,
@@ -66,6 +71,12 @@ export class ConversationViewer implements Component {
     keybindings?: ViewerKeybindings,
     /** Send a steering message to the agent. Omitted → no compose affordance. */
     private onSteer?: (message: string) => void,
+    /**
+     * Whether the header shows an estimated cost after the token count. Read
+     * once, at construction: the overlay is opened from a menu, so the setting
+     * cannot change while it is on screen.
+     */
+    private showCost = false,
   ) {
     this.keys = createViewerKeys(keybindings)
     this.unsubscribe = session.subscribe(() => {
@@ -184,13 +195,20 @@ export class ConversationViewer implements Component {
     const toolUses = this.activity?.toolUses ?? this.record.toolUses
     if (toolUses > 0)
       headerParts.unshift(`${toolUses} tool${toolUses === 1 ? "" : "s"}`)
-    const tokens = getLifetimeTotal(this.activity?.lifetimeUsage)
+    // Spend from the record, context from the live session: the record is the
+    // only total that survives the agent finishing and the only one carrying a
+    // nested child's spend.
+    const tokens = getLifetimeTotal(this.record.lifetimeUsage)
     if (tokens > 0) {
       const percent = getSessionContextPercent(this.activity?.session)
       headerParts.push(
         formatSessionTokens(tokens, percent, th, this.record.compactionCount),
       )
     }
+    const cost = this.showCost
+      ? formatCost(getLifetimeCost(this.record.lifetimeUsage))
+      : ""
+    if (cost) headerParts.push(cost)
 
     lines.push(
       row(

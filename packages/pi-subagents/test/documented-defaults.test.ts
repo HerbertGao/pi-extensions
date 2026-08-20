@@ -46,11 +46,11 @@ describe("documented defaults (README:441)", () => {
     expect(getMaxSubagentDepth()).toBe(2)
   })
 
-  it("background concurrency defaults to 4", async () => {
+  it("background concurrency defaults to 10", async () => {
     const { AgentManager } = await import("../src/agent-manager.js")
     const manager = new AgentManager()
     try {
-      expect(manager.getMaxConcurrent()).toBe(4)
+      expect(manager.getMaxConcurrent()).toBe(10)
     } finally {
       manager.dispose()
     }
