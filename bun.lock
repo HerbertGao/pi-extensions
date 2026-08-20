@@ -24,7 +24,7 @@
     },
     "packages/pi-cc-extensions": {
       "name": "@herbertgao/pi-cc-extensions",
-      "version": "0.8.54",
+      "version": "0.8.55",
       "dependencies": {
         "@shikijs/cli": "^4.0.2",
         "grok-mermaid": "^0.2.2",
@@ -47,7 +47,7 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.8.5",
+      "version": "2026.8.6",
       "dependencies": {
         "@ast-grep/cli": "^0.45.0",
         "@ast-grep/napi": "^0.45.0",
@@ -57,7 +57,7 @@
         "@earendil-works/pi-tui": "^0.84.1",
         "@effect/platform-node": "4.0.0-beta.103",
         "@effect/platform-node-shared": "4.0.0-beta.103",
-        "@herbertgao/pi-cc-extensions": "0.8.54",
+        "@herbertgao/pi-cc-extensions": "0.8.55",
         "@herbertgao/pi-copy-response": "0.2.6",
         "@herbertgao/pi-handoff": "1.1.2",
         "@herbertgao/pi-inline-skills": "1.0.5",
@@ -66,10 +66,10 @@
         "@herbertgao/pi-recap": "0.4.4",
         "@herbertgao/pi-rename": "0.4.2",
         "@herbertgao/pi-stash": "0.1.1",
-        "@herbertgao/pi-subagents": "0.15.4",
+        "@herbertgao/pi-subagents": "0.15.5",
         "@herbertgao/pi-titlebar-spinner": "0.1.3",
-        "@juicesharp/rpiv-ask-user-question": "2.6.0",
-        "@juicesharp/rpiv-config": "^2.6.0",
+        "@juicesharp/rpiv-ask-user-question": "2.6.2",
+        "@juicesharp/rpiv-config": "^2.6.2",
         "@modelcontextprotocol/client": "2.0.0",
         "@modelcontextprotocol/core": "2.0.0",
         "@modelcontextprotocol/ext-apps": "^1.2.2",
@@ -160,7 +160,7 @@
     },
     "packages/pi-subagents": {
       "name": "@herbertgao/pi-subagents",
-      "version": "0.15.4",
+      "version": "0.15.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.49",
         "croner": "^10.0.1",
@@ -428,9 +428,9 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@juicesharp/rpiv-ask-user-question": ["@juicesharp/rpiv-ask-user-question@2.6.0", "", { "dependencies": { "@juicesharp/rpiv-config": "^2.6.0", "typebox": "^1.1.24" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "@juicesharp/rpiv-i18n": "*" }, "optionalPeers": ["@juicesharp/rpiv-i18n"] }, "sha512-Kr/guMNG8AEV2+l1TXR9ww/Q4gXxVDGdasJ/sQWiXbne3yjavJrMbug5yX9ua/VB9mH63gpr0g7J0nZZZtwKjw=="],
+    "@juicesharp/rpiv-ask-user-question": ["@juicesharp/rpiv-ask-user-question@2.6.2", "", { "dependencies": { "@juicesharp/rpiv-config": "^2.6.2", "typebox": "^1.1.24" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "@juicesharp/rpiv-i18n": "*" }, "optionalPeers": ["@juicesharp/rpiv-i18n"] }, "sha512-DS9yZHcaPr+/nf0x2CCfiXBod/1aWjGyakGM3lZAObuGDhYI0nFRE5gxTcCOfQug6JtJXjt1GlzyX8Pljefdzg=="],
 
-    "@juicesharp/rpiv-config": ["@juicesharp/rpiv-config@2.6.0", "", { "dependencies": { "typebox": "^1.1.24" } }, "sha512-+LAW9MXg+tV3plz2OL5rQKe5LNmKvLkWGGQ3cl/kvj3pZdz/RFAhFCr+MqEiLtucwlq5by4Yksv6A69HE6G8oA=="],
+    "@juicesharp/rpiv-config": ["@juicesharp/rpiv-config@2.6.3", "", { "dependencies": { "typebox": "^1.1.24" } }, "sha512-0GtJedhefUxwSxpjnKvbSkcEIOyt1zYNeruTJyhfbTJ0YDNzrsegdJJy1iHZqiH1b8eROJHQB2SXl/tQRAMurQ=="],
 
     "@manypkg/find-root": ["@manypkg/find-root@1.1.0", "", { "dependencies": { "@babel/runtime": "^7.5.5", "@types/node": "^12.7.1", "find-up": "^4.1.0", "fs-extra": "^8.1.0" } }, "sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA=="],
 

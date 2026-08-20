@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -314,15 +314,48 @@ try {
   if (askToolModule.BEL !== "\x07") {
     throw new Error("ask-user-question terminal attention is not standard BEL")
   }
+  const previousXdgConfigHome = process.env.XDG_CONFIG_HOME
+  const askConfigRoot = join(stageDir, "ask-config")
+  const askConfigDir = join(askConfigRoot, "rpiv-ask-user-question")
+  const askConfigPath = join(askConfigDir, "config.json")
+  process.env.XDG_CONFIG_HOME = askConfigRoot
   let askTool
-  askToolModule.registerAskUserQuestionTool({
-    registerTool(tool) {
-      askTool = tool
-    },
-    events: { emit() {} },
-  })
-  if (!askTool) {
-    throw new Error("ask-user-question did not register its tool")
+  try {
+    const registerAskTool = () => {
+      let registered
+      askToolModule.registerAskUserQuestionTool({
+        registerTool(tool) {
+          registered = tool
+        },
+        events: { emit() {} },
+      })
+      if (!registered) {
+        throw new Error("ask-user-question did not register its tool")
+      }
+      return registered
+    }
+
+    askTool = registerAskTool()
+    await mkdir(askConfigDir, { recursive: true })
+    await writeFile(
+      askConfigPath,
+      `${JSON.stringify({ guidance: { description: "Aggregate guidance override" } })}\n`,
+    )
+    const guidedAskTool = registerAskTool()
+    if (guidedAskTool.description !== "Aggregate guidance override") {
+      throw new Error("ask-user-question ignored guidance.description")
+    }
+    await writeFile(
+      askConfigPath,
+      `${JSON.stringify({ guidance: { description: "" } })}\n`,
+    )
+    const fallbackAskTool = registerAskTool()
+    if (fallbackAskTool.description !== askTool.description) {
+      throw new Error("ask-user-question empty guidance did not use defaults")
+    }
+  } finally {
+    if (previousXdgConfigHome === undefined) delete process.env.XDG_CONFIG_HOME
+    else process.env.XDG_CONFIG_HOME = previousXdgConfigHome
   }
   const askParams = {
     questions: [
