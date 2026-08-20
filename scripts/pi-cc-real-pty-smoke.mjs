@@ -1092,15 +1092,18 @@ async function validateEvidence(events, runs, mockRequests) {
       event.event === "target" && event.line?.includes("Multiple Tools"),
   )
   assert(groupTargets.length > 0, "No real ToolGroup target was exercised")
+  // v0.8.63 collapses expanded cards only on a double click. Exact double-click
+  // timing is pinned by lazy-proxy tests; real PTY evidence stays responsible
+  // for the stable browser-independent boundary: hover and one expand transition.
   assert(
     groupTargets.some((target) => {
       const collapsed = byLabel.get(`${target.case}:collapsed`)
       return (
         collapsed?.counters?.toolGroupHoverObserved > 0 &&
-        collapsed?.counters?.toolGroupExpansionTransitions >= 2
+        collapsed?.counters?.toolGroupExpansionTransitions >= 1
       )
     }),
-    "ToolGroup hover/expand/collapse was not causally observed",
+    "ToolGroup hover/expand was not causally observed",
   )
   assert(
     snapshots.some((snapshot) =>

@@ -1,5 +1,7 @@
 import { visibleWidth } from "@earendil-works/pi-tui";
+import { ThinkingPreviewBlock } from "../../feature/compact-thinking.ts";
 import { isCompactAssistantComponent } from "../compact-mode.ts";
+import { isMessageDisplayComponent } from "../message-display.ts";
 import { ToolGroupComponent } from "../tool/grouping.ts";
 import { isToolExecutionComponent, stripTerminalSequencesPreservingLayout } from "./packets.ts";
 import { getScrollButtonWidget } from "./scroll.ts";
@@ -76,6 +78,29 @@ export function isScrollbarColumnAt(layout: any, x: number): boolean {
 	return hit;
 }
 
+/** compact 展开卡用 childAtRow 映射 thinking；其余按 render 行数下钻。 */
+function nestedChildAtRow(node: any, localRow: number, width: number): any {
+	if (typeof node?.childAtRow === "function") {
+		return node.childAtRow(localRow, width);
+	}
+	if (!Array.isArray(node?.children)) return null;
+	let offset = 0;
+	for (const child of node.children) {
+		let count = 0;
+		try {
+			const rendered = child.render?.(width);
+			if (Array.isArray(rendered)) count = rendered.length;
+		} catch {
+			count = 0;
+		}
+		if (localRow < offset + count) {
+			return nestedChildAtRow(child, localRow - offset, width);
+		}
+		offset += count;
+	}
+	return null;
+}
+
 /**
  * 布局 leaf box 的组件通常是容器（documentContainer/dock 容器等），工具卡与
  * widget 在其 children 内。按局部行遍历组件树，定位实际命中的子组件。
@@ -94,7 +119,19 @@ export function componentAtLocalRow(
 		return { component, row: localRow };
 	}
 	if (isCompactAssistantComponent(component)) {
-		// compact 摘要行整体作为可展开卡片（折叠摘要 / 展开内容）。
+		// 折叠：整行摘要。展开：先命中内部 thinking hint，其余仍归外层卡片。
+		if (component.expanded === true) {
+			const inner = nestedChildAtRow(component, localRow, width);
+			if (inner instanceof ThinkingPreviewBlock) {
+				return { component: inner, row: localRow };
+			}
+		}
+		return { component, row: localRow };
+	}
+	if (component instanceof ThinkingPreviewBlock) {
+		return { component, row: localRow };
+	}
+	if (isMessageDisplayComponent(component)) {
 		return { component, row: localRow };
 	}
 	if (component === getScrollButtonWidget()) {
@@ -134,7 +171,9 @@ export function collectFullscreenToolCards(
 	if (
 		isToolExecutionComponent(component) ||
 		component instanceof ToolGroupComponent ||
-		isCompactAssistantComponent(component)
+		isCompactAssistantComponent(component) ||
+		component instanceof ThinkingPreviewBlock ||
+		isMessageDisplayComponent(component)
 	) {
 		out.push(component);
 		return;

@@ -1377,7 +1377,7 @@ function displayConfigCacheKey(config: ToolDisplayConfig): string {
 		config.diffViewMode,
 		config.diffIndicatorMode,
 		String(config.diffSplitMinWidth),
-		String(config.diffCollapsedLines),
+		String(config.editDiffCollapsedLines),
 		config.diffWordWrap ? "1" : "0",
 		String(config.expandedPreviewMaxLines),
 	].join(":");
@@ -2232,7 +2232,7 @@ function resolveDiffDisplayLimit(
 		: DEFAULT_TOOL_DISPLAY_CONFIG.expandedPreviewMaxLines;
 	const collapsedLimit = Number.isFinite(maxCollapsedLines)
 		? maxCollapsedLines
-		: DEFAULT_TOOL_DISPLAY_CONFIG.diffCollapsedLines;
+		: DEFAULT_TOOL_DISPLAY_CONFIG.editDiffCollapsedLines;
 	return expanded ? Math.max(0, expandedLimit) : Math.max(1, collapsedLimit);
 }
 
@@ -2602,7 +2602,7 @@ export function renderEditDiffResult(
 			const headerRows = renderHeaderRows(parsed.stats, mode, safeWidth, theme);
 			const displayLimit = resolveDiffDisplayLimit(
 				options.expanded,
-				live.diffCollapsedLines,
+				live.editDiffCollapsedLines,
 				live.expandedPreviewMaxLines,
 			);
 			const processBudget = resolveDiffProcessBudget(displayLimit, wordWrap);
@@ -2636,7 +2636,7 @@ export function renderEditDiffResult(
 				bodyRows,
 				safeWidth,
 				options.expanded,
-				live.diffCollapsedLines,
+				live.editDiffCollapsedLines,
 				live.expandedPreviewMaxLines,
 				parsed.stats.hunks,
 				theme,
@@ -3027,7 +3027,7 @@ export function renderWriteDiffResult(
 			const data = getDetailedData();
 			const displayLimit = resolveDiffDisplayLimit(
 				options.expanded,
-				live.diffCollapsedLines,
+				live.editDiffCollapsedLines,
 				live.expandedPreviewMaxLines,
 			);
 			const processBudget = resolveDiffProcessBudget(displayLimit, wordWrap);
@@ -3065,7 +3065,7 @@ export function renderWriteDiffResult(
 				bodyRows,
 				safeWidth,
 				options.expanded,
-				live.diffCollapsedLines,
+				live.editDiffCollapsedLines,
 				live.expandedPreviewMaxLines,
 				data.hunkCount,
 				theme,

@@ -409,11 +409,14 @@ test("lazy-proxy tui: fullscreen tool clicks expand and official input passes th
 	assert.equal(renderer.officialInputs.length, 0, "hint click consumed before official chain");
 	assert.deepEqual(ui.widget.render(), []);
 
-	// 二次点击（正文行）：整卡折叠。
+	// 展开卡单击不收起；双击折叠。
+	tui.handleViewportInput(`\x1b[<0;20;2M`);
+	assert.equal(tool.expanded, true, "single click on expanded card does not collapse");
 	tui.handleViewportInput(`\x1b[<0;20;2M`);
 	assert.equal(tool.expanded, false);
 
 	// hover：先经过 dock，再到 collapsed 工具行；dock 空缓存不得污染同一布局的工具缓存。
+	renderer.officialInputs.length = 0;
 	tui.handleViewportInput(`\x1b[<32;20;22M`);
 	const renderCallsBefore = renderer.renderCalls;
 	tui.handleViewportInput(`\x1b[<32;20;2M`);
@@ -610,7 +613,9 @@ test("lazy-proxy tui: fullscreen compact assistant hint toggles and hovers", () 
 		assert.equal(assistant.expanded, true);
 		renderer.currentLayout = fullscreenLayout(assistant, null);
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
-		assert.equal(assistant.expanded, false, "expanded assistant card click collapses it");
+		assert.equal(assistant.expanded, true, "single click on expanded assistant does not collapse");
+		tui.handleViewportInput(`\x1b[<0;2;1M`);
+		assert.equal(assistant.expanded, false, "double-click collapses the assistant card");
 	} finally {
 		installToolMouseInteraction({});
 		compact.shutdown();
@@ -705,7 +710,9 @@ test("lazy-proxy tui: fullscreen multitool group hover and click toggle", () => 
 	tui.handleViewportInput(`\x1b[<0;${hintCol};2M`);
 	assert.equal((group as any).expanded, true, "group click expands all children");
 	tui.handleViewportInput(`\x1b[<0;${hintCol};2M`);
-	assert.equal((group as any).expanded, false, "second group click collapses all children");
+	assert.equal((group as any).expanded, true, "single click on expanded group does not collapse");
+	tui.handleViewportInput(`\x1b[<0;${hintCol};2M`);
+	assert.equal((group as any).expanded, false, "double-click collapses all children");
 	installToolMouseInteraction({});
 });
 
@@ -767,7 +774,9 @@ test("lazy-proxy tui: fullscreen expanded group child show-more hover highlights
 		const bodyRow = group.render(80).findIndex((line) => line.includes("line 0"));
 		assert.ok(bodyRow > row);
 		tui.handleViewportInput(`\x1b[<0;10;${bodyRow + 1}M`);
-		assert.equal(group.expanded, false, "ordinary child-row click collapses the whole group");
+		assert.equal(group.expanded, true, "single click on expanded group body does not collapse");
+		tui.handleViewportInput(`\x1b[<0;10;${bodyRow + 1}M`);
+		assert.equal(group.expanded, false, "double-click collapses the whole group");
 	} finally {
 		installToolMouseInteraction({});
 	}
