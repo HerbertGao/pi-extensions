@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -278,15 +278,16 @@ try {
   if (!lensManifest.pi?.skills?.includes("../../skills")) {
     throw new Error("Bundled pi-lens no longer declares its skills")
   }
-  // These ranges changed in 4.0.0 and must be promoted exactly. The aggregate
-  // intentionally keeps its existing broader typebox range for other companions.
-  for (const dependency of ["@earendil-works/pi-tui", "minimatch"]) {
-    const range = lensManifest.dependencies?.[dependency]
-    if (!range || sourceManifest.dependencies[dependency] !== range) {
-      throw new Error(
-        `Expected promoted pi-lens dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
-      )
-    }
+  // Keep pi-lens' minimatch range exact. Its older compatible pi-tui range is
+  // intentionally superseded by the aggregate host range validated below.
+  const lensMinimatchRange = lensManifest.dependencies?.minimatch
+  if (
+    !lensMinimatchRange ||
+    sourceManifest.dependencies.minimatch !== lensMinimatchRange
+  ) {
+    throw new Error(
+      `Expected promoted pi-lens dependency minimatch@${lensMinimatchRange}, got ${sourceManifest.dependencies.minimatch}`,
+    )
   }
   await Promise.all(
     [
@@ -314,15 +315,48 @@ try {
   if (askToolModule.BEL !== "\x07") {
     throw new Error("ask-user-question terminal attention is not standard BEL")
   }
+  const previousXdgConfigHome = process.env.XDG_CONFIG_HOME
+  const askConfigRoot = join(stageDir, "ask-config")
+  const askConfigDir = join(askConfigRoot, "rpiv-ask-user-question")
+  const askConfigPath = join(askConfigDir, "config.json")
+  process.env.XDG_CONFIG_HOME = askConfigRoot
   let askTool
-  askToolModule.registerAskUserQuestionTool({
-    registerTool(tool) {
-      askTool = tool
-    },
-    events: { emit() {} },
-  })
-  if (!askTool) {
-    throw new Error("ask-user-question did not register its tool")
+  try {
+    const registerAskTool = () => {
+      let registered
+      askToolModule.registerAskUserQuestionTool({
+        registerTool(tool) {
+          registered = tool
+        },
+        events: { emit() {} },
+      })
+      if (!registered) {
+        throw new Error("ask-user-question did not register its tool")
+      }
+      return registered
+    }
+
+    askTool = registerAskTool()
+    await mkdir(askConfigDir, { recursive: true })
+    await writeFile(
+      askConfigPath,
+      `${JSON.stringify({ guidance: { description: "Aggregate guidance override" } })}\n`,
+    )
+    const guidedAskTool = registerAskTool()
+    if (guidedAskTool.description !== "Aggregate guidance override") {
+      throw new Error("ask-user-question ignored guidance.description")
+    }
+    await writeFile(
+      askConfigPath,
+      `${JSON.stringify({ guidance: { description: "" } })}\n`,
+    )
+    const fallbackAskTool = registerAskTool()
+    if (fallbackAskTool.description !== askTool.description) {
+      throw new Error("ask-user-question empty guidance did not use defaults")
+    }
+  } finally {
+    if (previousXdgConfigHome === undefined) delete process.env.XDG_CONFIG_HOME
+    else process.env.XDG_CONFIG_HOME = previousXdgConfigHome
   }
   const askParams = {
     questions: [
@@ -842,11 +876,11 @@ try {
   }
   if (
     sourceManifest.dependencies["@earendil-works/pi-coding-agent"] !==
-      "^0.84.1" ||
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.1"
+      "^0.84.2" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.2"
   ) {
     throw new Error(
-      'Aggregate Pi host ranges must be exactly "^0.84.1"; update this check when the host is bumped',
+      'Aggregate Pi host ranges must be exactly "^0.84.2"; update this check when the host is bumped',
     )
   }
   const installedHosts = await Promise.all(
@@ -865,14 +899,12 @@ try {
     }),
   )
   for (const { hostDependency, version } of installedHosts) {
-    // `^0.84.1` legitimately resolves to later 0.84.x patches (the registry
-    // currently serves 0.84.2). Keep the minor line pinned while accepting
-    // compatible security/bug-fix releases; bump the source range and this
-    // guard together when Pi moves to a new minor line.
+    // Keep the 0.84 line pinned while accepting compatible later patches;
+    // bump the source range and this guard together when Pi moves again.
     const patch = /^0\.84\.(\d+)$/.exec(version)?.[1]
-    if (patch === undefined || Number(patch) < 1) {
+    if (patch === undefined || Number(patch) < 2) {
       throw new Error(
-        `Expected remote-pi ${hostDependency} host compatible with ^0.84.1, got ${version}`,
+        `Expected remote-pi ${hostDependency} host compatible with ^0.84.2, got ${version}`,
       )
     }
   }
