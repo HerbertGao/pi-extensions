@@ -634,6 +634,84 @@ try {
     )
   }
 
+  const { pickMainEntry } = await btwJiti.import(
+    join(btwRoot, "src", "main-tree-picker.ts"),
+  )
+  let mainTreeCustomCalls = 0
+  const mainTreeNotifications = []
+  const emptyTreeResult = await pickMainEntry(
+    { setLabel() {} },
+    {
+      sessionManager: { getTree: () => [], getLeafId: () => null },
+      ui: {
+        custom: async () => {
+          mainTreeCustomCalls++
+        },
+        notify: (message, level) =>
+          mainTreeNotifications.push({ message, level }),
+      },
+    },
+  )
+  if (
+    emptyTreeResult.kind !== "back" ||
+    mainTreeCustomCalls !== 0 ||
+    mainTreeNotifications[0]?.message !== "No main-thread entries are available"
+  ) {
+    throw new Error("pi-btw empty main tree did not return to its menu safely")
+  }
+
+  const { initTheme } = await btwJiti.import("@earendil-works/pi-coding-agent")
+  initTheme()
+  const { BtwTranscriptPager } = await btwJiti.import(
+    join(btwRoot, "src", "transcript-pager.ts"),
+  )
+  const passthroughTheme = {
+    fg: (_color, text) => text,
+    bg: (_color, text) => text,
+    bold: (text) => text,
+  }
+  const pager = new BtwTranscriptPager(
+    { terminal: { rows: 10 }, requestRender() {} },
+    passthroughTheme,
+    Array.from({ length: 20 }, (_, index) => ({
+      kind: "error",
+      question: `Question ${index}`,
+      answer: `Answer ${index}\nDetail ${index}`,
+    })),
+    () => {},
+    { startAtBottom: true },
+  )
+  const bottomLines = pager.render(60)
+  const layoutNodeSymbol = Symbol.for("@earendil-works/pi-tui/layout-node")
+  const layoutNode = pager.getFullscreenLayout()[layoutNodeSymbol]?.()
+  const transcriptScrollView = layoutNode?.entries?.[1]?.component
+  const scrollNode = transcriptScrollView?.[layoutNodeSymbol]?.()
+  const scrollState = scrollNode?.state
+  const bottomOffset = scrollState?.scrollTop
+  if (
+    scrollNode?.type !== "scroll" ||
+    scrollState?.primary !== true ||
+    !Number.isInteger(bottomOffset) ||
+    bottomOffset <= 0
+  ) {
+    throw new Error(
+      "pi-btw transcript did not expose a primary native ScrollView",
+    )
+  }
+  scrollState.scrollBy(-Math.max(1, scrollState.viewportHeight))
+  const olderLines = pager.render(60)
+  if (
+    scrollState.scrollTop >= bottomOffset ||
+    JSON.stringify(olderLines) === JSON.stringify(bottomLines) ||
+    olderLines[0] !== bottomLines[0] ||
+    !olderLines.some((line) => line.includes("Ctrl+C")) ||
+    !bottomLines.some((line) => line.includes("Ctrl+C"))
+  ) {
+    throw new Error(
+      "pi-btw native transcript scrolling did not preserve its fixed chrome",
+    )
+  }
+
   const ponytailRoot = join(
     packageRoot,
     "node_modules",
