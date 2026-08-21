@@ -576,6 +576,50 @@ try {
     pathToFileURL(mcpRequire.resolve("jiti"))
   )
   const mcpJiti = createMcpJiti(mcpManifestPath, { moduleCache: false })
+  const packageMcpCwd = join(stageDir, "package-mcp")
+  const packageMcpConfigDir = join(packageMcpCwd, ".pi")
+  const packageMcpRoot = join(packageMcpConfigDir, "fixture")
+  await mkdir(packageMcpRoot, { recursive: true })
+  await writeFile(
+    join(packageMcpConfigDir, "settings.json"),
+    `${JSON.stringify({ packages: ["./fixture"] })}\n`,
+  )
+  await writeFile(
+    join(packageMcpRoot, "package.json"),
+    `${JSON.stringify({ name: "@smoke/pack", pi: { mcp: "./mcp.json" } })}\n`,
+  )
+  await writeFile(
+    join(packageMcpRoot, "mcp.json"),
+    `${JSON.stringify({ mcpServers: { alpha: { command: "node", args: ["server.mjs"] } } })}\n`,
+  )
+  const previousCodingAgentDir = process.env.PI_CODING_AGENT_DIR
+  const previousPiPackageDir = process.env.PI_PACKAGE_DIR
+  process.env.PI_CODING_AGENT_DIR = join(stageDir, "mcp-agent")
+  process.env.PI_PACKAGE_DIR = packageRoot
+  try {
+    const { loadPackageMcpConfigs } = await mcpJiti.import(
+      join(mcpRoot, "package-mcp-loader.ts"),
+    )
+    const packageMcpConfig = loadPackageMcpConfigs(packageMcpCwd)
+    const packageServer = packageMcpConfig.mcpServers.smoke_pack__alpha
+    if (
+      packageServer?.command !== "node" ||
+      packageServer.args?.[0] !== "server.mjs"
+    ) {
+      throw new Error(
+        "pi-mcp-adapter did not load a package-declared MCP server",
+      )
+    }
+  } finally {
+    if (previousCodingAgentDir === undefined) {
+      delete process.env.PI_CODING_AGENT_DIR
+    } else {
+      process.env.PI_CODING_AGENT_DIR = previousCodingAgentDir
+    }
+    if (previousPiPackageDir === undefined) delete process.env.PI_PACKAGE_DIR
+    else process.env.PI_PACKAGE_DIR = previousPiPackageDir
+  }
+
   const { ensureToolCallApproved } = await mcpJiti.import(
     join(mcpRoot, "tool-approval.ts"),
   )
@@ -1036,6 +1080,29 @@ try {
     "loader.js",
   )
   const { loadExtensions } = await import(pathToFileURL(loaderPath))
+  const mcpRuntimeSmokePath = join(stageDir, "mcp-runtime-smoke.ts")
+  await writeFile(
+    mcpRuntimeSmokePath,
+    `import mcpAdapter, { registerMcpServer } from ${JSON.stringify(resolve(mcpRoot, mcpEntryRelative))}\n\n` +
+      `export default async function runtimeSmoke(pi) {\n` +
+      `  mcpAdapter(pi)\n` +
+      `  const registration = registerMcpServer({ pi, name: "aggregate-runtime", definition: { command: "node", args: ["server.mjs"], directTools: true } })\n` +
+      `  let duplicateRejected = false\n` +
+      `  try { registerMcpServer({ pi, name: "aggregate-runtime", definition: { command: "node", args: ["other.mjs"] } }) } catch (error) { duplicateRejected = error instanceof Error && error.message.includes("already registered") }\n` +
+      `  if (!duplicateRejected) throw new Error("duplicate runtime MCP server accepted")\n` +
+      `  await registration.dispose()\n` +
+      `  await registerMcpServer({ pi, name: "aggregate-runtime", definition: { command: "node", args: ["replacement.mjs"] } }).dispose()\n` +
+      `}\n`,
+  )
+  const mcpRuntimeSmoke = await loadExtensions(
+    [mcpRuntimeSmokePath],
+    installDir,
+  )
+  if (mcpRuntimeSmoke.errors.length > 0) {
+    throw new Error(
+      `pi-mcp-adapter runtime registration smoke failed:\n${JSON.stringify(mcpRuntimeSmoke.errors, null, 2)}`,
+    )
+  }
   const result = await loadExtensions(extensionPaths, installDir)
   if (result.errors.length > 0) {
     throw new Error(
@@ -1083,6 +1150,7 @@ try {
     const { createJiti } = await import(pathToFileURL(require.resolve("jiti")))
     const jiti = createJiti(mcpOAuthEntry, { moduleCache: false })
     const oauth = await jiti.import(mcpOAuthEntry)
+    const bearerStore = await jiti.import(join(mcpRoot, "mcp-bearer-store.ts"))
     const serverName = "aggregate-smoke"
     const serverUrl = "https://mcp.example.test/server"
     const tokens = { accessToken: "smoke-token" }
@@ -1100,6 +1168,30 @@ try {
     )
     if (mismatched.status !== "absent") {
       throw new Error("pi-mcp-adapter OAuth tokens were not URL-bound")
+    }
+
+    bearerStore.resetTestBearerTokenStore()
+    bearerStore.saveBearerTokenForUrl(serverName, "bearer-smoke", serverUrl)
+    if (
+      bearerStore.getBearerTokenForUrl(serverName, serverUrl) !==
+        "bearer-smoke" ||
+      bearerStore.getBearerTokenForUrl(
+        serverName,
+        "https://other.example.test/server",
+      ) !== undefined ||
+      bearerStore.inspectBearerTokenForUrl(
+        serverName,
+        "https://other.example.test/server",
+      ).status !== "url-mismatch"
+    ) {
+      throw new Error("pi-mcp-adapter bearer tokens were not URL-bound")
+    }
+    bearerStore.removeBearerToken(serverName)
+    if (
+      bearerStore.inspectBearerTokenForUrl(serverName, serverUrl).status !==
+      "missing"
+    ) {
+      throw new Error("pi-mcp-adapter bearer token removal failed")
     }
   } finally {
     if (previousAuthStore === undefined) {
