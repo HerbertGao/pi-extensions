@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.56
+
+### Patch Changes
+
+- [#89](https://github.com/HerbertGao/pi-extensions/pull/89) [`ed31f65`](https://github.com/HerbertGao/pi-extensions/commit/ed31f65b3c4a8757a1248970b5cea2853ad82342) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions through 0.8.63 with bounded thinking previews, renderer caching, separate write diff limits, and safer fullscreen click behavior.
+
 ## 0.8.55
 
 ### Patch Changes

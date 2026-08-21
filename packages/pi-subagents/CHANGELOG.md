@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0
+
+### Minor Changes
+
+- [#90](https://github.com/HerbertGao/pi-extensions/pull/90) [`74b7bce`](https://github.com/HerbertGao/pi-extensions/commit/74b7bceac14c36961d25af9cbc6aecc502bdaf3b) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-subagents with upstream 0.18.0, including worktree controls, background-by-default top-level agents, usage and cost reporting, programmatic activity tracking, child-session shutdown, and nested print-mode coverage.
+
 ## 0.15.5
 
 ### Patch Changes
