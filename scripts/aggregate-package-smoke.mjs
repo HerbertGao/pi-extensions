@@ -292,7 +292,10 @@ try {
   await Promise.all(
     [
       "dist/index.js",
+      "dist/clients/dispatch/runners/cue-vet.js",
+      "dist/clients/dispatch/runners/helm-render.js",
       "dist/clients/dispatch/runners/utils/toolchain-availability.js",
+      "vendor/grammars/tree-sitter-cue.wasm",
       "skills",
       "skills/pi-lens-write-ast-grep-rule/reference.md",
       "LICENSE",
@@ -464,6 +467,79 @@ try {
     items: [{ kind: "option", label: "Yes" }],
     collapseKey: "off",
   }
+  const { buildHintText } = await askJiti.import(
+    join(askRoot, "view", "tab-content-strategy.ts"),
+  )
+  const configuredCollapseHint = buildHintText(
+    singleQuestion,
+    false,
+    baseState,
+    "ctrl+pagedown",
+  )
+  if (!configuredCollapseHint.includes("Ctrl+PageDown to collapse")) {
+    throw new Error(
+      "ask-user-question did not render its configured collapse key",
+    )
+  }
+  if (
+    buildHintText(singleQuestion, false, baseState, "off").includes("collapse")
+  ) {
+    throw new Error("ask-user-question advertised a disabled collapse shortcut")
+  }
+  if (routeKey("ctrl+]", baseState, singleRuntime).kind !== "ignore") {
+    throw new Error("ask-user-question accepted its disabled collapse shortcut")
+  }
+
+  const { QuestionnaireSession } = await askJiti.import(
+    join(askRoot, "state", "questionnaire-session.ts"),
+  )
+  const askTheme = new Proxy(
+    {},
+    {
+      get:
+        () =>
+        (...args) =>
+          String(args.at(-1) ?? ""),
+    },
+  )
+  const createCollapseSession = (canReopenWhileHidden) => {
+    const hiddenStates = []
+    const session = new QuestionnaireSession({
+      tui: { requestRender() {} },
+      theme: askTheme,
+      params: askParams,
+      itemsByTab: [askToolModule.buildItemsForQuestion(askParams.questions[0])],
+      done() {},
+      keybindings,
+      editInput: async () => undefined,
+      collapseKey: "ctrl+]",
+      canReopenWhileHidden,
+    })
+    session.setOverlayHandle({
+      setHidden(hidden) {
+        hiddenStates.push(hidden)
+      },
+    })
+    return { session, hiddenStates }
+  }
+  const fallbackCollapse = createCollapseSession(false)
+  fallbackCollapse.session.toggleCollapsedExternal()
+  if (
+    fallbackCollapse.hiddenStates.length !== 0 ||
+    fallbackCollapse.session.component.render(80).length !== 1
+  ) {
+    throw new Error(
+      "ask-user-question hid an overlay without a raw-input reopen path",
+    )
+  }
+  const hiddenCollapse = createCollapseSession(true)
+  hiddenCollapse.session.toggleCollapsedExternal()
+  if (hiddenCollapse.hiddenStates[0] !== true) {
+    throw new Error(
+      "ask-user-question did not hide a safely reopenable overlay",
+    )
+  }
+
   if (
     routeKey("enter", { ...baseState, inputMode: true }, singleRuntime).kind !==
     "ignore"
@@ -1113,6 +1189,22 @@ try {
     throw new Error(
       `Loaded ${result.extensions.length} of ${extensionPaths.length} extensions`,
     )
+  }
+  const lensEntry = resolve(lensRoot, "dist", "index.js")
+  const loadedLens = result.extensions.find(
+    (extension) => extension.resolvedPath === lensEntry,
+  )
+  for (const toolName of [
+    "lens_diagnostics",
+    "lsp_diagnostics",
+    "pi_lens_activate_tools",
+  ]) {
+    if (!loadedLens?.tools.has(toolName)) {
+      throw new Error(`Packed pi-lens did not register ${toolName}`)
+    }
+  }
+  if (!loadedLens.commands.has("lens-widget-toggle")) {
+    throw new Error("Packed pi-lens did not register lens-widget-toggle")
   }
 
   const automodeEntry = resolve(automodeRoot, automodeEntryRelative)
