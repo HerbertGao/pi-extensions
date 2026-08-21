@@ -679,7 +679,7 @@ try {
   if (btwManifest.license !== "MIT") {
     throw new Error(`Expected pi-btw MIT license, got ${btwManifest.license}`)
   }
-  const btwEntryRelative = "./src/index.ts"
+  const btwEntryRelative = "./dist/index.ts"
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
@@ -691,18 +691,86 @@ try {
       `Expected pi-tui-kit dependency ${expectedTuiKitRange}, got ${sourceManifest.dependencies["@narumitw/pi-tui-kit"]}`,
     )
   }
-  const btwRequire = createRequire(join(btwRoot, btwEntryRelative))
+  const btwEntry = join(btwRoot, btwEntryRelative)
+  const btwDistSource = await readFile(btwEntry, "utf8")
+  await stat(`${btwEntry}.map`)
+  const btwRequire = createRequire(btwEntry)
   const { createJiti: createBtwJiti } = await import(
     pathToFileURL(btwRequire.resolve("jiti"))
   )
-  const btwJiti = createBtwJiti(btwManifestPath, { moduleCache: false })
-  const btwSettings = await btwJiti.import(join(btwRoot, "src", "settings.ts"))
+  const btwJiti = createBtwJiti(btwManifestPath, {
+    alias: {
+      "@earendil-works/pi-ai": join(
+        root,
+        "node_modules/@earendil-works/pi-ai/dist/compat.js",
+      ),
+      "@earendil-works/pi-coding-agent": join(
+        root,
+        "node_modules/@earendil-works/pi-coding-agent/dist/index.js",
+      ),
+      "@earendil-works/pi-tui": join(
+        root,
+        "node_modules/@earendil-works/pi-tui/dist/index.js",
+      ),
+    },
+    fsCache: false,
+    moduleCache: false,
+  })
+  // 0.55.0's public entry is the bundled dist. Add test-only exports in memory
+  // so these regressions exercise that exact artifact rather than its src mirror.
+  const btwProbe = await btwJiti.evalModule(
+    `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, updateBtwSettings };\n`,
+    { filename: btwEntry, async: true, forceTranspile: true },
+  )
+  const {
+    BtwTranscriptPager,
+    createBtwFullscreenTui,
+    pickMainEntry,
+    updateBtwSettings,
+  } = btwProbe
+  const styleTheme = {
+    bg: (_color, text) => `bg:${text}`,
+    bold: (text) => `bold:${text}`,
+    fg: (_color, text) => `fg:${text}`,
+    inverse: (text) => `inverse:${text}`,
+    underline: (text) => `underline:${text}`,
+  }
+  const copiedSelections = []
+  const fullscreenTui = createBtwFullscreenTui(
+    { terminal: {}, getShowHardwareCursor: () => false },
+    styleTheme,
+    () => {},
+    async (text) => {
+      copiedSelections.push(text)
+    },
+  )
+  if (
+    fullscreenTui.searchMatchStyle("needle") !== "underline:bg:fg:needle" ||
+    fullscreenTui.searchCurrentMatchStyle("needle") !==
+      "bold:inverse:bg:fg:needle" ||
+    (await fullscreenTui.copySelection("copy me")) !== true ||
+    copiedSelections[0] !== "copy me"
+  ) {
+    throw new Error("pi-btw fullscreen search or clipboard integration failed")
+  }
+  const failingClipboardTui = createBtwFullscreenTui(
+    { terminal: {}, getShowHardwareCursor: () => false },
+    styleTheme,
+    () => {},
+    async () => {
+      throw new Error("clipboard unavailable")
+    },
+  )
+  if ((await failingClipboardTui.copySelection("copy me")) !== false) {
+    throw new Error("pi-btw fullscreen clipboard failure was not reported")
+  }
+
   const btwSettingsPath = join(stageDir, "pi-btw-settings.json")
-  await btwSettings.updateBtwSettings(
+  await updateBtwSettings(
     { thinkingLevel: "high", rememberThinkingLevelChanges: true },
     { settingsPath: btwSettingsPath },
   )
-  await btwSettings.updateBtwSettings(
+  await updateBtwSettings(
     { thinkingLevel: undefined },
     { settingsPath: btwSettingsPath },
   )
@@ -719,9 +787,6 @@ try {
     )
   }
 
-  const { pickMainEntry } = await btwJiti.import(
-    join(btwRoot, "src", "main-tree-picker.ts"),
-  )
   let mainTreeCustomCalls = 0
   const mainTreeNotifications = []
   const emptyTreeResult = await pickMainEntry(
@@ -747,9 +812,6 @@ try {
 
   const { initTheme } = await btwJiti.import("@earendil-works/pi-coding-agent")
   initTheme()
-  const { BtwTranscriptPager } = await btwJiti.import(
-    join(btwRoot, "src", "transcript-pager.ts"),
-  )
   const passthroughTheme = {
     fg: (_color, text) => text,
     bg: (_color, text) => text,
@@ -1117,9 +1179,14 @@ try {
   }
   await runPiWebAccessRealSmoke({ webAccessEntry })
 
-  const btwEntry = resolve(btwRoot, btwEntryRelative)
   if (!extensionPaths.includes(btwEntry)) {
     throw new Error("Packed aggregate is missing the pi-btw extension entry")
+  }
+  const loadedBtw = result.extensions.find(
+    (extension) => extension.resolvedPath === btwEntry,
+  )
+  if (!loadedBtw?.commands.has("btw")) {
+    throw new Error("Packed pi-btw dist did not register the /btw command")
   }
   const ponytailEntry = resolve(ponytailRoot, ponytailEntryRelative)
   if (!extensionPaths.includes(ponytailEntry)) {
