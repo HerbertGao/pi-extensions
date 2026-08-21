@@ -292,7 +292,10 @@ try {
   await Promise.all(
     [
       "dist/index.js",
+      "dist/clients/dispatch/runners/cue-vet.js",
+      "dist/clients/dispatch/runners/helm-render.js",
       "dist/clients/dispatch/runners/utils/toolchain-availability.js",
+      "vendor/grammars/tree-sitter-cue.wasm",
       "skills",
       "skills/pi-lens-write-ast-grep-rule/reference.md",
       "LICENSE",
@@ -1046,6 +1049,22 @@ try {
     throw new Error(
       `Loaded ${result.extensions.length} of ${extensionPaths.length} extensions`,
     )
+  }
+  const lensEntry = resolve(lensRoot, "dist", "index.js")
+  const loadedLens = result.extensions.find(
+    (extension) => extension.resolvedPath === lensEntry,
+  )
+  for (const toolName of [
+    "lens_diagnostics",
+    "lsp_diagnostics",
+    "pi_lens_activate_tools",
+  ]) {
+    if (!loadedLens?.tools.has(toolName)) {
+      throw new Error(`Packed pi-lens did not register ${toolName}`)
+    }
+  }
+  if (!loadedLens.commands.has("lens-widget-toggle")) {
+    throw new Error("Packed pi-lens did not register lens-widget-toggle")
   }
 
   const automodeEntry = resolve(automodeRoot, automodeEntryRelative)
