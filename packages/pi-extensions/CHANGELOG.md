@@ -1,5 +1,35 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.7
+
+### Patch Changes
+
+- [#89](https://github.com/HerbertGao/pi-extensions/pull/89) [`ed31f65`](https://github.com/HerbertGao/pi-extensions/commit/ed31f65b3c4a8757a1248970b5cea2853ad82342) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions through 0.8.63 with bounded thinking previews, renderer caching, separate write diff limits, and safer fullscreen click behavior.
+
+- [#90](https://github.com/HerbertGao/pi-extensions/pull/90) [`74b7bce`](https://github.com/HerbertGao/pi-extensions/commit/74b7bceac14c36961d25af9cbc6aecc502bdaf3b) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-subagents with upstream 0.18.0, including worktree controls, background-by-default top-level agents, usage and cost reporting, programmatic activity tracking, child-session shutdown, and nested print-mode coverage.
+
+- [#85](https://github.com/HerbertGao/pi-extensions/pull/85) [`8a77fc3`](https://github.com/HerbertGao/pi-extensions/commit/8a77fc375c514a1b662692a3842ba0172d7ffdcc) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled ask-user-question extension to 2.6.2 with configurable tool guidance.
+
+- [#95](https://github.com/HerbertGao/pi-extensions/pull/95) [`4f6cbb1`](https://github.com/HerbertGao/pi-extensions/commit/4f6cbb117757a887a2b46c6e026ac225d1dd8332) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled ask-user-question extension to 2.6.4 with configurable collapse hints and safe fallback when hidden overlays cannot be reopened.
+
+- [#87](https://github.com/HerbertGao/pi-extensions/pull/87) [`6ebb08e`](https://github.com/HerbertGao/pi-extensions/commit/6ebb08e9d8b24aab47a4502bb3742cb39191368a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-mcp-adapter to 2.26.1 with parameter-scoped tool approvals.
+
+- [#97](https://github.com/HerbertGao/pi-extensions/pull/97) [`9ddb7bc`](https://github.com/HerbertGao/pi-extensions/commit/9ddb7bc9b11b401c0bdd9bb42dde0e0e341370b7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-mcp-adapter to 2.27.0 with package/runtime server registration, credential-store bearer tokens, and long-lived session fixes.
+
+- [#86](https://github.com/HerbertGao/pi-extensions/pull/86) [`b90f746`](https://github.com/HerbertGao/pi-extensions/commit/b90f7461f235f77c35b4c34645e97a790ab63ed7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-btw to 0.54.1 with main-tree branch selection and native scrolling.
+
+- [#96](https://github.com/HerbertGao/pi-extensions/pull/96) [`36a185e`](https://github.com/HerbertGao/pi-extensions/commit/36a185ec7095cf386d857020218c53adb7a02cda) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-btw to 0.55.0 with fullscreen transcript search and clipboard feedback.
+
+- [#98](https://github.com/HerbertGao/pi-extensions/pull/98) [`97b57da`](https://github.com/HerbertGao/pi-extensions/commit/97b57daafd3cb5bb0312973c4c07f3cc554a96fb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-lens to 4.1.0 with CUE language support and extensive diagnostics, lifecycle, and scanner reliability fixes.
+
+- [#83](https://github.com/HerbertGao/pi-extensions/pull/83) [`48452e2`](https://github.com/HerbertGao/pi-extensions/commit/48452e2a245e81050268a151aa10830868d1c52c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled Pi host dependencies to 0.84.2.
+
+- [#88](https://github.com/HerbertGao/pi-extensions/pull/88) [`509d657`](https://github.com/HerbertGao/pi-extensions/commit/509d65796dbeb1a5a5df63f663743637cc387d50) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-web-access to 0.24.0 with additional providers and safer content fetching.
+
+- Updated dependencies [[`ed31f65`](https://github.com/HerbertGao/pi-extensions/commit/ed31f65b3c4a8757a1248970b5cea2853ad82342), [`74b7bce`](https://github.com/HerbertGao/pi-extensions/commit/74b7bceac14c36961d25af9cbc6aecc502bdaf3b)]:
+  - @herbertgao/pi-cc-extensions@0.8.56
+  - @herbertgao/pi-subagents@0.16.0
+
 ## 2026.8.6
 
 ### Patch Changes
