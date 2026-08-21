@@ -58,12 +58,12 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.6.2`  | `juicesharp/rpiv-mono`      |
+| `@juicesharp/rpiv-ask-user-question` | `2.6.4`  | `juicesharp/rpiv-mono`      |
 | `@narumitw/pi-btw`                   | `0.55.0` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
 | `pi-mcp-adapter`                     | `2.26.1` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-lens`                            | `4.0.1`  | `apmantza/pi-lens`          |
+| `pi-lens`                            | `4.1.0`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.24.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
