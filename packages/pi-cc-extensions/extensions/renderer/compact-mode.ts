@@ -331,70 +331,93 @@ function editWriteExpandedCard(theme: any): any {
 	);
 }
 
-/** compact 展开卡：外卡片保持 userMessageBg 原色；内部 tool call card（addToolChild）
- *  背景更深一层且只覆盖内容区（左右内缩、上下限首尾文本行），形成嵌套层次。
- *  逐行重建背景同时修复嵌套 Box 的右侧截断。 */
-function expandedToolCard(theme: any): any {
+/** compact 展开卡：保留本地嵌套工具背景，并记录 thinking 的点击行区间。 */
+function layoutExpandedToolCard(
+	theme: any,
+	children: any[],
+	width: number,
+): { lines: string[]; hits: Array<{ child: any; start: number; end: number }> } {
 	const slot = "userMessageBg";
 	const toolBgAnsi = darkenBgAnsi(theme, slot);
+	const innerWidth = Math.max(0, width - 2);
+	const lines: string[] = [];
+	const hits: Array<{ child: any; start: number; end: number }> = [];
+	lines.push(paddedBackgroundRow(theme, slot, "", width));
+	let skipLeadingBlank = true;
+	for (const child of children) {
+		const childLines = child.render(innerWidth);
+		if (!child.__ccToolCard) {
+			let start = 0;
+			if (skipLeadingBlank) {
+				while (start < childLines.length && !hasVisibleText(childLines[start])) start++;
+				skipLeadingBlank = false;
+			}
+			const rangeStart = lines.length;
+			for (let i = start; i < childLines.length; i++) {
+				lines.push(paddedBackgroundRow(theme, slot, childLines[i], width));
+			}
+			if (lines.length > rangeStart) hits.push({ child, start: rangeStart, end: lines.length });
+			continue;
+		}
+		skipLeadingBlank = false;
+		let first = -1;
+		let last = -1;
+		for (let i = 0; i < childLines.length; i++) {
+			if (hasVisibleText(childLines[i])) {
+				if (first < 0) first = i;
+				last = i;
+			}
+		}
+		if (first < 0) {
+			for (const line of childLines) {
+				lines.push(paddedBackgroundRow(theme, slot, line, width));
+			}
+			continue;
+		}
+		lines.push(paddedBackgroundRow(theme, slot, "", width));
+		lines.push(toolCardBgRow(theme, slot, toolBgAnsi, "", width));
+		for (let i = first; i <= last; i++) {
+			lines.push(toolCardBgRow(theme, slot, toolBgAnsi, childLines[i], width));
+		}
+		lines.push(toolCardBgRow(theme, slot, toolBgAnsi, "", width));
+	}
+	lines.push(paddedBackgroundRow(theme, slot, "", width));
+	return { lines, hits };
+}
+
+function compactRoundCard(
+	cardItems: Array<{ child?: any; tool?: any }>,
+	toolRender: (tool: any, width: number) => string[],
+): any {
 	const children: any[] = [];
+	for (const item of cardItems) {
+		if (item.child) children.push(item.child);
+		else if (item.tool) {
+			const tool = item.tool;
+			children.push({
+				__ccToolCard: true,
+				render: (innerWidth: number) => toolRender(tool, innerWidth),
+				invalidate: () => tool.invalidate?.(),
+			});
+		}
+	}
 	return {
 		children,
-		addChild(child: any) {
-			children.push(child);
-		},
-		addToolChild(child: any) {
-			child.__ccToolCard = true;
-			children.push(child);
-		},
 		render(width: number): string[] {
-			const innerWidth = Math.max(0, width - 2);
-			const lines: string[] = [];
-			lines.push(paddedBackgroundRow(theme, slot, "", width));
-			// 展开不再显示摘要行：跳过第一个 child 的首行空白，避免白占一行
-			let skipLeadingBlank = true;
-			for (const child of children) {
-				const childLines = child.render(innerWidth);
-				if (!child.__ccToolCard) {
-					let start = 0;
-					if (skipLeadingBlank) {
-						while (start < childLines.length && !hasVisibleText(childLines[start])) start++;
-						skipLeadingBlank = false;
-					}
-					for (let i = start; i < childLines.length; i++) {
-						lines.push(paddedBackgroundRow(theme, slot, childLines[i], width));
-					}
-					continue;
-				}
-				// 工具卡：前导 1 空行 + 首尾文本行之间的内容区（深色）；不保留尾随，
-				// 相邻工具卡之间正好 1 空行，底部由卡片 padding 收尾。
-				skipLeadingBlank = false;
-				let first = -1;
-				let last = -1;
-				for (let i = 0; i < childLines.length; i++) {
-					if (hasVisibleText(childLines[i])) {
-						if (first < 0) first = i;
-						last = i;
-					}
-				}
-				if (first < 0) {
-					for (const line of childLines) {
-						lines.push(paddedBackgroundRow(theme, slot, line, width));
-					}
-					continue;
-				}
-				lines.push(paddedBackgroundRow(theme, slot, "", width));
-				// 子卡片内部上下各 1 行深色 padding
-				lines.push(toolCardBgRow(theme, slot, toolBgAnsi, "", width));
-				for (let i = first; i <= last; i++) {
-					lines.push(toolCardBgRow(theme, slot, toolBgAnsi, childLines[i], width));
-				}
-				lines.push(toolCardBgRow(theme, slot, toolBgAnsi, "", width));
-			}
-			lines.push(paddedBackgroundRow(theme, slot, "", width));
-			return lines;
+			return ["", ...layoutExpandedToolCard(themeOf(), children, width).lines];
 		},
-		invalidate() {},
+		childAtRow(localRow: number, width: number) {
+			if (localRow < 1) return null;
+			const row = localRow - 1;
+			const { hits } = layoutExpandedToolCard(themeOf(), children, width);
+			for (const hit of hits) {
+				if (row >= hit.start && row < hit.end) return hit.child;
+			}
+			return null;
+		},
+		invalidate() {
+			for (const child of children) child.invalidate?.();
+		},
 	};
 }
 
@@ -930,27 +953,21 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 					tool.updateDisplay?.();
 				}
 			}
-			round.anchor.contentContainer.addChild({
-				render(width: number): string[] {
-					const theme = themeOf();
-					const box = expandedToolCard(theme);
-					for (const child of assistantChildren) box.addChild(child);
-					const ids = roundToolCallIds(round);
-					for (const tool of trackedToolComponents) {
-						if (!ids.has(tool.toolCallId) || EDIT_WRITE_TOOLS.has(String(tool.toolName ?? ""))) {
-							continue;
-						}
-						box.addToolChild({
-							render: (innerWidth: number) => patch.toolOriginalRender.call(tool, innerWidth),
-							invalidate: () => tool.invalidate?.(),
-						});
-					}
-					return ["", ...box.render(width)];
-				},
-				invalidate() {
-					for (const child of assistantChildren) child.invalidate?.();
-				},
-			});
+			const cardItems: Array<{ child?: any; tool?: any }> = assistantChildren.map((child) => ({
+				child,
+			}));
+			const roundIds = roundToolCallIds(round);
+			for (const tool of trackedToolComponents) {
+				if (!roundIds.has(tool.toolCallId) || EDIT_WRITE_TOOLS.has(String(tool.toolName ?? ""))) {
+					continue;
+				}
+				cardItems.push({ tool });
+			}
+			round.anchor.contentContainer.addChild(
+				compactRoundCard(cardItems, (tool, innerWidth) =>
+					patch.toolOriginalRender.call(tool, innerWidth),
+				),
+			);
 			// 展开卡内工具会显示 error，外层仍挂 abort/length，避免只藏在折叠工具里。
 			appendStopStatus(round.anchor, stopStatus);
 			return;

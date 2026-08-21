@@ -55,7 +55,7 @@ Run `/reload` after installation.
   "diffViewMode": "auto",                  // diff layout: auto / split / unified
   "diffIndicatorMode": "bars",             // diff change indicators: bars / classic / none
   "diffSplitMinWidth": 120,                // min terminal width before auto layout uses side-by-side columns
-  "diffCollapsedLines": 24,                // diff body lines shown when collapsed; beyond that shows the expand hint (Ctrl+O / click)
+  "editDiffCollapsedLines": 24,                // diff body lines shown when collapsed; beyond that shows the expand hint (Ctrl+O / click)
   "diffWordWrap": true,                    // whether long diff lines wrap (otherwise truncated)
   "expandedPreviewMaxLines": 40,           // max body lines for expanded output/diff
   "useSummaryTitlesAsThinkingTitle": true, // use the latest provider summary as the active thinking title

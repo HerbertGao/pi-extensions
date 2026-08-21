@@ -1377,7 +1377,8 @@ function displayConfigCacheKey(config: ToolDisplayConfig): string {
 		config.diffViewMode,
 		config.diffIndicatorMode,
 		String(config.diffSplitMinWidth),
-		String(config.diffCollapsedLines),
+		String(config.editDiffCollapsedLines),
+		String(config.writeDiffCollapsedLines),
 		config.diffWordWrap ? "1" : "0",
 		String(config.expandedPreviewMaxLines),
 	].join(":");
@@ -2232,8 +2233,20 @@ function resolveDiffDisplayLimit(
 		: DEFAULT_TOOL_DISPLAY_CONFIG.expandedPreviewMaxLines;
 	const collapsedLimit = Number.isFinite(maxCollapsedLines)
 		? maxCollapsedLines
-		: DEFAULT_TOOL_DISPLAY_CONFIG.diffCollapsedLines;
+		: DEFAULT_TOOL_DISPLAY_CONFIG.editDiffCollapsedLines;
 	return expanded ? Math.max(0, expandedLimit) : Math.max(1, collapsedLimit);
+}
+
+/** Write collapsed body limit. Missing/NaN falls back to edit's limit. */
+function resolveWriteCollapsedLimit(config: ToolDisplayConfig): number {
+	const value = config.writeDiffCollapsedLines;
+	if (Number.isFinite(value)) {
+		return Math.max(0, value);
+	}
+	const fallback = Number.isFinite(config.editDiffCollapsedLines)
+		? config.editDiffCollapsedLines
+		: DEFAULT_TOOL_DISPLAY_CONFIG.writeDiffCollapsedLines;
+	return Math.max(0, fallback);
 }
 
 /**
@@ -2602,7 +2615,7 @@ export function renderEditDiffResult(
 			const headerRows = renderHeaderRows(parsed.stats, mode, safeWidth, theme);
 			const displayLimit = resolveDiffDisplayLimit(
 				options.expanded,
-				live.diffCollapsedLines,
+				live.editDiffCollapsedLines,
 				live.expandedPreviewMaxLines,
 			);
 			const processBudget = resolveDiffProcessBudget(displayLimit, wordWrap);
@@ -2636,7 +2649,7 @@ export function renderEditDiffResult(
 				bodyRows,
 				safeWidth,
 				options.expanded,
-				live.diffCollapsedLines,
+				live.editDiffCollapsedLines,
 				live.expandedPreviewMaxLines,
 				parsed.stats.hunks,
 				theme,
@@ -2901,6 +2914,41 @@ function renderWriteOverwriteGuardRows(
 	return renderSingleDiffRow(buildWriteOverwriteGuardText(guard, width), "warning", width, theme);
 }
 
+/** Folded write with a zero body limit: `↳ created • click to show more`. */
+function renderWriteCollapsedHintLine(
+	wasOverwrite: boolean,
+	width: number,
+	theme: DiffTheme,
+	hovered: boolean,
+	headerLabel?: string,
+): string[] {
+	const safeWidth = normalizeDiffRenderWidth(width);
+	if (safeWidth === 0) {
+		return [""];
+	}
+	const actionLabel = headerLabel?.trim() || (wasOverwrite ? "overwritten" : "created");
+	const clickLabel = showMoreHintText();
+	const candidates = [`↳ ${actionLabel} • ${clickLabel}`, `↳ ${actionLabel}`, actionLabel, "…"];
+	let text = candidates[candidates.length - 1] ?? "…";
+	for (const candidate of candidates) {
+		if (visibleWidth(candidate) <= safeWidth) {
+			text = candidate;
+			break;
+		}
+	}
+	if (visibleWidth(text) > safeWidth) {
+		text = truncateToWidth(text, safeWidth, "");
+	}
+	const clickIndex = text.lastIndexOf(clickLabel);
+	const styled =
+		hovered && clickIndex >= 0
+			? theme.fg("muted", text.slice(0, clickIndex)) +
+				theme.fg("text", clickLabel) +
+				theme.fg("muted", text.slice(clickIndex + clickLabel.length))
+			: theme.fg("muted", text);
+	return [clampDiffLineToWidth(styled, safeWidth)];
+}
+
 export function renderWriteDiffResult(
 	content: string | undefined,
 	options: DiffRenderOptions,
@@ -2977,6 +3025,27 @@ export function renderWriteDiffResult(
 				return cached;
 			}
 
+			const writeCollapsedLimit = resolveWriteCollapsedLimit(live);
+			if (!options.expanded && writeCollapsedLimit === 0) {
+				return cache.set(
+					safeWidth,
+					options.expanded,
+					mode,
+					configKey,
+					hovered,
+					clampDiffLinesToWidth(
+						renderWriteCollapsedHintLine(
+							options.fileExistedBeforeWrite === true,
+							safeWidth,
+							theme,
+							hovered,
+							options.headerLabel,
+						),
+						safeWidth,
+					),
+				);
+			}
+
 			const header = renderWriteHeader(
 				options.fileExistedBeforeWrite === true,
 				safeWidth,
@@ -3027,7 +3096,7 @@ export function renderWriteDiffResult(
 			const data = getDetailedData();
 			const displayLimit = resolveDiffDisplayLimit(
 				options.expanded,
-				live.diffCollapsedLines,
+				writeCollapsedLimit,
 				live.expandedPreviewMaxLines,
 			);
 			const processBudget = resolveDiffProcessBudget(displayLimit, wordWrap);
@@ -3065,7 +3134,7 @@ export function renderWriteDiffResult(
 				bodyRows,
 				safeWidth,
 				options.expanded,
-				live.diffCollapsedLines,
+				writeCollapsedLimit,
 				live.expandedPreviewMaxLines,
 				data.hunkCount,
 				theme,

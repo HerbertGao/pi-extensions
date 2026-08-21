@@ -8,7 +8,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
-import { showMoreHintText } from "../show-more-hint.ts";
+import { isToolTuiFullscreen, showMoreHintText } from "../show-more-hint.ts";
 
 const PATCH_KEY = Symbol.for("pi.ccstyle.tool-grouping-patch");
 const PARENT_KEY = Symbol.for("pi.ccstyle.tool-grouping-parent");
@@ -274,6 +274,17 @@ function groupChildWidth(width: number): number {
 	return Math.max(1, panelInnerWidth(width));
 }
 
+type SettledGroupCache = {
+	width: number;
+	hover: boolean;
+	theme: unknown;
+	fullscreen: boolean;
+	children: readonly unknown[];
+	args: unknown[];
+	results: unknown[];
+	lines: string[];
+};
+
 export class ToolGroupComponent extends Container {
 	readonly toolCallId = `ccstyle-tool-group-${nextGroupId++}`;
 	readonly toolName = "Tool group";
@@ -284,6 +295,8 @@ export class ToolGroupComponent extends Container {
 	}
 	private hintHovered = false;
 	private readonly patch: Patch;
+	/** 仅缓存已完成且折叠的分组；pending / expanded 每帧现算。 */
+	private settledCache: SettledGroupCache | undefined;
 
 	constructor(patch: Patch) {
 		super();
@@ -292,11 +305,13 @@ export class ToolGroupComponent extends Container {
 	}
 
 	addTool(tool: any): void {
+		this.settledCache = undefined;
 		this.children.push(tool);
 		tool[PARENT_KEY] = this;
 	}
 
 	releaseTools(): any[] {
+		this.settledCache = undefined;
 		const tools = [...this.children];
 		this.children.length = 0;
 		this.patch.groups.delete(this);
@@ -304,18 +319,21 @@ export class ToolGroupComponent extends Container {
 	}
 
 	removeTool(tool: any): void {
+		this.settledCache = undefined;
 		const index = this.children.indexOf(tool);
 		if (index >= 0) this.children.splice(index, 1);
 		if (tool?.[PARENT_KEY] === this) delete tool[PARENT_KEY];
 	}
 
 	setExpanded(expanded: boolean): void {
+		if (this._expanded !== expanded) this.settledCache = undefined;
 		this._expanded = expanded;
 		for (const tool of this.children)
 			(tool as Component & { setExpanded?: (expanded: boolean) => void }).setExpanded?.(expanded);
 	}
 
 	setHintHovered(hovered: boolean): void {
+		if (this.hintHovered !== hovered) this.settledCache = undefined;
 		this.hintHovered = hovered;
 	}
 
@@ -344,10 +362,53 @@ export class ToolGroupComponent extends Container {
 	}
 
 	invalidate(): void {
+		this.settledCache = undefined;
 		for (const tool of this.children) tool.invalidate?.();
 	}
 
+	private settledCacheHit(width: number): string[] | undefined {
+		const cache = this.settledCache;
+		if (!cache || this._expanded) return;
+		if (
+			cache.width !== width ||
+			cache.hover !== this.hintHovered ||
+			cache.theme !== this.patch.theme ||
+			cache.fullscreen !== isToolTuiFullscreen()
+		) {
+			return;
+		}
+		const tools = this.children as any[];
+		if (cache.children.length !== tools.length) return;
+		for (let i = 0; i < tools.length; i++) {
+			const tool = tools[i];
+			if (
+				cache.children[i] !== tool ||
+				cache.args[i] !== tool?.args ||
+				cache.results[i] !== tool?.result ||
+				status(tool) === "pending"
+			) {
+				return;
+			}
+		}
+		return cache.lines;
+	}
+
+	private storeSettledCache(width: number, lines: string[]): void {
+		this.settledCache = {
+			width,
+			hover: this.hintHovered,
+			theme: this.patch.theme,
+			fullscreen: isToolTuiFullscreen(),
+			children: [...this.children],
+			args: (this.children as any[]).map((tool) => tool?.args),
+			results: (this.children as any[]).map((tool) => tool?.result),
+			lines,
+		};
+	}
+
 	render(width: number): string[] {
+		const cached = this.settledCacheHit(width);
+		if (cached) return cached;
 		const theme = this.patch.theme;
 		const fg = (color: string, text: string) => theme?.fg?.(color, text) ?? text;
 		const counts = { pending: 0, success: 0, error: 0 };
@@ -420,6 +481,8 @@ export class ToolGroupComponent extends Container {
 				lines.push(paddedBackgroundRow(theme, backgroundSlot, line, width));
 			}
 			lines.push(paddedBackgroundRow(theme, backgroundSlot, "", width));
+		} else if (counts.pending === 0) {
+			this.storeSettledCache(width, lines);
 		}
 		return lines;
 	}

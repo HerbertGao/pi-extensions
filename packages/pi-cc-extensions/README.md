@@ -55,7 +55,7 @@ pi install npm:@herbertgao/pi-cc-extensions
   "diffViewMode": "auto",                  // diff 布局：auto / split / unified
   "diffIndicatorMode": "bars",             // diff 变更指示：bars / classic / none
   "diffSplitMinWidth": 120,                // 自动布局下使用左右分栏的最小终端宽度
-  "diffCollapsedLines": 24,                // 折叠时展示的 diff 行数，超出显示展开提示（Ctrl+O / 点击）
+  "editDiffCollapsedLines": 24,                // 折叠时展示的 diff 行数，超出显示展开提示（Ctrl+O / 点击）
   "diffWordWrap": true,                    // 长 diff 行是否换行（否则截断）
   "expandedPreviewMaxLines": 40,           // 展开后输出/diff 正文的最大行数
   "useSummaryTitlesAsThinkingTitle": true, // 用最新 provider 摘要作为思考标题

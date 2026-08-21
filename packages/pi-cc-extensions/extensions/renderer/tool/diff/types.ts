@@ -5,7 +5,9 @@ export interface ToolDisplayConfig {
 	diffViewMode: DiffViewMode;
 	diffIndicatorMode: DiffIndicatorMode;
 	diffSplitMinWidth: number;
-	diffCollapsedLines: number;
+	editDiffCollapsedLines: number;
+	/** Write-only collapsed body lines. 0 = `↳ created • click to show more`. */
+	writeDiffCollapsedLines: number;
 	diffWordWrap: boolean;
 	expandedPreviewMaxLines: number;
 }
@@ -14,8 +16,10 @@ export const DEFAULT_TOOL_DISPLAY_CONFIG: ToolDisplayConfig = {
 	diffViewMode: "auto",
 	diffIndicatorMode: "bars",
 	diffSplitMinWidth: 120,
-	/** Collapsed tool/diff body: ~half a typical terminal after chrome. */
-	diffCollapsedLines: 24,
+	/** Collapsed edit/diff body: ~half a typical terminal after chrome. */
+	editDiffCollapsedLines: 24,
+	/** Write create/overwrite collapsed body; 0 shows only the expand hint. */
+	writeDiffCollapsedLines: 0,
 	diffWordWrap: true,
 	/**
 	 * Expanded tool/diff body cap. 40 ≈ one screen of content after title,
