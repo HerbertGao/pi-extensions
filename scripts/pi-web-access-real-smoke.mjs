@@ -1,12 +1,14 @@
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
-import { randomBytes } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 import { createServer } from "node:http"
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   stat,
   truncate,
@@ -34,20 +36,33 @@ const geminiMarker = "GEMINIWEBTRANSPORTMARKER"
 const firecrawlMarker = "FIRECRAWLSEARCHMARKER"
 const rscMarker = "RSCEXTRACTIONMARKER"
 const pdfMarker = "PDFEXTRACTIONMARKER"
+const pdfPageMarkers = [1, 2, 3].map((page) => `${pdfMarker}-PAGE-${page}`)
+const dataUriSecret = `DATAURIPAYLOADMARKER:${"s".repeat(300_000)}`
+const dataUriEncoded = Buffer.from(dataUriSecret).toString("base64")
+const githubOwner = "smoke-owner"
+const githubRepo = "smoke-repo"
+const githubRef = "../../traversal"
+const githubTraversalUrl = `git+https://github.com/${githubOwner}/${githubRepo}/tree/${encodeURIComponent(githubRef)}`
 const imagePng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
 )
 
-function createPdf(text) {
-  const stream = `BT /F1 18 Tf 72 720 Td (${text}) Tj ET`
+function createPdf() {
+  const fontObject = 3 + pdfPageMarkers.length * 2
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+    `<< /Type /Pages /Kids [${pdfPageMarkers.map((_, index) => `${3 + index * 2} 0 R`).join(" ")}] /Count ${pdfPageMarkers.length} >>`,
   ]
+  for (const [index, marker] of pdfPageMarkers.entries()) {
+    const pageObject = 3 + index * 2
+    const stream = `BT /F1 18 Tf 72 720 Td (${marker}) Tj ET`
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontObject} 0 R >> >> /Contents ${pageObject + 1} 0 R >>`,
+      `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+    )
+  }
+  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
   let body = "%PDF-1.4\n"
   const offsets = [0]
   for (let index = 0; index < objects.length; index++) {
@@ -416,6 +431,7 @@ function sendSse(response, delta, finishReason = "stop") {
 async function startMockServer() {
   const requests = []
   const pdfPath = `/fixture-${randomBytes(8).toString("hex")}.pdf`
+  const dataUriPath = `/data-uri-${randomBytes(8).toString("hex")}.txt`
   const server = createServer((request, response) => {
     if (request.url === "/page-a" || request.url === "/page-b") {
       const page = request.url.endsWith("a") ? "A" : "B"
@@ -447,7 +463,12 @@ async function startMockServer() {
     }
     if (request.url === pdfPath) {
       response.writeHead(200, { "content-type": "application/pdf" })
-      response.end(createPdf(pdfMarker))
+      response.end(createPdf())
+      return
+    }
+    if (request.url === dataUriPath) {
+      response.writeHead(200, { "content-type": "text/plain; charset=utf-8" })
+      response.end(`before data:text/plain;base64,${dataUriEncoded} after`)
       return
     }
 
@@ -565,6 +586,20 @@ async function startMockServer() {
           name = "fetch_content"
           args = { urls: urls.slice(-2) }
         } else if (
+          prompt.startsWith("RUN_DATA_URI_SMOKE") &&
+          toolResults === 0
+        ) {
+          name = "fetch_content"
+          args = {
+            url: `http://127.0.0.1:${address.port}${dataUriPath}`,
+          }
+        } else if (
+          prompt.startsWith("RUN_GITHUB_CLONE_SMOKE") &&
+          toolResults === 0
+        ) {
+          name = "fetch_content"
+          args = { url: githubTraversalUrl, forceClone: true }
+        } else if (
           prompt.startsWith("RESTORE_WEB_SMOKE") &&
           toolResults === 0
         ) {
@@ -609,6 +644,7 @@ async function startMockServer() {
   return {
     port: address.port,
     pdfPath,
+    dataUriPath,
     requests,
     close: () =>
       new Promise((resolvePromise, reject) =>
@@ -797,12 +833,35 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
     const homeDir = join(stageDir, "home")
     const sessionDir = join(stageDir, "sessions")
     const workDir = join(stageDir, "work")
+    const cloneRoot = join(stageDir, "clone-cache")
+    const sentinelDir = join(stageDir, "sentinel")
+    const fakeBin = join(stageDir, "fake-bin")
+    const fakeGhLog = join(stageDir, "fake-gh-clone-args.json")
     await Promise.all([
       mkdir(agentDir, { recursive: true }),
       mkdir(homeDir, { recursive: true }),
       mkdir(sessionDir, { recursive: true }),
       mkdir(workDir, { recursive: true }),
+      mkdir(sentinelDir, { recursive: true }),
+      mkdir(fakeBin, { recursive: true }),
     ])
+    await writeFile(join(sentinelDir, "keep.txt"), "sentinel survives")
+    const fakeGh = join(fakeBin, "gh")
+    await writeFile(
+      fakeGh,
+      `#!/usr/bin/env node
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+const args = process.argv.slice(2);
+if (args[0] === "--version") process.exit(0);
+if (args[0] !== "repo" || args[1] !== "clone") process.exit(1);
+const localPath = args[3];
+mkdirSync(localPath, { recursive: true });
+writeFileSync(process.env.PI_WEB_ACCESS_FAKE_GH_LOG, JSON.stringify(args));
+writeFileSync(new URL("README.md", \`file://\${localPath}/\`), "fake clone");
+symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file://\${localPath}/\`), process.platform === "win32" ? "junction" : "dir");
+`,
+    )
+    await chmod(fakeGh, 0o755)
     await writeFile(
       join(agentDir, "models.json"),
       `${JSON.stringify(
@@ -849,6 +908,8 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
       jinaApiKey: "smoke-jina-key",
       workflow: "none",
       ssrf: { allowRanges: ["127.0.0.0/8"] },
+      pdf: { provider: "unpdf", maxPages: 2.9 },
+      githubClone: { clonePath: cloneRoot },
     }
     await writeJson(configPath, baseConfig)
     await assertRegistrationGates({
@@ -879,6 +940,9 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
       HOME: homeDir,
       PI_CODING_AGENT_DIR: agentDir,
       PI_WEB_ACCESS_JINA_MARKER: jinaMarker,
+      PI_WEB_ACCESS_FAKE_GH_LOG: fakeGhLog,
+      PI_WEB_ACCESS_SENTINEL: sentinelDir,
+      PATH: `${fakeBin}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       NODE_OPTIONS: `${existingNodeOptions ? `${existingNodeOptions} ` : ""}--import=${pathToFileURL(providerPreload).href}`,
     }
     const baseArgs = [
@@ -995,13 +1059,104 @@ export async function runPiWebAccessRealSmoke({ webAccessEntry }) {
       /PDF extracted and saved to: ([^\n]+)/,
     )?.[1]
     assert.ok(pdfOutputPath, "PDF fetch did not report extracted output")
-    assert.match(await readFile(pdfOutputPath, "utf8"), new RegExp(pdfMarker))
+    const pdfMarkdown = await readFile(pdfOutputPath, "utf8")
+    assert.match(pdfMarkdown, new RegExp(pdfPageMarkers[0]))
+    assert.match(pdfMarkdown, new RegExp(pdfPageMarkers[1]))
+    assert.ok(!pdfMarkdown.includes(pdfPageMarkers[2]), pdfMarkdown)
+    assert.match(pdfMarkdown, /> Pages: 3 \(extracted first 2\)/)
+    assert.match(
+      pdfMarkdown,
+      /\*\[Truncated: Only first 2 of 3 pages extracted\]\*/,
+    )
     await rm(pdfOutputPath, { force: true })
     if (process.platform !== "win32") {
       assert.equal((await stat(cacheDir)).mode & 0o777, 0o700)
       assert.equal((await stat(cachePath)).mode & 0o777, 0o600)
     }
     assert.ok((await stat(cachePath)).size <= 128 * 1024 * 1024)
+
+    const dataUriRun = await runPi(
+      [...baseArgs, "--no-session", "RUN_DATA_URI_SMOKE"],
+      { cwd: workDir, env },
+    )
+    const dataUriEnd = parseEvents(dataUriRun.stdout).find(
+      (event) =>
+        event.type === "tool_execution_end" &&
+        event.toolName === "fetch_content",
+    )
+    assert.equal(dataUriEnd?.isError, false)
+    const dataUriResult = JSON.stringify(dataUriEnd.result)
+    assert.ok(Buffer.byteLength(dataUriResult) < 1024, dataUriResult)
+    assert.match(dataUriResult, /inline data URI omitted/)
+    assert.match(
+      dataUriResult,
+      new RegExp(`encodedBytes=${Buffer.byteLength(dataUriEncoded)}`),
+    )
+    assert.match(
+      dataUriResult,
+      new RegExp(`decodedBytes=${Buffer.byteLength(dataUriSecret)}`),
+    )
+    assert.match(dataUriResult, /retrieval=not-retained/)
+    assert.ok(
+      !dataUriResult.includes(dataUriSecret) &&
+        !dataUriResult.includes(dataUriEncoded),
+      "fetch_content result retained the inline data URI payload",
+    )
+    const dataUriCache = (
+      await Promise.all(
+        (
+          await readdir(cacheDir)
+        )
+          .filter((name) => name.endsWith(".json"))
+          .map((name) => readFile(join(cacheDir, name), "utf8")),
+      )
+    ).find((contents) => contents.includes(mock.dataUriPath))
+    assert.ok(dataUriCache, "fetch_content did not cache the data URI fixture")
+    assert.match(dataUriCache, /inline data URI omitted/)
+    assert.ok(
+      !dataUriCache.includes(dataUriSecret) &&
+        !dataUriCache.includes(dataUriEncoded),
+      "fetch_content cache retained the inline data URI payload",
+    )
+
+    const githubRun = await runPi(
+      [...baseArgs, "--no-session", "RUN_GITHUB_CLONE_SMOKE"],
+      { cwd: workDir, env },
+    )
+    const githubEnd = parseEvents(githubRun.stdout).find(
+      (event) =>
+        event.type === "tool_execution_end" &&
+        event.toolName === "fetch_content",
+    )
+    assert.equal(githubEnd?.isError, false)
+    assert.match(resultText(githubEnd), /sentinel-link  \(outside repo\)/)
+    const cloneArgs = JSON.parse(await readFile(fakeGhLog, "utf8"))
+    const realCloneRoot = await realpath(cloneRoot)
+    const expectedClonePath = join(
+      realCloneRoot,
+      createHash("sha256")
+        .update(JSON.stringify([githubOwner, githubRepo, githubRef]))
+        .digest("hex"),
+    )
+    assert.deepEqual(cloneArgs, [
+      "repo",
+      "clone",
+      `${githubOwner}/${githubRepo}`,
+      expectedClonePath,
+      "--",
+      "--depth",
+      "1",
+      "--single-branch",
+      "--branch",
+      githubRef,
+    ])
+    const clonedPath = cloneArgs[3]
+    assert.equal(clonedPath, expectedClonePath)
+    await assert.rejects(stat(clonedPath), { code: "ENOENT" })
+    assert.equal(
+      await readFile(join(sentinelDir, "keep.txt"), "utf8"),
+      "sentinel survives",
+    )
 
     await writeJson(configPath, {
       ...baseConfig,
