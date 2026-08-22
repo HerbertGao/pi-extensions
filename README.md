@@ -35,9 +35,9 @@ These packages retain their original names and upstream maintainers. The aggrega
 | Package                                                                         | Pinned version | Purpose                                       |
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
 | [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.9.0`        | Minimal coding mode and maintenance skills.   |
-| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.6.4`        | Structured user questionnaires.               |
+| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.7.0`        | Structured user questionnaires.               |
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.55.1`       | Parallel side questions outside main history. |
-| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.9`        | Priority service tier for selected models.    |
+| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.10`       | Priority service tier for selected models.    |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.27.0`       | MCP tools and skills.                         |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.0`        | Code diagnostics and skills.                  |
