@@ -86,7 +86,8 @@ const TOOL_MOUSE_MOTION_ENABLE = "\x1b[?1003h\x1b[?1006h";
 const TOOL_MOUSE_MOTION_DISABLE = "\x1b[?1003l";
 const FULLSCREEN_MOTION_ENABLED = Symbol("ccstyle.fullscreen-motion-enabled");
 const TOOL_MOUSE_OWNER_KEY = Symbol.for("pi.ccstyle.tool-mouse-owner");
-const DEFAULT_TOOL_MOUSE_OWNER = {};
+type ToolMouseOwner = object;
+const DEFAULT_TOOL_MOUSE_OWNER: ToolMouseOwner = {};
 export const TOOL_MOUSE_DISABLE = "\x1b[?1006l\x1b[?1003l\x1b[?1000l";
 
 let toolMouseUi: any = null;
@@ -96,7 +97,7 @@ let toolMouseRenderPatchOriginal: ((...args: any[]) => any) | null = null;
 let toolMouseRenderPatchWrapper: ((...args: any[]) => any) | null = null;
 let toolMouseRenderPatchState: { active: boolean } | null = null;
 let toolMouseRawWrite: ((data: string) => unknown) | null = null;
-let toolMouseInstallationOwner: object | null = null;
+let toolMouseInstallationOwner: ToolMouseOwner | null = null;
 let fullscreenMotionTerminal: any = null;
 let ownsFullscreenMotion = false;
 let sessionRenderTimer: ReturnType<typeof setTimeout> | null = null;
@@ -156,9 +157,10 @@ function updateToolSummaryHover(tui: any, packet: SgrMousePacket): void {
 }
 
 const EXPAND_PANEL_DOUBLE_CLICK_MS = 400;
-let lastExpandPanelClick: { id: unknown; at: number } | null = null;
+type ExpandPanelIdentity = string | object;
+let lastExpandPanelClick: { id: ExpandPanelIdentity; at: number } | null = null;
 
-function expandPanelIdentity(card: any): unknown {
+function expandPanelIdentity(card: any): ExpandPanelIdentity {
 	return card instanceof ThinkingPreviewBlock
 		? thinkingRunKey(card.messageTimestamp, card.runStartIndex)
 		: card;
@@ -471,7 +473,7 @@ function patchFullscreenViewportInput(tui: any): void {
 				}
 			}
 		}
-		return Reflect.apply(original, this, [data]);
+		return original.apply(this, [data]);
 	};
 }
 
@@ -611,7 +613,7 @@ function wrapToolRendersForFrame(
 				) {
 					const boxOriginal = box.render;
 					const boxWrapped = function (this: any, ...boxArgs: any[]) {
-						const boxLines = Reflect.apply(boxOriginal, this, boxArgs);
+						const boxLines = boxOriginal.apply(this, boxArgs);
 						if (Array.isArray(boxLines)) contentBoxLines = boxLines.length;
 						return boxLines;
 					};
@@ -621,7 +623,7 @@ function wrapToolRendersForFrame(
 					}
 				}
 				try {
-					const lines = Reflect.apply(originalRender, this, renderArgs);
+					const lines = originalRender.apply(this, renderArgs);
 					if (!Array.isArray(lines)) return lines;
 					renderedTools.push({
 						component,
@@ -697,10 +699,10 @@ function patchToolMouseMotionAfterRender(tui: any): void {
 	const rawWrite = typeof terminal?.write === "function" ? terminal.write : undefined;
 	if (typeof original !== "function") return;
 
-	toolMouseRawWrite = rawWrite ? (data) => Reflect.apply(rawWrite, terminal, [data]) : null;
+	toolMouseRawWrite = rawWrite ? (data) => rawWrite.apply(terminal, [data]) : null;
 	const patchState = { active: true };
 	const wrapper = function (this: any, ...args: any[]) {
-		if (!patchState.active) return Reflect.apply(original, this, args);
+		if (!patchState.active) return original.apply(this, args);
 		const renderedTools: FrameToolRender[] = [];
 		const idToComponent = new Map<number, any>();
 		const frame: IoViewFrameState = {
@@ -717,7 +719,7 @@ function patchToolMouseMotionAfterRender(tui: any): void {
 		let sawTuiRender = false;
 		if (originalTuiRender) {
 			const wrappedTuiRender = function (this: any, ...renderArgs: any[]) {
-				const lines = Reflect.apply(originalTuiRender, this, renderArgs);
+				const lines = originalTuiRender.apply(this, renderArgs);
 				if (!Array.isArray(lines)) return lines;
 				sawTuiRender = true;
 				const extracted = extractToolFramePlacements(
@@ -734,7 +736,7 @@ function patchToolMouseMotionAfterRender(tui: any): void {
 		const previousFrame = getActiveIoViewFrame();
 		setActiveIoViewFrame(frame);
 		try {
-			const result = Reflect.apply(original, this, args);
+			const result = original.apply(this, args);
 			succeeded = true;
 			// Test harnesses may paint via doRender without tui.render; recover markers there.
 			if (!sawTuiRender && Array.isArray(this.previousLines)) {
@@ -811,7 +813,7 @@ function handleToolMouseInput(data: string): { consume: true } | undefined {
 }
 
 export function teardownToolMouseInteraction(
-	owner: object = toolMouseInstallationOwner ?? DEFAULT_TOOL_MOUSE_OWNER,
+	owner: ToolMouseOwner = toolMouseInstallationOwner ?? DEFAULT_TOOL_MOUSE_OWNER,
 ): void {
 	const host = globalThis as any;
 	if (host[TOOL_MOUSE_OWNER_KEY] && host[TOOL_MOUSE_OWNER_KEY] !== owner) return;
@@ -861,7 +863,7 @@ export function resetToolHoverState(): void {
 
 export function installToolMouseInteraction(
 	ctx: any,
-	owner: object = DEFAULT_TOOL_MOUSE_OWNER,
+	owner: ToolMouseOwner = DEFAULT_TOOL_MOUSE_OWNER,
 ): void {
 	teardownToolMouseInteraction(toolMouseInstallationOwner ?? owner);
 	if (ctx?.mode !== "tui" || !ctx?.hasUI) return;
