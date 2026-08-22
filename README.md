@@ -35,12 +35,12 @@ These packages retain their original names and upstream maintainers. The aggrega
 | Package                                                                         | Pinned version | Purpose                                       |
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
 | [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.9.0`        | Minimal coding mode and maintenance skills.   |
-| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.6.4`        | Structured user questionnaires.               |
-| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.55.0`       | Parallel side questions outside main history. |
-| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.9`        | Priority service tier for selected models.    |
+| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.7.0`        | Structured user questionnaires.               |
+| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.55.1`       | Parallel side questions outside main history. |
+| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.10`       | Priority service tier for selected models.    |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.27.0`       | MCP tools and skills.                         |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.0`        | Code diagnostics and skills.                  |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.24.1`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
 | [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.11.0`       | Auto-mode guardrails.                         |

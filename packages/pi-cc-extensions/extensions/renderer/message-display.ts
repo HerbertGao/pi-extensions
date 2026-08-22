@@ -17,6 +17,9 @@ import { showMoreHintText } from "./show-more-hint.ts";
  */
 
 const MESSAGE_DISPLAY_PATCH = Symbol.for("pi.ccstyle.message-display-patch");
+const MESSAGE_DISPLAY_ORIGINAL_BG = Symbol.for("pi.ccstyle.message-display-original-bg");
+const MESSAGE_DISPLAY_ORIGINAL_PADDING = Symbol.for("pi.ccstyle.message-display-original-padding");
+const MESSAGE_DISPLAY_ORIGINAL_SAVED = Symbol.for("pi.ccstyle.message-display-original-saved");
 
 // 与 renderer/index.ts renderCall 的成功勾一致：亮绿 ✓（truecolor ANSI）。
 const BRIGHT_GREEN = "\x1b[38;2;80;220;100m";
@@ -55,21 +58,54 @@ const BRANCH_KIND: DisplayKind = {
 	body: (component) => String(component.message?.summary ?? ""),
 };
 
-function renderCcstyle(component: any, kind: DisplayKind): void {
+function ensureHintHover(component: any): void {
+	if (typeof component.setHintHovered === "function") return;
+	component.setHintHovered = function (this: any, hovered: boolean) {
+		if (this.hintHovered === hovered) return;
+		this.hintHovered = hovered;
+		this.invalidate?.();
+	};
+}
+
+function rememberMessageDisplay(component: any): void {
+	if (component[MESSAGE_DISPLAY_ORIGINAL_SAVED]) return;
+	component[MESSAGE_DISPLAY_ORIGINAL_BG] = component.bgFn;
+	component[MESSAGE_DISPLAY_ORIGINAL_PADDING] = [component.paddingX, component.paddingY];
+	component[MESSAGE_DISPLAY_ORIGINAL_SAVED] = true;
+}
+
+function restoreMessageDisplay(component: any): void {
+	if (!component[MESSAGE_DISPLAY_ORIGINAL_SAVED]) return;
+	const [paddingX, paddingY] = component[MESSAGE_DISPLAY_ORIGINAL_PADDING];
+	component.paddingX = paddingX;
+	component.paddingY = paddingY;
+	component.setBgFn?.(component[MESSAGE_DISPLAY_ORIGINAL_BG]);
+	delete component[MESSAGE_DISPLAY_ORIGINAL_BG];
+	delete component[MESSAGE_DISPLAY_ORIGINAL_PADDING];
+	delete component[MESSAGE_DISPLAY_ORIGINAL_SAVED];
+}
+
+function renderCcstyle(component: any, kind: DisplayKind): boolean {
 	const theme = displayTheme;
-	if (!theme) return; // 主题未就绪时保留原生渲染
+	if (!theme) return false; // 主题未就绪时回退原生渲染
+	rememberMessageDisplay(component);
 	if (component.bgFn) component.setBgFn?.(undefined); // 与工具调用一致，去掉灰底
-	if (component.paddingY !== 0) {
-		component._ccstyleOriginalPaddingY = component.paddingY;
-		component.paddingY = 0; // 工具组件 paddingY=0；原生 Box 默认 1，会上下各留一个空行
-	}
+	component.paddingY = 0; // 工具组件 paddingY=0；原生 Box 默认 1，会上下各留一个空行
 	component.clear();
+	ensureHintHover(component);
 	const icon = `${BRIGHT_GREEN}✓${ANSI_FG_RESET}`; // 已完成消息，等同工具成功态
 	const title = theme.fg("toolTitle", kind.title(component));
 	if (!component.expanded) {
-		const hint = theme.fg("dim", ` • ${showMoreHintText()}`);
+		const hovered = component.hintHovered === true;
+		const hint = `${theme.fg("dim", " • ")}${theme.fg(hovered ? "text" : "dim", showMoreHintText())}`;
 		component.addChild(new Text(`${icon} ${title}${hint}`, 0, 0));
-		return;
+		return true;
+	}
+	// 展开卡与 tool 一致：userMessageBg + 上下左右 1 格
+	component.paddingX = 1;
+	component.paddingY = 1;
+	if (typeof theme.bg === "function" && typeof component.setBgFn === "function") {
+		component.setBgFn((text: string) => theme.bg("userMessageBg", text));
 	}
 	component.addChild(new Text(`${icon} ${title}`, 0, 0));
 	component.addChild(new Spacer(1));
@@ -78,6 +114,7 @@ function renderCcstyle(component: any, kind: DisplayKind): void {
 			color: (text: string) => theme.fg("customMessageText", text),
 		}),
 	);
+	return true;
 }
 
 type PatchEntry = {
@@ -91,10 +128,26 @@ export function installMessageDisplayRendering(): () => void {
 	const host = globalThis as any;
 	const previous = host[MESSAGE_DISPLAY_PATCH];
 	if (previous) previous.dispose();
-	const patch: { active: boolean; entries: PatchEntry[]; dispose: () => void } = {
+	const patch: {
+		active: boolean;
+		entries: PatchEntry[];
+		components: Set<WeakRef<any>>;
+		tracked: WeakSet<object>;
+		dispose: () => void;
+	} = {
 		active: true,
 		entries: [],
+		components: new Set(),
+		tracked: new WeakSet(),
 		dispose: () => {},
+	};
+	const track = (component: object): void => {
+		for (const ref of patch.components) {
+			if (!ref.deref()) patch.components.delete(ref);
+		}
+		if (patch.tracked.has(component)) return;
+		patch.tracked.add(component);
+		patch.components.add(new WeakRef(component));
 	};
 	const installOne = (ComponentClass: any, kind: DisplayKind): void => {
 		const prototype = ComponentClass.prototype;
@@ -102,17 +155,15 @@ export function installMessageDisplayRendering(): () => void {
 		const installed = function (this: any) {
 			if (patch.active && config.mode !== "off") {
 				try {
-					renderCcstyle(this, kind);
-					return;
+					if (renderCcstyle(this, kind)) {
+						track(this);
+						return;
+					}
 				} catch {
 					// 渲染失败回退原生
 				}
 			}
-			// 回退原生前恢复 paddingY，避免原生渲染丢失上下内边距
-			if (this._ccstyleOriginalPaddingY !== undefined) {
-				this.paddingY = this._ccstyleOriginalPaddingY;
-				delete this._ccstyleOriginalPaddingY;
-			}
+			restoreMessageDisplay(this);
 			original.call(this);
 		};
 		prototype.updateDisplay = installed;
@@ -128,6 +179,17 @@ export function installMessageDisplayRendering(): () => void {
 				entry.prototype.updateDisplay = entry.original;
 			}
 		}
+		for (const ref of patch.components) {
+			const component = ref.deref();
+			if (!component) continue;
+			try {
+				restoreMessageDisplay(component);
+				component.updateDisplay();
+			} catch {
+				// 单个陈旧组件不应阻断其余原型与组件恢复
+			}
+		}
+		patch.components.clear();
 		if (host[MESSAGE_DISPLAY_PATCH] === patch) delete host[MESSAGE_DISPLAY_PATCH];
 	};
 	host[MESSAGE_DISPLAY_PATCH] = patch;

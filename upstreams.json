@@ -4,7 +4,7 @@
     {
       "name": "Tifan Pi extensions",
       "repository": "https://github.com/tifandotme/pi-extensions",
-      "reviewedCommit": "5975a48cde9670bb1e8f7cbb76ad04f7c9102853"
+      "reviewedCommit": "efc30c353f435081efa00d3d30c0cd5293b33f8b"
     },
     {
       "name": "pi-subagents",
@@ -14,7 +14,7 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "6b7447eb9d82afa9ea26dd7433c59ff56663098e"
+      "reviewedCommit": "4709081a28255b8bdfe610620a2a9ee8951013d6"
     }
   ],
   "companions": [

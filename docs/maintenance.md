@@ -8,17 +8,17 @@
 
 ## Source baselines
 
-| Local package set      | Upstream                   | Imported baseline    | Notes                                                                                                                                               |
-| ---------------------- | -------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`            | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                               |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`) | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces. |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `6b7447e` (`0.8.63`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, and renderer-lifecycle fixes.                     |
+| Local package set      | Upstream                   | Imported baseline    | Notes                                                                                                                                                         |
+| ---------------------- | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`            | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                                         |
+| `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`) | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `4709081` (`0.8.64`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                       | Upstream package               | Imported version | Imported commit |
 | ----------------------------------- | ------------------------------ | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.63`         | `6b7447e`       |
+| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.64`         | `4709081`       |
 | `@herbertgao/pi-copy-response`      | `@tifan/pi-copy-response`      | `0.2.6`          | `460d580`       |
 | `@herbertgao/pi-fixed-editor`       | `@tifan/pi-fixed-editor`       | `0.3.0`          | `5975a48`       |
 | `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `1.1.2`          | `460d580`       |
@@ -32,6 +32,24 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
+
+### pi-mermaid-open post-0.1.3 review
+
+The range `5975a48..efc30c3` contains only `efc30c3` (`feat(pi-mermaid-open): show skipped diagrams in terminal`) and is **deferred until a published release**. The repository review cursor advances, but the imported Tifan source baseline remains `5975a48` and `@herbertgao/pi-mermaid-open` remains based on upstream `0.1.3` at `460d580`.
+
+The change reconstructs whether Pi skipped a diagram from Kitty availability and the current terminal width without applying project settings. That can misreport diagrams already handled by `pi-cc-extensions`, disabled by effective configuration, or skipped because of parser warnings. Its focused `status.test.ts` is also not connected to the upstream package or repository CI scripts.
+
+Reconsider the change after upstream publishes it. Before acceptance, verify skipped-status detection against effective global and project settings, cover coexistence with `pi-cc-extensions` plus disabled and warning cases, and require the focused regression test to run in CI.
+
+### pi-cc-extensions 0.8.64 review
+
+The released range `6b7447e..4709081` was reviewed commit by commit:
+
+- `7562198` is **selectively ported**: isolated message-hint hover and unified expanded-card padding/background are included. Its model-status removal is not copied because this aggregate uses `pi-footer` and never registered the upstream model-status feature.
+- `8d53291` is **reviewed but not ported**: upstream package version, lockfile, and upstream-namespace render-example documentation remain outside this monorepo sync.
+- `4709081` is **ported**: expanded thinking wraps use bounded per-message/run/width caching, collapse evicts only that run, and double-click identity survives component rebuilds without crossing runs.
+
+The fork keeps its renderer-first compact-thinking lifecycle bridge, message-display hardening, live mouse TUI slot, terminal-width handling, Markdown fence/inline protection, compact-thinking coexistence, rich diff ANSI/CRLF/write metadata, and dedicated Agent renderer. Package provenance and the repository review cursor advance to released `v0.8.64` at `4709081`.
 
 ### pi-subagents 0.18.0 review
 
@@ -58,15 +76,17 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.6.4`  | `juicesharp/rpiv-mono`      |
-| `@narumitw/pi-btw`                   | `0.55.0` | `narumiruna/pi-extensions`  |
-| `@pi-plugins/fast-mode`              | `0.1.9`  | `k3dom/pi-plugins`          |
+| `@juicesharp/rpiv-ask-user-question` | `2.7.0`  | `juicesharp/rpiv-mono`      |
+| `@narumitw/pi-btw`                   | `0.55.1` | `narumiruna/pi-extensions`  |
+| `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
 | `pi-mcp-adapter`                     | `2.27.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-lens`                            | `4.1.0`  | `apmantza/pi-lens`          |
+| `pi-lens`                            | `4.1.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.24.1` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
+
+The reviewed `pi-lens@4.1.1` release baseline is tag `v4.1.1` at commit `e06104d`; no later commits are bundled.
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
 
