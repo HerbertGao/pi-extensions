@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-extensions",
-  "version": "2026.8.7",
+  "version": "2026.8.8",
   "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
   "keywords": [
     "extensions",
@@ -42,7 +42,7 @@
     "@earendil-works/pi-tui": "^0.84.2",
     "@effect/platform-node": "4.0.0-beta.103",
     "@effect/platform-node-shared": "4.0.0-beta.103",
-    "@herbertgao/pi-cc-extensions": "0.8.56",
+    "@herbertgao/pi-cc-extensions": "0.8.57",
     "@herbertgao/pi-copy-response": "0.2.6",
     "@herbertgao/pi-handoff": "1.1.2",
     "@herbertgao/pi-inline-skills": "1.0.5",

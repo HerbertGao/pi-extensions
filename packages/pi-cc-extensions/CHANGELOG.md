@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.57
+
+### Patch Changes
+
+- [#112](https://github.com/HerbertGao/pi-extensions/pull/112) [`6f11ad0`](https://github.com/HerbertGao/pi-extensions/commit/6f11ad03ccbb6ec186aa508f85a1b1d2cdd81c31) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Isolate message hint hover, unify expanded summary card styling, and keep thinking panels stable across transcript rebuilds.
+
 ## 0.8.56
 
 ### Patch Changes

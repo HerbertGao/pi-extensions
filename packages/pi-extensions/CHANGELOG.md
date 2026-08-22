@@ -1,5 +1,24 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.8
+
+### Patch Changes
+
+- [#112](https://github.com/HerbertGao/pi-extensions/pull/112) [`6f11ad0`](https://github.com/HerbertGao/pi-extensions/commit/6f11ad03ccbb6ec186aa508f85a1b1d2cdd81c31) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle the pi-cc-extensions 0.8.64 sync with stable thinking panels and message-card interactions.
+
+- [#107](https://github.com/HerbertGao/pi-extensions/pull/107) [`82c71c4`](https://github.com/HerbertGao/pi-extensions/commit/82c71c431e117ae2278172060e379caa89cfe52a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled ask-user-question extension to 2.7.0 with global Submit notes, note-only submission, and cancellation details that retain notes without changing the cancelled result.
+
+- [#106](https://github.com/HerbertGao/pi-extensions/pull/106) [`a8fc25c`](https://github.com/HerbertGao/pi-extensions/commit/a8fc25ced50f2e8df69d8eefa138d759841a32be) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled `@pi-plugins/fast-mode` to 0.1.10 so it reuses the aggregate Pi TUI host and applies consistent error handling.
+
+- [#108](https://github.com/HerbertGao/pi-extensions/pull/108) [`620e470`](https://github.com/HerbertGao/pi-extensions/commit/620e4701f0c26be0669e0651765c601968783a87) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-btw to 0.55.1 and its promoted pi-tui-kit dependency to ^0.57.0.
+
+- [#111](https://github.com/HerbertGao/pi-extensions/pull/111) [`7bc0e4e`](https://github.com/HerbertGao/pi-extensions/commit/7bc0e4e9264e64a5829ee22ed14d44a995a9b8c7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-lens to 4.1.1 with improved diagnostics, cache and LSP observability, safer session switching, oxlint warning recovery, faster scans, and log-write retry.
+
+- [#113](https://github.com/HerbertGao/pi-extensions/pull/113) [`6f597eb`](https://github.com/HerbertGao/pi-extensions/commit/6f597eb7da31cbb55a3ee7ab4579effee36a45d1) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled pi-web-access to 0.24.1 with bounded inline data URI output, configured PDF page limits, and hashed clone-cache cleanup.
+
+- Updated dependencies [[`6f11ad0`](https://github.com/HerbertGao/pi-extensions/commit/6f11ad03ccbb6ec186aa508f85a1b1d2cdd81c31)]:
+  - @herbertgao/pi-cc-extensions@0.8.57
+
 ## 2026.8.7
 
 ### Patch Changes
