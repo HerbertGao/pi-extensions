@@ -1,4 +1,12 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -272,14 +280,69 @@ try {
   if (lensManifest.license !== "MIT") {
     throw new Error(`Expected pi-lens MIT license, got ${lensManifest.license}`)
   }
-  if (!lensManifest.pi?.extensions?.includes("./dist/index.js")) {
+  if (
+    JSON.stringify(lensManifest.pi?.extensions) !==
+    JSON.stringify(["./dist/index.js"])
+  ) {
     throw new Error("Bundled pi-lens no longer declares its expected Pi entry")
   }
-  if (!lensManifest.pi?.skills?.includes("../../skills")) {
+  if (
+    JSON.stringify(lensManifest.pi?.skills) !== JSON.stringify(["../../skills"])
+  ) {
     throw new Error("Bundled pi-lens no longer declares its skills")
   }
-  // Keep pi-lens' minimatch range exact. Its older compatible pi-tui range is
-  // intentionally superseded by the aggregate host range validated below.
+  const expectedLensBins = {
+    "pi-lens": "dist/mcp/cli.js",
+    "pi-lens-mcp": "dist/mcp/server.js",
+    "pi-lens-analyze": "dist/mcp/analyze-cli.js",
+  }
+  if (JSON.stringify(lensManifest.bin) !== JSON.stringify(expectedLensBins)) {
+    throw new Error("Bundled pi-lens no longer declares its three CLIs")
+  }
+  const expectedLensPeers = {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "^0.84.1",
+    typebox: "^1.0.0",
+  }
+  for (const [dependency, range] of Object.entries(expectedLensPeers)) {
+    if (
+      lensManifest.peerDependencies?.[dependency] !== range ||
+      lensManifest.peerDependenciesMeta?.[dependency]?.optional !== true ||
+      lensManifest.dependencies?.[dependency]
+    ) {
+      throw new Error(
+        `Expected pi-lens optional peer ${dependency}@${range} outside runtime dependencies`,
+      )
+    }
+  }
+  const lensJitiRange = lensManifest.optionalDependencies?.jiti
+  if (
+    lensJitiRange !== "^2.7.0" ||
+    sourceManifest.dependencies.jiti !== lensJitiRange
+  ) {
+    throw new Error(
+      `Expected aggregate jiti host for pi-lens ${lensJitiRange}, got ${sourceManifest.dependencies.jiti}`,
+    )
+  }
+  if (
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.2" ||
+    sourceManifest.dependencies.typebox !== "^1.1.38"
+  ) {
+    throw new Error("Aggregate pi-lens host ranges are no longer compatible")
+  }
+  const lensHosts = Object.keys(expectedLensPeers)
+  const nestedLensHosts = await Promise.all(
+    lensHosts.map((dependency) =>
+      pathExists(join(lensRoot, "node_modules", ...dependency.split("/"))),
+    ),
+  )
+  for (const [index, dependency] of lensHosts.entries()) {
+    if (nestedLensHosts[index]) {
+      throw new Error(`Bundled pi-lens contains a nested ${dependency} host`)
+    }
+  }
+  // Keep pi-lens' minimatch range exact; the aggregate already provides its
+  // compatible Pi TUI, typebox, and jiti hosts.
   const lensMinimatchRange = lensManifest.dependencies?.minimatch
   if (
     !lensMinimatchRange ||
@@ -289,14 +352,36 @@ try {
       `Expected promoted pi-lens dependency minimatch@${lensMinimatchRange}, got ${sourceManifest.dependencies.minimatch}`,
     )
   }
+  const expectedLensSkillGroups = [
+    "pi-lens-ast-grep",
+    "pi-lens-lsp-navigation",
+    "pi-lens-write-ast-grep-rule",
+    "pi-lens-write-tree-sitter-rule",
+  ]
+  const lensSkillGroups = (
+    await readdir(join(lensRoot, "skills"), {
+      withFileTypes: true,
+    })
+  )
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .toSorted()
+  if (
+    JSON.stringify(lensSkillGroups) !== JSON.stringify(expectedLensSkillGroups)
+  ) {
+    throw new Error(
+      `Expected four pi-lens skill groups, got ${lensSkillGroups.join(", ")}`,
+    )
+  }
   await Promise.all(
     [
       "dist/index.js",
+      "dist/tools",
       "dist/clients/dispatch/runners/cue-vet.js",
       "dist/clients/dispatch/runners/helm-render.js",
       "dist/clients/dispatch/runners/utils/toolchain-availability.js",
       "vendor/grammars/tree-sitter-cue.wasm",
-      "skills",
+      ...expectedLensSkillGroups.map((group) => `skills/${group}/SKILL.md`),
       "skills/pi-lens-write-ast-grep-rule/reference.md",
       "LICENSE",
     ].map((path) => stat(join(lensRoot, path))),
