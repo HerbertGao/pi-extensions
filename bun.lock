@@ -68,8 +68,8 @@
         "@herbertgao/pi-stash": "0.1.1",
         "@herbertgao/pi-subagents": "0.15.5",
         "@herbertgao/pi-titlebar-spinner": "0.1.3",
-        "@juicesharp/rpiv-ask-user-question": "2.6.4",
-        "@juicesharp/rpiv-config": "^2.6.4",
+        "@juicesharp/rpiv-ask-user-question": "2.7.0",
+        "@juicesharp/rpiv-config": "^2.7.0",
         "@modelcontextprotocol/client": "2.0.0",
         "@modelcontextprotocol/core": "2.0.0",
         "@modelcontextprotocol/ext-apps": "^1.2.2",
@@ -428,9 +428,9 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@juicesharp/rpiv-ask-user-question": ["@juicesharp/rpiv-ask-user-question@2.6.4", "", { "dependencies": { "@juicesharp/rpiv-config": "^2.6.4", "typebox": "^1.1.24" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "@juicesharp/rpiv-i18n": "*" }, "optionalPeers": ["@juicesharp/rpiv-i18n"] }, "sha512-IVor3RobvdagAsHm69buLbm4lE/xCP4vpJQmgVgsXPSe1T0Shurv4QWP8JKPjtE+DzzQrK94sOmymG9gygnNMg=="],
+    "@juicesharp/rpiv-ask-user-question": ["@juicesharp/rpiv-ask-user-question@2.7.0", "", { "dependencies": { "@juicesharp/rpiv-config": "^2.7.0", "typebox": "^1.1.24" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "@juicesharp/rpiv-i18n": "*" }, "optionalPeers": ["@juicesharp/rpiv-i18n"] }, "sha512-5amOEZ8RfSZJUTahYSajsulHGGKHaYwEQAd+J/f7gNPq7MkzgxOUCZzvwM9V8hTmFISHWNQFq1pv0ZIky8aTNw=="],
 
-    "@juicesharp/rpiv-config": ["@juicesharp/rpiv-config@2.6.4", "", { "dependencies": { "typebox": "^1.1.24" } }, "sha512-nbY5W3kV7D0pVTbWKyi3C74H8QPTmJi4nNo5DelqR4rPOG26i02hqqAH+A3guTP86f/bbwFNUgJ3QQgLZnDoPg=="],
+    "@juicesharp/rpiv-config": ["@juicesharp/rpiv-config@2.7.0", "", { "dependencies": { "typebox": "^1.1.24" } }, "sha512-S6+O9nub/n6WoTrs2egEai2MpymbeD9+Ut+aCgnaDu3OYA6nbAz4ZiFHLz9HVj7dALj8RuUaj5xtnX50J8MPRQ=="],
 
     "@manypkg/find-root": ["@manypkg/find-root@1.1.0", "", { "dependencies": { "@babel/runtime": "^7.5.5", "@types/node": "^12.7.1", "find-up": "^4.1.0", "fs-extra": "^8.1.0" } }, "sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA=="],
 
