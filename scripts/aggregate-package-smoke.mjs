@@ -833,10 +833,13 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = sourceManifest.dependencies["@narumitw/pi-btw"]
-  if (btwManifest.version !== expectedBtwVersion) {
+  const expectedBtwVersion = "0.55.1"
+  if (
+    sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
+    btwManifest.version !== expectedBtwVersion
+  ) {
     throw new Error(
-      `Expected bundled pi-btw ${expectedBtwVersion}, got ${btwManifest.version}`,
+      `Expected aggregate and bundled pi-btw ${expectedBtwVersion}, got ${sourceManifest.dependencies["@narumitw/pi-btw"]} and ${btwManifest.version}`,
     )
   }
   if (btwManifest.license !== "MIT") {
@@ -846,12 +849,14 @@ try {
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = btwManifest.dependencies?.["@narumitw/pi-tui-kit"]
+  const expectedTuiKitRange = "^0.57.0"
   if (
-    sourceManifest.dependencies["@narumitw/pi-tui-kit"] !== expectedTuiKitRange
+    sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
+      expectedTuiKitRange ||
+    btwManifest.dependencies?.["@narumitw/pi-tui-kit"] !== expectedTuiKitRange
   ) {
     throw new Error(
-      `Expected pi-tui-kit dependency ${expectedTuiKitRange}, got ${sourceManifest.dependencies["@narumitw/pi-tui-kit"]}`,
+      `Expected aggregate and bundled pi-tui-kit dependency ${expectedTuiKitRange}`,
     )
   }
   const btwEntry = join(btwRoot, btwEntryRelative)
@@ -879,7 +884,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.55.0's public entry is the bundled dist. Add test-only exports in memory
+  // 0.55.1's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, updateBtwSettings };\n`,
