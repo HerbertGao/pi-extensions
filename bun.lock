@@ -79,7 +79,7 @@
         "@narumitw/pi-btw": "0.55.0",
         "@narumitw/pi-tui-kit": "^0.56.0",
         "@noble/ed25519": "^3.1.0",
-        "@pi-plugins/fast-mode": "0.1.9",
+        "@pi-plugins/fast-mode": "0.1.10",
         "@shikijs/cli": "^4.0.2",
         "@sinclair/typebox": "^0.34.49",
         "ajv": "^8.17.1",
@@ -604,7 +604,7 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.77.0", "", { "os": "win32", "cpu": "x64" }, "sha512-+teyvPDZ2RjUvo+SuCqS/UhaJl1QtdW5fWT5NJTV61V5MIuIS90Db9LixmtEGvXixyttiK62P96MSu3UlpviBw=="],
 
-    "@pi-plugins/fast-mode": ["@pi-plugins/fast-mode@0.1.9", "", { "dependencies": { "@effect/platform-node": "4.0.0-beta.103", "effect": "4.0.0-beta.103" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-1CZF0ylqxx2rQwv20/UhcHlkUy+vUjsnb3hGg66hA9pW/m7xzaFaHJ/G9YUZ87THQx3TPtxKJyuIztWxrZOT4g=="],
+    "@pi-plugins/fast-mode": ["@pi-plugins/fast-mode@0.1.10", "", { "dependencies": { "@effect/platform-node": "4.0.0-beta.103", "effect": "4.0.0-beta.103" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-U/F8Cloo2/KSj03K1LocAJrrjgiCEfMqbqQAw5jiGaXSOjMjWIYTH+lA4V5YWJnB+lnREREUsusOwkBAx3tCeg=="],
 
     "@pkgr/core": ["@pkgr/core@0.1.2", "", {}, "sha512-fdDH1LSGfZdTH2sxdpVMw31BanV28K/Gry0cVFxaNP77neJSkd82mM8ErPNYs9e+0O7SdHBLTDzDgwUuy18RnQ=="],
 
