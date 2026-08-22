@@ -141,7 +141,7 @@ export function installMessageDisplayRendering(): () => void {
 		tracked: new WeakSet(),
 		dispose: () => {},
 	};
-	const track = (component: object): void => {
+	const track = (component: Record<PropertyKey, unknown>): void => {
 		for (const ref of patch.components) {
 			if (!ref.deref()) patch.components.delete(ref);
 		}
