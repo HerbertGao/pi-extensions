@@ -101,5 +101,5 @@ bun run typecheck
 
 ## Credits
 
-- Derived from [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) under the MIT license.
+- Derived from [`minuque/pi-cc-extensions` v0.8.64](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.64) (`4709081`) under the MIT license.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).

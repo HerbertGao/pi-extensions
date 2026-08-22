@@ -1,4 +1,4 @@
-import { ThinkingPreviewBlock } from "../../feature/compact-thinking.ts";
+import { ThinkingPreviewBlock, thinkingRunKey } from "../../feature/compact-thinking.ts";
 import { hasActiveTextPreview, showTextPreview } from "../../feature/context.ts";
 import { ToolGroupComponent } from "../tool/grouping.ts";
 import { isCompactAssistantComponent, setHoveredCompactAssistant } from "../compact-mode.ts";
@@ -58,6 +58,7 @@ import {
 	setHoveredToolCallId,
 	setHoveredToolGroup,
 	setHoveredThinking,
+	setHoveredMessageDisplay,
 	setHoveredToolIo,
 	type FullscreenHoverTarget,
 } from "./hover.ts";
@@ -155,13 +156,20 @@ function updateToolSummaryHover(tui: any, packet: SgrMousePacket): void {
 }
 
 const EXPAND_PANEL_DOUBLE_CLICK_MS = 400;
-let lastExpandPanelClick: { card: any; at: number } | null = null;
+let lastExpandPanelClick: { id: unknown; at: number } | null = null;
+
+function expandPanelIdentity(card: any): unknown {
+	return card instanceof ThinkingPreviewBlock
+		? thinkingRunKey(card.messageTimestamp, card.runStartIndex)
+		: card;
+}
 
 function isExpandPanelDoubleClick(card: any): boolean {
 	const now = Date.now();
+	const id = expandPanelIdentity(card);
 	const prev = lastExpandPanelClick;
-	lastExpandPanelClick = { card, at: now };
-	return Boolean(prev && prev.card === card && now - prev.at <= EXPAND_PANEL_DOUBLE_CLICK_MS);
+	lastExpandPanelClick = { id, at: now };
+	return Boolean(prev && prev.id === id && now - prev.at <= EXPAND_PANEL_DOUBLE_CLICK_MS);
 }
 
 function clearExpandPanelDoubleClick(): void {
@@ -174,6 +182,7 @@ function collapseExpandedCard(tui: any, card: any): boolean {
 	setHoveredToolCallId(null);
 	setHoveredToolGroup(null);
 	setHoveredThinking(null);
+	setHoveredMessageDisplay(null);
 	setHoveredToolIo(null, null);
 	setHoveredCompactAssistant(null);
 	card.invalidate?.();
@@ -346,6 +355,7 @@ function handleFullscreenToolClick(tui: any, packet: SgrMousePacket): boolean {
 	setHoveredToolCallId(null);
 	setHoveredToolGroup(null);
 	setHoveredThinking(null);
+	setHoveredMessageDisplay(null);
 	setHoveredToolIo(null, null);
 	setHoveredCompactAssistant(null);
 	card.invalidate?.();
@@ -417,8 +427,7 @@ function handleFullscreenToolHover(tui: any, packet: SgrMousePacket): void {
 				// compact 摘要行：折叠时仅提示文字高亮，展开卡整体高亮。
 				if (component.expanded || overHint) target = { kind: "assistant", component };
 			} else if (isMessageDisplayComponent(component)) {
-				// skill/compaction/branch：折叠只点 hint；展开后双击收起。
-				if (component.expanded || overHint) target = { kind: "assistant", component };
+				if (overHint) target = { kind: "message", component };
 			}
 		}
 	}
@@ -815,6 +824,7 @@ export function teardownToolMouseInteraction(
 	setHoveredToolCallId(null);
 	setHoveredToolGroup(null);
 	setHoveredThinking(null);
+	setHoveredMessageDisplay(null);
 	setHoveredToolIo(null, null);
 	setHoveredCompactAssistant(null);
 	clearExpandPanelDoubleClick();
@@ -842,6 +852,7 @@ export function teardownToolMouseInteraction(
 export function resetToolHoverState(): void {
 	setHoveredToolCallId(null);
 	setHoveredThinking(null);
+	setHoveredMessageDisplay(null);
 	setHoveredCompactAssistant(null);
 	setScrollButtonVisible(false);
 	setScrollButtonHovered(false);

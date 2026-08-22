@@ -8,7 +8,11 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 
 import {
 	animateCompactThinkingText,
+	clearThinkingPreviewCache,
 	installCompactThinking,
+	ThinkingPreviewBlock,
+	thinkingExpandedWrapCacheSize,
+	THINKING_EXPANDED_WRAP_CACHE_MAX,
 } from "../extensions/feature/compact-thinking.ts";
 
 const config = {
@@ -28,6 +32,66 @@ test("compact summary reuses compact-thinking's sweep animation", () => {
 	assert.notEqual(first, second);
 	assert.equal(first.replace(/<[^>]+>/g, ""), "Thinking...");
 	assert.equal(second.replace(/<[^>]+>/g, ""), "Thinking...");
+});
+
+test("expanded wrap cache keys by run and evicts on collapse", () => {
+	clearThinkingPreviewCache();
+	const theme = {
+		fg: (_color: string, text: string) => text,
+		bg: (_slot: string, text: string) => text,
+	} as any;
+	const bodyA = Array.from({ length: 12 }, (_, i) => `alpha-${i}`).join(" ");
+	const bodyB = Array.from({ length: 12 }, (_, i) => `beta-${i}`).join(" ");
+	const a = new ThinkingPreviewBlock("Thought", bodyA, 0, 7, (text) => text, theme, 1);
+	const b = new ThinkingPreviewBlock("Thought", bodyB, 0, 7, (text) => text, theme, 10);
+	a.setExpanded(true);
+	b.setExpanded(true);
+	a.render(40);
+	b.render(40);
+	assert.equal(thinkingExpandedWrapCacheSize(), 2, "two runs keep separate wrap slots");
+	a.render(40);
+	b.render(40);
+	assert.equal(thinkingExpandedWrapCacheSize(), 2, "rerender does not thrash sibling slots");
+	a.render(24);
+	assert.equal(thinkingExpandedWrapCacheSize(), 3, "each width keeps its own wrap slot");
+	a.setExpanded(false);
+	assert.equal(thinkingExpandedWrapCacheSize(), 1, "collapse drops all wraps for only that run");
+	const rebuiltA = new ThinkingPreviewBlock("Thought", bodyA, 0, 7, (text) => text, theme, 1);
+	const rebuiltB = new ThinkingPreviewBlock("Thought", bodyB, 0, 7, (text) => text, theme, 10);
+	assert.equal(rebuiltA.expanded, false, "rebuilt collapsed run stays collapsed");
+	assert.equal(rebuiltB.expanded, true, "rebuilt sibling run stays expanded");
+	rebuiltB.render(40);
+	assert.equal(thinkingExpandedWrapCacheSize(), 1, "rebuilt sibling reuses its surviving wrap");
+	rebuiltB.setExpanded(false);
+	assert.equal(thinkingExpandedWrapCacheSize(), 0);
+	clearThinkingPreviewCache();
+});
+
+test("expanded wrap cache evicts oldest beyond cap", () => {
+	clearThinkingPreviewCache();
+	const theme = {
+		fg: (_color: string, text: string) => text,
+		bg: (_slot: string, text: string) => text,
+	} as any;
+	const blocks: ThinkingPreviewBlock[] = [];
+	for (let index = 0; index <= THINKING_EXPANDED_WRAP_CACHE_MAX; index++) {
+		const block = new ThinkingPreviewBlock(
+			"Thought",
+			`wrap-body-${index} `.repeat(8),
+			0,
+			index,
+			(text) => text,
+			theme,
+			0,
+		);
+		block.setExpanded(true);
+		block.render(40);
+		blocks.push(block);
+	}
+	assert.equal(thinkingExpandedWrapCacheSize(), THINKING_EXPANDED_WRAP_CACHE_MAX);
+	clearThinkingPreviewCache();
+	assert.equal(thinkingExpandedWrapCacheSize(), 0, "lifecycle clear drops expanded wraps");
+	for (const block of blocks) block.setExpanded(false);
 });
 
 function runtime() {
