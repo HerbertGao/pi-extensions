@@ -12,7 +12,7 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.6.4`
-- `@narumitw/pi-btw@0.55.0`
+- `@narumitw/pi-btw@0.55.1`
 - `@pi-plugins/fast-mode@0.1.9`
 - `pi-mcp-adapter@2.27.0`
 - `pi-footer@0.5.1`

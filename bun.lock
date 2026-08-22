@@ -76,8 +76,8 @@
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@mozilla/readability": "^0.6.0",
         "@napi-rs/keyring": "^1.3.0",
-        "@narumitw/pi-btw": "0.55.0",
-        "@narumitw/pi-tui-kit": "^0.56.0",
+        "@narumitw/pi-btw": "0.55.1",
+        "@narumitw/pi-tui-kit": "^0.57.0",
         "@noble/ed25519": "^3.1.0",
         "@pi-plugins/fast-mode": "0.1.9",
         "@shikijs/cli": "^4.0.2",
@@ -510,9 +510,9 @@
 
     "@napi-rs/keyring-win32-x64-msvc": ["@napi-rs/keyring-win32-x64-msvc@1.3.0", "", { "os": "win32", "cpu": "x64" }, "sha512-4DnCWXwDc0HRKwyRlG5y0VhKZW2tNRQfKKfyj6IX/KWfDNyq9hn4n+GL1auyDcOO/v8PwnhmYo2+rOOqCkvvOg=="],
 
-    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.55.0", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.56.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-r2yaZWOVvvnRseCNAnQ5OZccCYxWrywIXFv1xw0lssqsk9zKo2fRY1hwi0xdPq7k2PWDb48uuFnjQqHQFp5QYw=="],
+    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.55.1", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.57.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-7xIr1f+q2uhvxTbEVzLKzbwt7x6NOPCWM8OQWo8GceqCOruGwjMLfNmznEbobXWAXQBn1IlTVVhewSDFYmiOYw=="],
 
-    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.56.0", "", { "dependencies": { "grok-mermaid": "0.2.2", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-9wwY6fZbSEPJAy9eri3L28tDKNMkNrlQ2//9HHhkOnKopd7z5jUJptcFmu+OtxSNcBjj4+L+i0RiyMpWZcB5mg=="],
+    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.57.0", "", { "dependencies": { "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-izA2zdatrX2MdOnX1bKbPpwzxsEXNidgDhwJQfjzHtiS3SpSkIAAS5J1qZ3/VA3RJ1wAe9hSKEVLRugQdy8YpQ=="],
 
     "@noble/ed25519": ["@noble/ed25519@3.1.0", "", {}, "sha512-pfcObRY3CtvwfaG9Mt5XqZdKmAQppl37tHUeuBhDUbiwJBCVY4/A4lbMvb1xKhMDx96AqAqZpMWuBX1HulhX4g=="],
 
@@ -1699,6 +1699,8 @@
     "@manypkg/get-packages/@changesets/types": ["@changesets/types@4.1.0", "", {}, "sha512-LDQvVDv5Kb50ny2s25Fhm3d9QSZimsoUGBsUioj6MC3qbMUCuC8GPIvk/M6IvXx3lYhAs0lwWUQLb+VIEUCECw=="],
 
     "@manypkg/get-packages/fs-extra": ["fs-extra@8.1.0", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^4.0.0", "universalify": "^0.1.0" } }, "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g=="],
+
+    "@narumitw/pi-tui-kit/grok-mermaid": ["grok-mermaid@0.2.3", "", {}, "sha512-/4KopAbsjvuRP9MdPtlDjOHUmUVEohOX73JNcsWpzAtFxh+bq5+Dhb6gzvRieLDwIPQIR3/vy8V1NNTuz4Zsmg=="],
 
     "@narumitw/pi-tui-kit/highlight.js": ["highlight.js@11.12.0", "", {}, "sha512-nbfWpyRMcMrPMmDwJB+dhX/eiaPKtc2RB+0QZskqJ3WjRA/FDS0e9hZrx8EC/lbEv8gXy98FcDbNa/dspAaJMg=="],
 
