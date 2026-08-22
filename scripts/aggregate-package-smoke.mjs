@@ -458,6 +458,49 @@ try {
       },
     ],
   }
+  const { buildQuestionnaireResponse, DECLINE_MESSAGE } = await askJiti.import(
+    join(askRoot, "tool", "response-envelope.ts"),
+  )
+  const answer = {
+    questionIndex: 0,
+    question: "Pick one",
+    kind: "option",
+    answer: "A",
+  }
+  const notedResponse = buildQuestionnaireResponse(
+    { answers: [answer], cancelled: false, globalNote: "Remember this" },
+    askParams,
+  )
+  if (
+    !notedResponse.content[0].text.includes('"Pick one"="A".') ||
+    !notedResponse.content[0].text.includes("global note: Remember this.")
+  ) {
+    throw new Error("ask-user-question omitted a global Submit note")
+  }
+  const noteOnlyResponse = buildQuestionnaireResponse(
+    { answers: [], cancelled: false, globalNote: "Only context" },
+    askParams,
+  )
+  if (
+    noteOnlyResponse.details.cancelled ||
+    !noteOnlyResponse.content[0].text.includes("global note: Only context.")
+  ) {
+    throw new Error("ask-user-question did not accept a note-only submission")
+  }
+  const cancelledNoteResponse = buildQuestionnaireResponse(
+    { answers: [answer], cancelled: true, globalNote: "Private detail" },
+    askParams,
+  )
+  if (
+    cancelledNoteResponse.content[0].text !== DECLINE_MESSAGE ||
+    cancelledNoteResponse.content[0].text.includes("Private detail") ||
+    cancelledNoteResponse.details.globalNote !== "Private detail" ||
+    !cancelledNoteResponse.details.cancelled
+  ) {
+    throw new Error(
+      "ask-user-question cancellation did not retain its note only in details",
+    )
+  }
   const runAskAttention = async (isTTY) => {
     const originalIsTTY = Object.getOwnPropertyDescriptor(
       process.stdout,
@@ -875,10 +918,13 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = sourceManifest.dependencies["@narumitw/pi-btw"]
-  if (btwManifest.version !== expectedBtwVersion) {
+  const expectedBtwVersion = "0.55.1"
+  if (
+    sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
+    btwManifest.version !== expectedBtwVersion
+  ) {
     throw new Error(
-      `Expected bundled pi-btw ${expectedBtwVersion}, got ${btwManifest.version}`,
+      `Expected aggregate and bundled pi-btw ${expectedBtwVersion}, got ${sourceManifest.dependencies["@narumitw/pi-btw"]} and ${btwManifest.version}`,
     )
   }
   if (btwManifest.license !== "MIT") {
@@ -888,12 +934,14 @@ try {
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = btwManifest.dependencies?.["@narumitw/pi-tui-kit"]
+  const expectedTuiKitRange = "^0.57.0"
   if (
-    sourceManifest.dependencies["@narumitw/pi-tui-kit"] !== expectedTuiKitRange
+    sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
+      expectedTuiKitRange ||
+    btwManifest.dependencies?.["@narumitw/pi-tui-kit"] !== expectedTuiKitRange
   ) {
     throw new Error(
-      `Expected pi-tui-kit dependency ${expectedTuiKitRange}, got ${sourceManifest.dependencies["@narumitw/pi-tui-kit"]}`,
+      `Expected aggregate and bundled pi-tui-kit dependency ${expectedTuiKitRange}`,
     )
   }
   const btwEntry = join(btwRoot, btwEntryRelative)
@@ -921,7 +969,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.55.0's public entry is the bundled dist. Add test-only exports in memory
+  // 0.55.1's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, updateBtwSettings };\n`,
@@ -1126,6 +1174,20 @@ try {
     throw new Error(
       "Bundled fast-mode no longer declares its expected Pi entry",
     )
+  }
+  if (fastModeManifest.peerDependencies?.["@earendil-works/pi-tui"] !== "*") {
+    throw new Error("Bundled fast-mode must reuse the aggregate Pi TUI host")
+  }
+  const fastModeSourceMap = parseJson(
+    await readFile(join(fastModeRoot, `${fastModeEntryRelative}.map`), "utf8"),
+    `${fastModeEntryRelative}.map`,
+  )
+  if (
+    fastModeSourceMap.sources?.some((source) =>
+      /(?:marked|@earendil-works[+/]pi-tui)/.test(source),
+    )
+  ) {
+    throw new Error("Bundled fast-mode still contains inline TUI dependencies")
   }
   for (const [dependency, range] of Object.entries(
     fastModeManifest.dependencies ?? {},
@@ -1468,6 +1530,13 @@ try {
   const fastModeEntry = resolve(fastModeRoot, fastModeEntryRelative)
   if (!extensionPaths.includes(fastModeEntry)) {
     throw new Error("Packed aggregate is missing the fast-mode extension entry")
+  }
+  if (
+    !result.extensions.some(
+      (extension) => extension.resolvedPath === fastModeEntry,
+    )
+  ) {
+    throw new Error("Packed fast-mode extension did not load")
   }
   const footerEntry = resolve(footerRoot, footerEntryRelative)
   if (!extensionPaths.includes(footerEntry)) {
