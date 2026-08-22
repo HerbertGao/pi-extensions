@@ -64,7 +64,7 @@
     "@narumitw/pi-btw": "0.55.0",
     "@narumitw/pi-tui-kit": "^0.56.0",
     "@noble/ed25519": "^3.1.0",
-    "@pi-plugins/fast-mode": "0.1.9",
+    "@pi-plugins/fast-mode": "0.1.10",
     "@shikijs/cli": "^4.0.2",
     "@sinclair/typebox": "^0.34.49",
     "ajv": "^8.17.1",

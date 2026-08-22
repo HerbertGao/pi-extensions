@@ -1042,6 +1042,20 @@ try {
       "Bundled fast-mode no longer declares its expected Pi entry",
     )
   }
+  if (fastModeManifest.peerDependencies?.["@earendil-works/pi-tui"] !== "*") {
+    throw new Error("Bundled fast-mode must reuse the aggregate Pi TUI host")
+  }
+  const fastModeSourceMap = parseJson(
+    await readFile(join(fastModeRoot, `${fastModeEntryRelative}.map`), "utf8"),
+    `${fastModeEntryRelative}.map`,
+  )
+  if (
+    fastModeSourceMap.sources?.some((source) =>
+      /(?:marked|@earendil-works[+/]pi-tui)/.test(source),
+    )
+  ) {
+    throw new Error("Bundled fast-mode still contains inline TUI dependencies")
+  }
   for (const [dependency, range] of Object.entries(
     fastModeManifest.dependencies ?? {},
   )) {
@@ -1383,6 +1397,13 @@ try {
   const fastModeEntry = resolve(fastModeRoot, fastModeEntryRelative)
   if (!extensionPaths.includes(fastModeEntry)) {
     throw new Error("Packed aggregate is missing the fast-mode extension entry")
+  }
+  if (
+    !result.extensions.some(
+      (extension) => extension.resolvedPath === fastModeEntry,
+    )
+  ) {
+    throw new Error("Packed fast-mode extension did not load")
   }
   const footerEntry = resolve(footerRoot, footerEntryRelative)
   if (!extensionPaths.includes(footerEntry)) {
