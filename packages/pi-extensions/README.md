@@ -11,17 +11,19 @@ pi install npm:@herbertgao/pi-extensions
 The package bundles 11 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions`, plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
-- `@juicesharp/rpiv-ask-user-question@2.6.4`
-- `@narumitw/pi-btw@0.55.0`
-- `@pi-plugins/fast-mode@0.1.9`
+- `@juicesharp/rpiv-ask-user-question@2.7.0`
+- `@narumitw/pi-btw@0.55.1`
+- `@pi-plugins/fast-mode@0.1.10`
 - `pi-mcp-adapter@2.27.0`
 - `pi-footer@0.5.1`
-- `pi-lens@4.1.0`
+- `pi-lens@4.1.1`
 - `pi-web-access@0.24.0`
 - `remote-pi@0.7.0`
 - `@czottmann/pi-automode@1.11.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
+
+`pi-lens@4.1.1` improves diagnostics, cache, and LSP observability; prevents session-switch crashes; restores oxlint warnings; speeds large ignored-tree scans; and retries failed log writes once.
 
 If `pi-footer` was installed separately before upgrading to an aggregate release that includes it, remove the standalone source shown by `pi list` so only the bundled copy loads. For the pinned standalone install used while preparing this integration:
 
