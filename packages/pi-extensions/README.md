@@ -8,6 +8,8 @@ Aggregate installer for HerbertGao-maintained Pi extensions and pinned upstream 
 pi install npm:@herbertgao/pi-extensions
 ```
 
+Requires Node.js 24 or newer.
+
 The package bundles 11 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions`, plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
@@ -19,6 +21,7 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 - `pi-lens@4.1.1`
 - `pi-web-access@0.24.2`
 - `remote-pi@0.7.0`
+- `resume-from@0.2.0`
 - `@czottmann/pi-automode@1.12.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
