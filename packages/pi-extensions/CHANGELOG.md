@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.10
+
+### Patch Changes
+
+- [#118](https://github.com/HerbertGao/pi-extensions/pull/118) [`1e2550a`](https://github.com/HerbertGao/pi-extensions/commit/1e2550aa341c92586ef71cfb941c7dd926eb6b3c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle resume-from 0.2.0 for cross-agent session imports and require Node.js 24 or newer.
+
 ## 2026.8.9
 
 ### Patch Changes
