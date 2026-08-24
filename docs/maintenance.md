@@ -13,6 +13,7 @@
 | Tifan-derived packages | `tifandotme/pi-extensions` | Per-package below; reviewed `08ecbf7` | Released handoff, Mermaid, thinking, recap, rename, and stash updates are imported; Fixed Editor remains frozen at `5975a48`.                                 |
 | `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`)                  | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
 | `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `e971a39` (`0.8.66`)                  | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
+| `resume-from`          | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)                   | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                   |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
@@ -27,6 +28,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-preferred-thinking` | `@tifan/pi-preferred-thinking` | `1.0.0`          | `b39d1e6`       |
 | `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.5`          | `b39d1e6`       |
 | `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.5.0`          | `3f6b5e6`       |
+| `@herbertgao/resume-from`           | `resume-from`                  | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.2.0`          | `b39d1e6`       |
 | `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.18.0`         | `3f9d35c`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
@@ -86,8 +88,13 @@ The released range `bb47763..3f9d35c` was reviewed commit by commit:
 
 Both package provenance and the repository review cursor advance to the released `0.18.0` tag at `3f9d35c`.
 
+### resume-from 0.2.0 import
+
+The complete v0.2.0 source and test suite are imported at `e1dad0d`. The local package preserves upstream formatting and its MIT license. The maintained patch reads repository ownership from the earliest main-session record instead of the current active chain, whose cwd may change after Claude Code resets or compacts the transcript.
+
 ## Upstream contribution follow-ups
 
+- The stable Claude Code repository-ownership fix is tracked by upstream [issue #5](https://github.com/alexei-led/resume-from/issues/5) and [PR #6](https://github.com/alexei-led/resume-from/pull/6); drop the local patch after an equivalent upstream release is reviewed.
 - The `pi-subagents` agent display-name/color customization is merged upstream at `2d5b904`; keep the local implementation for the maintained package identity and compatibility patches, and re-audit it on future upstream syncs.
 - Propose the `pi-cc-extensions` fence/inline-code-safe circled-number normalization and its focused Markdown regression tests to `minuque/pi-cc-extensions`; keep the local implementation until upstream accepts an equivalent change.
 - Propose the `pi-cc-extensions` renderer-first compact-thinking lifecycle bridge and package-entry teardown regression test to `minuque/pi-cc-extensions`; without the bridge, shutdown can leave a stale compact-thinking prototype wrapper beneath compact mode.
@@ -108,7 +115,6 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-lens`                            | `4.1.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.24.2` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
-| `resume-from`                        | `0.2.0`  | `alexei-led/resume-from`    |
 | `@czottmann/pi-automode`             | `1.12.0` | `czottmann/pi-automode`     |
 
 The reviewed `pi-lens@4.1.1` release baseline is tag `v4.1.1` at commit `e06104d`; no later commits are bundled.
@@ -124,6 +130,7 @@ origin               HerbertGao/pi-extensions
 tifan-upstream       tifandotme/pi-extensions
 tintinweb-upstream   tintinweb/pi-subagents
 minuque-upstream     minuque/pi-cc-extensions
+alexei-upstream      alexei-led/resume-from
 ```
 
 Treat every `*-upstream` remote as fetch-only even though Git records a push URL.

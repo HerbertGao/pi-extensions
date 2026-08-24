@@ -1,0 +1,94 @@
+{
+  "name": "@herbertgao/resume-from",
+  "version": "0.2.0",
+  "description": "Continue a coding session in a different agent, or a different profile.",
+  "keywords": [
+    "pi-package",
+    "coding-agent",
+    "session-handoff",
+    "claude-code",
+    "codex"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Alexei Led"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "resume-from": "./dist/bin.js"
+  },
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./pi-extension": {
+      "types": "./dist/host/pi-extension/index.d.ts",
+      "import": "./dist/host/pi-extension/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "shims/pi",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome check . && eslint . --cache --cache-strategy content",
+    "lint:fix": "biome check --write .",
+    "pack:dry": "npm pack --dry-run",
+    "prepack": "npm run build",
+    "postpack": "node scripts/clean-dist.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "esbuild": "0.28.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.9.0",
+    "typescript": "^7.0.2",
+    "typescript-compiler-api": "npm:typescript@6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@earendil-works/pi-tui": "^0.84.1",
+    "gpt-tokenizer": "^3.4.0"
+  },
+  "pi": {
+    "extensions": [
+      "./shims/pi/extensions/resume-from.js"
+    ],
+    "image": "https://raw.githubusercontent.com/alexei-led/resume-from/fa0bfa778b52c64accc53155f12f3b895476ea08/assets/resume-from-card.png"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
+    "directory": "packages/resume-from"
+  },
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/resume-from#readme",
+  "bugs": {
+    "url": "https://github.com/HerbertGao/pi-extensions/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "x-upstream": {
+    "package": "resume-from",
+    "version": "0.2.0",
+    "repository": "https://github.com/alexei-led/resume-from",
+    "commit": "e1dad0dd4ae5fb6a5a50b905dd4359a29fd0910e"
+  }
+}
