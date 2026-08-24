@@ -17,13 +17,13 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 - `pi-mcp-adapter@2.27.0`
 - `pi-footer@0.5.1`
 - `pi-lens@4.1.1`
-- `pi-web-access@0.24.1`
+- `pi-web-access@0.24.2`
 - `remote-pi@0.7.0`
-- `@czottmann/pi-automode@1.11.0`
+- `@czottmann/pi-automode@1.12.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
-`pi-lens@4.1.1` improves diagnostics, cache, and LSP observability; prevents session-switch crashes; restores oxlint warnings; speeds large ignored-tree scans; and retries failed log writes once.
+`pi-lens@4.1.1` improves diagnostics, cache, and LSP observability; prevents session-switch crashes; restores oxlint warnings; speeds large ignored-tree scans; and retries failed log writes once. `pi-automode@1.12.0` adds its read-only diagnostics tool and skill, plus stricter bounded policy handling. `pi-web-access@0.24.2` prefers Codex-backed OpenAI search for Codex sessions and fixes Windows browser-cookie handling.
 
 If `pi-footer` was installed separately before upgrading to an aggregate release that includes it, remove the standalone source shown by `pi list` so only the bundled copy loads. For the pinned standalone install used while preparing this integration:
 

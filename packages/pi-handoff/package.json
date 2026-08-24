@@ -33,7 +33,14 @@
     "provenance": true
   },
   "dependencies": {
-    "@herbertgao/pi-rename": "^0.4.2"
+    "@herbertgao/pi-rename": "^0.4.2",
+    "typebox": "^1.1.38"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": ">=0.84.2",
+    "@earendil-works/pi-ai": ">=0.84.2",
+    "@earendil-works/pi-coding-agent": ">=0.84.2",
+    "@earendil-works/pi-tui": ">=0.84.2"
   },
   "engines": {
     "node": ">=20"
@@ -46,8 +53,8 @@
   },
   "x-upstream": {
     "package": "@tifan/pi-handoff",
-    "version": "1.1.2",
+    "version": "2.0.1",
     "repository": "https://github.com/tifandotme/pi-extensions",
-    "commit": "460d580"
+    "commit": "3f6b5e628e31817960a02cfae9bcb4a3f4bcd79b"
   }
 }

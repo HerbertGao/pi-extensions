@@ -39,8 +39,8 @@ pi install npm:@herbertgao/pi-cc-extensions
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- | ------------- |
 | Claude Code UI | 工具摘要、折叠展开、rich edit/write diff，以及 `on` / `compact` / `off` 三种模式                          | `/ccstyle`  |
 | Fullscreen mode  | 工具卡/group 点击展开与收起、预览、hover 高亮、回到底部按钮 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
-| 配置面板             | `Style / Diff / Thinking / Feature` 四页签，含启动头、滚轮步进及可选功能开关                              | `/ccstyle`  |
-| 上下文检查           | 查看上下文占用，并预览 System prompt、Tools、Tool results、Skills 和消息内容                              | `/context`  |
+| 配置面板             | `Style / Diff / Thinking / UI / Feature` 五页签，含启动头、滚轮步进及可选功能开关                              | `/ccstyle`  |
+| 上下文检查           | 查看上下文占用，并预览 System prompt、Memory、Tools、Tool results、Skills 和消息内容                              | `/context`  |
 | Session/Subagent 引用         | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                                                      | `@` |
 | 主题                 | 随包提供内置 CC Dark、CC Light 主题                                                                      | `/theme`    |
 
@@ -101,5 +101,5 @@ bun run typecheck
 
 ## 致谢
 
-- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.64](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.64)（`4709081`）衍生维护。
+- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.66](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.66)（`e971a39`）衍生维护。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。

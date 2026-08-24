@@ -1,11 +1,12 @@
-import { complete, type Message } from "@earendil-works/pi-ai/compat"
+import type { Message } from "@earendil-works/pi-ai/compat"
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 import {
   SessionManager,
   convertToLlm,
   serializeConversation,
-  type SessionEntry,
+  sessionEntryToContextMessages,
 } from "@earendil-works/pi-coding-agent"
+import { completeText } from "./complete-text.js"
 import { Text } from "@earendil-works/pi-tui"
 import { Type } from "typebox"
 
@@ -79,13 +80,9 @@ export default function (pi: ExtensionAPI): void {
         return errorResult(`Error loading session: ${err}`)
       }
 
-      const branch = sessionManager.getBranch()
-      const messages = branch
-        .filter(
-          (entry): entry is SessionEntry & { type: "message" } =>
-            entry.type === "message",
-        )
-        .map((entry) => entry.message)
+      const messages = sessionManager
+        .buildContextEntries()
+        .flatMap(sessionEntryToContextMessages)
 
       if (messages.length === 0) {
         return {
@@ -104,11 +101,6 @@ export default function (pi: ExtensionAPI): void {
         )
       }
 
-      const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
-      if (!auth.ok) {
-        return errorResult(`Error: Query model unavailable: ${auth.error}`)
-      }
-
       const conversationText = serializeConversation(convertToLlm(messages))
       const userMessage: Message = {
         role: "user",
@@ -122,28 +114,19 @@ export default function (pi: ExtensionAPI): void {
       }
 
       try {
-        const response = await complete(
+        const answer = await completeText(
+          ctx,
           model,
-          { systemPrompt: QUERY_SYSTEM_PROMPT, messages: [userMessage] },
-          {
-            ...(auth.apiKey ? { apiKey: auth.apiKey } : {}),
-            ...(auth.headers ? { headers: auth.headers } : {}),
-            ...(signal ? { signal } : {}),
-          },
+          QUERY_SYSTEM_PROMPT,
+          userMessage,
+          signal,
         )
-
-        if (response.stopReason === "aborted") {
+        if (answer === null) {
           return {
             content: [{ type: "text" as const, text: "Query was cancelled." }],
             details: { cancelled: true },
           }
         }
-
-        const answer = response.content
-          .filter((c): c is { type: "text"; text: string } => c.type === "text")
-          .map((c) => c.text)
-          .join("\n")
-          .trim()
 
         return {
           content: [{ type: "text" as const, text: answer }],
@@ -154,7 +137,9 @@ export default function (pi: ExtensionAPI): void {
           },
         }
       } catch (err) {
-        return errorResult(`Error querying session: ${err}`)
+        return errorResult(
+          `Error querying session: ${err instanceof Error ? err.message : String(err)}`,
+        )
       }
     },
   })

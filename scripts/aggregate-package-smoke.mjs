@@ -113,6 +113,10 @@ try {
       "Bundled pi-automode no longer declares its expected Pi entry",
     )
   }
+  const automodeSkillsRelative = "./skills"
+  if (!automodeManifest.pi?.skills?.includes(automodeSkillsRelative)) {
+    throw new Error("Bundled pi-automode no longer declares its skills")
+  }
   const automodeLicense = await readFile(
     join(automodeRoot, "LICENSE.md"),
     "utf8",
@@ -1327,6 +1331,7 @@ try {
   )
   await Promise.all(
     [
+      "node_modules/@czottmann/pi-automode/skills/automode-diagnostics/SKILL.md",
       "node_modules/@dietrichgebert/ponytail/LICENSE",
       "node_modules/@juicesharp/rpiv-ask-user-question/LICENSE",
       "node_modules/@narumitw/pi-btw/LICENSE",
@@ -1335,6 +1340,8 @@ try {
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
       "examples/pi-footer.json",
+      "node_modules/@herbertgao/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
+      "node_modules/@herbertgao/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
       "node_modules/remote-pi/service-templates/launchd.plist.template",
@@ -1399,6 +1406,27 @@ try {
       `Loaded ${result.extensions.length} of ${extensionPaths.length} extensions`,
     )
   }
+  const requiredChildRegistrations = [
+    ["@herbertgao/pi-handoff/src/index.ts", "commands", "__pi-handoff-session"],
+    ["@herbertgao/pi-handoff/src/session-query.ts", "tools", "session_query"],
+    ["@herbertgao/pi-mermaid-open/src/index.ts", "commands", "mermaid-open"],
+    [
+      "@herbertgao/pi-preferred-thinking/src/index.ts",
+      "commands",
+      "preferred-thinking",
+    ],
+    ["@herbertgao/pi-recap/src/index.ts", "commands", "recap"],
+    ["@herbertgao/pi-rename/src/index.ts", "commands", "rename"],
+  ]
+  for (const [relativePath, registry, name] of requiredChildRegistrations) {
+    const entry = resolve(packageRoot, "node_modules", relativePath)
+    const loaded = result.extensions.find(
+      (extension) => extension.resolvedPath === entry,
+    )
+    if (!loaded?.[registry].has(name)) {
+      throw new Error(`Packed ${relativePath} did not register ${name}`)
+    }
+  }
   const lensEntry = resolve(lensRoot, "dist", "index.js")
   const loadedLens = result.extensions.find(
     (extension) => extension.resolvedPath === lensEntry,
@@ -1421,6 +1449,16 @@ try {
     throw new Error(
       "Packed aggregate is missing the pi-automode extension entry",
     )
+  }
+  const automodeSkills = resolve(automodeRoot, automodeSkillsRelative)
+  if (!skillPaths.includes(automodeSkills)) {
+    throw new Error("Packed aggregate is missing the pi-automode skills")
+  }
+  const loadedAutomode = result.extensions.find(
+    (extension) => extension.resolvedPath === automodeEntry,
+  )
+  if (!loadedAutomode?.tools.has("automode_inspect")) {
+    throw new Error("Packed pi-automode did not register automode_inspect")
   }
   await runPiAutomodeRealSmoke({ automodeEntry })
 

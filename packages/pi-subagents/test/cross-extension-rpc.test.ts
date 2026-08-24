@@ -35,6 +35,7 @@ describe("cross-extension RPC", () => {
     manager = {
       spawn: vi.fn().mockReturnValue("agent-42"),
       abort: vi.fn().mockReturnValue(true),
+      consumeResult: vi.fn().mockReturnValue(true),
     }
     ctx = { session: true }
     deps = { events, pi: { events }, getCtx: () => ctx, manager }
@@ -265,6 +266,43 @@ describe("cross-extension RPC", () => {
 
       await new Promise((r) => setTimeout(r, 20))
       expect(reply).not.toHaveBeenCalled()
+    })
+  })
+
+  // --- consume ---
+
+  describe("consume RPC", () => {
+    it("consumes settled results", async () => {
+      registerRpcHandlers(deps)
+      const reply = vi.fn()
+      events.on("subagents:rpc:consume:reply:req-c1", reply)
+      events.emit("subagents:rpc:consume", {
+        requestId: "req-c1",
+        agentId: "agent-42",
+      })
+
+      await vi.waitFor(() => expect(reply).toHaveBeenCalled())
+      expect(reply).toHaveBeenCalledWith({ success: true })
+      expect(manager.consumeResult).toHaveBeenCalledWith("agent-42")
+    })
+
+    it("refuses unknown or running agents", async () => {
+      ;(manager.consumeResult as ReturnType<typeof vi.fn>).mockReturnValue(
+        false,
+      )
+      registerRpcHandlers(deps)
+      const reply = vi.fn()
+      events.on("subagents:rpc:consume:reply:req-c2", reply)
+      events.emit("subagents:rpc:consume", {
+        requestId: "req-c2",
+        agentId: "agent-42",
+      })
+
+      await vi.waitFor(() => expect(reply).toHaveBeenCalled())
+      expect(reply).toHaveBeenCalledWith({
+        success: false,
+        error: "Agent not found or still running",
+      })
     })
   })
 

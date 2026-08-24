@@ -9,7 +9,7 @@ import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@earen
 export type ContextPart = {
 	label: string;
 	tokens: number;
-	color: "accent" | "success" | "warning" | "muted" | "dim";
+	color: "accent" | "success" | "warning" | "muted" | "dim" | "error";
 };
 
 type PreviewKey = "systemPrompt" | "tools" | "toolResults" | "contextFiles" | "skills";
@@ -43,11 +43,16 @@ export function escCloseHitbox(bounds: DialogBounds): {
 	};
 }
 
-let activeTextPreviews = 0;
+let activeContextOverlays = 0;
 
-/** fullscreen 输入包装用于把鼠标事件继续传给当前文本预览 overlay。 */
+/** fullscreen 输入包装用于把鼠标事件继续传给当前 context overlay。 */
 export function hasActiveTextPreview(): boolean {
-	return activeTextPreviews > 0;
+	return activeContextOverlays > 0;
+}
+
+/** fullscreen overlays fall back to 1002; restore motion events for hover states. */
+function ensureFullscreenMouseMotion(tui: any): void {
+	if (tui.mode === "fullscreen") tui.terminal?.write?.("\x1b[?1003h\x1b[?1006h");
 }
 
 export async function showTextPreview(
@@ -56,10 +61,11 @@ export async function showTextPreview(
 	rawContent: string,
 ): Promise<void> {
 	const content = normalizePreviewText(rawContent);
-	activeTextPreviews++;
+	activeContextOverlays++;
 	try {
 		await ctx.ui.custom(
 			(tui, theme, _keybindings, done) => {
+				ensureFullscreenMouseMotion(tui);
 				let scrollOffset = 0;
 				let pageSize = 1;
 				let totalLines = 1;
@@ -249,7 +255,7 @@ export async function showTextPreview(
 			},
 		);
 	} finally {
-		activeTextPreviews--;
+		activeContextOverlays--;
 	}
 }
 
@@ -424,7 +430,7 @@ export function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBr
 	const parts: ContextPart[] = [
 		{ label: "System prompt", tokens: baseSystem, color: "accent" },
 		{ label: "Tools", tokens: toolTokens, color: "success" },
-		{ label: "Context files", tokens: contextFileTokens, color: "warning" },
+		{ label: "Memory", tokens: contextFileTokens, color: "error" },
 		{ label: "Skills", tokens: skillTokens, color: "warning" },
 		{ label: "User messages", tokens: user, color: "muted" },
 		{ label: "Assistant messages", tokens: assistant, color: "accent" },
@@ -448,10 +454,12 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 			const breakdown = collectContextBreakdown(ctx);
 			const estimated = breakdown.parts.reduce((sum, part) => sum + part.tokens, 0);
 			const fixedParts = breakdown.parts.filter(
-				(part) => part.label === "System prompt" || part.label === "Tools",
+				(part) =>
+					part.label === "System prompt" || part.label === "Memory" || part.label === "Tools",
 			);
 			const variableParts = breakdown.parts.filter(
-				(part) => part.label !== "System prompt" && part.label !== "Tools",
+				(part) =>
+					part.label !== "System prompt" && part.label !== "Memory" && part.label !== "Tools",
 			);
 			const orderedParts = [...fixedParts, ...variableParts];
 			const fixedTokens = fixedParts.reduce((sum, part) => sum + part.tokens, 0);
@@ -527,9 +535,9 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 				},
 				{
 					key: "contextFiles",
-					label: "Context files",
-					title: "Context Files",
-					content: contextFilesContent || "No context files loaded.",
+					label: "Memory",
+					title: "Memory Files",
+					content: contextFilesContent || "No memory files loaded.",
 				},
 				{
 					key: "skills",
@@ -549,8 +557,10 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 			let selectedPreviewIndex = 0;
 
 			while (true) {
-				const action = await ctx.ui.custom(
+				activeContextOverlays++;
+				const actionPromise = ctx.ui.custom(
 					(tui, theme, _keybindings, done) => {
+						ensureFullscreenMouseMotion(tui);
 						let previewHitboxes: Array<{
 							key: PreviewKey;
 							row: number;
@@ -558,6 +568,8 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 							endCol: number;
 						}> = [];
 						let escHitbox: { row: number; startCol: number; endCol: number } | undefined;
+						let escHovered = false;
+						let hoveredKey: PreviewKey | undefined;
 
 						const padLine = (text: string, width: number): string => {
 							const truncated = truncateToWidth(text, width, "…");
@@ -588,27 +600,32 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 								}
 
 								const mouse = parseSgrMousePacket(data);
-								if (
-									mouse?.final !== "M" ||
-									mouseBaseButton(mouse.code) !== 0 ||
-									(mouse.code & 32) !== 0
-								)
-									return;
-								if (
+								if (!mouse || mouse.final !== "M") return;
+								const overEsc = Boolean(
 									escHitbox &&
-									mouse.row === escHitbox.row &&
-									mouse.col >= escHitbox.startCol &&
-									mouse.col <= escHitbox.endCol
-								) {
-									done(undefined);
-									return;
-								}
+										mouse.row === escHitbox.row &&
+										mouse.col >= escHitbox.startCol &&
+										mouse.col <= escHitbox.endCol,
+								);
 								const hitbox = previewHitboxes.find(
 									(candidate) =>
 										mouse.row === candidate.row &&
 										mouse.col >= candidate.startCol &&
 										mouse.col <= candidate.endCol,
 								);
+								if ((mouse.code & 32) !== 0) {
+									if (overEsc !== escHovered || hitbox?.key !== hoveredKey) {
+										escHovered = overEsc;
+										hoveredKey = hitbox?.key;
+										tui.requestRender();
+									}
+									return;
+								}
+								if (mouseBaseButton(mouse.code) !== 0) return;
+								if (overEsc) {
+									done(undefined);
+									return;
+								}
 								if (hitbox) {
 									selectedPreviewIndex = Math.max(
 										0,
@@ -643,6 +660,9 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 									Math.max(...allParts.map((part) => part.label.length)),
 								);
 								const selectedLabel = visiblePreviews[selectedPreviewIndex]?.label;
+								const hoverLabel = visiblePreviews.find(
+									(preview) => preview.key === hoveredKey,
+								)?.label;
 								const partRows = allParts.map((part) => {
 									const pct = contextWindow > 0 ? (part.tokens / contextWindow) * 100 : 0;
 									const swatch = theme.fg(part.color, "■");
@@ -651,12 +671,13 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 									const selected = part.label === selectedLabel;
 									const prefix = selected ? "› " : "  ";
 									const row = padLine(`${prefix}${swatch} ${label} ${amount}`, inner);
-									return selected ? theme.bg("selectedBg", row) : row;
+									if (selected) return theme.bg("selectedBg", row);
+									return part.label === hoverLabel ? theme.bg("customMessageBg", row) : row;
 								});
 								const border = (text: string) => theme.fg("border", text);
 								const lines = [
 									border(`╭${"─".repeat(inner)}╮`),
-									`${border("│")}${padLine(` ${title}  ${theme.fg("muted", subtitle)}`, inner - escWidth)}${theme.fg("muted", "[esc]")}${border("│")}`,
+									`${border("│")}${padLine(` ${title}  ${theme.fg("muted", subtitle)}`, inner - escWidth)}${theme.fg(escHovered ? "text" : "muted", "[esc]")}${border("│")}`,
 									`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
 									`${border("│")}${padLine(` ${segments}`, inner)}${border("│")}`,
 									`${border("│")}${" ".repeat(inner)}${border("│")}`,
@@ -706,6 +727,12 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 						},
 					},
 				);
+				let action;
+				try {
+					action = await actionPromise;
+				} finally {
+					activeContextOverlays--;
+				}
 
 				if (!action) break;
 				const preview = previewByKey.get(action as PreviewKey);

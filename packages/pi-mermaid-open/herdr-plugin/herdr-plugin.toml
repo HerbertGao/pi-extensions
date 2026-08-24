@@ -1,0 +1,11 @@
+id = "pi-mermaid-open"
+name = "Pi Mermaid Open"
+version = "0.1.3"
+min_herdr_version = "0.8.0"
+platforms = ["linux", "macos", "windows"]
+
+[[panes]]
+id = "viewer"
+title = "Mermaid"
+command = ["node", "viewer.mjs"]
+placement = "overlay"

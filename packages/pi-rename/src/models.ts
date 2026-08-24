@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
-import type { Api, Model, ProviderHeaders } from "@earendil-works/pi-ai"
+import type { Api, Model } from "@earendil-works/pi-ai"
 import {
   getAgentDir,
   type ExtensionContext,
@@ -22,8 +22,6 @@ export interface RenameModelPreference {
 
 export interface RenameModelAuth {
   readonly model: Model<Api>
-  readonly apiKey: string
-  readonly headers: ProviderHeaders | undefined
 }
 
 export type RenameModelConfig =
@@ -134,14 +132,8 @@ async function getModelAuth(
   )
   if (!model) return undefined
 
-  const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
-  return auth.ok && auth.apiKey
-    ? {
-        model,
-        apiKey: auth.apiKey,
-        headers: auth.headers,
-      }
-    : undefined
+  const auth = await ctx.modelRegistry.getProviderAuth(model.provider)
+  return auth?.auth.apiKey ? { model } : undefined
 }
 
 export async function getRenameModelAuth(
@@ -181,8 +173,8 @@ export async function getAuthenticatedTextModelPreferences(
     .filter((model) => model.input.includes("text"))
   const authenticatedModels = await Promise.all(
     models.map(async (model) => {
-      const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
-      return auth.ok && auth.apiKey ? toModelPreference(model) : undefined
+      const auth = await ctx.modelRegistry.getProviderAuth(model.provider)
+      return auth?.auth.apiKey ? toModelPreference(model) : undefined
     }),
   )
 

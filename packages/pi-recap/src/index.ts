@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core"
-import { complete, type Message } from "@earendil-works/pi-ai/compat"
+import type { Message } from "@earendil-works/pi-ai"
 import type { AutocompleteItem } from "@earendil-works/pi-tui"
 import type {
   ExtensionAPI,
@@ -276,22 +276,18 @@ async function generateRecap(
     return
   }
 
-  const auth = modelAuth.auth
-
   const abortController = new AbortController()
   abortPendingGeneration(state)
   state.abortController = abortController
 
   try {
-    const response = await complete(
-      auth.model,
+    const response = await ctx.modelRegistry.complete(
+      modelAuth.auth,
       {
         systemPrompt: RECAP_SYSTEM_PROMPT,
         messages: [buildPrompt(messages)],
       },
       {
-        apiKey: auth.apiKey,
-        ...(auth.headers ? { headers: auth.headers } : {}),
         maxTokens: RECAP_MAX_TOKENS,
         maxRetries: 0,
         cacheRetention: "none",

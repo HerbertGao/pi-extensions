@@ -8,38 +8,53 @@
 
 ## Source baselines
 
-| Local package set      | Upstream                   | Imported baseline    | Notes                                                                                                                                                         |
-| ---------------------- | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tifan-derived packages | `tifandotme/pi-extensions` | `5975a48`            | Fixed Editor includes the merged streaming repaint fix and is frozen as a legacy package for Pi versions before 0.84.                                         |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`) | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `4709081` (`0.8.64`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
+| Local package set      | Upstream                   | Imported baseline                     | Notes                                                                                                                                                         |
+| ---------------------- | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tifan-derived packages | `tifandotme/pi-extensions` | Per-package below; reviewed `08ecbf7` | Released handoff, Mermaid, thinking, recap, rename, and stash updates are imported; Fixed Editor remains frozen at `5975a48`.                                 |
+| `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`)                  | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `e971a39` (`0.8.66`)                  | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                       | Upstream package               | Imported version | Imported commit |
 | ----------------------------------- | ------------------------------ | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.64`         | `4709081`       |
+| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.66`         | `e971a39`       |
 | `@herbertgao/pi-copy-response`      | `@tifan/pi-copy-response`      | `0.2.6`          | `460d580`       |
 | `@herbertgao/pi-fixed-editor`       | `@tifan/pi-fixed-editor`       | `0.3.0`          | `5975a48`       |
-| `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `1.1.2`          | `460d580`       |
+| `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `2.0.1`          | `3f6b5e6`       |
 | `@herbertgao/pi-inline-skills`      | `@tifan/pi-inline-skills`      | `1.0.5`          | `460d580`       |
-| `@herbertgao/pi-mermaid-open`       | `@tifan/pi-mermaid-open`       | `0.1.3`          | `460d580`       |
-| `@herbertgao/pi-preferred-thinking` | `@tifan/pi-preferred-thinking` | `0.3.0`          | `460d580`       |
-| `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.4`          | `460d580`       |
-| `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.4.2`          | `460d580`       |
-| `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.1.0`          | `460d580`       |
+| `@herbertgao/pi-mermaid-open`       | `@tifan/pi-mermaid-open`       | `0.2.0`          | `b39d1e6`       |
+| `@herbertgao/pi-preferred-thinking` | `@tifan/pi-preferred-thinking` | `1.0.0`          | `b39d1e6`       |
+| `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.5`          | `b39d1e6`       |
+| `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.5.0`          | `3f6b5e6`       |
+| `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.2.0`          | `b39d1e6`       |
 | `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.18.0`         | `3f9d35c`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
 
-### pi-mermaid-open post-0.1.3 review
+### Tifan release review through 08ecbf7
 
-The range `5975a48..efc30c3` contains only `efc30c3` (`feat(pi-mermaid-open): show skipped diagrams in terminal`) and is **deferred until a published release**. The repository review cursor advances, but the imported Tifan source baseline remains `5975a48` and `@herbertgao/pi-mermaid-open` remains based on upstream `0.1.3` at `460d580`.
+The range `efc30c3..08ecbf7` and the matching published tags were reviewed package by package:
 
-The change reconstructs whether Pi skipped a diagram from Kitty availability and the current terminal width without applying project settings. That can misreport diagrams already handled by `pi-cc-extensions`, disabled by effective configuration, or skipped because of parser warnings. Its focused `status.test.ts` is also not connected to the upstream package or repository CI scripts.
+- `pi-handoff@2.0.1` is **ported** with the intentional `-handoff` prompt marker, generated handoff artifact, clean-session bridge, and shared completion helper; the local import continues to use `@herbertgao/pi-rename`.
+- `pi-mermaid-open@0.2.0` is **ported** now that the release reads Pi's effective Mermaid mode/output padding, distinguishes disabled, unsupported, too-wide, warning, and `mmd` cases, carries a runnable status regression test, and adds the Herdr overlay fallback. Its status explicitly describes Pi's native renderer; the aggregate's separate `pi-cc-extensions` Markdown enhancement remains additive.
+- `pi-preferred-thinking@1.0.0` is **ported** with its intentional migration to Pi 0.84.2 native per-model thinking pins in `enabledModels`; the old private config is no longer read.
+- `pi-recap@0.4.5` and `pi-rename@0.5.0` are **ported** with Pi 0.84.2 model-registry APIs, loading UI, and Herdr pane/tab synchronization; local malformed-JSON/Herdr-output fallbacks remain preserved where still applicable.
+- `pi-stash@0.2.0` contains documentation/release metadata only. Provenance advances while the local Alt+S shortcut fix remains intact instead of restoring the upstream Ctrl+S conflict.
+- `pi-review` is a new optional product rather than an update to an imported package. It is reviewed but **not imported**: adding another aggregate extension is outside this maintenance issue and has no existing local compatibility contract.
 
-Reconsider the change after upstream publishes it. Before acceptance, verify skipped-status detection against effective global and project settings, cover coexistence with `pi-cc-extensions` plus disabled and warning cases, and require the focused regression test to run in CI.
+The repository review cursor advances to `08ecbf7`; documentation-only commits after the published tags do not change package provenance.
+
+### pi-cc-extensions 0.8.66 review
+
+The released range `4709081..e971a39` was reviewed commit by commit:
+
+- `e1345b0` is **selectively ported**: `/context` exposes context files as a fixed Memory partition and restores fullscreen mouse motion for hoverable context overlays, while retaining this fork's more granular Skills, user/assistant, tool-result, and compaction breakdown plus its scrollable text preview.
+- `7890bb3` is **ported**: `/ccstyle` moves startup-header and wheel-step controls into a dedicated UI tab.
+- `402341b` and `e971a39` are release metadata only and are represented through local provenance rather than copied manifests or lockfiles.
+
+The fork continues to preserve its renderer-first compact-thinking lifecycle bridge, message-display hardening, live mouse TUI slot, terminal-width handling, Markdown fence/inline protection, compact-thinking coexistence, rich diff ANSI/CRLF/write metadata, and dedicated Agent renderer. Package provenance and the repository review cursor advance to released `v0.8.66` at `e971a39`.
 
 ### pi-cc-extensions 0.8.64 review
 
@@ -50,6 +65,15 @@ The released range `6b7447e..4709081` was reviewed commit by commit:
 - `4709081` is **ported**: expanded thinking wraps use bounded per-message/run/width caching, collapse evicts only that run, and double-click identity survives component rebuilds without crossing runs.
 
 The fork keeps its renderer-first compact-thinking lifecycle bridge, message-display hardening, live mouse TUI slot, terminal-width handling, Markdown fence/inline protection, compact-thinking coexistence, rich diff ANSI/CRLF/write metadata, and dedicated Agent renderer. Package provenance and the repository review cursor advance to released `v0.8.64` at `4709081`.
+
+### pi-subagents post-0.18.0 review
+
+The unreleased range `3f9d35c..a9db27b` was reviewed commit by commit:
+
+- `c73e968` and its `7e695f3` changelog follow-up are **ported**: Ctrl+C now closes the conversation viewer when no steering composer owns input.
+- `a9db27b` is **selectively ported**: `subagents:rpc:consume` marks only settled top-level results consumed and cancels their pending nudge, while preserving this fork's model resolution, top-level spawn filtering, parent ownership, and lifecycle gates.
+
+The repository review cursor advances to `a9db27b`. Package provenance remains the published `0.18.0` tag at `3f9d35c`; unreleased commits are not represented as a package version baseline.
 
 ### pi-subagents 0.18.0 review
 
@@ -82,9 +106,9 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-mcp-adapter`                     | `2.27.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `4.1.1`  | `apmantza/pi-lens`          |
-| `pi-web-access`                      | `0.24.1` | `nicobailon/pi-web-access`  |
+| `pi-web-access`                      | `0.24.2` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
-| `@czottmann/pi-automode`             | `1.11.0` | `czottmann/pi-automode`     |
+| `@czottmann/pi-automode`             | `1.12.0` | `czottmann/pi-automode`     |
 
 The reviewed `pi-lens@4.1.1` release baseline is tag `v4.1.1` at commit `e06104d`; no later commits are bundled.
 

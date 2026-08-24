@@ -890,6 +890,20 @@ export default function (pi: ExtensionAPI) {
             const record = manager.getRecord(id)
             return !record?.parentAgentId && manager.abort(id)
           },
+          consumeResult: (id) => {
+            const record = manager.getRecord(id)
+            if (
+              !record ||
+              record.parentAgentId ||
+              record.status === "running" ||
+              record.status === "queued"
+            ) {
+              return false
+            }
+            record.resultConsumed = true
+            cancelNudge(record.id)
+            return true
+          },
         },
       })
       // Broadcast readiness so extensions loaded alongside us can discover us.
@@ -911,6 +925,7 @@ export default function (pi: ExtensionAPI) {
     rpcHandle?.unsubSpawn()
     rpcHandle?.unsubStop()
     rpcHandle?.unsubPing()
+    rpcHandle?.unsubConsume()
     rpcHandle = undefined
     currentCtx = undefined
     // Only release the global slot if this activation claimed it — a child
@@ -1068,6 +1083,7 @@ export default function (pi: ExtensionAPI) {
   // Grab UI context from first tool execution + clear lingering widget on new turn
   pi.on("tool_execution_start", async (_event, ctx) => {
     widget.setUICtx(ctx.ui as UICtx)
+    // SAFETY: both UI adapters receive the same Pi ExtensionContext UI surface.
     fleet.setUICtx(ctx.ui as unknown as FleetUICtx)
     widget.onTurnStart()
   })

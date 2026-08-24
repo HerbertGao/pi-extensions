@@ -1,7 +1,7 @@
 {
   "name": "@herbertgao/pi-preferred-thinking",
   "version": "0.3.0",
-  "description": "Persist preferred thinking level per model in pi.",
+  "description": "Set and apply per-model thinking levels from Pi's native settings.",
   "keywords": [
     "pi",
     "pi-extension",
@@ -32,6 +32,9 @@
     "access": "public",
     "provenance": true
   },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.84.2"
+  },
   "engines": {
     "node": ">=20"
   },
@@ -42,8 +45,8 @@
   },
   "x-upstream": {
     "package": "@tifan/pi-preferred-thinking",
-    "version": "0.3.0",
+    "version": "1.0.0",
     "repository": "https://github.com/tifandotme/pi-extensions",
-    "commit": "460d580"
+    "commit": "b39d1e6359c78718cbf8fe5c74c82b89065e9a0b"
   }
 }

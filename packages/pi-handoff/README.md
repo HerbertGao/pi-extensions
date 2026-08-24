@@ -10,42 +10,39 @@ Start a fresh pi session from a handoff document, and query past sessions for co
 pi install npm:@herbertgao/pi-handoff
 ```
 
-For local development:
+## Requirements
+
+Matt Pocock's [`handoff` skill](https://github.com/mattpocock/skills/blob/main/skills/productivity/handoff/SKILL.md) is required:
 
 ```bash
-pi install /absolute/path/to/pi-extensions/packages/pi-handoff
+npx skills add https://github.com/mattpocock/skills --global --skill handoff
 ```
-
-You also need a `handoff` skill installed and discoverable by pi. For example, install or expose Matt Pocock's `handoff` skill, then run `/reload`.
 
 ## How it works
 
-Run `/handoff-session` to generate a handoff document from the current session and start a clean session from it. The command asks what the next session is for, uses the installed `handoff` skill as the document policy, and writes the handoff under the OS temp directory.
+Submit a prompt containing a standalone `-handoff` marker to generate a handoff document from the current session and automatically start a clean session from it. The marker can appear anywhere in the prompt. The handoff is written under the OS temp directory.
 
-The new session name is generated from the current conversation using pi-rename-style rules: lowercase, hyphen-separated, and under 60 characters. Naming uses `openai-codex/gpt-5.6-luna` when available, with a local fallback. The focus answer is used for the handoff document, not for the session name. The prompt is left in the editor for review and manual submit.
+The new session name uses the current session name when available. Otherwise, it uses the next-session focus, sanitized to lowercase, hyphen-separated text under 60 characters.
 
 The handoff includes the previous session path when available, so the next agent can use `session_query` if the handoff omits a detail.
 
-## Commands
+## Usage
 
-- `/handoff-session`: Generate a handoff from the current session and start a renamed session from it.
+```text
+fix the auth flow -handoff
+```
 
-## Tools
+The standalone `-handoff` marker is consumed before the prompt reaches the agent. The text before and after it becomes the next-session focus. A prompt containing only `-handoff` continues the current work.
 
-- `session_query`: Answer a question about a previous pi session, given the full path to its `.jsonl` file and the question to ask.
+## `session_query`
 
-## Behavior
+`session_query`: Answer a question about a previous pi session, given the full path to its `.jsonl` file and the question to ask. It uses the configured `openai-codex/gpt-5.6-luna` model, which must be available and authenticated.
 
-- Uses the current selected model to generate the handoff document.
-- Uses `openai-codex/gpt-5.6-luna` to name the new pi session when available.
-- Requires a discoverable skill named exactly `handoff`.
-- Writes stable, readable files under the OS temp directory, such as `/tmp/pi-handoffs/pi-handoff-2026-06-01-inline-skills.md`.
-- Starts a clean session with native parent-session linking.
-- Does not autosend.
+Pi provides session loading and compaction-aware context reconstruction, but not semantic questions about an arbitrary previous session. `session_query` supplies that model-powered query layer.
 
 ## Release notes
 
-See [CHANGELOG.md](CHANGELOG.md)
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

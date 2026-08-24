@@ -39,8 +39,8 @@ Run `/reload` after installation.
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                         | `/ccstyle`  |
 | Fullscreen mode          | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
-| Settings panel               | `Style / Diff / Thinking / Feature` tabs with startup, wheel, and optional feature toggles                                                        | `/ccstyle`  |
-| Context inspection           | Usage breakdown and previews for the system prompt, tools, tool results, skills, and messages                                                   | `/context`  |
+| Settings panel               | `Style / Diff / Thinking / UI / Feature` tabs with startup, wheel, and optional feature toggles                                                        | `/ccstyle`  |
+| Context inspection           | Usage breakdown and previews for the system prompt, memory, tools, tool results, skills, and messages                                                   | `/context`  |
 | Session/Subagent references           | Search and inject effective context from previous Sessions or existing SubAgents                                                                  | `@` |
 | Theme                        | Bundled CC Dark and CC Light themes                                                                                                               | `/theme`    |
 
@@ -101,5 +101,5 @@ bun run typecheck
 
 ## Credits
 
-- Derived from [`minuque/pi-cc-extensions` v0.8.64](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.64) (`4709081`) under the MIT license.
+- Derived from [`minuque/pi-cc-extensions` v0.8.66](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.66) (`e971a39`) under the MIT license.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).

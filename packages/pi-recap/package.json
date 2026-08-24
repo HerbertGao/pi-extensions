@@ -32,6 +32,12 @@
     "access": "public",
     "provenance": true
   },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": ">=0.84.2",
+    "@earendil-works/pi-ai": ">=0.84.2",
+    "@earendil-works/pi-coding-agent": ">=0.84.2",
+    "@earendil-works/pi-tui": ">=0.84.2"
+  },
   "engines": {
     "node": ">=20"
   },
@@ -42,8 +48,8 @@
   },
   "x-upstream": {
     "package": "@tifan/pi-recap",
-    "version": "0.4.4",
+    "version": "0.4.5",
     "repository": "https://github.com/tifandotme/pi-extensions",
-    "commit": "460d580"
+    "commit": "b39d1e6359c78718cbf8fe5c74c82b89065e9a0b"
   }
 }
