@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.11
+
+### Patch Changes
+
+- [#120](https://github.com/HerbertGao/pi-extensions/pull/120) [`6780351`](https://github.com/HerbertGao/pi-extensions/commit/6780351201a04bec1a74a7803342180f074978cc) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replace the bundled upstream resume-from package with the maintained `@herbertgao/resume-from` fork so Claude Code sessions remain discoverable after their active transcript moves into a nested working directory.
+
 ## 2026.8.10
 
 ### Patch Changes
