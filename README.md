@@ -8,6 +8,8 @@ A collection of HerbertGao-maintained and pinned upstream extensions for the [Pi
 pi install npm:@herbertgao/pi-extensions
 ```
 
+Requires Node.js 24 or newer.
+
 The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual packages can also be installed separately. The deprecated fixed-editor package remains available only for legacy Pi versions and is not loaded by the aggregate.
 
 ## Packages
@@ -43,6 +45,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.24.2`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
+| [`resume-from`](https://github.com/alexei-led/resume-from)                      | `0.2.0`        | Import sessions across Pi, Claude, and Codex. |
 | [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.12.0`       | Auto-mode guardrails and diagnostics.         |
 
 ### Remote Pi trust boundary

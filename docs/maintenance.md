@@ -108,6 +108,7 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-lens`                            | `4.1.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.24.2` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
+| `resume-from`                        | `0.2.0`  | `alexei-led/resume-from`    |
 | `@czottmann/pi-automode`             | `1.12.0` | `czottmann/pi-automode`     |
 
 The reviewed `pi-lens@4.1.1` release baseline is tag `v4.1.1` at commit `e06104d`; no later commits are bundled.

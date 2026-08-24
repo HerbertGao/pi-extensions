@@ -1320,6 +1320,46 @@ try {
     }
   }
 
+  const resumeFromRoot = join(packageRoot, "node_modules", "resume-from")
+  const resumeFromManifestPath = join(resumeFromRoot, "package.json")
+  const resumeFromManifest = parseJson(
+    await readFile(resumeFromManifestPath, "utf8"),
+    resumeFromManifestPath,
+  )
+  const expectedResumeFromVersion = sourceManifest.dependencies["resume-from"]
+  if (resumeFromManifest.version !== expectedResumeFromVersion) {
+    throw new Error(
+      `Expected bundled resume-from ${expectedResumeFromVersion}, got ${resumeFromManifest.version}`,
+    )
+  }
+  if (resumeFromManifest.license !== "MIT") {
+    throw new Error(
+      `Expected resume-from MIT license, got ${resumeFromManifest.license}`,
+    )
+  }
+  const resumeFromEntryRelative = "./shims/pi/extensions/resume-from.js"
+  if (!resumeFromManifest.pi?.extensions?.includes(resumeFromEntryRelative)) {
+    throw new Error(
+      "Bundled resume-from no longer declares its expected Pi entry",
+    )
+  }
+  if (
+    resumeFromManifest.engines?.node !== ">=24" ||
+    sourceManifest.engines?.node !== ">=24"
+  ) {
+    throw new Error("Aggregate must preserve resume-from's Node 24 baseline")
+  }
+  const expectedTokenizerRange =
+    resumeFromManifest.dependencies?.["gpt-tokenizer"]
+  if (
+    !expectedTokenizerRange ||
+    manifest.dependencies["gpt-tokenizer"] !== expectedTokenizerRange
+  ) {
+    throw new Error(
+      `Expected promoted gpt-tokenizer ${expectedTokenizerRange}, got ${manifest.dependencies["gpt-tokenizer"]}`,
+    )
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
@@ -1344,6 +1384,7 @@ try {
       "node_modules/@herbertgao/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
+      "node_modules/resume-from/LICENSE",
       "node_modules/remote-pi/service-templates/launchd.plist.template",
       "node_modules/remote-pi/service-templates/systemd.service.template",
       "node_modules/remote-pi/service-templates/task-launcher.vbs.template",
@@ -1417,6 +1458,11 @@ try {
     ],
     ["@herbertgao/pi-recap/src/index.ts", "commands", "recap"],
     ["@herbertgao/pi-rename/src/index.ts", "commands", "rename"],
+    [
+      "resume-from/shims/pi/extensions/resume-from.js",
+      "commands",
+      "resume-from",
+    ],
   ]
   for (const [relativePath, registry, name] of requiredChildRegistrations) {
     const entry = resolve(packageRoot, "node_modules", relativePath)

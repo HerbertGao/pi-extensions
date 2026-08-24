@@ -73,6 +73,7 @@
     "croner": "^10.0.1",
     "cross-spawn": "^7.0.6",
     "effect": "4.0.0-beta.103",
+    "gpt-tokenizer": "^3.4.0",
     "grok-mermaid": "0.2.2",
     "jiti": "^2.7.0",
     "js-yaml": "^5.2.2",
@@ -90,6 +91,7 @@
     "qrcode-terminal": "^0.12.0",
     "recheck": "^4.5.0",
     "remote-pi": "0.7.0",
+    "resume-from": "0.2.0",
     "smol-toml": "^1.6.1",
     "strip-json-comments": "^5.0.3",
     "turndown": "^7.2.0",
@@ -124,10 +126,11 @@
     "pi-lens",
     "pi-mcp-adapter",
     "pi-web-access",
-    "remote-pi"
+    "remote-pi",
+    "resume-from"
   ],
   "engines": {
-    "node": ">=22.19.0"
+    "node": ">=24"
   },
   "pi": {
     "extensions": [
@@ -151,6 +154,7 @@
       "./node_modules/pi-lens/dist/index.js",
       "./node_modules/pi-web-access/index.ts",
       "./node_modules/remote-pi/dist/index.js",
+      "./node_modules/resume-from/shims/pi/extensions/resume-from.js",
       "./node_modules/@czottmann/pi-automode/extensions/auto-mode.ts",
       "./node_modules/pi-footer/src/index.ts"
     ],

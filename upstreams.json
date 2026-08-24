@@ -55,6 +55,10 @@
       "repository": "https://github.com/jacobaraujo7/remote_pi"
     },
     {
+      "package": "resume-from",
+      "repository": "https://github.com/alexei-led/resume-from"
+    },
+    {
       "package": "@czottmann/pi-automode",
       "repository": "https://github.com/czottmann/pi-automode"
     }
