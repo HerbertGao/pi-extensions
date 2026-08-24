@@ -13,7 +13,6 @@ import {
   type RecapModelPreference,
 } from "./models.js"
 
-const USE_DEFAULT_VALUE = "__pi-recap-default__"
 const MAX_VISIBLE_ITEMS = 10
 
 export type ModelPickerResult =
@@ -22,7 +21,6 @@ export type ModelPickerResult =
   | { action: "cancel" }
 
 interface ModelPickerItem {
-  readonly value: string
   readonly label: string
   readonly description?: string
   readonly model?: RecapModelPreference
@@ -43,12 +41,10 @@ class RecapModelPicker implements Component, Focusable {
     this.theme = theme
     this.items = [
       {
-        value: USE_DEFAULT_VALUE,
         label: "Use default",
         description: formatRecapModelKey(DEFAULT_RECAP_MODEL),
       },
       ...models.map((model) => ({
-        value: formatRecapModelKey(model),
         label: formatRecapModelKey(model),
         model,
       })),
@@ -90,11 +86,7 @@ class RecapModelPicker implements Component, Focusable {
     } else {
       for (const [index, item] of visibleItems.entries()) {
         lines.push(
-          this.renderItem(
-            item,
-            startIndex + index === this.selectedIndex,
-            width,
-          ),
+          this.renderItem(item, startIndex + index === this.selectedIndex),
         )
       }
     }
@@ -146,11 +138,7 @@ class RecapModelPicker implements Component, Focusable {
     }
   }
 
-  private renderItem(
-    item: ModelPickerItem,
-    isSelected: boolean,
-    width: number,
-  ): string {
+  private renderItem(item: ModelPickerItem, isSelected: boolean): string {
     const prefix = isSelected ? "→ " : "  "
     const label = isSelected
       ? this.theme.fg("accent", item.label)
@@ -158,7 +146,7 @@ class RecapModelPicker implements Component, Focusable {
     const description = item.description
       ? this.theme.fg("dim", ` ${item.description}`)
       : ""
-    return truncateToWidth(`${prefix}${label}${description}`, width)
+    return `${prefix}${label}${description}`
   }
 
   private moveSelection(delta: number): void {
@@ -171,14 +159,13 @@ class RecapModelPicker implements Component, Focusable {
     const item = this.getFilteredItems()[this.selectedIndex]
     if (!item) return
 
-    if (item.value === USE_DEFAULT_VALUE) {
+    const model = item.model
+    if (!model) {
       this.onDone({ action: "default" })
       return
     }
 
-    if (item.model) {
-      this.onDone({ action: "model", model: item.model })
-    }
+    this.onDone({ action: "model", model })
   }
 
   private getFilter(): string {

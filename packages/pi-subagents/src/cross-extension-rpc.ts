@@ -1,7 +1,7 @@
 /**
  * Cross-extension RPC handlers for the subagents extension.
  *
- * Exposes ping, spawn, and stop RPCs over the pi.events event bus,
+ * Exposes ping, spawn, stop, and consume RPCs over the pi.events event bus,
  * using per-request scoped reply channels.
  *
  * Reply envelope follows pi-mono convention:
@@ -25,7 +25,7 @@ export type RpcReply<T = void> =
 /** RPC protocol version — bumped when the envelope or method contracts change. */
 export const PROTOCOL_VERSION = 2
 
-/** Minimal AgentManager interface needed by the spawn/stop RPCs. */
+/** Minimal AgentManager interface needed by the spawn/stop/consume RPCs. */
 export interface SpawnCapable {
   spawn(
     pi: unknown,
@@ -35,6 +35,7 @@ export interface SpawnCapable {
     options: any,
   ): string
   abort(id: string): boolean
+  consumeResult(id: string): boolean
 }
 
 export interface RpcDeps {
@@ -48,6 +49,7 @@ export interface RpcHandle {
   unsubPing: () => void
   unsubSpawn: () => void
   unsubStop: () => void
+  unsubConsume: () => void
 }
 
 /**
@@ -76,7 +78,7 @@ function handleRpc<P extends { requestId: string }>(
 }
 
 /**
- * Register ping, spawn, and stop RPC handlers on the event bus.
+ * Register ping, spawn, stop, and consume RPC handlers on the event bus.
  * Returns unsub functions for cleanup.
  */
 export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
@@ -130,5 +132,14 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
     },
   )
 
-  return { unsubPing, unsubSpawn, unsubStop }
+  const unsubConsume = handleRpc<{
+    requestId: string
+    agentId: string
+  }>(events, "subagents:rpc:consume", ({ agentId }) => {
+    if (!manager.consumeResult(agentId)) {
+      throw new Error("Agent not found or still running")
+    }
+  })
+
+  return { unsubPing, unsubSpawn, unsubStop, unsubConsume }
 }

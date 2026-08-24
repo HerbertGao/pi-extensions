@@ -86,7 +86,44 @@ async function writeJson(path, value) {
 async function createPackageJiti(webAccessEntry) {
   const require = createRequire(webAccessEntry)
   const { createJiti } = await import(pathToFileURL(require.resolve("jiti")))
-  return createJiti(webAccessEntry, { moduleCache: false })
+  return createJiti(webAccessEntry, {
+    alias: {
+      "@earendil-works/pi-ai": join(
+        root,
+        "node_modules/@earendil-works/pi-ai/dist/index.js",
+      ),
+      "@earendil-works/pi-ai/compat": join(
+        root,
+        "node_modules/@earendil-works/pi-ai/dist/compat.js",
+      ),
+    },
+    moduleCache: false,
+  })
+}
+
+async function assertAutoProviderRouting(webAccessEntry) {
+  const webAccess = await (
+    await createPackageJiti(webAccessEntry)
+  ).import(webAccessEntry)
+  const available = { openai: true, exa: true }
+  assert.equal(
+    webAccess.resolveCuratorDefaultProvider(
+      "auto",
+      available,
+      { model: { provider: "openai-codex" } },
+      undefined,
+    ),
+    "openai",
+  )
+  assert.equal(
+    webAccess.resolveCuratorDefaultProvider(
+      "auto",
+      available,
+      { model: { provider: "smoke" } },
+      undefined,
+    ),
+    "exa",
+  )
 }
 
 function inspectRegistration(webAccessEntry, agentDir) {
@@ -920,6 +957,7 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
     })
     await assertGeminiWebTransport(resolvedWebAccessEntry)
     await assertCredentialRedirects(resolvedWebAccessEntry)
+    await assertAutoProviderRouting(resolvedWebAccessEntry)
 
     await assertNewReleaseFeatures({
       webAccessEntry: resolvedWebAccessEntry,

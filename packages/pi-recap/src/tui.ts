@@ -82,7 +82,7 @@ class PiRecapLine implements Component {
     const labelWidth = visibleWidth(LABEL)
     const label = this.renderLabel()
 
-    if (width < MIN_RECAP_WIDTH || width <= labelWidth) {
+    if (width < MIN_RECAP_WIDTH) {
       return [
         truncateToWidth(this.theme.fg("muted", `${LABEL}${this.recap}`), width),
       ]

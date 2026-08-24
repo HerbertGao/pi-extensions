@@ -73,7 +73,10 @@ test("context usage reconciles provider tokens and caps variable parts", () => {
 test("context breakdown exposes tool results for preview", () => {
 	const breakdown = collectContextBreakdown({
 		getSystemPrompt: () => "system",
-		getSystemPromptOptions: () => ({ selectedTools: [] }),
+		getSystemPromptOptions: () => ({
+			selectedTools: [],
+			contextFiles: [{ path: "AGENTS.md", content: "MEMORY_PREVIEW" }],
+		}),
 		sessionManager: {
 			buildContextEntries: () => [
 				{
@@ -91,6 +94,7 @@ test("context breakdown exposes tool results for preview", () => {
 		},
 	} as never);
 	assert.match(breakdown.toolResults, /TOOL_RESULT_PREVIEW/);
+	assert.ok(breakdown.parts.some((part) => part.label === "Memory" && part.tokens > 0));
 	assert.ok(breakdown.parts.some((part) => part.label === "Tool results" && part.tokens > 0));
 });
 

@@ -32,7 +32,7 @@ Spawn specialized agents that run in isolated sessions — each with its own too
 - **Tool denylist** — block specific tools via `disallowed_tools` frontmatter
 - **Styled completion notifications** — background agent results render as themed, compact notification boxes (icon, stats, result preview) instead of raw XML. Expandable to show full output. Group completions render each agent individually
 - **Event bus** — lifecycle events (`subagents:created`, `started`, `completed`, `failed`, `steered`, `compacted`) emitted via `pi.events`, enabling other extensions to react to sub-agent activity
-- **Cross-extension RPC** — other pi extensions can spawn and stop subagents via the `pi.events` event bus (`subagents:rpc:ping`, `subagents:rpc:spawn`, `subagents:rpc:stop`). Standardized reply envelopes with protocol versioning. Emits `subagents:ready` on session start
+- **Cross-extension RPC** — other pi extensions can spawn, stop, and consume subagent results via the `pi.events` event bus (`subagents:rpc:ping`, `subagents:rpc:spawn`, `subagents:rpc:stop`, `subagents:rpc:consume`). Standardized reply envelopes with protocol versioning. Emits `subagents:ready` on session start
 - **Schedule subagents** — pass `schedule` to the `Agent` tool to fire on cron / interval / one-shot. Session-scoped jobs with PID-locked persistence; results land via the same `subagent-notification` followUp path as manual background completions; manage via `/agents → Scheduled jobs`
 - **Model scope enforcement** — opt-in validation that subagent model choices stay within your pi `enabledModels` allowlist (sourced from `/scoped-models`, with both global and project-local pi settings honored). Caller-supplied out-of-scope → hard error to orchestrator; frontmatter-pinned out-of-scope → warning + runs anyway (frontmatter authoritative). Toggle via `/agents → Settings → Scope models`
 
@@ -520,7 +520,7 @@ Listen for `subagents:ready` to know when RPC handlers are available:
 
 ```typescript
 pi.events.on("subagents:ready", () => {
-  // RPC handlers are registered — safe to call ping/spawn/stop
+  // RPC handlers are registered — safe to call ping/spawn/stop/consume
 })
 ```
 
@@ -580,6 +580,19 @@ const unsub = pi.events.on(`subagents:rpc:stop:reply:${requestId}`, (reply) => {
 })
 pi.events.emit("subagents:rpc:stop", { requestId, agentId: "agent-id-here" })
 ```
+
+### Consume
+
+Mark a settled agent result as already shown so its completion notification is suppressed:
+
+```typescript
+pi.events.emit("subagents:rpc:consume", {
+  requestId: crypto.randomUUID(),
+  agentId: "agent-id-here",
+})
+```
+
+This is the event-bus equivalent of `get_subagent_result` consuming a result. Running, queued, unknown, and nested agents are refused; the channel is additive and remains outside the protocol-version handshake.
 
 Reply channels are scoped per `requestId`, so concurrent requests don't interfere.
 
@@ -677,7 +690,7 @@ src/
   agent-color.ts      # Claude Code/Agency Agents name color parsing and badge rendering
   agent-runner.ts     # Session creation, execution, graceful max_turns, steer/resume
   agent-manager.ts    # Agent lifecycle, concurrency queue, completion notifications
-  cross-extension-rpc.ts # RPC handlers for cross-extension spawn/ping via pi.events
+  cross-extension-rpc.ts # RPC handlers for cross-extension spawn/stop/consume via pi.events
   group-join.ts       # Group join manager: batched completion notifications with timeout
   custom-agents.ts    # Load user-defined agents from .pi/agents/, .agents/agents/, and global agents
   memory.ts           # Persistent agent memory (resolve, read, build prompt blocks)

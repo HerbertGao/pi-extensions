@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core"
-import { complete, type Message } from "@earendil-works/pi-ai/compat"
+import type { Message } from "@earendil-works/pi-ai"
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent"
 import {
   formatRenameModelKey,
@@ -123,17 +123,13 @@ export async function generateRename(
     const modelAuth = await getRenameModelAuth(ctx, modelConfig)
 
     if (modelAuth.status === "ok") {
-      const response = await complete(
+      const response = await ctx.modelRegistry.complete(
         modelAuth.auth.model,
         {
           systemPrompt: RENAME_SYSTEM_PROMPT,
           messages: [buildRenamePrompt(context)],
         },
         {
-          apiKey: modelAuth.auth.apiKey,
-          ...(modelAuth.auth.headers
-            ? { headers: modelAuth.auth.headers }
-            : {}),
           maxTokens: RENAME_MAX_TOKENS,
           maxRetries: 0,
           cacheRetention: "none",

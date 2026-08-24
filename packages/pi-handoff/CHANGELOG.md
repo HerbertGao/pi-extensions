@@ -1,5 +1,23 @@
 # @tifan/pi-handoff
 
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`b2ea184`](https://github.com/tifandotme/pi-extensions/commit/b2ea1841e99243aa4773bd5c33f43c40248859db)]:
+  - @tifan/pi-rename@0.5.0
+
+## 2.0.0
+
+### Major Changes
+
+- [`297e825`](https://github.com/tifandotme/pi-extensions/commit/297e825ba42eeed32814a34cd4fe5bdbe935b11c) Thanks [@tifandotme](https://github.com/tifandotme)! - Replace `/handoff-session` with the `-handoff` prompt marker and automatically start the new session from the generated handoff.
+
+### Patch Changes
+
+- Updated dependencies [[`e8709bc`](https://github.com/tifandotme/pi-extensions/commit/e8709bc388aa8e094918ec465cfab511358f18ff)]:
+  - @tifan/pi-rename@0.4.3
+
 ## 1.1.2
 
 ### Patch Changes

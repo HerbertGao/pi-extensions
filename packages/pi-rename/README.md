@@ -10,17 +10,13 @@ Generate session names for pi and Herdr.
 pi install npm:@herbertgao/pi-rename
 ```
 
-For local development:
-
-```bash
-pi install /absolute/path/to/pi-extensions/packages/pi-rename
-```
+This package requires Pi 0.84.2 or newer.
 
 ## How it works
 
-Run `/rename` to generate a fresh hyphen-separated session name. The extension applies the name to the pi session and, when pi is running inside Herdr, to the current Herdr tab.
+Run `/rename` to generate a fresh hyphen-separated session name. The extension applies the name to the pi session and, when pi is running inside Herdr, to the current pane and tab when it is the tab's only pane, or to the current pane in a split tab.
 
-When a named session starts or resumes in Herdr, the extension also applies the saved pi session name to the current tab if the tab still has its default Herdr label.
+When a named session starts or resumes in Herdr, the extension applies the saved pi session name when the target still has its default label or the temporary `herdr-wrap` label.
 
 `/rename` builds naming context from the first user message plus up to three latest user messages. It ignores assistant replies, tool output, and attachments. Before sending context to the rename model, it redacts common secrets.
 
@@ -43,7 +39,7 @@ Run `/rename config` to choose a different model.
 
 After you choose a model, `pi-rename` uses only that model. Choose `Use default` in `/rename config` to return to the default.
 
-You can also edit `~/.config/pi/extensions/pi-rename.json` manually:
+You can also edit `$PI_CODING_AGENT_DIR/extensions/pi-rename.json` manually:
 
 ```json
 {
@@ -53,13 +49,19 @@ You can also edit `~/.config/pi/extensions/pi-rename.json` manually:
 
 ## Herdr behavior
 
-The extension uses `HERDR_PANE_ID` to find the current Herdr pane, then renames that pane's tab.
+Herdr tab renaming requires the `herdr` CLI. If it is unavailable, the extension still renames the pi session.
 
-On session startup or resume, it only auto-renames tabs that still have the default Herdr label, such as the tab number. It does not overwrite custom Herdr tab labels.
+The extension uses `HERDR_PANE_ID` to find the current Herdr pane. With one pane in the tab, it renames both the pane and tab. With sibling panes, it renames only the current pane.
 
-On quit, the Herdr tab keeps the last session name.
+On session startup or resume, it does not overwrite custom Herdr labels. It recognizes the temporary label from the Nushell `herdr-wrap` wrapper so saved session names still apply.
+
+On quit, the target keeps the last session name.
 
 If pi is not running inside Herdr, only the pi session name is updated.
+
+## Release notes
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

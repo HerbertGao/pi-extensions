@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
-import type { Api, Model, ProviderHeaders } from "@earendil-works/pi-ai"
+import type { Api, Model } from "@earendil-works/pi-ai"
 import {
   getAgentDir,
   type ExtensionContext,
@@ -20,12 +20,6 @@ export interface RecapModelPreference {
   readonly id: string
 }
 
-export interface FastModelAuth {
-  readonly model: Model<Api>
-  readonly apiKey: string
-  readonly headers: ProviderHeaders | undefined
-}
-
 export type RecapModelConfig =
   | { readonly kind: "missing" }
   | { readonly kind: "invalid" }
@@ -34,7 +28,7 @@ export type RecapModelConfig =
 export type ResolvedRecapModelAuth =
   | {
       readonly status: "ok"
-      readonly auth: FastModelAuth
+      readonly auth: Model<Api>
       readonly source: "configured" | "default"
     }
   | { readonly status: "invalid-config" }
@@ -66,8 +60,8 @@ export function formatRecapModelKey({
   return `${provider}/${id}`
 }
 
-export function formatAuthModelKey(auth: FastModelAuth): string {
-  return `${auth.model.provider}/${auth.model.id}`
+export function formatAuthModelKey(auth: Model<Api>): string {
+  return `${auth.provider}/${auth.id}`
 }
 
 export function parseModelSpec(
@@ -127,21 +121,15 @@ export function resolveInitialModelConfig(): RecapModelConfig {
 async function getModelAuth(
   ctx: ExtensionContext,
   modelPreference: RecapModelPreference,
-): Promise<FastModelAuth | undefined> {
+): Promise<Model<Api> | undefined> {
   const model = ctx.modelRegistry.find(
     modelPreference.provider,
     modelPreference.id,
   )
   if (!model) return undefined
 
-  const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
-  return auth.ok && auth.apiKey
-    ? {
-        model,
-        apiKey: auth.apiKey,
-        headers: auth.headers,
-      }
-    : undefined
+  const auth = await ctx.modelRegistry.getProviderAuth(model.provider)
+  return auth?.auth.apiKey ? model : undefined
 }
 
 export async function getRecapModelAuth(
@@ -181,8 +169,8 @@ export async function getAuthenticatedTextModelPreferences(
     .filter((model) => model.input.includes("text"))
   const authenticatedModels = await Promise.all(
     models.map(async (model) => {
-      const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
-      return auth.ok && auth.apiKey ? toModelPreference(model) : undefined
+      const auth = await ctx.modelRegistry.getProviderAuth(model.provider)
+      return auth?.auth.apiKey ? toModelPreference(model) : undefined
     }),
   )
 

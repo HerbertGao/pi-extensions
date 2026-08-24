@@ -180,7 +180,7 @@ function buildNumberInputSubmenu(
 
 /** Section tabs for /ccstyle — matches Zentui-style "A / B / C" headers. */
 type CcstyleSection = {
-	id: "style" | "editor" | "diff" | "thinking" | "feature";
+	id: "style" | "diff" | "thinking" | "ui" | "feature";
 	label: string;
 	items: any[];
 };
@@ -421,6 +421,7 @@ export async function showCcstylePanel(
 		const onSettingChange = (id: string, value: string) => {
 			const featureToggle = featureToggles[id];
 			if (featureToggle) {
+				// SAFETY: featureToggles contains only boolean keys from Config.
 				(config as unknown as Record<string, boolean>)[id] = value === "on";
 				featureToggle.apply(value === "on");
 				saveConfig();
@@ -550,11 +551,14 @@ export async function showCcstylePanel(
 				items: [thinkingTitleSetting, thinkingPreviewSetting, thinkingAnimationSetting],
 			},
 			{
+				id: "ui",
+				label: "UI",
+				items: [startupHeaderSetting, scrollStepSetting],
+			},
+			{
 				id: "feature",
 				label: "Feature",
 				items: [
-					startupHeaderSetting,
-					scrollStepSetting,
 					sessionReferenceToggle.setting,
 					subagentAutocompleteToggle.setting,
 					contextCommandToggle.setting,
@@ -588,6 +592,7 @@ export async function showCcstylePanel(
 
 		/** 数值项：当前选中项有 submenu + values 时，Space 仅循环预设，不打开子面板。 */
 		const cyclePresetInList = (list: InstanceType<typeof SettingsList>): boolean => {
+			// SAFETY: SettingsList owns these stable fields used by its built-in input handler.
 			const internal = list as unknown as {
 				submenuComponent: unknown;
 				items: {

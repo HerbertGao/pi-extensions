@@ -1,8 +1,28 @@
-import { spawn } from "node:child_process"
-import { mkdir } from "node:fs/promises"
+import { execFile, spawn } from "node:child_process"
+import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { getAgentDir, type ExtensionAPI } from "@earendil-works/pi-coding-agent"
+import { fileURLToPath } from "node:url"
+import { promisify } from "node:util"
+import { diagramKind, render as renderNativeMermaid } from "grok-mermaid"
+import {
+  Box,
+  CancellableLoader,
+  deleteKittyImage,
+  getCapabilities,
+  Image,
+  matchesKey,
+  Spacer,
+  Text,
+  type Component,
+  type TUI,
+} from "@earendil-works/pi-tui"
+import {
+  getAgentDir,
+  type ExtensionAPI,
+  type ExtensionCommandContext,
+  type Theme,
+} from "@earendil-works/pi-coding-agent"
 
 type TextBlock = {
   type: "text"
@@ -20,30 +40,53 @@ type MessageEntry = {
   message: unknown
 }
 
+type MermaidFenceLanguage = "mermaid" | "mmd"
+
+type NativeMermaidMode = "off" | "final" | "streaming"
+
+type NativeStatus =
+  | { kind: "rendered"; width: number }
+  | { kind: "skipped"; reason: SkipReason }
+
+type SkipReason =
+  | { kind: "disabled" }
+  | { kind: "mmd-fence" }
+  | { kind: "unsupported" }
+  | { kind: "invalid" }
+  | { kind: "too-wide"; width: number; availableWidth: number }
+  | { kind: "warnings" }
+
 type MermaidDiagram = {
   source: string
   diagramType: string
   label: string
+  fenceLanguage: MermaidFenceLanguage
   messageOffset: number
   discoveredIndex: number
+  nativeStatus: NativeStatus
 }
 
-const SCAN_ASSISTANT_MESSAGE_LIMIT = 50
+type NativeMermaidConfig = {
+  mode: NativeMermaidMode
+  availableWidth: number
+}
+
+type PiSettings = {
+  outputPad?: 0 | 1
+  markdown?: {
+    mermaid?: NativeMermaidMode
+  }
+}
+
+const execFileAsync = promisify(execFile)
 const OUTPUT_DIR = path.join(getAgentDir(), "artifacts", "mermaid")
+const HERDR_PLUGIN_ID = "pi-mermaid-open"
+const HERDR_PLUGIN_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "herdr-plugin",
+)
 const MERMAID_FENCE_PATTERN = /```\s*(mermaid|mmd)\b[^\n]*\n([\s\S]*?)```/gi
-const KNOWN_TYPES = [
-  "sequenceDiagram",
-  "classDiagram",
-  "stateDiagram",
-  "erDiagram",
-  "flowchart",
-  "graph",
-  "gantt",
-  "journey",
-  "pie",
-  "mindmap",
-  "timeline",
-]
 
 function isTextBlock(value: unknown): value is TextBlock {
   return (
@@ -99,18 +142,7 @@ function classifyDiagram(source: string): string {
     .map((line) => line.trim())
     .find((line) => line.length > 0 && !line.startsWith("%%"))
 
-  if (!firstMeaningfulLine) return "mermaid"
-
-  for (const type of KNOWN_TYPES) {
-    if (
-      firstMeaningfulLine === type ||
-      firstMeaningfulLine.startsWith(`${type} `)
-    ) {
-      return type
-    }
-  }
-
-  return firstMeaningfulLine.split(/\s+/)[0] ?? "mermaid"
+  return firstMeaningfulLine?.split(/\s+/)[0] ?? "mermaid"
 }
 
 function extractTitle(source: string): string | undefined {
@@ -152,12 +184,71 @@ function conciseError(stderr: string, stdout: string): string {
   return text || "Unknown error"
 }
 
-function discoverDiagrams(entries: readonly unknown[]): MermaidDiagram[] {
+function getNativeMermaidMode(settings: PiSettings): NativeMermaidMode {
+  const mode = settings.markdown?.mermaid
+  return mode === "off" || mode === "final" ? mode : "streaming"
+}
+
+async function readNativeMermaidConfig(): Promise<NativeMermaidConfig> {
+  let settings: PiSettings = {}
+  try {
+    settings = JSON.parse(
+      await readFile(path.join(getAgentDir(), "settings.json"), "utf8"),
+    ) as PiSettings
+  } catch {
+    // Pi's defaults are streaming Mermaid with one column of output padding.
+  }
+
+  const columns = process.stdout.columns ?? 80
+  const outputPad = settings.outputPad ?? 1
+
+  return {
+    mode: getNativeMermaidMode(settings),
+    availableWidth: Math.max(1, columns - outputPad * 2),
+  }
+}
+
+export function getNativeStatus(
+  source: string,
+  fenceLanguage: MermaidFenceLanguage,
+  config: NativeMermaidConfig,
+): NativeStatus {
+  if (config.mode === "off")
+    return { kind: "skipped", reason: { kind: "disabled" } }
+  if (fenceLanguage !== "mermaid") {
+    return { kind: "skipped", reason: { kind: "mmd-fence" } }
+  }
+  if (diagramKind(source) === null) {
+    return { kind: "skipped", reason: { kind: "unsupported" } }
+  }
+
+  const art = renderNativeMermaid(source)
+  if (!art) return { kind: "skipped", reason: { kind: "invalid" } }
+  if (art.width > config.availableWidth) {
+    return {
+      kind: "skipped",
+      reason: {
+        kind: "too-wide",
+        width: art.width,
+        availableWidth: config.availableWidth,
+      },
+    }
+  }
+  if (art.warnings.length > 0) {
+    return { kind: "skipped", reason: { kind: "warnings" } }
+  }
+
+  return { kind: "rendered", width: art.width }
+}
+
+function discoverDiagrams(
+  entries: readonly unknown[],
+  nativeConfig: NativeMermaidConfig,
+): MermaidDiagram[] {
   const assistantMessages = entries
     .filter(isMessageEntry)
     .map((entry) => entry.message)
     .filter(isAssistantMessage)
-    .slice(-SCAN_ASSISTANT_MESSAGE_LIMIT)
     .toReversed()
 
   const diagrams: MermaidDiagram[] = []
@@ -168,6 +259,9 @@ function discoverDiagrams(entries: readonly unknown[]): MermaidDiagram[] {
       const source = trimOuterBlankLines(match[2] ?? "")
       if (!source) continue
 
+      const fenceLanguage = (
+        match[1] ?? "mermaid"
+      ).toLowerCase() as MermaidFenceLanguage
       const discoveredIndex = diagrams.length + 1
       const diagramType = classifyDiagram(source)
       const label = extractTitle(source) ?? `${diagramType} ${discoveredIndex}`
@@ -176,8 +270,10 @@ function discoverDiagrams(entries: readonly unknown[]): MermaidDiagram[] {
         source,
         diagramType,
         label,
+        fenceLanguage,
         messageOffset: messageIndex + 1,
         discoveredIndex,
+        nativeStatus: getNativeStatus(source, fenceLanguage, nativeConfig),
       })
     }
   })
@@ -185,36 +281,72 @@ function discoverDiagrams(entries: readonly unknown[]): MermaidDiagram[] {
   return diagrams
 }
 
+export function formatNativeStatus(status: NativeStatus): string {
+  if (status.kind === "rendered") return `✓ rendered · ${status.width} cols`
+
+  switch (status.reason.kind) {
+    case "disabled":
+      return "✗ skipped · Mermaid disabled"
+    case "mmd-fence":
+      return "✗ skipped · mmd fence"
+    case "unsupported":
+      return "✗ skipped · unsupported"
+    case "invalid":
+      return "✗ skipped · invalid"
+    case "too-wide":
+      return `✗ skipped · too wide (${status.reason.width} > ${status.reason.availableWidth})`
+    case "warnings":
+      return "⚠ skipped · parser warnings"
+  }
+}
+
 function pickerLabel(diagram: MermaidDiagram): string {
   return [
-    `${diagram.discoveredIndex}. ${relativeMessageLabel(diagram.messageOffset)}`,
+    formatNativeStatus(diagram.nativeStatus),
     diagram.diagramType,
     diagram.label,
+    relativeMessageLabel(diagram.messageOffset),
   ].join(" · ")
 }
 
-async function createSvgArtifactPath(diagram: MermaidDiagram): Promise<string> {
+async function createPngArtifactPath(diagram: MermaidDiagram): Promise<string> {
   await mkdir(OUTPUT_DIR, { recursive: true })
   const baseName = [
     timestampForFilename(),
     slugify(diagram.diagramType),
     slugify(diagram.label),
   ].join("-")
-  return path.join(OUTPUT_DIR, `${baseName}.svg`)
+  return path.join(OUTPUT_DIR, `${baseName}.png`)
 }
 
-async function renderMermaidToSvg(
+async function renderMermaidToPng(
   source: string,
-  svgPath: string,
+  pngPath: string,
 ): Promise<{
   ok: boolean
   error?: string
 }> {
+  const bunx = os.platform() === "win32" ? "bunx.cmd" : "bunx"
+  let command = bunx
+  try {
+    await execFileAsync(bunx, ["--version"])
+  } catch {
+    command = os.platform() === "win32" ? "npx.cmd" : "npx"
+  }
+
   return new Promise((resolve) => {
-    const command = os.platform() === "win32" ? "bunx.cmd" : "bunx"
     const child = spawn(
       command,
-      ["-y", "@mermaid-js/mermaid-cli", "-i", "-", "-o", svgPath],
+      [
+        "-y",
+        "@mermaid-js/mermaid-cli",
+        "-i",
+        "-",
+        "-o",
+        pngPath,
+        "--scale",
+        "4",
+      ],
       {
         env: { ...process.env, PUPPETEER_CHROME_SKIP_DOWNLOAD: "true" },
       },
@@ -248,45 +380,126 @@ async function renderMermaidToSvg(
   })
 }
 
-async function openSvg(
-  pi: ExtensionAPI,
-  svgPath: string,
-): Promise<{
-  ok: boolean
-  error?: string
-}> {
-  const platform = os.platform()
-  if (platform === "darwin") {
-    const result = await pi.exec("open", [svgPath])
-    return result.code === 0
-      ? { ok: true }
-      : { ok: false, error: conciseError(result.stderr, result.stdout) }
+class MermaidImageViewer implements Component {
+  private readonly box: Box
+  private readonly done: () => void
+  private readonly image: Image
+  private readonly tui: TUI
+
+  constructor(
+    base64Data: string,
+    pngPath: string,
+    diagram: MermaidDiagram,
+    tui: TUI,
+    theme: Theme,
+    done: () => void,
+  ) {
+    this.done = done
+    this.tui = tui
+    this.box = new Box(1, 1, (text) => theme.bg("customMessageBg", text))
+    this.box.addChild(new Text(theme.fg("accent", diagram.label), 0, 0))
+    this.box.addChild(
+      new Text(theme.fg("dim", formatNativeStatus(diagram.nativeStatus)), 0, 0),
+    )
+    this.box.addChild(new Spacer(1))
+    this.image = new Image(
+      base64Data,
+      "image/png",
+      { fallbackColor: (text) => theme.fg("muted", text) },
+      {
+        maxWidthCells: Math.max(10, tui.terminal.columns - 8),
+        maxHeightCells: Math.max(4, tui.terminal.rows - 8),
+        filename: pngPath,
+      },
+    )
+    this.box.addChild(this.image)
+    this.box.addChild(new Spacer(1))
+    this.box.addChild(new Text(theme.fg("dim", "Esc or Enter to close"), 0, 0))
   }
 
-  if (platform === "linux") {
-    const result = await pi.exec("xdg-open", [svgPath])
-    return result.code === 0
-      ? { ok: true }
-      : { ok: false, error: conciseError(result.stderr, result.stdout) }
+  handleInput(data: string): void {
+    if (matchesKey(data, "escape") || matchesKey(data, "return")) this.done()
   }
 
-  if (platform === "win32") {
-    const result = await pi.exec("cmd", ["/c", "start", "", svgPath])
-    return result.code === 0
-      ? { ok: true }
-      : { ok: false, error: conciseError(result.stderr, result.stdout) }
+  render(width: number): string[] {
+    return this.box.render(width)
   }
 
-  return { ok: false, error: `Unsupported platform: ${platform}` }
+  invalidate(): void {
+    this.box.invalidate()
+  }
+
+  dispose(): void {
+    const imageId = this.image.getImageId()
+    if (imageId !== undefined) {
+      this.tui.terminal.write(deleteKittyImage(imageId))
+    }
+  }
+}
+
+async function showPngInHerdrOverlay(pngPath: string): Promise<boolean> {
+  try {
+    await execFileAsync("herdr", [
+      "plugin",
+      "link",
+      HERDR_PLUGIN_ROOT,
+      "--enabled",
+    ])
+    await execFileAsync("herdr", [
+      "plugin",
+      "pane",
+      "open",
+      "--plugin",
+      HERDR_PLUGIN_ID,
+      "--entrypoint",
+      "viewer",
+      "--placement",
+      "overlay",
+      "--env",
+      `PI_MERMAID_OPEN_PNG=${pngPath}`,
+      "--focus",
+    ])
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function showPngInTerminal(
+  ctx: ExtensionCommandContext,
+  pngPath: string,
+  diagram: MermaidDiagram,
+): Promise<void> {
+  const base64Data = (await readFile(pngPath)).toString("base64")
+  await ctx.ui.custom<void>(
+    (tui, theme, _keybindings, done) =>
+      new MermaidImageViewer(base64Data, pngPath, diagram, tui, theme, done),
+    {
+      overlay: true,
+      overlayOptions: {
+        width: "92%",
+        maxHeight: "92%",
+        margin: 2,
+      },
+    },
+  )
 }
 
 export default function (pi: ExtensionAPI): void {
   pi.registerCommand("mermaid-open", {
-    description: "Open a Mermaid diagram from recent assistant messages as SVG",
+    description: "Open a skipped Mermaid diagram in a terminal popup",
     handler: async (_args, ctx) => {
       await ctx.waitForIdle()
 
-      const diagrams = discoverDiagrams(ctx.sessionManager.getBranch())
+      const nativeConfig = await readNativeMermaidConfig()
+      const diagrams = discoverDiagrams(
+        ctx.sessionManager.getBranch(),
+        nativeConfig,
+      )
+      const skippedDiagrams = diagrams.filter(
+        (diagram) => diagram.nativeStatus.kind === "skipped",
+      )
+
       if (diagrams.length === 0) {
         ctx.ui.notify(
           "No Mermaid diagrams found in recent assistant messages.",
@@ -294,52 +507,89 @@ export default function (pi: ExtensionAPI): void {
         )
         return
       }
+      if (skippedDiagrams.length === 0) {
+        ctx.ui.notify("No skipped Mermaid diagrams found.", "info")
+        return
+      }
 
-      let selected = diagrams[0]
-      if (ctx.mode === "tui" && diagrams.length > 1) {
-        const labels = diagrams.map(pickerLabel)
-        const choice = await ctx.ui.select("Open Mermaid diagram:", labels)
+      let selected = skippedDiagrams[0]
+      if (ctx.mode === "tui" && skippedDiagrams.length > 1) {
+        const labels = skippedDiagrams.map(pickerLabel)
+        const choice = await ctx.ui.select(
+          "Open skipped Mermaid diagram:",
+          labels,
+        )
         if (!choice) return
-        selected = diagrams[labels.indexOf(choice)]
+        selected = skippedDiagrams[labels.indexOf(choice)]
       }
 
       if (!selected) return
 
-      let svgPath: string
+      const imageCapabilities = getCapabilities()
+      const canDisplayInHerdr =
+        ctx.mode === "tui" &&
+        Boolean(process.env["HERDR_PANE_ID"]) &&
+        imageCapabilities.images === "kitty"
+      const canDisplayInTerminal =
+        ctx.mode === "tui" && Boolean(imageCapabilities.images)
+      const temporaryDirectory = canDisplayInTerminal
+        ? await mkdtemp(path.join(os.tmpdir(), "pi-mermaid-open-"))
+        : undefined
+      const pngPath = temporaryDirectory
+        ? path.join(temporaryDirectory, "diagram.png")
+        : await createPngArtifactPath(selected)
+
+      if (ctx.mode === "tui") {
+        ctx.ui.setWidget("pi-mermaid-open", (tui, theme) => {
+          const color = (text: string) => theme.fg("dim", text)
+          return new CancellableLoader(
+            tui,
+            color,
+            color,
+            "rendering Mermaid...",
+          )
+        })
+      }
+
+      let handedOffToHerdr = false
       try {
-        svgPath = await createSvgArtifactPath(selected)
-      } catch (error) {
-        ctx.ui.notify(
-          `Failed to create Mermaid artifact path: ${error instanceof Error ? error.message : String(error)}`,
-          "error",
-        )
-        return
-      }
+        const renderResult = await renderMermaidToPng(selected.source, pngPath)
+        if (!renderResult.ok) {
+          ctx.ui.notify(
+            `Mermaid render failed\nError: ${renderResult.error ?? "Unknown error"}`,
+            "error",
+          )
+          return
+        }
 
-      const renderResult = await renderMermaidToSvg(selected.source, svgPath)
-      if (!renderResult.ok) {
-        ctx.ui.notify(
-          `Mermaid render failed\nError: ${renderResult.error ?? "Unknown error"}`,
-          "error",
-        )
-        return
-      }
+        if (canDisplayInHerdr) {
+          handedOffToHerdr = await showPngInHerdrOverlay(pngPath)
+          if (handedOffToHerdr) return
+          ctx.ui.notify(
+            "Herdr overlay unavailable; opening Mermaid in Pi instead.",
+            "warning",
+          )
+        }
 
-      if (ctx.mode !== "tui") {
-        ctx.ui.notify(`Rendered Mermaid SVG: ${svgPath}`, "info")
-        return
-      }
+        if (ctx.mode !== "tui" || !canDisplayInTerminal) {
+          ctx.ui.notify(
+            canDisplayInTerminal
+              ? `Rendered Mermaid PNG: ${pngPath}`
+              : `Saved Mermaid PNG: ${pngPath}\nKitty graphics are unavailable.`,
+            canDisplayInTerminal ? "info" : "warning",
+          )
+          return
+        }
 
-      const openResult = await openSvg(pi, svgPath)
-      if (!openResult.ok) {
-        ctx.ui.notify(
-          `Rendered SVG but failed to open it.\nSVG: ${svgPath}\nError: ${openResult.error ?? "Unknown error"}`,
-          "warning",
-        )
-        return
+        await showPngInTerminal(ctx, pngPath, selected)
+      } finally {
+        if (ctx.mode === "tui") {
+          ctx.ui.setWidget("pi-mermaid-open", undefined)
+        }
+        if (temporaryDirectory && !handedOffToHerdr) {
+          await rm(temporaryDirectory, { recursive: true, force: true })
+        }
       }
-
-      ctx.ui.notify(`Opened Mermaid SVG: ${svgPath}`, "info")
     },
   })
 }

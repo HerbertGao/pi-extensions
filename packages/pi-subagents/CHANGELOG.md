@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Ctrl+C closes the conversation viewer** when it is not composing a steering message.
+- **Cross-extension callers can consume settled RPC-spawned results** with `subagents:rpc:consume`, suppressing a duplicate completion notification after another extension has already shown the result.
 - **One malformed agent file no longer aborts extension activation** ([#212](https://github.com/tintinweb/pi-subagents/issues/212) — thanks [@daromaj](https://github.com/daromaj)). Unreadable and unparseable files are skipped with a path-specific warning, including the earlier source that remains active when a broken file was an override.
 
 ## [0.15.1] - 2026-08-10
