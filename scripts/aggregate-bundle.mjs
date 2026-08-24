@@ -71,12 +71,7 @@ async function packWorkspacePackages(tarballsDir) {
   const packagesDir = join(root, "packages")
   const packageEntries = await readdir(packagesDir, { withFileTypes: true })
   const packageDirs = packageEntries
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        entry.name.startsWith("pi-") &&
-        entry.name !== "pi-extensions",
-    )
+    .filter((entry) => entry.isDirectory() && entry.name !== "pi-extensions")
     .map((entry) => join(packagesDir, entry.name))
 
   await mkdir(tarballsDir, { recursive: true })

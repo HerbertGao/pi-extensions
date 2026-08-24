@@ -15,6 +15,11 @@
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
       "reviewedCommit": "e971a39d1685590de81bd445e3a829279d216039"
+    },
+    {
+      "name": "resume-from",
+      "repository": "https://github.com/alexei-led/resume-from",
+      "reviewedCommit": "e1dad0dd4ae5fb6a5a50b905dd4359a29fd0910e"
     }
   ],
   "companions": [
@@ -53,10 +58,6 @@
     {
       "package": "remote-pi",
       "repository": "https://github.com/jacobaraujo7/remote_pi"
-    },
-    {
-      "package": "resume-from",
-      "repository": "https://github.com/alexei-led/resume-from"
     },
     {
       "package": "@czottmann/pi-automode",

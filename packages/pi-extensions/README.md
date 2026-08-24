@@ -10,7 +10,7 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer.
 
-The package bundles 11 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions`, plus the following upstream packages under their original names:
+The package bundles 12 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions` and `@herbertgao/resume-from`, plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.7.0`
@@ -21,12 +21,11 @@ The package bundles 11 active `@herbertgao/*` child packages, including `@herber
 - `pi-lens@4.1.1`
 - `pi-web-access@0.24.2`
 - `remote-pi@0.7.0`
-- `resume-from@0.2.0`
 - `@czottmann/pi-automode@1.12.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
-`pi-lens@4.1.1` improves diagnostics, cache, and LSP observability; prevents session-switch crashes; restores oxlint warnings; speeds large ignored-tree scans; and retries failed log writes once. `pi-automode@1.12.0` adds its read-only diagnostics tool and skill, plus stricter bounded policy handling. `pi-web-access@0.24.2` prefers Codex-backed OpenAI search for Codex sessions and fixes Windows browser-cookie handling.
+`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.1` improves diagnostics, cache, and LSP observability; prevents session-switch crashes; restores oxlint warnings; speeds large ignored-tree scans; and retries failed log writes once. `pi-automode@1.12.0` adds its read-only diagnostics tool and skill, plus stricter bounded policy handling. `pi-web-access@0.24.2` prefers Codex-backed OpenAI search for Codex sessions and fixes Windows browser-cookie handling.
 
 If `pi-footer` was installed separately before upgrading to an aggregate release that includes it, remove the standalone source shown by `pi list` so only the bundled copy loads. For the pinned standalone install used while preparing this integration:
 

@@ -53,6 +53,7 @@
     "@herbertgao/pi-stash": "0.1.2",
     "@herbertgao/pi-subagents": "0.16.1",
     "@herbertgao/pi-titlebar-spinner": "0.1.3",
+    "@herbertgao/resume-from": "0.2.0",
     "@juicesharp/rpiv-ask-user-question": "2.7.0",
     "@juicesharp/rpiv-config": "^2.7.0",
     "@modelcontextprotocol/client": "2.0.0",
@@ -91,7 +92,6 @@
     "qrcode-terminal": "^0.12.0",
     "recheck": "^4.5.0",
     "remote-pi": "0.7.0",
-    "resume-from": "0.2.0",
     "smol-toml": "^1.6.1",
     "strip-json-comments": "^5.0.3",
     "turndown": "^7.2.0",
@@ -119,6 +119,7 @@
     "@herbertgao/pi-stash",
     "@herbertgao/pi-subagents",
     "@herbertgao/pi-titlebar-spinner",
+    "@herbertgao/resume-from",
     "@juicesharp/rpiv-ask-user-question",
     "@narumitw/pi-btw",
     "@pi-plugins/fast-mode",
@@ -126,8 +127,7 @@
     "pi-lens",
     "pi-mcp-adapter",
     "pi-web-access",
-    "remote-pi",
-    "resume-from"
+    "remote-pi"
   ],
   "engines": {
     "node": ">=24"
@@ -137,6 +137,7 @@
       "./node_modules/@dietrichgebert/ponytail/pi-extension/index.js",
       "./node_modules/@herbertgao/pi-cc-extensions/extensions/index.ts",
       "./node_modules/@herbertgao/pi-copy-response/src/index.ts",
+      "./node_modules/@herbertgao/resume-from/shims/pi/extensions/resume-from.js",
       "./node_modules/@herbertgao/pi-handoff/src/index.ts",
       "./node_modules/@herbertgao/pi-handoff/src/session-query.ts",
       "./node_modules/@herbertgao/pi-inline-skills/src/index.ts",
@@ -154,7 +155,6 @@
       "./node_modules/pi-lens/dist/index.js",
       "./node_modules/pi-web-access/index.ts",
       "./node_modules/remote-pi/dist/index.js",
-      "./node_modules/resume-from/shims/pi/extensions/resume-from.js",
       "./node_modules/@czottmann/pi-automode/extensions/auto-mode.ts",
       "./node_modules/pi-footer/src/index.ts"
     ],

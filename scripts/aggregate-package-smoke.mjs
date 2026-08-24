@@ -1320,14 +1320,23 @@ try {
     }
   }
 
-  const resumeFromRoot = join(packageRoot, "node_modules", "resume-from")
+  const resumeFromRoot = join(
+    packageRoot,
+    "node_modules",
+    "@herbertgao",
+    "resume-from",
+  )
   const resumeFromManifestPath = join(resumeFromRoot, "package.json")
   const resumeFromManifest = parseJson(
     await readFile(resumeFromManifestPath, "utf8"),
     resumeFromManifestPath,
   )
-  const expectedResumeFromVersion = sourceManifest.dependencies["resume-from"]
-  if (resumeFromManifest.version !== expectedResumeFromVersion) {
+  const expectedResumeFromVersion =
+    sourceManifest.dependencies["@herbertgao/resume-from"]
+  if (
+    resumeFromManifest.name !== "@herbertgao/resume-from" ||
+    resumeFromManifest.version !== expectedResumeFromVersion
+  ) {
     throw new Error(
       `Expected bundled resume-from ${expectedResumeFromVersion}, got ${resumeFromManifest.version}`,
     )
@@ -1384,7 +1393,7 @@ try {
       "node_modules/@herbertgao/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
-      "node_modules/resume-from/LICENSE",
+      "node_modules/@herbertgao/resume-from/LICENSE",
       "node_modules/remote-pi/service-templates/launchd.plist.template",
       "node_modules/remote-pi/service-templates/systemd.service.template",
       "node_modules/remote-pi/service-templates/task-launcher.vbs.template",
@@ -1459,7 +1468,7 @@ try {
     ["@herbertgao/pi-recap/src/index.ts", "commands", "recap"],
     ["@herbertgao/pi-rename/src/index.ts", "commands", "rename"],
     [
-      "resume-from/shims/pi/extensions/resume-from.js",
+      "@herbertgao/resume-from/shims/pi/extensions/resume-from.js",
       "commands",
       "resume-from",
     ],

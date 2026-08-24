@@ -25,6 +25,7 @@ The aggregate package bundles the active maintained packages below plus the pinn
 | [`@herbertgao/pi-preferred-thinking`](packages/pi-preferred-thinking) | Persist preferred thinking levels per model.                                | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-preferred-thinking) |
 | [`@herbertgao/pi-recap`](packages/pi-recap)                           | Generate one-line session recaps.                                           | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-recap)                           |
 | [`@herbertgao/pi-rename`](packages/pi-rename)                         | Generate session names and rename Herdr tabs.                               | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-rename)                         |
+| [`@herbertgao/resume-from`](packages/resume-from)                     | Continue sessions across Pi, Claude Code, and Codex.                        | [`resume-from`](https://github.com/alexei-led/resume-from)                                                               |
 | [`@herbertgao/pi-stash`](packages/pi-stash)                           | Stash and restore one editor draft.                                         | [`@tifan/pi-stash`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-stash)                           |
 | [`@herbertgao/pi-subagents`](packages/pi-subagents)                   | Autonomous subagents with HerbertGao's agent-name and color customizations. | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents)                                                   |
 | [`@herbertgao/pi-titlebar-spinner`](packages/pi-titlebar-spinner)     | Show activity in the terminal titlebar.                                     | [`@tifan/pi-titlebar-spinner`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-titlebar-spinner)     |
@@ -45,7 +46,6 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.24.2`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
-| [`resume-from`](https://github.com/alexei-led/resume-from)                      | `0.2.0`        | Import sessions across Pi, Claude, and Codex. |
 | [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.12.0`       | Auto-mode guardrails and diagnostics.         |
 
 ### Remote Pi trust boundary
@@ -68,4 +68,4 @@ See [`docs/maintenance.md`](docs/maintenance.md) for per-package upstream baseli
 
 ## Attribution
 
-The Tifan-derived packages and tintinweb-derived subagents package retain their original MIT notices and upstream links. HerbertGao's changes are maintained in this independent repository.
+The Tifan-derived packages, tintinweb-derived subagents package, and Alexei Led's `resume-from` retain their original MIT notices and upstream links. HerbertGao's changes are maintained in this independent repository.
