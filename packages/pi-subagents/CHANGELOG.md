@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.1
+
+### Patch Changes
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Port Ctrl+C conversation-viewer dismissal and cross-extension consumption of settled subagent results while preserving local spawn and ownership safeguards.
+
 ## 0.16.0
 
 ### Minor Changes

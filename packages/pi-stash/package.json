@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-stash",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Stash one pi draft and restore it after the next message.",
   "keywords": [
     "pi",

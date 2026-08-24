@@ -4,6 +4,12 @@
 
 ### Minor Changes
 
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Open Mermaid diagrams skipped by Pi's native renderer with reason-aware selection, terminal image viewing, and an optional Herdr overlay.
+
+## 0.2.0
+
+### Minor Changes
+
 - [`b9d0e7e`](https://github.com/tifandotme/pi-extensions/commit/b9d0e7ec0e5e74afafba59e38334311f50e8615f) Thanks [@tifandotme](https://github.com/tifandotme)! - Add a Herdr overlay for viewing rendered Mermaid diagrams with Kitty graphics, zoom, and pan controls.
 
 - [`efc30c3`](https://github.com/tifandotme/pi-extensions/commit/efc30c353f435081efa00d3d30c0cd5293b33f8b) Thanks [@tifandotme](https://github.com/tifandotme)! - Update `/mermaid-open` to focus on diagrams Pi skipped, label skip reasons, show progress while rendering, and display selected diagrams as temporary PNGs in a terminal image popup instead of opening a browser.

@@ -4,6 +4,12 @@
 
 ### Minor Changes
 
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use Pi 0.84.2 model-registry APIs, show rename progress, and synchronize generated names across Herdr panes and tabs.
+
+## 0.5.0
+
+### Minor Changes
+
 - [`b2ea184`](https://github.com/tifandotme/pi-extensions/commit/b2ea1841e99243aa4773bd5c33f43c40248859db) Thanks [@tifandotme](https://github.com/tifandotme)! - Update Herdr synchronization to rename the current pane in split tabs and both the pane and tab in single-pane tabs.
 
 ## 0.4.3

@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.58
+
+### Patch Changes
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions through 0.8.66 with a Memory context partition, hoverable context overlays, and a dedicated UI settings tab.
+
 ## 0.8.57
 
 ### Patch Changes
