@@ -1,5 +1,11 @@
 # @tifan/pi-preferred-thinking
 
+## 0.4.0
+
+### Minor Changes
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Adopt Pi 0.84.2 native per-model thinking pins from enabledModels and retire the extension-specific preference file.
+
 ## 1.0.0
 
 ### Major Changes

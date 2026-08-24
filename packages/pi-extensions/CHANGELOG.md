@@ -1,5 +1,39 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.9
+
+### Patch Changes
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Port Ctrl+C conversation-viewer dismissal and cross-extension consumption of settled subagent results while preserving local spawn and ownership safeguards.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Advance pi-stash provenance through upstream 0.2.0 while preserving the local Alt+S shortcut that avoids Pi's built-in Ctrl+S bindings.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions through 0.8.66 with a Memory context partition, hoverable context overlays, and a dedicated UI settings tab.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Adopt prompt-marker handoffs that generate a handoff artifact and start a clean session, while retaining the session query tool and local rename package integration.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Open Mermaid diagrams skipped by Pi's native renderer with reason-aware selection, terminal image viewing, and an optional Herdr overlay.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Adopt Pi 0.84.2 native per-model thinking pins from enabledModels and retire the extension-specific preference file.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use Pi 0.84.2 model-registry completion and authentication APIs for recap generation and model selection.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use Pi 0.84.2 model-registry APIs, show rename progress, and synchronize generated names across Herdr panes and tabs.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-automode to 1.12.0 with read-only diagnostics, bundled diagnostics skill, stricter policy validation, and bounded matching and classifier requests.
+
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-web-access to 0.24.2 with model-aware default search routing and more reliable Windows browser-cookie access.
+
+- Updated dependencies [[`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d), [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d)]:
+  - @herbertgao/pi-subagents@0.16.1
+  - @herbertgao/pi-stash@0.1.2
+  - @herbertgao/pi-cc-extensions@0.8.58
+  - @herbertgao/pi-handoff@2.0.0
+  - @herbertgao/pi-mermaid-open@0.2.0
+  - @herbertgao/pi-preferred-thinking@0.4.0
+  - @herbertgao/pi-recap@0.4.5
+  - @herbertgao/pi-rename@0.5.0
+
 ## 2026.8.8
 
 ### Patch Changes

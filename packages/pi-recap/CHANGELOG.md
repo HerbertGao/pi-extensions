@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- [#116](https://github.com/HerbertGao/pi-extensions/pull/116) [`ecda398`](https://github.com/HerbertGao/pi-extensions/commit/ecda398b9a95212c512d53325c617e485e6ded8d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use Pi 0.84.2 model-registry completion and authentication APIs for recap generation and model selection.
+
+## 0.4.5
+
+### Patch Changes
+
 - [`12ef66c`](https://github.com/tifandotme/pi-extensions/commit/12ef66c7ec6efe04202c91f70e20cd97e9c167f3) Thanks [@tifandotme](https://github.com/tifandotme)! - Require Pi 0.84.2 or newer for recap generation.
 
 ## 0.4.4
