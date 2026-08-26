@@ -1,5 +1,33 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.12
+
+### Patch Changes
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions 0.8.67 with accurate context accounting, configurable dim thinking text, safer tool animation timing, and PowerShell command recognition.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use `HERDR_TEMPORARY_LABEL` to apply saved session names without overwriting custom Herdr labels.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync reviewed pi-subagents 0.18.2 features for effective model display, bounded Markdown viewing, foreground concurrency, BOM-safe agents, and RPC model-scope enforcement.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update rpiv-ask-user-question to 2.7.1 and align its bundled configuration dependency.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-automode to 1.13.0 with parsed shell-command policy checks and safe legacy configuration migration.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-mcp-adapter to 2.28.0 with namespace tools, cross-extension registration, progress, TTL, and recovery improvements.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-btw to 0.55.3 with reliable editor and search focus restoration after cancellation.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-lens to 4.1.2 with more reliable delayed diagnostics, process cleanup, and snapshot state.
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-web-access to 0.25.0 with opt-in proxy and cloud providers, GitHub-aware fetching, and Defuddle extraction fallback.
+
+- [#125](https://github.com/HerbertGao/pi-extensions/pull/125) [`5321c7e`](https://github.com/HerbertGao/pi-extensions/commit/5321c7edcf0ea83488231953dd2fe8ca5fe64018) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle eight reviewed Tifan packages directly under their upstream names instead of maintaining redundant local forks.
+
+- Updated dependencies [[`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96), [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96)]:
+  - @herbertgao/pi-cc-extensions@0.8.59
+  - @herbertgao/pi-subagents@0.17.0
+
 ## 2026.8.11
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.59
+
+### Patch Changes
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively sync pi-cc-extensions 0.8.67 with accurate context accounting, configurable dim thinking text, safer tool animation timing, and PowerShell command recognition.
+
 ## 0.8.58
 
 ### Patch Changes
