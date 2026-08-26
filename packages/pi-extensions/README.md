@@ -10,12 +10,20 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer.
 
-The package bundles 12 active `@herbertgao/*` child packages, including `@herbertgao/pi-cc-extensions` and `@herbertgao/resume-from`, plus the following upstream packages under their original names:
+The package bundles 4 active `@herbertgao/*` child packages—`pi-cc-extensions`, `resume-from`, `pi-stash`, and `pi-subagents`—plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.7.1`
 - `@narumitw/pi-btw@0.55.3`
 - `@pi-plugins/fast-mode@0.1.10`
+- `@tifan/pi-copy-response@0.2.6`
+- `@tifan/pi-handoff@2.0.1`
+- `@tifan/pi-inline-skills@1.0.5`
+- `@tifan/pi-mermaid-open@0.2.0`
+- `@tifan/pi-preferred-thinking@1.0.0`
+- `@tifan/pi-recap@0.4.5`
+- `@tifan/pi-rename@0.5.1`
+- `@tifan/pi-titlebar-spinner@0.1.3`
 - `pi-mcp-adapter@2.28.0`
 - `pi-footer@0.5.1`
 - `pi-lens@4.1.2`
@@ -67,7 +75,7 @@ For the intended compact status text, merge these optional companion settings in
 
 The copy command replaces an existing `pi-footer.json`; review or back it up first. Only one footer-replacement extension should be enabled at a time. Use `/footer` for interactive changes.
 
-Pi 0.84.1 or newer should use native `fullscreen` TUI mode. The deprecated `@herbertgao/pi-fixed-editor` legacy package is intentionally not bundled.
+Pi 0.84.1 or newer should use native `fullscreen` TUI mode.
 
 ### Remote Pi trust boundary
 
@@ -79,4 +87,4 @@ See the [repository README](https://github.com/HerbertGao/pi-extensions#readme) 
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Bundled Tifan package notices are included in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

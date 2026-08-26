@@ -19,7 +19,7 @@
     "format:check": "oxfmt --check . && bun run --cwd packages/pi-cc-extensions format:check && bun run --cwd packages/resume-from format:check",
     "lint": "oxlint . && bun run --cwd packages/pi-subagents lint && bun run --cwd packages/resume-from lint",
     "typecheck": "tsc --noEmit -p tsconfig.json && bun run --cwd packages/pi-subagents typecheck && bun run --cwd packages/pi-cc-extensions typecheck && bun run --cwd packages/resume-from typecheck",
-    "test": "node --test scripts/*.test.mjs && bun run --cwd packages/pi-fixed-editor test && bun run --cwd packages/pi-mermaid-open test && bun run --cwd packages/pi-rename test && bun run --cwd packages/pi-stash test && bun run --cwd packages/pi-subagents test && bun run --cwd packages/pi-cc-extensions test && bun run --cwd packages/resume-from test",
+    "test": "node --test scripts/*.test.mjs && bun run --cwd packages/pi-stash test && bun run --cwd packages/pi-subagents test && bun run --cwd packages/pi-cc-extensions test && bun run --cwd packages/resume-from test",
     "test:aggregate": "node scripts/aggregate-package-smoke.mjs",
     "test:pty:pi-cc": "node scripts/pi-cc-real-pty-smoke.mjs",
     "check:upstreams": "node scripts/check-upstreams.mjs --validate",

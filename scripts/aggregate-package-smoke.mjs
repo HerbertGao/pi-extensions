@@ -1369,6 +1369,72 @@ try {
     )
   }
 
+  const directTifanPackages = [
+    "@tifan/pi-copy-response",
+    "@tifan/pi-handoff",
+    "@tifan/pi-inline-skills",
+    "@tifan/pi-mermaid-open",
+    "@tifan/pi-preferred-thinking",
+    "@tifan/pi-recap",
+    "@tifan/pi-rename",
+    "@tifan/pi-titlebar-spinner",
+  ]
+  await Promise.all(
+    directTifanPackages.map(async (packageName) => {
+      const packageManifestPath = join(
+        packageRoot,
+        "node_modules",
+        ...packageName.split("/"),
+        "package.json",
+      )
+      const packageManifest = parseJson(
+        await readFile(packageManifestPath, "utf8"),
+        packageManifestPath,
+      )
+      const expectedVersion = sourceManifest.dependencies[packageName]
+      if (
+        packageManifest.name !== packageName ||
+        packageManifest.version !== expectedVersion ||
+        packageManifest.license !== "MIT" ||
+        !packageManifest.pi?.extensions?.length
+      ) {
+        throw new Error(
+          `Bundled ${packageName} does not match its pinned MIT Pi package contract`,
+        )
+      }
+      const packagePrefix = `./node_modules/${packageName}/`
+      const declaredEntries = packageManifest.pi.extensions
+        .map((entry) => `${packagePrefix}${entry.replace(/^\.\//u, "")}`)
+        .toSorted()
+      const configuredEntries = manifest.pi.extensions
+        .filter((entry) => entry.startsWith(packagePrefix))
+        .toSorted()
+      if (
+        JSON.stringify(declaredEntries) !== JSON.stringify(configuredEntries)
+      ) {
+        throw new Error(
+          `Aggregate Pi entries for ${packageName} differ from its published manifest`,
+        )
+      }
+      return undefined
+    }),
+  )
+  const tifanNotices = await readFile(
+    join(packageRoot, "THIRD_PARTY_NOTICES.md"),
+    "utf8",
+  )
+  if (
+    directTifanPackages.some(
+      (packageName) => !tifanNotices.includes(`\`${packageName}\``),
+    ) ||
+    !tifanNotices.includes("Copyright (c) 2026 Tifan Dwi Avianto") ||
+    !tifanNotices.includes(
+      "The above copyright notice and this permission notice shall be included",
+    )
+  ) {
+    throw new Error("Aggregate Tifan third-party notices are incomplete")
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
@@ -1389,8 +1455,8 @@ try {
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
       "examples/pi-footer.json",
-      "node_modules/@herbertgao/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
-      "node_modules/@herbertgao/pi-mermaid-open/herdr-plugin/viewer.mjs",
+      "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
+      "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
       "node_modules/@herbertgao/resume-from/LICENSE",
@@ -1457,16 +1523,18 @@ try {
     )
   }
   const requiredChildRegistrations = [
-    ["@herbertgao/pi-handoff/src/index.ts", "commands", "__pi-handoff-session"],
-    ["@herbertgao/pi-handoff/src/session-query.ts", "tools", "session_query"],
-    ["@herbertgao/pi-mermaid-open/src/index.ts", "commands", "mermaid-open"],
+    ["@tifan/pi-copy-response/src/index.ts", "commands", "copy-response"],
+    ["@tifan/pi-handoff/src/index.ts", "commands", "__pi-handoff-session"],
+    ["@tifan/pi-handoff/src/session-query.ts", "tools", "session_query"],
+    ["@tifan/pi-inline-skills/src/index.ts", "commands", "loaded-skills"],
+    ["@tifan/pi-mermaid-open/src/index.ts", "commands", "mermaid-open"],
     [
-      "@herbertgao/pi-preferred-thinking/src/index.ts",
+      "@tifan/pi-preferred-thinking/src/index.ts",
       "commands",
       "preferred-thinking",
     ],
-    ["@herbertgao/pi-recap/src/index.ts", "commands", "recap"],
-    ["@herbertgao/pi-rename/src/index.ts", "commands", "rename"],
+    ["@tifan/pi-recap/src/index.ts", "commands", "recap"],
+    ["@tifan/pi-rename/src/index.ts", "commands", "rename"],
     [
       "@herbertgao/resume-from/shims/pi/extensions/resume-from.js",
       "commands",
