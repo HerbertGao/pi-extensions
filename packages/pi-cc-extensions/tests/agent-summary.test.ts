@@ -12,6 +12,7 @@ import {
 
 test("classifyTool：bash/read/edit/write/other", () => {
 	assert.equal(classifyTool("bash"), "bash");
+	assert.equal(classifyTool("powershell"), "bash");
 	assert.equal(classifyTool("read"), "read");
 	assert.equal(classifyTool("edit"), "edit");
 	assert.equal(classifyTool("write"), "write");

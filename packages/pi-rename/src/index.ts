@@ -1,5 +1,4 @@
 import { execFile } from "node:child_process"
-import path from "node:path"
 import { promisify } from "node:util"
 import type { AgentMessage } from "@earendil-works/pi-agent-core"
 import {
@@ -23,6 +22,7 @@ import {
   saveModelPreference,
   type RenameModelConfig,
 } from "./models.js"
+import { isTemporaryHerdrLabel } from "./herdr-label.js"
 import { generateRename, getUserMessageContext } from "./naming.js"
 
 const execFileAsync = promisify(execFile)
@@ -163,16 +163,12 @@ function isDefaultHerdrTabLabel(tab: HerdrTabInfo): boolean {
   return typeof tab.number === "number" && label === String(tab.number)
 }
 
-function isPiWrapperLabel(label: string | undefined): boolean {
-  return label?.trim() === `${path.basename(process.cwd())} (pi)`
-}
-
 function canRenameSessionStart(context: HerdrContext): boolean {
   const singlePane = context.tab.paneCount === 1
   const label = singlePane ? context.tab.label : context.pane.label
   return (
     (singlePane ? isDefaultHerdrTabLabel(context.tab) : !label?.trim()) ||
-    isPiWrapperLabel(label)
+    isTemporaryHerdrLabel(label)
   )
 }
 

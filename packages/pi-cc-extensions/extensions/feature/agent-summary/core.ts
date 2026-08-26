@@ -26,7 +26,7 @@ export type AgentSummaryData = {
 
 export function classifyTool(toolName: string): AgentToolCategory {
 	const base = toolName.split(".").pop() ?? toolName;
-	if (base === "bash") return "bash";
+	if (base === "bash" || base === "powershell") return "bash";
 	if (base === "read") return "read";
 	if (base === "edit") return "edit";
 	if (base === "write") return "write";

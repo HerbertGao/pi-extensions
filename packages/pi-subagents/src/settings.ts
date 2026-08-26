@@ -6,10 +6,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { getAgentDir } from "@earendil-works/pi-coding-agent"
 import { NO_FALLBACK } from "./agent-types.js"
-import type { JoinMode, WidgetMode } from "./types.js"
+import type { JoinMode, ViewerMarkdownMode, WidgetMode } from "./types.js"
 
 export interface SubagentsSettings {
   maxConcurrent?: number
+  /** Max concurrent blocking agents. 0 = unlimited (default). */
+  maxConcurrentForeground?: number
   /**
    * 0 = unlimited — the extension's single source of truth for that convention:
    * `normalizeMaxTurns()` in agent-runner.ts treats 0 → `undefined`, and the
@@ -200,6 +202,10 @@ export interface SubagentsSettings {
    * what the parent session counts.
    */
   showCost?: boolean
+  /** Show effective model and thinking level in running widget rows. */
+  showModel?: boolean
+  /** Markdown scope in the conversation viewer. Defaults to assistant. */
+  viewerMarkdown?: ViewerMarkdownMode
 }
 
 export type ToolDescriptionMode = "full" | "compact" | "custom"
@@ -207,6 +213,7 @@ export type ToolDescriptionMode = "full" | "compact" | "custom"
 /** Setter hooks used by applySettings to wire persisted values into in-memory state. */
 export interface SettingsAppliers {
   setMaxConcurrent: (n: number) => void
+  setMaxConcurrentForeground: (n: number) => void
   setDefaultMaxTurns: (n: number) => void
   setGraceTurns: (n: number) => void
   setDefaultJoinMode: (mode: JoinMode) => void
@@ -224,6 +231,8 @@ export interface SettingsAppliers {
   setFallbackSubagent: (v: string | undefined) => void
   setReportUsage: (b: boolean) => void
   setShowCost: (b: boolean) => void
+  setShowModel: (b: boolean) => void
+  setViewerMarkdown: (mode: ViewerMarkdownMode) => void
 }
 
 /** Emit callback — a subset of `pi.events.emit` to keep helpers testable. */
@@ -241,6 +250,8 @@ const VALID_WIDGET_MODES: ReadonlySet<string> = new Set<WidgetMode>([
   "background",
   "off",
 ])
+const VALID_VIEWER_MARKDOWN_MODES: ReadonlySet<string> =
+  new Set<ViewerMarkdownMode>(["off", "assistant", "all"])
 
 // Sanity ceilings — prevent hand-edited configs from asking for values that
 // make no operational sense (e.g. 1e6 concurrent subagents). Permissive enough
@@ -261,6 +272,13 @@ function sanitize(raw: unknown): SubagentsSettings {
     (r.maxConcurrent as number) <= MAX_CONCURRENT_CEILING
   ) {
     out.maxConcurrent = r.maxConcurrent as number
+  }
+  if (
+    Number.isInteger(r.maxConcurrentForeground) &&
+    (r.maxConcurrentForeground as number) >= 0 &&
+    (r.maxConcurrentForeground as number) <= MAX_CONCURRENT_CEILING
+  ) {
+    out.maxConcurrentForeground = r.maxConcurrentForeground as number
   }
   if (
     Number.isInteger(r.defaultMaxTurns) &&
@@ -330,6 +348,15 @@ function sanitize(raw: unknown): SubagentsSettings {
   }
   if (typeof r.showCost === "boolean") {
     out.showCost = r.showCost
+  }
+  if (typeof r.showModel === "boolean") {
+    out.showModel = r.showModel
+  }
+  if (
+    typeof r.viewerMarkdown === "string" &&
+    VALID_VIEWER_MARKDOWN_MODES.has(r.viewerMarkdown)
+  ) {
+    out.viewerMarkdown = r.viewerMarkdown as ViewerMarkdownMode
   }
   if (r.fallbackSubagent === false) {
     // The only non-string spelling worth accepting: a boolean would otherwise be
@@ -407,6 +434,8 @@ export function applySettings(
 ): void {
   if (typeof s.maxConcurrent === "number")
     appliers.setMaxConcurrent(s.maxConcurrent)
+  if (typeof s.maxConcurrentForeground === "number")
+    appliers.setMaxConcurrentForeground(s.maxConcurrentForeground)
   if (typeof s.defaultMaxTurns === "number")
     appliers.setDefaultMaxTurns(s.defaultMaxTurns)
   if (typeof s.graceTurns === "number") appliers.setGraceTurns(s.graceTurns)
@@ -434,6 +463,8 @@ export function applySettings(
     appliers.setWorktreeIsolation(s.worktreeIsolation)
   if (typeof s.reportUsage === "boolean") appliers.setReportUsage(s.reportUsage)
   if (typeof s.showCost === "boolean") appliers.setShowCost(s.showCost)
+  if (typeof s.showModel === "boolean") appliers.setShowModel(s.showModel)
+  if (s.viewerMarkdown) appliers.setViewerMarkdown(s.viewerMarkdown)
 }
 
 /**

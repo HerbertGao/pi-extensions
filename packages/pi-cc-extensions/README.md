@@ -61,6 +61,7 @@ pi install npm:@herbertgao/pi-cc-extensions
   "useSummaryTitlesAsThinkingTitle": true, // 用最新 provider 摘要作为思考标题
   "previewLines": 3,                       // thinking 预览行数，0 隐藏预览正文
   "animationIntervalMs": 90,               // thinking 标题动画间隔（毫秒）
+  "dimThinkingText": false,                // thinking 正文使用 dim 色
   "showStartupHeader": true,               // 自定义启动头（logo + tips）开关
   "scrollStepLines": 3,                    // fullscreen 滚轮滚动步进行数
   "enableSessionReference": true,          // @ session 引用
@@ -101,5 +102,5 @@ bun run typecheck
 
 ## 致谢
 
-- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.66](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.66)（`e971a39`）衍生维护。
+- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.67](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.67)（`bc58504`）衍生维护。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。

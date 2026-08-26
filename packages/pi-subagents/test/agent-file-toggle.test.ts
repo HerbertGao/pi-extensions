@@ -21,12 +21,13 @@ import {
   isDisabledContent,
   isEmptyStub,
 } from "../src/agent-file-toggle.js"
+import { parseAgentFrontmatter } from "../src/custom-agents.js"
 
 /** What the loader concludes about a file, via the same parser it really uses. */
 function loaderSeesDisabled(content: string): boolean {
   return (
-    parseFrontmatter<Record<string, unknown>>(content).frontmatter.enabled ===
-    false
+    parseAgentFrontmatter<Record<string, unknown>>(content).frontmatter
+      .enabled === false
   )
 }
 
@@ -146,17 +147,16 @@ describe("disableInContent", () => {
     expect(loaderSeesDisabled(content)).toBe(true)
   })
 
-  it("reports no-frontmatter for a BOM-prefixed file, matching what the loader sees", () => {
-    // The parser doesn't accept a BOM either — it reports an empty frontmatter
-    // and treats the whole file as body. So refusing here is agreement with the
-    // read side, not a gap: inserting the key would have no effect on loading.
+  it("disables a BOM-prefixed file exactly as the loader reads it", () => {
     const src = "﻿---\ndescription: Scout\n---\n\nBody.\n"
-    expect(parseFrontmatter<Record<string, unknown>>(src).frontmatter).toEqual(
-      {},
-    )
+    expect(
+      parseAgentFrontmatter<Record<string, unknown>>(src).frontmatter,
+    ).toEqual({ description: "Scout" })
     const { content, outcome } = disableInContent(src)
-    expect(outcome).toBe("no-frontmatter")
-    expect(content).toBe(src)
+    expect(outcome).toBe("disabled")
+    expect(content.startsWith("﻿")).toBe(true)
+    expect(loaderSeesDisabled(content)).toBe(true)
+    expect(enableInContent(content).content).toBe(src)
   })
 })
 

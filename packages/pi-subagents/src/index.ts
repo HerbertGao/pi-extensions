@@ -77,7 +77,11 @@ import {
   resolveAgentInvocationConfig,
   resolveJoinMode,
 } from "./invocation-config.js"
-import { type ModelRegistry, resolveModel } from "./model-resolver.js"
+import {
+  describeModel,
+  type ModelRegistry,
+  resolveModel,
+} from "./model-resolver.js"
 import {
   checkModelScope,
   isScopeModelsEnabled,
@@ -113,6 +117,7 @@ import {
   type JoinMode,
   type NotificationDetails,
   type SubagentType,
+  type ViewerMarkdownMode,
   type WidgetMode,
 } from "./types.js"
 import {
@@ -541,6 +546,21 @@ export default function (pi: ExtensionAPI) {
     widget.update()
     fleet.update()
   }
+  let showModel = false
+  function isShowModelEnabled(): boolean {
+    return showModel
+  }
+  function setShowModel(enabled: boolean): void {
+    showModel = enabled
+    widget.update()
+  }
+  let viewerMarkdown: ViewerMarkdownMode = "assistant"
+  function getViewerMarkdown(): ViewerMarkdownMode {
+    return viewerMarkdown
+  }
+  function setViewerMarkdown(mode: ViewerMarkdownMode): void {
+    viewerMarkdown = mode
+  }
 
   // ---- Cancellable pending notifications ----
   // Holds notifications briefly so get_subagent_result can cancel them
@@ -800,6 +820,8 @@ export default function (pi: ExtensionAPI) {
     // Also internal: it names a transcript directory, so a forged value would
     // be a path-traversal primitive.
     delete safeOptions.rootSessionId
+    // Every call through this registry is detached, never a blocking tool call.
+    delete safeOptions.blocking
     // Cross-extension callers get the same dispatch contract as the LLM (#183).
     // The RPC layer already throws for an unresolvable model rather than falling
     // back silently; a bad agent type should not be quieter. Throws become error
@@ -958,6 +980,7 @@ export default function (pi: ExtensionAPI) {
     agentActivity,
     getWidgetMode,
     isShowCostEnabled,
+    isShowModelEnabled,
   )
   function setWidgetMode(m: WidgetMode): void {
     widgetMode = m
@@ -1133,6 +1156,7 @@ export default function (pi: ExtensionAPI) {
   applyAndEmitLoaded(
     {
       setMaxConcurrent: (n) => manager.setMaxConcurrent(n),
+      setMaxConcurrentForeground: (n) => manager.setMaxConcurrentForeground(n),
       setDefaultMaxTurns,
       setGraceTurns,
       setDefaultJoinMode,
@@ -1152,6 +1176,8 @@ export default function (pi: ExtensionAPI) {
       setFallbackSubagent: setFallbackSubagent,
       setReportUsage,
       setShowCost,
+      setShowModel,
+      setViewerMarkdown,
     },
     (event, payload) => pi.events.emit(event, payload),
   )
@@ -1637,20 +1663,27 @@ Terse command-style prompts produce shallow, generic work.
           writeInitialEntry(rec.outputFile, agentId, params.prompt, ctx.cwd)
         }
 
-        const parentModelId = ctx.model?.id
-        const effectiveModelId = model?.id
-        const modelName =
-          effectiveModelId && effectiveModelId !== parentModelId
-            ? (model?.name ?? effectiveModelId)
-                .replace(/^Claude\s+/i, "")
-                .toLowerCase()
-            : undefined
+        const { modelName, modelId } = model
+          ? describeModel(model)
+          : { modelName: undefined, modelId: undefined }
+        const askedModel = ((asked: string | undefined) => {
+          if (!asked) return undefined
+          const resolvedAsked = resolveModel(asked, ctx.modelRegistry)
+          if (typeof resolvedAsked === "string") return asked
+          return resolvedAsked.provider === model?.provider &&
+            resolvedAsked.id === model?.id
+            ? undefined
+            : asked
+        })(resolvedConfig.overridden?.model)
         const effectiveMaxTurns = normalizeMaxTurns(
           resolvedConfig.maxTurns ?? getDefaultMaxTurns(),
         )
         const agentInvocation: AgentInvocation = {
           modelName,
+          modelId,
           thinking,
+          requestedThinking: resolvedConfig.overridden?.thinking,
+          requestedModel: askedModel,
           // Explicit value only — the default fallback would just add noise.
           // Normalize so `0` (unlimited) doesn't surface as a misleading "max turns: 0".
           maxTurns: normalizeMaxTurns(resolvedConfig.maxTurns),
@@ -1671,6 +1704,23 @@ Terse command-style prompts produce shallow, generic work.
           subagentType,
           modelName,
           tags: agentTags.length > 0 ? agentTags : undefined,
+        }
+        const detailBaseFor = (
+          rec: AgentRecord | undefined,
+        ): typeof detailBase => {
+          if (!rec?.invocation) return detailBase
+          const { modelName: recModelName, tags } = buildInvocationTags(
+            rec.invocation,
+          )
+          const recModeLabel = getPromptModeLabel(rec.type)
+          const recTags = recModeLabel ? [recModeLabel, ...tags] : tags
+          return {
+            displayName: getDisplayName(rec.type),
+            description: rec.description,
+            subagentType: rec.type,
+            modelName: recModelName,
+            tags: recTags.length > 0 ? recTags : undefined,
+          }
         }
 
         // ---- Schedule: register a job, don't spawn now ----
@@ -1865,9 +1915,7 @@ Terse command-style prompts produce shallow, generic work.
                 `\nYou will be notified when this agent completes.\n` +
                 `Use get_subagent_result to retrieve full results, or steer_subagent to send it messages.`,
               {
-                ...detailBase,
-                subagentType: existing.type,
-                displayName: existing.type,
+                ...detailBaseFor(record),
                 toolUses: record.toolUses,
                 tokens: "",
                 durationMs: 0,
@@ -1890,12 +1938,12 @@ Terse command-style prompts produce shallow, generic work.
           if (record.status === "error") {
             return textResult(
               `Agent failed: ${record.error}${partialOutputSuffix(record)}`,
-              buildDetails(detailBase, record),
+              buildDetails(detailBaseFor(record), record),
             )
           }
           return textResult(
             record.result?.trim() || "No output.",
-            buildDetails(detailBase, record),
+            buildDetails(detailBaseFor(record), record),
           )
         }
 
@@ -1990,7 +2038,7 @@ Terse command-style prompts produce shallow, generic work.
               `Use get_subagent_result to retrieve full results, or steer_subagent to send it messages.\n` +
               `Do not duplicate this agent's work.`,
             {
-              ...detailBase,
+              ...detailBaseFor(record),
               toolUses: 0,
               tokens: "",
               durationMs: 0,
@@ -2004,10 +2052,11 @@ Terse command-style prompts produce shallow, generic work.
         let spinnerFrame = 0
         const startedAt = Date.now()
         let fgId: string | undefined
+        let queuedAhead: number | undefined
 
         const streamUpdate = () => {
           const details: AgentDetails = {
-            ...detailBase,
+            ...detailBaseFor(fgId ? manager.getRecord(fgId) : undefined),
             toolUses: fgState.toolUses,
             tokens: fgId ? formatLifetimeTokens(manager.getRecord(fgId)!) : "",
             cost: fgId
@@ -2017,10 +2066,10 @@ Terse command-style prompts produce shallow, generic work.
             maxTurns: fgState.maxTurns,
             durationMs: Date.now() - startedAt,
             status: "running",
-            activity: describeActivity(
-              fgState.activeTools,
-              fgState.responseText,
-            ),
+            activity:
+              queuedAhead === undefined
+                ? describeActivity(fgState.activeTools, fgState.responseText)
+                : `queued — waiting for a foreground slot${queuedAhead > 0 ? ` (${queuedAhead} ahead)` : ""}`,
             spinnerFrame: spinnerFrame % SPINNER.length,
           }
           onUpdate?.({
@@ -2040,6 +2089,10 @@ Terse command-style prompts produce shallow, generic work.
         const origOnSession = fgCallbacks.onSessionCreated
         fgCallbacks.onSessionCreated = (session: any) => {
           origOnSession(session)
+          if (queuedAhead !== undefined) {
+            queuedAhead = undefined
+            streamUpdate()
+          }
           for (const a of manager.listAgents()) {
             if (a.session === session) {
               fgId = a.id
@@ -2090,6 +2143,10 @@ Terse command-style prompts produce shallow, generic work.
               invocation: agentInvocation,
               signal,
               rootSessionId: ctx.sessionManager.getSessionId(),
+              onQueued: (_id, ahead) => {
+                queuedAhead = ahead
+                streamUpdate()
+              },
               ...fgCallbacks,
             },
             (fgAgentId) => {
@@ -2114,7 +2171,7 @@ Terse command-style prompts produce shallow, generic work.
         // Get final token count
         const tokenText = formatLifetimeTokens(record)
 
-        const details = buildDetails(detailBase, record, fgState, {
+        const details = buildDetails(detailBaseFor(record), record, fgState, {
           tokens: tokenText,
         })
 
@@ -2553,6 +2610,11 @@ Terse command-style prompts produce shallow, generic work.
           keybindings,
           (message: string) => manager.steer(record.id, message),
           showCost,
+          getViewerMarkdown,
+          (mode) => {
+            setViewerMarkdown(mode)
+            persistSettings(ctx, `Viewer markdown set to ${mode}`)
+          },
         )
       },
       {
@@ -2844,6 +2906,7 @@ Write the file using the write tool. Only write the file, nothing else.`
       {
         description: `Generate ${name} agent`,
         maxTurns: 5,
+        bypassQueue: true,
       },
     )
 
@@ -2968,6 +3031,7 @@ Write the file using the write tool. Only write the file, nothing else.`
   function snapshotSettings() {
     return {
       maxConcurrent: manager.getMaxConcurrent(),
+      maxConcurrentForeground: manager.getMaxConcurrentForeground(),
       // 0 = unlimited — per SubagentsSettings.defaultMaxTurns docstring and
       // normalizeMaxTurns() in agent-runner.ts (which maps 0 → undefined).
       defaultMaxTurns: getDefaultMaxTurns() ?? 0,
@@ -2991,6 +3055,8 @@ Write the file using the write tool. Only write the file, nothing else.`
       fallbackSubagent: getFallbackSubagent(),
       reportUsage: isReportUsageEnabled(),
       showCost: isShowCostEnabled(),
+      showModel: isShowModelEnabled(),
+      viewerMarkdown: getViewerMarkdown(),
     } satisfies SubagentsSettings
   }
 
@@ -3010,6 +3076,7 @@ Write the file using the write tool. Only write the file, nothing else.`
 
   const NUMERIC_IDS = new Set([
     "maxConcurrent",
+    "maxConcurrentForeground",
     "defaultMaxTurns",
     "graceTurns",
     "maxSubagentDepth",
@@ -3018,6 +3085,7 @@ Write the file using the write tool. Only write the file, nothing else.`
   async function showSettings(ctx: ExtensionCommandContext) {
     function buildItems(): SettingItem[] {
       const mc = manager.getMaxConcurrent()
+      const mcf = manager.getMaxConcurrentForeground()
       const dmt = getDefaultMaxTurns() ?? 0
       const gt = getGraceTurns()
       const msd = getMaxSubagentDepth()
@@ -3036,6 +3104,14 @@ Write the file using the write tool. Only write the file, nothing else.`
           description: "Max concurrent background agents (Enter to type)",
           currentValue: String(mc),
           values: [String(mc)],
+        },
+        {
+          id: "maxConcurrentForeground",
+          label: "Max foreground concurrency",
+          description:
+            "Max concurrent blocking agents (0 = unlimited, Enter to type)",
+          currentValue: String(mcf),
+          values: [String(mcf)],
         },
         {
           id: "defaultMaxTurns",
@@ -3145,6 +3221,21 @@ Write the file using the write tool. Only write the file, nothing else.`
           values: ["on", "off"],
         },
         {
+          id: "showModel",
+          label: "Show model",
+          description: "Show model and thinking level in running widget rows",
+          currentValue: isShowModelEnabled() ? "on" : "off",
+          values: ["on", "off"],
+        },
+        {
+          id: "viewerMarkdown",
+          label: "Viewer markdown",
+          description:
+            "Conversation Markdown: assistant (default), all tool results, or off; press m in the viewer to cycle",
+          currentValue: getViewerMarkdown(),
+          values: ["off", "assistant", "all"],
+        },
+        {
           id: "fleetView",
           label: "Fleet view",
           description:
@@ -3177,6 +3268,17 @@ Write the file using the write tool. Only write the file, nothing else.`
         if (n >= 1) {
           manager.setMaxConcurrent(n)
           notifyApplied(ctx, `Max concurrency set to ${n}`)
+        }
+      } else if (id === "maxConcurrentForeground") {
+        const n = parseInt(value, 10)
+        if (n >= 0) {
+          manager.setMaxConcurrentForeground(n)
+          notifyApplied(
+            ctx,
+            n === 0
+              ? "Max foreground concurrency set to unlimited"
+              : `Max foreground concurrency set to ${n}`,
+          )
         }
       } else if (id === "defaultMaxTurns") {
         const n = parseInt(value, 10)
@@ -3282,6 +3384,13 @@ Write the file using the write tool. Only write the file, nothing else.`
         const enabled = value === "on"
         setShowCost(enabled)
         notifyApplied(ctx, `Cost display ${enabled ? "enabled" : "disabled"}`)
+      } else if (id === "showModel") {
+        const enabled = value === "on"
+        setShowModel(enabled)
+        notifyApplied(ctx, `Model display ${enabled ? "enabled" : "disabled"}`)
+      } else if (id === "viewerMarkdown") {
+        setViewerMarkdown(value as ViewerMarkdownMode)
+        notifyApplied(ctx, `Viewer markdown set to ${value}`)
       } else if (id === "toolDescriptionMode") {
         setToolDescriptionMode(value as ToolDescriptionMode)
         notifyApplied(
@@ -3352,20 +3461,24 @@ Write the file using the write tool. Only write the file, nothing else.`
       const current =
         result === "maxConcurrent"
           ? String(manager.getMaxConcurrent())
-          : result === "defaultMaxTurns"
-            ? String(getDefaultMaxTurns() ?? 0)
-            : result === "maxSubagentDepth"
-              ? String(getMaxSubagentDepth())
-              : String(getGraceTurns())
+          : result === "maxConcurrentForeground"
+            ? String(manager.getMaxConcurrentForeground())
+            : result === "defaultMaxTurns"
+              ? String(getDefaultMaxTurns() ?? 0)
+              : result === "maxSubagentDepth"
+                ? String(getMaxSubagentDepth())
+                : String(getGraceTurns())
 
       const label =
         result === "maxConcurrent"
           ? "Max concurrency (1+)"
-          : result === "defaultMaxTurns"
-            ? "Default max turns (0 = unlimited)"
-            : result === "maxSubagentDepth"
-              ? "Nested depth (0/1 = nesting off)"
-              : "Grace turns (1+)"
+          : result === "maxConcurrentForeground"
+            ? "Max foreground concurrency (0 = unlimited)"
+            : result === "defaultMaxTurns"
+              ? "Default max turns (0 = unlimited)"
+              : result === "maxSubagentDepth"
+                ? "Nested depth (0/1 = nesting off)"
+                : "Grace turns (1+)"
 
       // Loop until user enters a valid integer or cancels (Esc / null).
       // Silently trims whitespace; rejects non-numeric input by re-prompting.
@@ -3388,6 +3501,18 @@ Write the file using the write tool. Only write the file, nothing else.`
   // the right toast. Successful saves show info; persistence failures downgrade
   // to warning so users aren't silently reverted on restart. Event fires regardless
   // of outcome so listeners see the in-memory change.
+  function persistSettings(
+    ctx: ExtensionCommandContext,
+    successMsg: string,
+  ): void {
+    const { message, level } = saveAndEmitChanged(
+      snapshotSettings(),
+      successMsg,
+      (event, payload) => pi.events.emit(event, payload),
+    )
+    if (level === "warning") ctx.ui.notify(message, level)
+  }
+
   function notifyApplied(ctx: ExtensionCommandContext, successMsg: string) {
     const { message, level } = saveAndEmitChanged(
       snapshotSettings(),

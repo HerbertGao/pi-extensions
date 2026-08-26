@@ -141,13 +141,21 @@ function loadFromDir(
  * Read and parse one agent file, or warn and return undefined for the caller to
  * skip. Under strict mode the same failure aborts startup while naming the file.
  */
+export function parseAgentFrontmatter<T extends Record<string, unknown>>(
+  content: string,
+): { frontmatter: T; body: string } {
+  return parseFrontmatter<T>(
+    content.startsWith("\uFEFF") ? content.slice(1) : content,
+  )
+}
+
 function readAgentFile(
   path: string,
   strict: boolean,
   warnings: WarningState,
 ): { frontmatter: Record<string, unknown>; body: string } | undefined {
   try {
-    return parseFrontmatter<Record<string, unknown>>(
+    return parseAgentFrontmatter<Record<string, unknown>>(
       readFileSync(path, "utf-8"),
     )
   } catch (err) {

@@ -52,9 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`strictAgentFiles` — fail startup on a broken agent file instead of skipping it.** Off by default and applied only during initial extension activation; later per-call reloads remain tolerant.
+- **Selective upstream 0.18.2 behavior sync.** Agent surfaces now show the effective model/thinking level and disclose overridden requests; `showModel` adds them to widget rows. The conversation viewer adds persistent raw/assistant/all Markdown modes, 16K result truncation, and literal fallback. `maxConcurrentForeground` independently bounds blocking top-level spawns while nested, RPC/detached, and resume paths remain exempt.
 
 ### Fixed
 
+- **Cross-extension model overrides honor `scopeModels`.** String overrides first use this fork's tolerant resolver; resolved strings and `Model` objects are then scope-checked, while `null` still inherits.
+- **UTF-8 BOM-prefixed agent files load and toggle correctly** without weakening the fork's warning-based malformed-file recovery or opt-in strict startup behavior.
+- **Foreground spawn callbacks are per-call**, removing the shared `AgentManager.onSpawned` race for parallel or queued calls.
 - **Ctrl+C closes the conversation viewer** when it is not composing a steering message.
 - **Cross-extension callers can consume settled RPC-spawned results** with `subagents:rpc:consume`, suppressing a duplicate completion notification after another extension has already shown the result.
 - **One malformed agent file no longer aborts extension activation** ([#212](https://github.com/tintinweb/pi-subagents/issues/212) — thanks [@daromaj](https://github.com/daromaj)). Unreadable and unparseable files are skipped with a path-specific warning, including the earlier source that remains active when a broken file was an override.

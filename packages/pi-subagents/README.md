@@ -13,11 +13,11 @@ Spawn specialized agents that run in isolated sessions — each with its own too
 ## Features
 
 - **Claude Code look & feel** — same tool names, calling conventions, and UI patterns (`Agent`, `get_subagent_result`, `steer_subagent`) — feels native
-- **Parallel background agents** — top-level agents run detached by default, with automatic queuing (configurable concurrency limit, default 10) and smart group join; nested delegation still defaults to foreground
-- **Live widget UI** — persistent above-editor widget with animated spinners, live tool activity, token counts, and colored status icons. Configurable via `/agents → Settings → Widget`: `all` (every agent), `background` (default — hides foreground runs, which already render inline as the `Agent` tool result), or `off`
+- **Independent concurrency pools** — detached agents use `maxConcurrent` (default 10); blocking agents can be bounded separately with `maxConcurrentForeground` (default 0 = unlimited). Nested children occupy neither pool, avoiding parent/child deadlocks
+- **Live widget UI** — persistent above-editor widget with animated spinners, live tool activity, token counts, and colored status icons. Configurable via `/agents → Settings → Widget`: `all` (every agent), `background` (default — hides foreground runs, which already render inline as the `Agent` tool result), or `off`; opt-in `showModel` adds the effective model and thinking level
 - **FleetView** — Claude Code-style navigable list of `main` + every running subagent rendered below the editor (earliest-launched first). Press `↓` (or `←`) at an empty prompt to jump in, `↑`/`↓` to move the selection, `Enter` to open the selected agent's live, auto-updating conversation, `Esc` to return. Finished agents linger briefly before dropping out, and a viewer stays open through completion so you can read the final output. Toggle via `/agents → Settings → Fleet view`
-- **Conversation viewer** — select any agent in `/agents` to open a live-scrolling overlay of its full conversation (auto-follows new content, scroll up to pause). Steer a running agent inline by pressing `Enter` to open a composer, typing, then `Enter` to send (`Esc` or an empty submit returns) — the message appears as a user message and redirects the agent after its current tool. Stop a still-running agent by pressing `x` (then `x` again to confirm) — both work for background agents too
-- **Custom agent types** — define agents in `.pi/agents/<name>.md` or `.agents/agents/<name>.md` (project) or globally, with YAML frontmatter: custom system prompts, model selection, thinking levels, tool restrictions, and Claude Code-compatible colored name badges
+- **Conversation viewer** — select any agent in `/agents` to open a live-scrolling overlay of its full conversation. Assistant Markdown renders by default; press `m` to cycle raw / assistant-only / assistant+tool-results. Individual tool and bash results are capped at 16K characters with literal fallback if Markdown rendering fails. `Enter` steers and `x`, `x` stops a running agent
+- **Custom agent types** — define agents in `.pi/agents/<name>.md` or `.agents/agents/<name>.md` (project) or globally, with YAML frontmatter: custom system prompts, model selection, thinking levels, tool restrictions, and Claude Code-compatible colored name badges. UTF-8 BOM-prefixed files are parsed safely
 - **Nested subagents** — opt-in, default-off delegation: a custom agent that sets `allowed_subagents` gets its own ownership-scoped `Agent`, `get_subagent_result`, and `steer_subagent` tools, depth-capped from the main session (default 2). It can control only its own children, they are stopped when it finishes, and their transcripts and token spend roll up to it. The allowlist is a privilege boundary — a child runs with its own tools, so pick it as carefully as `tools:` itself
 - **Mid-run steering** — inject messages into running agents to redirect their work without restarting
 - **Session resume** — pick up where an agent left off, preserving full conversation context
@@ -32,7 +32,7 @@ Spawn specialized agents that run in isolated sessions — each with its own too
 - **Tool denylist** — block specific tools via `disallowed_tools` frontmatter
 - **Styled completion notifications** — background agent results render as themed, compact notification boxes (icon, stats, result preview) instead of raw XML. Expandable to show full output. Group completions render each agent individually
 - **Event bus** — lifecycle events (`subagents:created`, `started`, `completed`, `failed`, `steered`, `compacted`) emitted via `pi.events`, enabling other extensions to react to sub-agent activity
-- **Cross-extension RPC** — other pi extensions can spawn, stop, and consume subagent results via the `pi.events` event bus (`subagents:rpc:ping`, `subagents:rpc:spawn`, `subagents:rpc:stop`, `subagents:rpc:consume`). Standardized reply envelopes with protocol versioning. Emits `subagents:ready` on session start
+- **Cross-extension RPC** — other pi extensions can spawn, stop, and consume subagent results via the `pi.events` event bus (`subagents:rpc:ping`, `subagents:rpc:spawn`, `subagents:rpc:stop`, `subagents:rpc:consume`). String model overrides use the same tolerant resolver as the Agent tool, and both strings and `Model` objects honor `scopeModels`. Emits `subagents:ready` on session start
 - **Schedule subagents** — pass `schedule` to the `Agent` tool to fire on cron / interval / one-shot. Session-scoped jobs with PID-locked persistence; results land via the same `subagent-notification` followUp path as manual background completions; manage via `/agents → Scheduled jobs`
 - **Model scope enforcement** — opt-in validation that subagent model choices stay within your pi `enabledModels` allowlist (sourced from `/scoped-models`, with both global and project-local pi settings honored). Caller-supplied out-of-scope → hard error to orchestrator; frontmatter-pinned out-of-scope → warning + runs anyway (frontmatter authoritative). Toggle via `/agents → Settings → Scope models`
 
@@ -98,7 +98,7 @@ Restrictions:
 
 ## UI
 
-The extension renders a persistent widget above the editor showing active agents. By default it shows background runs only (`widgetMode: background`) — foreground agents already render inline as the `Agent` tool result, so the widget would otherwise double-render them. Switch to `all` (every agent) or `off` (hide the widget) via `/agents → Settings → Widget`:
+The extension renders a persistent widget above the editor showing active agents. By default it shows background runs only (`widgetMode: background`) — foreground agents already render inline as the `Agent` tool result, so the widget would otherwise double-render them. Switch to `all` (every agent) or `off` (hide the widget) via `/agents → Settings → Widget`. Tool results and the conversation viewer always show the effective model and thinking level; enable `/agents → Settings → Show model` to add them to running widget rows:
 
 ```
 ● Agents
@@ -264,7 +264,7 @@ allowed_subagents: support-file-finder, support-callsite-tracer # or `all`
 
 The hard cap is depth 2 by default: main session (0) → subagent (1) → nested child (2). Change it project-wide with `maxSubagentDepth` in `subagents.json` (or `/agents → Settings → Nested depth`); `0` or `1` turns nesting off everywhere. An agent already at the cap gets no nested tools at all — not even `get_subagent_result`, since it can never own a child. A child must independently set `allowed_subagents` to delegate again; isolated agents never receive nested tools.
 
-Nested children don't occupy `maxConcurrent` slots — their parent already holds one, and queueing them behind it would deadlock a parent waiting on its own child. The depth cap bounds how _deep_ nesting goes, not how _wide_: a parent's only limit on concurrent children is that each spawn costs it a turn. Pair `allowed_subagents` with a `max_turns` on that agent if you want a hard ceiling on its fan-out.
+Nested children don't occupy `maxConcurrent` or `maxConcurrentForeground` slots — queueing a child behind a parent waiting for it would deadlock. The depth cap bounds how _deep_ nesting goes, not how _wide_: a parent's only limit on concurrent children is that each spawn costs it a turn. Pair `allowed_subagents` with a `max_turns` on that agent if you want a hard ceiling on its fan-out.
 
 Because a subagent session never activates this extension (that is what keeps a child from building a second agent manager, and it is why nested tools are injected directly instead), a subagent also gets none of the extension's other surfaces: no `/agents` command, no cross-extension RPC handlers, no `subagents:ready` event.
 
@@ -418,11 +418,11 @@ When on, each subagent spawn's effective model is validated against pi's own `en
 
 **Out-of-scope handling depends on source:**
 
-| Model source                                  | Out-of-scope behavior                                                |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| Caller-supplied via `Agent({ model: "..." })` | Hard error returned to the orchestrator, listing allowed models      |
-| Pinned in agent frontmatter                   | Warning toast + the pinned model runs (frontmatter is authoritative) |
-| Parent-inherited (neither set)                | Warning toast + parent's model runs                                  |
+| Model source                                               | Out-of-scope behavior                                                |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| Caller-supplied via `Agent({ model: "..." })` or spawn RPC | Hard error returned to the orchestrator, listing allowed models      |
+| Pinned in agent frontmatter                                | Warning toast + the pinned model runs (frontmatter is authoritative) |
+| Parent-inherited (neither set)                             | Warning toast + parent's model runs                                  |
 
 **Design:** `scopeModels` is a guardrail against the orchestrator picking unexpected models at runtime, not a hard policy against user-level config. The "frontmatter is authoritative" guarantee from v0.5.1 still holds for `model:` — caller params can't override frontmatter, and frontmatter pins run even when out of scope (with a visible warning).
 
@@ -434,18 +434,24 @@ When on, each subagent spawn's effective model is validated against pi's own `en
 
 ## Persistent Settings
 
-Runtime tuning values set via `/agents` → Settings (including background default, worktree isolation, usage reporting, and cost display) persist across pi restarts. Two files, merged on load:
+Runtime tuning values set via `/agents` → Settings (including concurrency, viewer Markdown, model/cost display, background default, and worktree isolation) persist across pi restarts. Two files, merged on load:
 
 - **Global:** `~/.pi/agent/subagents.json` — your machine-wide defaults. Edit by hand; the `/agents` menu never writes here.
 - **Project:** `<cwd>/.pi/subagents.json` — per-project overrides. Written by `/agents` → Settings.
 
-**Precedence:** project overrides global on any field present in both. Missing fields fall back to the hardcoded defaults (max concurrency `10`, background by default enabled, default max turns unlimited, grace turns `5`, nested depth `2`, join mode `smart`, worktree isolation enabled, usage/cost reporting disabled, strict agent files disabled, defaults enabled).
+**Precedence:** project overrides global on any field present in both. Missing fields fall back to the hardcoded defaults (background concurrency `10`, foreground concurrency unlimited, background by default enabled, default max turns unlimited, grace turns `5`, nested depth `2`, join mode `smart`, worktree isolation enabled, viewer Markdown `assistant`, usage/cost/model widget display disabled, strict agent files disabled, defaults enabled).
+
+**Foreground concurrency** (`maxConcurrentForeground`, default `0` = unlimited): independently bounds only top-level blocking `Agent` spawns. RPC, other detached spawns, resume, and nested children remain exempt; nested exemption prevents self-deadlock. Queued blocking calls show that they are waiting and remain cancellable.
 
 **Background by default** (`backgroundByDefault`, default `true`): unqualified top-level `Agent` calls run detached. Set `false` to restore foreground-by-default behavior. Explicit tool or agent-file `run_in_background` values win. Nested calls always default to foreground so a parent cannot finish and stop an uncollected child.
 
 **Worktree isolation** (`worktreeIsolation`, default `true`): set `false` to reject worktree creation on every spawn path and remove the `isolation` parameter and guidance on the next Pi session. `isolation: off` in agent frontmatter vetoes a caller's `worktree` request.
 
 **Usage and cost** (`reportUsage` and `showCost`, both default `false`): `reportUsage` attaches child usage to parent tool results so Pi session stats include delegated work; `showCost` renders Pi's estimated USD totals in subagent surfaces. They are independent.
+
+**Model display** (`showModel`, default `false`): adds the effective model and thinking level to running widget rows. Tool results and the conversation viewer show them regardless; when a requested value was overridden or clamped, the UI also shows what was asked.
+
+**Viewer Markdown** (`viewerMarkdown`, default `"assistant"`): `"off"` wraps all transcript content literally, `"assistant"` renders only assistant text as Markdown, and `"all"` also renders tool results. Press `m` in the viewer to cycle and persist the same setting. Bash output always stays literal.
 
 **Strict agent files** (`strictAgentFiles`, default `false`): fail extension startup when any discovered agent file is unreadable or malformed. Enable via `/agents → Settings → Strict agent files` or set `true` in `subagents.json`. Strictness applies only to startup; reloads before later Agent calls remain tolerant so a file edited incorrectly mid-session is skipped with a warning instead of aborting the call.
 
@@ -564,7 +570,7 @@ pi.events.emit("subagents:rpc:spawn", {
 })
 ```
 
-`options.model` accepts either a `Model` object (e.g. `ctx.model`) or a `"provider/modelId"` string — strings are resolved against `ctx.modelRegistry` at the RPC boundary, so cross-extension callers can forward serializable values without losing auth context.
+`options.model` accepts either a `Model` object (e.g. `ctx.model`) or a string. Strings use the same tolerant local resolver as the Agent tool; after resolution, both string and object overrides are checked against `scopeModels`. `null` keeps inherit behavior.
 
 `options.cwd` (absolute path to an existing directory — anything else returns an error envelope; `null` means unset) runs the agent in a different working directory than the parent session. Its tools operate there and the prompt's environment block describes it, but **`.pi` config still loads from the parent session's project** — the target directory's `.pi` extensions never execute, and its agents/skills/settings are not picked up. Combined with `isolation: "worktree"`, the worktree is created _from_ the target directory's repo, the agent works at the equivalent subdirectory inside the copy (a monorepo-package cwd stays scoped to that package), and the resulting `pi-agent-*` branch lands in that repo — the completion message names it. On session end, worktree registrations are pruned in every repo that received one; only a hard crash can leave a stale entry (then: `git worktree prune` in the target repo). Agents with `memory:` keep reading/writing the parent project's memory.
 

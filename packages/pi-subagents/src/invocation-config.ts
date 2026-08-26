@@ -113,6 +113,7 @@ export function resolveAgentInvocationConfig(
   runInBackground: boolean
   isolated: boolean
   isolation?: IsolationMode
+  overridden?: { thinking?: ThinkingLevel; model?: string }
 } {
   // Precedence first, collapse second — reversing these loses the veto, since
   // an agent file's "off" only outranks a caller's "worktree" while it is still
@@ -121,6 +122,18 @@ export function resolveAgentInvocationConfig(
   const isolation =
     requested === "worktree" && opts?.worktreeAllowed !== false
       ? "worktree"
+      : undefined
+  const overriddenThinking =
+    agentConfig?.thinking != null &&
+    params.thinking != null &&
+    agentConfig.thinking !== params.thinking
+      ? (params.thinking as ThinkingLevel)
+      : undefined
+  const overriddenModel =
+    agentConfig?.model != null &&
+    params.model != null &&
+    agentConfig.model !== params.model
+      ? params.model
       : undefined
 
   return {
@@ -139,6 +152,10 @@ export function resolveAgentInvocationConfig(
       false,
     isolated: agentConfig?.isolated ?? params.isolated ?? false,
     isolation,
+    overridden:
+      overriddenThinking || overriddenModel
+        ? { thinking: overriddenThinking, model: overriddenModel }
+        : undefined,
   }
 }
 

@@ -11,13 +11,14 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-import { config, normalizeConfig } from "../extensions/config/config.ts";
+import { config, formatConfigStatus, normalizeConfig } from "../extensions/config/config.ts";
 import { installCompactThinking } from "../extensions/feature/compact-thinking.ts";
 import {
 	buildMessageSummary,
 	installCompactMode,
 	isCompactAssistantComponent,
 	refreshCompactModeComponents,
+	styleCompactThinkingText,
 } from "../extensions/renderer/compact-mode.ts";
 import { refreshMountedTranscript } from "../extensions/renderer/transcript-refresh.ts";
 import claudeCodeStyleExtension from "../extensions/renderer/index.ts";
@@ -186,6 +187,9 @@ test("config normalize keeps compact, defaults feature toggles on, and orders mo
 	assert.equal(normalizeConfig({ enabled: false }).mode, "off");
 	assert.equal(normalizeConfig({ enabled: true }).mode, "on");
 	assert.equal(normalizeConfig({ mode: "legacy" }).mode, "on");
+	assert.equal(normalizeConfig({}).dimThinkingText, false);
+	assert.equal(normalizeConfig({ dimThinkingText: true }).dimThinkingText, true);
+	assert.match(formatConfigStatus(normalizeConfig({})), /thinkingDim=off/);
 
 	let completions: Array<{ value: string }> = [];
 	const pi: any = {
@@ -204,6 +208,19 @@ test("config normalize keeps compact, defaults feature toggles on, and orders mo
 		);
 	} finally {
 		config.mode = previousMode;
+	}
+});
+
+test("dim thinking text uses the dim token without mutating the theme", () => {
+	const theme = { fg: (color: string, text: string) => `<${color}>${text}` };
+	const previous = config.dimThinkingText;
+	try {
+		config.dimThinkingText = false;
+		assert.equal(styleCompactThinkingText("hi", theme as any), "<thinkingText>hi");
+		config.dimThinkingText = true;
+		assert.equal(styleCompactThinkingText("hi", theme as any), "<dim>hi");
+	} finally {
+		config.dimThinkingText = previous;
 	}
 });
 
@@ -572,6 +589,8 @@ test("compact edit/write stays single-line when collapsed and reuses rich diff w
 	const hooks = installCompactMode({ writeMetadata: metadata });
 	try {
 		const edit = tool("edit", "e1", { path: "a.ts" });
+		assert.match(renderText(edit).join("\n"), /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] edit a\.ts/);
+		assert.notEqual(edit.state?.ccstyleAnimationScheduled, true);
 		edit.updateResult({
 			content: [],
 			details: {

@@ -10,6 +10,7 @@
  */
 
 import { type ModelRegistry, resolveModel } from "./model-resolver.js"
+import { checkModelScope } from "./model-scope.js"
 
 /** Minimal event bus interface needed by the RPC handlers. */
 export interface EventBus {
@@ -104,21 +105,40 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
     // agent's auth lookup doesn't crash with "No API key found for
     // undefined".
     let normalizedOptions = options ?? {}
-    if (typeof normalizedOptions.model === "string") {
-      const registry = (ctx as { modelRegistry?: ModelRegistry }).modelRegistry
-      if (!registry) {
+    const override = normalizedOptions.model
+    // null means inherit, matching the runner's `model ?? default` behavior.
+    if (override != null) {
+      const { modelRegistry, cwd } = ctx as {
+        modelRegistry?: ModelRegistry
+        cwd?: string
+      }
+      const label =
+        typeof override === "string"
+          ? override
+          : `${override.provider}/${override.id}`
+      if (!modelRegistry) {
         throw new Error(
-          `Model override "${normalizedOptions.model}" provided but ctx.modelRegistry is unavailable`,
+          `Model override "${label}" provided but ctx.modelRegistry is unavailable`,
         )
       }
-      const resolved = resolveModel(normalizedOptions.model, registry)
-      if (typeof resolved === "string") {
-        // resolveModel returns a human-readable error string when the
-        // input doesn't match any available model. Surface it instead of
-        // silently falling back so the caller sees the auth/typo issue.
-        throw new Error(resolved)
+
+      let model = override
+      if (typeof override === "string") {
+        const resolved = resolveModel(override, modelRegistry)
+        if (typeof resolved === "string") throw new Error(resolved)
+        model = resolved
+        normalizedOptions = { ...normalizedOptions, model: resolved }
       }
-      normalizedOptions = { ...normalizedOptions, model: resolved }
+
+      const verdict = checkModelScope({
+        model,
+        cwd: cwd ?? process.cwd(),
+        modelRegistry,
+        callerSupplied: true,
+        agentLabel: type,
+        modelInput: label,
+      })
+      if (verdict.kind === "error") throw new Error(verdict.message)
     }
 
     return { id: manager.spawn(pi, ctx, type, prompt, normalizedOptions) }

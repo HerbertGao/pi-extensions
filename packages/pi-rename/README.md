@@ -16,7 +16,7 @@ This package requires Pi 0.84.2 or newer.
 
 Run `/rename` to generate a fresh hyphen-separated session name. The extension applies the name to the pi session and, when pi is running inside Herdr, to the current pane and tab when it is the tab's only pane, or to the current pane in a split tab.
 
-When a named session starts or resumes in Herdr, the extension applies the saved pi session name when the target still has its default label or the temporary `herdr-wrap` label.
+When a named session starts or resumes in Herdr, the extension applies the saved pi session name when the target still has its default or temporary startup label.
 
 `/rename` builds naming context from the first user message plus up to three latest user messages. It ignores assistant replies, tool output, and attachments. Before sending context to the rename model, it redacts common secrets.
 
@@ -53,7 +53,15 @@ Herdr tab renaming requires the `herdr` CLI. If it is unavailable, the extension
 
 The extension uses `HERDR_PANE_ID` to find the current Herdr pane. With one pane in the tab, it renames both the pane and tab. With sibling panes, it renames only the current pane.
 
-On session startup or resume, it does not overwrite custom Herdr labels. It recognizes the temporary label from the Nushell `herdr-wrap` wrapper so saved session names still apply.
+On session startup or resume, it does not overwrite custom Herdr labels. It replaces only Herdr's default or temporary startup labels, so saved session names still apply.
+
+If your launcher gives Pi a temporary Herdr label, it must set `HERDR_TEMPORARY_LABEL` before starting Pi. The value must match the label shown in Herdr. In Bash, pass it to Pi inline:
+
+```bash
+HERDR_TEMPORARY_LABEL="my-project (pi)" pi
+```
+
+If you do not set this variable, `pi-rename` replaces only Herdr's default label.
 
 On quit, the target keeps the last session name.
 

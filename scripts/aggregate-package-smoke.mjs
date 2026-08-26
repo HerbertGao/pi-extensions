@@ -922,7 +922,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.55.1"
+  const expectedBtwVersion = "0.55.3"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -938,7 +938,7 @@ try {
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = "^0.57.0"
+  const expectedTuiKitRange = "^0.58.1"
   if (
     sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
       expectedTuiKitRange ||
@@ -973,7 +973,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.55.1's public entry is the bundled dist. Add test-only exports in memory
+  // 0.55.3's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, updateBtwSettings };\n`,

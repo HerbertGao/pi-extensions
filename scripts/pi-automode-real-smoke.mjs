@@ -560,8 +560,25 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
         homeRoot.state,
       )
 
+      const nestedHomeRoot = await runCase("nested-var-home-root", {
+        config: {},
+        home: randomHome,
+        prompt: `CALL bash echo "$(rm -rf ${randomHome})"`,
+      })
+      assert(
+        classifierRequests(nestedHomeRoot.requests).length === 0,
+        "nested-var-home-root: nested hard deny unexpectedly called classifier",
+        nestedHomeRoot.requests,
+      )
+      assert(
+        nestedHomeRoot.state.recentDenials?.at(-1)?.kind ===
+          "deterministic-hard-deny",
+        "nested-var-home-root: nested HOME deletion was not hard-denied",
+        nestedHomeRoot.state,
+      )
+
       process.stdout.write(
-        "Real Pi automode smoke passed: 10 cases, packed extension, localhost mock provider\n",
+        "Real Pi automode smoke passed: 11 cases, packed extension, localhost mock provider\n",
       )
     } finally {
       await mock.close()

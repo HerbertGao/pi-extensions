@@ -318,7 +318,7 @@ function createCcstyleTool(
 			const isPending =
 				visualState === "pending" ||
 				(!visualState && (context?.isPartial || context?.executionStarted));
-			if (isPending) scheduleAnimation(context);
+			if (isPending && context?.executionStarted) scheduleAnimation(context);
 			const rawIcon = isPending ? pendingIcon(toolName) : settledIcon(toolName, visualState);
 			const icon =
 				visualState === "success"
@@ -678,6 +678,7 @@ export function installToolExpandedBackground(): () => void {
 	const host = globalThis as any;
 	const previous = host[TOOL_EXPANDED_BACKGROUND_PATCH] as ToolExpandedBackgroundPatch | undefined;
 	if (previous) previous.dispose();
+	// SAFETY: Pi's runtime ToolExecutionComponent prototype owns updateDisplay; its public type omits it.
 	const prototype = ToolExecutionComponent.prototype as unknown as { updateDisplay: () => void };
 	const original = prototype.updateDisplay;
 	const patch: ToolExpandedBackgroundPatch = {

@@ -402,6 +402,42 @@ describe("SubagentScheduler — fire path", () => {
     expect(optsArg.isBackground).toBe(true)
   })
 
+  it("passes the job configuration as the invocation snapshot", () => {
+    scheduler.addJob({
+      name: "configured",
+      description: "x",
+      schedule: "1s",
+      subagent_type: "general-purpose",
+      prompt: "x",
+      thinking: "high",
+      max_turns: 12,
+      isolated: true,
+    })
+
+    vi.advanceTimersByTime(1_000)
+    expect(manager.spawn.mock.calls[0][4].invocation).toEqual({
+      thinking: "high",
+      maxTurns: 12,
+      isolated: true,
+      runInBackground: true,
+      isolation: undefined,
+    })
+  })
+
+  it("normalizes an unlimited turn budget out of the invocation", () => {
+    scheduler.addJob({
+      name: "unlimited",
+      description: "x",
+      schedule: "1s",
+      subagent_type: "general-purpose",
+      prompt: "x",
+      max_turns: 0,
+    })
+
+    vi.advanceTimersByTime(1_000)
+    expect(manager.spawn.mock.calls[0][4].invocation.maxTurns).toBeUndefined()
+  })
+
   it("disabled jobs do not fire", () => {
     const job = scheduler.addJob({
       name: "off",

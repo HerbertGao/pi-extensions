@@ -80,7 +80,12 @@ function scheduleGroupAnimation(patch: Patch): void {
 		patch.animationTimer = null;
 		if (!patch.active) return;
 		for (const group of patch.groups) {
-			if (group.children.some((tool) => status(tool) === "pending")) group.invalidate();
+			if (
+				(group.children as any[]).some(
+					(tool) => tool?.executionStarted && status(tool) === "pending",
+				)
+			)
+				group.invalidate();
 		}
 	}, TOOL_LOADING_INTERVAL_MS);
 	patch.animationTimer.unref?.();
@@ -425,7 +430,10 @@ export class ToolGroupComponent extends Container {
 		const label =
 			names.size === 1 ? humanizeToolName(toolName(this.children[0])) : "Multiple Tools";
 		const overall: ToolStatus = counts.error ? "error" : counts.pending ? "pending" : "success";
-		if (overall === "pending") scheduleGroupAnimation(this.patch);
+		if (
+			(this.children as any[]).some((tool) => tool?.executionStarted && status(tool) === "pending")
+		)
+			scheduleGroupAnimation(this.patch);
 		const overallColor = overall === "pending" ? "accent" : overall;
 		const nameList = names.size > 1 ? ` ${fg("dim", `• ${toolNameList(this.children)}`)}` : "";
 		// 圆点保持 dim；hover 只高亮可点击文字。

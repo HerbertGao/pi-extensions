@@ -101,7 +101,6 @@ describe("AgentWidget", () => {
       toolUses: 0,
       responseText: "",
       turnCount: 1,
-      lifetimeUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     }
   }
 
@@ -118,6 +117,11 @@ describe("AgentWidget", () => {
       startedAt: Date.now(),
       lifetimeUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       compactionCount: 0,
+      invocation: {
+        modelName: "sonnet 4.6",
+        modelId: "anthropic/claude-sonnet-4-6",
+        thinking: "high",
+      },
       isBackground: opts.isBackground,
       parentAgentId: opts.parentAgentId,
     }
@@ -128,16 +132,19 @@ describe("AgentWidget", () => {
     manager: unknown,
     activityId: string,
     mode?: () => WidgetMode,
+    showModel = false,
   ): string {
     const widget = new AgentWidget(
       manager as any,
       new Map([[activityId, makeActivity()]]),
       mode,
+      () => false,
+      () => showModel,
     )
     let factory: any
     widget.setUICtx({
       setStatus: () => {},
-      setWidget: (_key, content) => {
+      setWidget: (_key: string, content: unknown) => {
         factory = content
       },
     })
@@ -202,6 +209,32 @@ describe("AgentWidget", () => {
     )
   })
 
+  it("names the model and thinking level only when enabled", () => {
+    const manager = {
+      listAgents: () => [makeRecord("background", { isBackground: true })],
+    }
+    expect(
+      renderLines(manager, "background", () => "background", true),
+    ).toContain("sonnet 4.6 · thinking: high")
+    expect(
+      renderLines(manager, "background", () => "background"),
+    ).not.toContain("sonnet 4.6")
+  })
+
+  it("discloses a thinking level the run did not honor", () => {
+    const record: any = makeRecord("background", { isBackground: true })
+    record.invocation = {
+      modelName: "haiku 4.5",
+      modelId: "anthropic/claude-haiku-4-5",
+      thinking: "high",
+      requestedThinking: "max",
+    }
+    const manager = { listAgents: () => [record] }
+    expect(
+      renderLines(manager, "background", () => "background", true),
+    ).toContain("haiku 4.5 · thinking: high (asked max)")
+  })
+
   // "off" hides the widget entirely — even a background agent renders nothing.
   it("renders nothing in 'off' mode", () => {
     const manager = {
@@ -237,7 +270,7 @@ describe("AgentWidget cost display", () => {
     let factory: any
     widget.setUICtx({
       setStatus: () => {},
-      setWidget: (_key, content) => {
+      setWidget: (_key: string, content: unknown) => {
         factory = content
       },
     } as any)
@@ -313,7 +346,6 @@ describe("AgentWidget overflow accounting", () => {
           toolUses: 0,
           responseText: "",
           turnCount: 1,
-          lifetimeUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         } as AgentActivity,
       ]),
     )
@@ -325,7 +357,7 @@ describe("AgentWidget overflow accounting", () => {
     let factory: any
     widget.setUICtx({
       setStatus: () => {},
-      setWidget: (_k, c) => {
+      setWidget: (_k: string, c: unknown) => {
         factory = c
       },
     } as any)
@@ -428,7 +460,6 @@ describe("AgentWidget overflow accounting", () => {
           toolUses: 0,
           responseText: "",
           turnCount: 1,
-          lifetimeUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         } as AgentActivity,
       ],
     ])

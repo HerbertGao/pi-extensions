@@ -10,16 +10,16 @@
 
 | Local package set      | Upstream                   | Imported baseline                     | Notes                                                                                                                                                         |
 | ---------------------- | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tifan-derived packages | `tifandotme/pi-extensions` | Per-package below; reviewed `08ecbf7` | Released handoff, Mermaid, thinking, recap, rename, and stash updates are imported; Fixed Editor remains frozen at `5975a48`.                                 |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `3f9d35c` (`0.18.0`)                  | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `e971a39` (`0.8.66`)                  | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
+| Tifan-derived packages | `tifandotme/pi-extensions` | Per-package below; reviewed `cca1906` | Released handoff, Mermaid, thinking, recap, rename, and stash updates are imported; Fixed Editor remains frozen at `5975a48`.                                 |
+| `pi-subagents`         | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`)                  | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
+| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `bc58504` (`0.8.67`)                  | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
 | `resume-from`          | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)                   | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                   |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                       | Upstream package               | Imported version | Imported commit |
 | ----------------------------------- | ------------------------------ | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.66`         | `e971a39`       |
+| `@herbertgao/pi-cc-extensions`      | `pi-cc-extensions`             | `0.8.67`         | `bc58504`       |
 | `@herbertgao/pi-copy-response`      | `@tifan/pi-copy-response`      | `0.2.6`          | `460d580`       |
 | `@herbertgao/pi-fixed-editor`       | `@tifan/pi-fixed-editor`       | `0.3.0`          | `5975a48`       |
 | `@herbertgao/pi-handoff`            | `@tifan/pi-handoff`            | `2.0.1`          | `3f6b5e6`       |
@@ -27,13 +27,22 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-mermaid-open`       | `@tifan/pi-mermaid-open`       | `0.2.0`          | `b39d1e6`       |
 | `@herbertgao/pi-preferred-thinking` | `@tifan/pi-preferred-thinking` | `1.0.0`          | `b39d1e6`       |
 | `@herbertgao/pi-recap`              | `@tifan/pi-recap`              | `0.4.5`          | `b39d1e6`       |
-| `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.5.0`          | `3f6b5e6`       |
+| `@herbertgao/pi-rename`             | `@tifan/pi-rename`             | `0.5.1`          | `cca1906`       |
 | `@herbertgao/resume-from`           | `resume-from`                  | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-stash`              | `@tifan/pi-stash`              | `0.2.0`          | `b39d1e6`       |
-| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.18.0`         | `3f9d35c`       |
+| `@herbertgao/pi-subagents`          | `@tintinweb/pi-subagents`      | `0.18.2`         | `ad81024`       |
 | `@herbertgao/pi-titlebar-spinner`   | `@tifan/pi-titlebar-spinner`   | `0.1.3`          | `460d580`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
+
+### Tifan pi-rename 0.5.1 review
+
+The range `08ecbf7..cca1906` affects only `pi-rename`:
+
+- `7ff6d08` is **ported**: session startup now recognizes a launcher-provided temporary Herdr label through `HERDR_TEMPORARY_LABEL` instead of guessing from the current working directory. The focused environment-variable regression test is included, while local malformed Herdr JSON recovery remains intact.
+- `cca1906` is release metadata and is represented through local provenance rather than copied workspace metadata.
+
+No other imported Tifan package changed. Package provenance and the repository review cursor advance to released `@tifan/pi-rename@0.5.1` at `cca1906`.
 
 ### Tifan release review through 08ecbf7
 
@@ -47,6 +56,17 @@ The range `efc30c3..08ecbf7` and the matching published tags were reviewed packa
 - `pi-review` is a new optional product rather than an update to an imported package. It is reviewed but **not imported**: adding another aggregate extension is outside this maintenance issue and has no existing local compatibility contract.
 
 The repository review cursor advances to `08ecbf7`; documentation-only commits after the published tags do not change package provenance.
+
+### pi-cc-extensions 0.8.67 and post-release review
+
+The released range `e971a39..bc58504` was reviewed commit by commit:
+
+- `c5424bf` is **selectively ported**: `/context` deducts only Memory and Skills content actually embedded in the system prompt, while retaining this fork's detailed user, assistant, tool-result, and compaction partitions plus scrollable previews.
+- `25d204c` and `a29c4ea` are **selectively ported**: tool animations start only after execution begins, while restored entries remain static and input summaries keep the fork's viewport-aware clipping instead of adopting a fixed width.
+- `fad2062` is **ported**: `dimThinkingText` can render compact thinking with the dim theme color.
+- `bc58504` is release metadata and is represented through local provenance.
+
+In the post-release range `bc58504..dba37e5`, PowerShell is recognized as a shell command in agent summaries. Upstream test consolidation is not copied, and the global dock-flush prototype patch is **deferred** because it does not restore the original method during extension shutdown or reload. Package provenance advances to released `v0.8.67` at `bc58504`; the repository review cursor advances through `dba37e5`.
 
 ### pi-cc-extensions 0.8.66 review
 
@@ -67,6 +87,18 @@ The released range `6b7447e..4709081` was reviewed commit by commit:
 - `4709081` is **ported**: expanded thinking wraps use bounded per-message/run/width caching, collapse evicts only that run, and double-click identity survives component rebuilds without crossing runs.
 
 The fork keeps its renderer-first compact-thinking lifecycle bridge, message-display hardening, live mouse TUI slot, terminal-width handling, Markdown fence/inline protection, compact-thinking coexistence, rich diff ANSI/CRLF/write metadata, and dedicated Agent renderer. Package provenance and the repository review cursor advance to released `v0.8.64` at `4709081`.
+
+### pi-subagents 0.18.1, 0.18.2, and 0.19 workflow review
+
+The released range `a9db27b..ad81024` was reviewed commit by commit:
+
+- `92422a4` is **selectively ported**: agent records and UI expose requested and effective model/thinking settings while retaining this fork's tolerant model resolution.
+- `917853c` is **ported**: the conversation viewer gains Markdown modes with bounded fallback rendering, and agent files safely accept a UTF-8 BOM while preserving malformed-agent recovery.
+- `e56085d` is **selectively ported**: foreground tasks use an independent concurrency pool and per-invocation spawn callbacks; nested, RPC, detached, and resumed tasks retain their ownership exemptions to avoid deadlock.
+- `084d177` is **selectively ported**: cross-extension RPC applies model-scope policy after resolving string model requests through the local resolver.
+- Benchmark, host documentation, upstream namespace, lockfile, and release-only changes are reviewed but not copied.
+
+Package provenance advances to released `v0.18.2` at `ad81024`. The later workflow engine through `v0.19.0` at `bd446fc` is **deferred** as a separate product surface: it adds workers, workflow ownership, structured output, worktree gates, and substantial prompt/runtime cost beyond the maintained subagent contract. The repository review cursor advances through `bd446fc` so those commits are not repeatedly reported.
 
 ### pi-subagents post-0.18.0 review
 
@@ -107,17 +139,24 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.7.0`  | `juicesharp/rpiv-mono`      |
-| `@narumitw/pi-btw`                   | `0.55.1` | `narumiruna/pi-extensions`  |
+| `@juicesharp/rpiv-ask-user-question` | `2.7.1`  | `juicesharp/rpiv-mono`      |
+| `@narumitw/pi-btw`                   | `0.55.3` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
-| `pi-mcp-adapter`                     | `2.27.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.28.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-lens`                            | `4.1.1`  | `apmantza/pi-lens`          |
-| `pi-web-access`                      | `0.24.2` | `nicobailon/pi-web-access`  |
+| `pi-lens`                            | `4.1.2`  | `apmantza/pi-lens`          |
+| `pi-web-access`                      | `0.25.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
-| `@czottmann/pi-automode`             | `1.12.0` | `czottmann/pi-automode`     |
+| `@czottmann/pi-automode`             | `1.13.0` | `czottmann/pi-automode`     |
 
-The reviewed `pi-lens@4.1.1` release baseline is tag `v4.1.1` at commit `e06104d`; no later commits are bundled.
+The issue #122 companion review accepted six released updates:
+
+- `pi-automode@1.13.0` parses shell commands before policy matching and migrates legacy configuration; its new `unbash@4.0.10` dependency is ISC-licensed.
+- `rpiv-ask-user-question@2.7.1` contains release/dependency metadata only and advances `rpiv-config` to `^2.7.1`.
+- `pi-btw@0.55.3` restores editor/search focus after Ctrl+C and advances `pi-tui-kit` to `^0.58.1`.
+- `pi-lens@4.1.2` fixes delayed and stale LSP delivery, process cleanup, and snapshot completeness. The reviewed release baseline is tag `v4.1.2` at commit `1b83ea8`.
+- `pi-mcp-adapter@2.28.0` adds namespace tools, cross-extension registration, progress, TTL, and recovery without changing its dependency or peer contract.
+- `pi-web-access@0.25.0` adds opt-in proxy and cloud-auth providers, GitHub-aware fetching, and a default Defuddle extraction fallback; its new `defuddle@0.19.3` dependency is MIT-licensed.
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
 
