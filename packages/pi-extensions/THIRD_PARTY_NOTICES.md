@@ -1,7 +1,21 @@
+# Third-party notices
+
+The aggregate package bundles the following packages from [tifandotme/pi-extensions](https://github.com/tifandotme/pi-extensions):
+
+- `@tifan/pi-copy-response`
+- `@tifan/pi-handoff`
+- `@tifan/pi-inline-skills`
+- `@tifan/pi-mermaid-open`
+- `@tifan/pi-preferred-thinking`
+- `@tifan/pi-recap`
+- `@tifan/pi-rename`
+- `@tifan/pi-titlebar-spinner`
+
+They are distributed under the following MIT license:
+
 MIT License
 
 Copyright (c) 2026 Tifan Dwi Avianto
-Copyright (c) 2026 Herbert Gao
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -10,26 +10,17 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer.
 
-The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual packages can also be installed separately. The deprecated fixed-editor package remains available only for legacy Pi versions and is not loaded by the aggregate.
+The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual maintained packages can also be installed separately.
 
-## Packages
+## Maintained packages
 
-| Package                                                               | Description                                                                 | Source                                                                                                                   |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions)           | Claude Code-style output, fullscreen interaction, context and references.   | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)                                                        |
-| [`@herbertgao/pi-copy-response`](packages/pi-copy-response)           | Pick and copy an assistant response.                                        | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-copy-response)           |
-| [`@herbertgao/pi-fixed-editor`](packages/pi-fixed-editor)             | Frozen legacy support for Pi versions before 0.84; not in the aggregate.    | [`@tifan/pi-fixed-editor`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-fixed-editor)             |
-| [`@herbertgao/pi-handoff`](packages/pi-handoff)                       | Transfer session context and query past sessions.                           | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-handoff)                       |
-| [`@herbertgao/pi-inline-skills`](packages/pi-inline-skills)           | Inline `/skill` autocomplete.                                               | [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-inline-skills)           |
-| [`@herbertgao/pi-mermaid-open`](packages/pi-mermaid-open)             | Extract and open Mermaid diagrams.                                          | [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-mermaid-open)             |
-| [`@herbertgao/pi-preferred-thinking`](packages/pi-preferred-thinking) | Persist preferred thinking levels per model.                                | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-preferred-thinking) |
-| [`@herbertgao/pi-recap`](packages/pi-recap)                           | Generate one-line session recaps.                                           | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-recap)                           |
-| [`@herbertgao/pi-rename`](packages/pi-rename)                         | Generate session names and rename Herdr tabs.                               | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-rename)                         |
-| [`@herbertgao/resume-from`](packages/resume-from)                     | Continue sessions across Pi, Claude Code, and Codex.                        | [`resume-from`](https://github.com/alexei-led/resume-from)                                                               |
-| [`@herbertgao/pi-stash`](packages/pi-stash)                           | Stash and restore one editor draft.                                         | [`@tifan/pi-stash`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-stash)                           |
-| [`@herbertgao/pi-subagents`](packages/pi-subagents)                   | Autonomous subagents with HerbertGao's agent-name and color customizations. | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents)                                                   |
-| [`@herbertgao/pi-titlebar-spinner`](packages/pi-titlebar-spinner)     | Show activity in the terminal titlebar.                                     | [`@tifan/pi-titlebar-spinner`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-titlebar-spinner)     |
-| [`@herbertgao/pi-extensions`](packages/pi-extensions)                 | Aggregate installer for the collection.                                     | This repository                                                                                                          |
+| Package                                                     | Description                                                                 | Source                                                                                         |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions) | Claude Code-style output, fullscreen interaction, context and references.   | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)                              |
+| [`@herbertgao/resume-from`](packages/resume-from)           | Continue sessions across Pi, Claude Code, and Codex.                        | [`resume-from`](https://github.com/alexei-led/resume-from)                                     |
+| [`@herbertgao/pi-stash`](packages/pi-stash)                 | Stash and restore one editor draft.                                         | [`@tifan/pi-stash`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-stash) |
+| [`@herbertgao/pi-subagents`](packages/pi-subagents)         | Autonomous subagents with HerbertGao's agent-name and color customizations. | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents)                         |
+| [`@herbertgao/pi-extensions`](packages/pi-extensions)       | Aggregate installer for the collection.                                     | This repository                                                                                |
 
 ## Bundled upstream companions
 
@@ -41,6 +32,14 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.7.1`        | Structured user questionnaires.               |
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.55.3`       | Parallel side questions outside main history. |
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.10`       | Priority service tier for selected models.    |
+| [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.6`        | Pick and copy an assistant response.          |
+| [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.0.1`        | Session handoffs and queries.                 |
+| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.5`        | Inline `/skill` autocomplete.                 |
+| [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.0`        | Extract and open Mermaid diagrams.            |
+| [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.0`        | Persist thinking levels per model.            |
+| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.5`        | Generate one-line session recaps.             |
+| [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.5.1`        | Generate session names and rename Herdr.      |
+| [`@tifan/pi-titlebar-spinner`](https://github.com/tifandotme/pi-extensions)     | `0.1.3`        | Show activity in the terminal titlebar.       |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.28.0`       | MCP tools and skills.                         |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.2`        | Code diagnostics and skills.                  |
@@ -60,7 +59,7 @@ The aggregate enables `pi-footer` and ships [`packages/pi-extensions/examples/pi
 
 ## Native fullscreen
 
-Pi 0.84.1's native `fullscreen` TUI owns transcript scrolling and the fixed bottom dock. `@herbertgao/pi-cc-extensions` integrates its mouse interactions with that native viewport. The old Fixed Editor compositor is retained only as a separately installable legacy package for Pi versions before 0.84.
+Pi 0.84.1's native `fullscreen` TUI owns transcript scrolling and the fixed bottom dock. `@herbertgao/pi-cc-extensions` integrates its mouse interactions with that native viewport.
 
 ## Maintenance
 
@@ -68,4 +67,4 @@ See [`docs/maintenance.md`](docs/maintenance.md) for per-package upstream baseli
 
 ## Attribution
 
-The Tifan-derived packages, tintinweb-derived subagents package, and Alexei Led's `resume-from` retain their original MIT notices and upstream links. HerbertGao's changes are maintained in this independent repository.
+The maintained Tifan-derived packages, tintinweb-derived subagents package, and Alexei Led's `resume-from` retain their original MIT notices and upstream links. Directly bundled companions retain their upstream package names; the aggregate ships their required notices in [`THIRD_PARTY_NOTICES.md`](packages/pi-extensions/THIRD_PARTY_NOTICES.md). HerbertGao's changes are maintained in this independent repository.

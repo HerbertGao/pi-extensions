@@ -40,6 +40,38 @@
       "repository": "https://github.com/k3dom/pi-plugins"
     },
     {
+      "package": "@tifan/pi-copy-response",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-handoff",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-inline-skills",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-mermaid-open",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-preferred-thinking",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-recap",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-rename",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
+      "package": "@tifan/pi-titlebar-spinner",
+      "repository": "https://github.com/tifandotme/pi-extensions"
+    },
+    {
       "package": "pi-mcp-adapter",
       "repository": "https://github.com/nicobailon/pi-mcp-adapter"
     },

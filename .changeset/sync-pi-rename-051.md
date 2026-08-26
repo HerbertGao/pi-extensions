@@ -1,5 +1,4 @@
 ---
-"@herbertgao/pi-rename": patch
 "@herbertgao/pi-extensions": patch
 ---
 
