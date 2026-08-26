@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-extensions",
-  "version": "2026.8.11",
+  "version": "2026.8.12",
   "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
   "keywords": [
     "extensions",
@@ -43,9 +43,9 @@
     "@earendil-works/pi-tui": "^0.84.2",
     "@effect/platform-node": "4.0.0-beta.103",
     "@effect/platform-node-shared": "4.0.0-beta.103",
-    "@herbertgao/pi-cc-extensions": "0.8.58",
+    "@herbertgao/pi-cc-extensions": "0.8.59",
     "@herbertgao/pi-stash": "0.1.2",
-    "@herbertgao/pi-subagents": "0.16.1",
+    "@herbertgao/pi-subagents": "0.17.0",
     "@herbertgao/resume-from": "0.2.0",
     "@juicesharp/rpiv-ask-user-question": "2.7.1",
     "@juicesharp/rpiv-config": "^2.7.1",

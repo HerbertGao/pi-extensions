@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0
+
+### Minor Changes
+
+- [#123](https://github.com/HerbertGao/pi-extensions/pull/123) [`acb79c0`](https://github.com/HerbertGao/pi-extensions/commit/acb79c0f7b0a8a65ec2612cb6ce32c8cca496f96) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync reviewed pi-subagents 0.18.2 features for effective model display, bounded Markdown viewing, foreground concurrency, BOM-safe agents, and RPC model-scope enforcement.
+
 ## 0.16.1
 
 ### Patch Changes
