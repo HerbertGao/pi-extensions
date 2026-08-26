@@ -28,7 +28,8 @@
 
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent"
+import { getAgentDir } from "@earendil-works/pi-coding-agent"
+import { parseAgentFrontmatter } from "./custom-agents.js"
 import type { AgentConfig } from "./types.js"
 
 export type AgentFileLocation = "project" | "workspace" | "personal"
@@ -69,12 +70,11 @@ const FENCE = /^---[ \t]*$/
 
 /**
  * Split a file into its frontmatter lines and everything else, agreeing with
- * what `parseFrontmatter` (the load side) considers a frontmatter block.
+ * what `parseAgentFrontmatter` (the load side) considers a frontmatter block.
  *
  * Lines keep their terminators, so an edit preserves the file's existing line
  * endings instead of rewriting CRLF to LF. Returns undefined when there is no
- * usable block — notably for a BOM-prefixed file, which the parser also reads
- * as having none, so writing a key into it would change nothing on load.
+ * usable block. A leading BOM stays byte-for-byte in the file.
  */
 function splitFrontmatter(
   content: string,
@@ -82,8 +82,11 @@ function splitFrontmatter(
   | { lines: string[]; openIdx: number; closeIdx: number; eol: string }
   | undefined {
   const lines = content.split(/(?<=\n)/)
-  if (lines.length === 0 || !FENCE.test(lines[0].replace(/\r?\n$/, "")))
-    return undefined
+  if (lines.length === 0) return undefined
+  const first = (
+    content.startsWith("\uFEFF") ? lines[0].slice(1) : lines[0]
+  ).replace(/\r?\n$/, "")
+  if (!FENCE.test(first)) return undefined
   const closeIdx = lines.findIndex(
     (l, i) => i > 0 && FENCE.test(l.replace(/\r?\n$/, "")),
   )
@@ -110,8 +113,8 @@ function splitFrontmatter(
 export function isDisabledContent(content: string): boolean {
   try {
     return (
-      parseFrontmatter<Record<string, unknown>>(content).frontmatter.enabled ===
-      false
+      parseAgentFrontmatter<Record<string, unknown>>(content).frontmatter
+        .enabled === false
     )
   } catch {
     return false

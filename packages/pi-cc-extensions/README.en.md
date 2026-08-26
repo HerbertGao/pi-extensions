@@ -61,6 +61,7 @@ Run `/reload` after installation.
   "useSummaryTitlesAsThinkingTitle": true, // use the latest provider summary as the active thinking title
   "previewLines": 3,                       // thinking preview lines; 0 hides the preview body
   "animationIntervalMs": 90,               // thinking title animation interval in ms
+  "dimThinkingText": false,                // dim thinking body text
   "showStartupHeader": true,               // custom startup header (logo + tips) toggle
   "scrollStepLines": 3,                    // fullscreen mouse wheel scroll lines
   "enableSessionReference": true,          // @ session references
@@ -101,5 +102,5 @@ bun run typecheck
 
 ## Credits
 
-- Derived from [`minuque/pi-cc-extensions` v0.8.66](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.66) (`e971a39`) under the MIT license.
+- Derived from [`minuque/pi-cc-extensions` v0.8.67](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.67) (`bc58504`) under the MIT license.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).

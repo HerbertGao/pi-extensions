@@ -71,7 +71,8 @@ export function styleCompactThinkingText(
 	bold = false,
 ): string {
 	if (!theme) return text;
-	const colored = typeof theme.fg === "function" ? theme.fg("thinkingText", text) : text;
+	const color = config.dimThinkingText ? "dim" : "thinkingText";
+	const colored = typeof theme.fg === "function" ? theme.fg(color, text) : text;
 	const weighted = bold && typeof theme.bold === "function" ? theme.bold(colored) : colored;
 	return typeof theme.italic === "function" ? theme.italic(weighted) : weighted;
 }
@@ -1119,7 +1120,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		}
 		const name = String(this.toolName ?? "");
 		if (EDIT_WRITE_TOOLS.has(name)) {
-			if (!this.result || this.isPartial === true) scheduleAnimation(this);
+			if (this.executionStarted && (!this.result || this.isPartial === true))
+				scheduleAnimation(this);
 			const lines = compactEditWriteLine(this, width, deps.writeMetadata);
 			if (this.expanded !== true) return lines;
 			return compactEditWriteExpandedLines(this, width, deps.writeMetadata);

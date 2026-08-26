@@ -349,6 +349,15 @@ export async function showCcstylePanel(
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
 				buildNumberInputSubmenu(theme, thinkingAnimationSetting, closeSubmenu),
 		};
+		const thinkingDimSetting = {
+			id: "dimThinkingText",
+			label: "Dim thinking text",
+			description: config.dimThinkingText
+				? "Thinking text uses the theme's dim color."
+				: "Keep the default thinking text color.",
+			currentValue: config.dimThinkingText ? "on" : "off",
+			values: ["on", "off"],
+		};
 		const startupHeaderSetting = {
 			id: "showStartupHeader",
 			label: "Startup header",
@@ -505,6 +514,12 @@ export async function showCcstylePanel(
 					);
 					thinkingAnimationSetting.currentValue = String(config.animationIntervalMs);
 					break;
+				case "dimThinkingText":
+					config.dimThinkingText = value === "on";
+					thinkingDimSetting.description = config.dimThinkingText
+						? "Thinking text uses the theme's dim color."
+						: "Keep the default thinking text color.";
+					break;
 				case "showStartupHeader":
 					config.showStartupHeader = value === "on";
 					startupHeaderSetting.description = config.showStartupHeader
@@ -548,7 +563,12 @@ export async function showCcstylePanel(
 			{
 				id: "thinking",
 				label: "Thinking",
-				items: [thinkingTitleSetting, thinkingPreviewSetting, thinkingAnimationSetting],
+				items: [
+					thinkingTitleSetting,
+					thinkingPreviewSetting,
+					thinkingAnimationSetting,
+					thinkingDimSetting,
+				],
 			},
 			{
 				id: "ui",

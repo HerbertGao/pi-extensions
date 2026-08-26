@@ -3,7 +3,7 @@
 // bounds 为 0-based 的弹框起点（left/top）+ 宽度。
 import assert from "node:assert/strict";
 import test from "node:test";
-import { initTheme } from "@earendil-works/pi-coding-agent";
+import { formatSkillsForPrompt, initTheme } from "@earendil-works/pi-coding-agent";
 import {
 	escCloseHitbox,
 	hasActiveTextPreview,
@@ -94,8 +94,31 @@ test("context breakdown exposes tool results for preview", () => {
 		},
 	} as never);
 	assert.match(breakdown.toolResults, /TOOL_RESULT_PREVIEW/);
-	assert.ok(breakdown.parts.some((part) => part.label === "Memory" && part.tokens > 0));
+	assert.equal(breakdown.parts.find((part) => part.label === "Memory")?.tokens ?? 0, 0);
 	assert.ok(breakdown.parts.some((part) => part.label === "Tool results" && part.tokens > 0));
+});
+
+test("context breakdown attributes embedded memory and skills once", () => {
+	const memory = "cccc";
+	const skills = [{ name: "ok", description: "desc", filePath: "/v" }];
+	const skillsText = formatSkillsForPrompt(skills as any).trim();
+	const systemPrompt = `base\n<project_instructions>\n${memory}\n</project_instructions>\n${skillsText}`;
+	const breakdown = collectContextBreakdown({
+		getSystemPrompt: () => systemPrompt,
+		getSystemPromptOptions: () => ({
+			selectedTools: [],
+			contextFiles: [{ path: "AGENTS.md", content: memory }],
+			skills,
+		}),
+		sessionManager: { buildContextEntries: () => [] },
+	} as never);
+
+	const systemTokens = breakdown.parts.find((part) => part.label === "System prompt")?.tokens ?? -1;
+	const memoryTokens = breakdown.parts.find((part) => part.label === "Memory")?.tokens ?? -1;
+	const skillTokens = breakdown.parts.find((part) => part.label === "Skills")?.tokens ?? -1;
+	assert.equal(memoryTokens, Math.ceil(memory.length / 4));
+	assert.equal(skillTokens, Math.ceil(skillsText.length / 4));
+	assert.equal(systemTokens + memoryTokens + skillTokens, Math.ceil(systemPrompt.length / 4));
 });
 
 /** showTextPreview 自定义 UI 的最小 harness：捕获 component（挂载后实时可读），theme 可注入，可选挂载回调。 */

@@ -95,6 +95,7 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 			/[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Bash /,
 			"single tools use the shared Braille loader",
 		);
+		assert.notEqual(component.state?.ccstyleAnimationScheduled, true);
 		component.updateResult({
 			content: [{ type: "text", text: "first line\nsecond line\nthird line" }],
 			isError: false,

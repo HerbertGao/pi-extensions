@@ -1,7 +1,9 @@
 import {
 	type ExtensionAPI,
 	type ExtensionCommandContext,
+	type Skill,
 	estimateTokens,
+	formatSkillsForPrompt,
 	getMarkdownTheme,
 } from "@earendil-works/pi-coding-agent";
 import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
@@ -287,6 +289,11 @@ const tokenEstimate = (value: unknown): number => {
 	return Math.max(0, Math.ceil(text.length / 4));
 };
 
+function embeddedTokens(prompt: string, chunk: string): number {
+	if (!chunk || !prompt.includes(chunk)) return 0;
+	return tokenEstimate(chunk);
+}
+
 type ToolPreviewInfo = {
 	name: string;
 	description?: string;
@@ -359,12 +366,7 @@ export function formatTokens(tokens: number): string {
 
 type SystemPromptOptions = {
 	contextFiles?: Array<{ path: string; content: string }>;
-	skills?: Array<{
-		name: string;
-		description?: string;
-		filePath?: string;
-		disableModelInvocation?: boolean;
-	}>;
+	skills?: Skill[];
 	selectedTools?: string[];
 	toolSnippets?: Record<string, string>;
 	promptGuidelines?: string[];
@@ -386,19 +388,11 @@ export function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBr
 	const systemPrompt = typeof ctx.getSystemPrompt === "function" ? ctx.getSystemPrompt() : "";
 
 	const contextFileTokens = (options.contextFiles ?? []).reduce(
-		(sum, file) => sum + tokenEstimate(file.content),
+		(sum, file) => sum + embeddedTokens(systemPrompt, file.content),
 		0,
 	);
-	// Prefer field-level estimates over JSON.stringify(whole skill).
-	const skillTokens = (options.skills ?? []).reduce((sum, skill) => {
-		if (!skill || typeof skill !== "object") return sum + tokenEstimate(skill);
-		return (
-			sum +
-			tokenEstimate(skill.name) +
-			tokenEstimate(skill.description) +
-			tokenEstimate(skill.filePath)
-		);
-	}, 0);
+	const skillsText = formatSkillsForPrompt(options.skills ?? []).trim();
+	const skillTokens = embeddedTokens(systemPrompt, skillsText);
 	const tools = options.selectedTools ?? [];
 	const snippets = options.toolSnippets;
 	let toolTokens = tokenEstimate(options.promptGuidelines);
@@ -455,11 +449,17 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 			const estimated = breakdown.parts.reduce((sum, part) => sum + part.tokens, 0);
 			const fixedParts = breakdown.parts.filter(
 				(part) =>
-					part.label === "System prompt" || part.label === "Memory" || part.label === "Tools",
+					part.label === "System prompt" ||
+					part.label === "Memory" ||
+					part.label === "Skills" ||
+					part.label === "Tools",
 			);
 			const variableParts = breakdown.parts.filter(
 				(part) =>
-					part.label !== "System prompt" && part.label !== "Memory" && part.label !== "Tools",
+					part.label !== "System prompt" &&
+					part.label !== "Memory" &&
+					part.label !== "Skills" &&
+					part.label !== "Tools",
 			);
 			const orderedParts = [...fixedParts, ...variableParts];
 			const fixedTokens = fixedParts.reduce((sum, part) => sum + part.tokens, 0);

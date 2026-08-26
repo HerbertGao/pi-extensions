@@ -16,6 +16,26 @@ function tool(name: string, id: string, args: any = {}) {
 	return new ToolExecutionComponent(name, id, args, {}, undefined, ui, process.cwd()) as any;
 }
 
+test("restored tools keep the static Braille loader", () => {
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		parent.addChild(tool("read", "read-stale"));
+		parent.addChild(tool("bash", "bash-stale"));
+		const group = parent.children[0] as ToolGroupComponent;
+		const rendered = group
+			.render(100)
+			.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+			.filter((line: string) => line.trim());
+		assert.match(rendered[0], /2 running/);
+		assert.ok(rendered.some((line: string) => /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/.test(line)));
+		assert.doesNotMatch(rendered.join("\n"), /queued/);
+		assert.equal((group as any).patch.animationTimer, null);
+	} finally {
+		hooks.shutdown();
+	}
+});
+
 test("mixed tools group across three empty separators while edit/write and content break groups", () => {
 	let enabled = true;
 	const hooks = installToolGrouping(() => enabled);

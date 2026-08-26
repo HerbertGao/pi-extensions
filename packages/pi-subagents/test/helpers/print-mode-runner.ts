@@ -148,7 +148,7 @@ export interface RunPrintModeOptions {
    * resolve from your local config (settings default → first authed model) — i.e.
    * it picks up whatever your `pi` install is logged into, no env required.
    */
-  live?: { provider: string; model: string }
+  live?: false | { provider: string; model: string }
 }
 
 export interface PrintModeRun {
@@ -304,8 +304,9 @@ export async function runPrintMode(
     // `model` undefined: createAgentSession then calls findInitialModel() against
     // the real, auth-backed registry + your local settings default — i.e. it
     // picks up whatever your `pi` install is logged into, no env needed.
-    const provider = options.live?.provider ?? process.env.PI_PROVIDER
-    const modelId = options.live?.model ?? process.env.PI_MODEL
+    const livePin = options.live || undefined
+    const provider = livePin?.provider ?? process.env.PI_PROVIDER
+    const modelId = livePin?.model ?? process.env.PI_MODEL
     if (provider && modelId) {
       // getModel's overloads need the concrete provider literal; cast through.
       // Since pi-ai 0.80 it is a static builtin-catalog lookup that returns

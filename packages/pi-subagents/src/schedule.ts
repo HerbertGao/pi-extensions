@@ -22,6 +22,7 @@ import type {
 import { Cron } from "croner"
 import { nanoid } from "nanoid"
 import type { AgentManager } from "./agent-manager.js"
+import { normalizeMaxTurns } from "./agent-runner.js"
 import { resolveSpawnType } from "./agent-types.js"
 import { resolveModel } from "./model-resolver.js"
 import type { ScheduleStore } from "./schedule-store.js"
@@ -280,6 +281,13 @@ export class SubagentScheduler {
         isolated: job.isolated,
         thinkingLevel: job.thinking,
         isolation: job.isolation,
+        invocation: {
+          thinking: job.thinking,
+          maxTurns: normalizeMaxTurns(job.max_turns),
+          isolated: job.isolated,
+          runInBackground: true,
+          isolation: job.isolation,
+        },
       })
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err)

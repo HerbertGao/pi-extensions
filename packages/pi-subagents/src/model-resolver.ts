@@ -14,6 +14,20 @@ export interface ModelRegistry {
   getAvailable?(): any[]
 }
 
+/** Both display forms of a resolved model. */
+export function describeModel(model: {
+  provider: string
+  id: string
+  name?: string
+}): { modelName: string; modelId: string } {
+  return {
+    modelName: (model.name ?? model.id)
+      .replace(/^Claude\s+/i, "")
+      .toLowerCase(),
+    modelId: `${model.provider}/${model.id}`,
+  }
+}
+
 /**
  * Resolve a model string to a Model instance.
  * Tries exact match first ("provider/modelId"), then fuzzy match against all available models.

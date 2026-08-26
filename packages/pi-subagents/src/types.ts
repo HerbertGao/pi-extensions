@@ -105,6 +105,9 @@ export type JoinMode = "async" | "group" | "smart"
  */
 export type WidgetMode = "all" | "background" | "off"
 
+/** How much of the conversation viewer renders as Markdown. */
+export type ViewerMarkdownMode = "off" | "assistant" | "all"
+
 export interface AgentRecord {
   id: string
   type: SubagentType
@@ -125,6 +128,10 @@ export interface AgentRecord {
   session?: AgentSession
   abortController?: AbortController
   promise?: Promise<string>
+  /** Whether a caller is awaiting this agent inline. */
+  blocking?: boolean
+  /** Resolves when a queued blocking agent starts or is removed from the queue. */
+  startGate?: Promise<void>
   groupId?: string
   joinMode?: JoinMode
   /** Set when result was already consumed via get_subagent_result — suppresses completion notification. */
@@ -176,10 +183,18 @@ export interface AgentRecord {
   rootSessionId?: string
 }
 
+/** Effective session level, including pi's display-only `off` value. */
+export type EffectiveThinkingLevel = ThinkingLevel | "off"
+
 export interface AgentInvocation {
-  /** Short display name, e.g. "haiku" — only set when different from parent. */
+  /** Short model label for tight UI rows. */
   modelName?: string
-  thinking?: ThinkingLevel
+  /** Canonical provider/model id. */
+  modelId?: string
+  thinking?: EffectiveThinkingLevel
+  /** Requested values retained only when the run used something else. */
+  requestedThinking?: EffectiveThinkingLevel
+  requestedModel?: string
   maxTurns?: number
   isolated?: boolean
   inheritContext?: boolean

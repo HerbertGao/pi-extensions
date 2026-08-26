@@ -226,18 +226,31 @@ export function getPromptModeLabel(type: SubagentType): string | undefined {
 /** Mode label is not included — callers add it where they want it. */
 export function buildInvocationTags(invocation: AgentInvocation | undefined): {
   modelName?: string
+  modelId?: string
   tags: string[]
 } {
   const tags: string[] = []
   if (!invocation) return { tags }
-  if (invocation.thinking) tags.push(`thinking: ${invocation.thinking}`)
+  const asked = (
+    value: string | undefined,
+    requested: string | undefined,
+  ): string | undefined =>
+    value && requested && requested !== value
+      ? `${value} (asked ${requested})`
+      : value
+  const thinking = asked(invocation.thinking, invocation.requestedThinking)
+  if (thinking) tags.push(`thinking: ${thinking}`)
   if (invocation.isolated) tags.push("isolated")
   if (invocation.isolation === "worktree") tags.push("worktree")
   if (invocation.inheritContext) tags.push("inherit context")
   if (invocation.runInBackground) tags.push("background")
   if (invocation.maxTurns != null)
     tags.push(`max turns: ${invocation.maxTurns}`)
-  return { modelName: invocation.modelName, tags }
+  return {
+    modelName: asked(invocation.modelName, invocation.requestedModel),
+    modelId: asked(invocation.modelId, invocation.requestedModel),
+    tags,
+  }
 }
 
 /** Truncate text to a single line, max `len` chars. */
@@ -317,6 +330,8 @@ export class AgentWidget {
      * supplies the user's `showCost` setting.
      */
     private showCost: () => boolean = () => false,
+    /** Whether running rows show the model and thinking level. */
+    private showModel: () => boolean = () => false,
   ) {}
 
   /**
@@ -526,6 +541,12 @@ export class AgentWidget {
         : ""
 
       const parts: string[] = []
+      if (this.showModel()) {
+        const { modelName, tags } = buildInvocationTags(a.invocation)
+        if (modelName) parts.push(modelName)
+        const thinkingTag = tags.find((tag) => tag.startsWith("thinking: "))
+        if (thinkingTag) parts.push(thinkingTag)
+      }
       if (bg) parts.push(formatTurns(bg.turnCount, bg.maxTurns))
       if (toolUses > 0)
         parts.push(`${toolUses} tool use${toolUses === 1 ? "" : "s"}`)
