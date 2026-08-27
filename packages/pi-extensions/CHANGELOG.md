@@ -1,5 +1,17 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.13
+
+### Minor Changes
+
+- [#128](https://github.com/HerbertGao/pi-extensions/pull/128) [`f2c0267`](https://github.com/HerbertGao/pi-extensions/commit/f2c02674208f1fcbe8a85b6707cbb50b1749b928) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `@luxusai/pi-hindsight@0.12.0` with its extension and memory-doctor skill for self-hosted cross-host project memory.
+
+### Patch Changes
+
+- [#130](https://github.com/HerbertGao/pi-extensions/pull/130) [`8a37939`](https://github.com/HerbertGao/pi-extensions/commit/8a37939d3dbd1cbed676b8f06146badab58fa723) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-mcp-adapter to 2.29.0 with opt-in Parallel Search setup and reliable non-TUI status text.
+
+- [#130](https://github.com/HerbertGao/pi-extensions/pull/130) [`8a37939`](https://github.com/HerbertGao/pi-extensions/commit/8a37939d3dbd1cbed676b8f06146badab58fa723) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-btw to 0.55.4 and align its promoted pi-tui-kit dependency with 0.59.0.
+
 ## 2026.8.12
 
 ### Patch Changes
