@@ -32,6 +32,10 @@
       "repository": "https://github.com/juicesharp/rpiv-mono"
     },
     {
+      "package": "@luxusai/pi-hindsight",
+      "repository": "https://github.com/luxus/pi-hindsight"
+    },
+    {
       "package": "@narumitw/pi-btw",
       "repository": "https://github.com/narumiruna/pi-extensions"
     },

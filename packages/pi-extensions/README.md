@@ -14,6 +14,7 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-cc-extensions`
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.7.1`
+- `@luxusai/pi-hindsight@0.12.0`
 - `@narumitw/pi-btw@0.55.3`
 - `@pi-plugins/fast-mode@0.1.10`
 - `@tifan/pi-copy-response@0.2.6`
@@ -77,6 +78,10 @@ The copy command replaces an existing `pi-footer.json`; review or back it up fir
 
 Pi 0.84.1 or newer should use native `fullscreen` TUI mode.
 
+### Hindsight memory server
+
+`@luxusai/pi-hindsight` is enabled by the aggregate, but automatic memory network I/O stays behind its setup gate until a server and coding bank are configured. Run `/hindsight` for guided setup. Prefer a self-hosted, authenticated endpoint reachable only over Tailscale or another private network; use one shared coding bank with stable project tags for cross-host development, and keep user memory disabled unless explicitly needed.
+
 ### Remote Pi trust boundary
 
 Configure `REMOTE_PI_RELAY` to a private relay, preferably reachable only through Tailscale or another private network, **before** first running `/remote-pi`. TLS/Tailscale protects traffic in transit but the relay process can read routed content; `remote-pi@0.7.0` is not end-to-end encrypted.
@@ -87,4 +92,4 @@ See the [repository README](https://github.com/HerbertGao/pi-extensions#readme) 
 
 ## License
 
-[MIT](LICENSE). Bundled Tifan package notices are included in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). Bundled upstream notices are included in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

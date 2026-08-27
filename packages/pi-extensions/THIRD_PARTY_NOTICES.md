@@ -34,3 +34,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+## `@luxusai/pi-hindsight`
+
+The aggregate also bundles [`@luxusai/pi-hindsight`](https://github.com/luxus/pi-hindsight) version 0.12.0. Its published `package.json` declares the SPDX license identifier `MIT`. The reviewed upstream repository and npm tarball do not currently include a standalone license or copyright notice, so this aggregate does not invent one; it preserves the published package metadata and upstream attribution verbatim.
