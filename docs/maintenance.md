@@ -140,7 +140,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
 | `@juicesharp/rpiv-ask-user-question` | `2.7.1`  | `juicesharp/rpiv-mono`      |
 | `@luxusai/pi-hindsight`              | `0.12.0` | `luxus/pi-hindsight`        |
-| `@narumitw/pi-btw`                   | `0.55.3` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-btw`                   | `0.55.4` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.6`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-handoff`                  | `2.0.1`  | `tifandotme/pi-extensions`  |
@@ -150,14 +150,19 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-recap`                    | `0.4.5`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-rename`                   | `0.5.1`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-titlebar-spinner`         | `0.1.3`  | `tifandotme/pi-extensions`  |
-| `pi-mcp-adapter`                     | `2.28.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.29.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `4.1.2`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.25.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.13.0` | `czottmann/pi-automode`     |
 
-The issue #122 companion review accepted six released updates:
+The issue #126 companion review accepted two released updates:
+
+- `pi-btw@0.55.4` contains release metadata only and advances the promoted `pi-tui-kit` dependency to `^0.59.0`.
+- `pi-mcp-adapter@2.29.0` adds an opt-in Parallel Search setup preset and reliable status text in non-TUI hosts without changing its runtime dependency versions.
+
+The earlier issue #122 companion review accepted six released updates:
 
 - `pi-automode@1.13.0` parses shell commands before policy matching and migrates legacy configuration; its new `unbash@4.0.10` dependency is ISC-licensed.
 - `rpiv-ask-user-question@2.7.1` contains release/dependency metadata only and advances `rpiv-config` to `^2.7.1`.
