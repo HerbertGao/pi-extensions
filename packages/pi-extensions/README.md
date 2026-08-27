@@ -15,7 +15,7 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-cc-extensions`
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.7.1`
 - `@luxusai/pi-hindsight@0.12.0`
-- `@narumitw/pi-btw@0.55.3`
+- `@narumitw/pi-btw@0.55.4`
 - `@pi-plugins/fast-mode@0.1.10`
 - `@tifan/pi-copy-response@0.2.6`
 - `@tifan/pi-handoff@2.0.1`
@@ -25,7 +25,7 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-cc-extensions`
 - `@tifan/pi-recap@0.4.5`
 - `@tifan/pi-rename@0.5.1`
 - `@tifan/pi-titlebar-spinner@0.1.3`
-- `pi-mcp-adapter@2.28.0`
+- `pi-mcp-adapter@2.29.0`
 - `pi-footer@0.5.1`
 - `pi-lens@4.1.2`
 - `pi-web-access@0.25.0`
