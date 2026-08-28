@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.8.60
+
+### Patch Changes
+
+- [#132](https://github.com/HerbertGao/pi-extensions/pull/132) [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Advance reviewed pi-cc-extensions provenance through 0.8.68 while preserving local viewport clipping, renderer lifecycle, Markdown, mouse, and rich-diff hardening.
+
 ## 0.8.59
 
 ### Patch Changes

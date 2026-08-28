@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.1
+
+### Patch Changes
+
+- [#132](https://github.com/HerbertGao/pi-extensions/pull/132) [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Review pi-subagents 0.19.0 and adopt readable bounded-result counts while retaining the unsigned worktree-preservation safeguard that upstream still lacks.
+
 ## 0.17.0
 
 ### Minor Changes
