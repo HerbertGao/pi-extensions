@@ -1,5 +1,21 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.14
+
+### Patch Changes
+
+- [#132](https://github.com/HerbertGao/pi-extensions/pull/132) [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove the redundant pi-stash fork; bundled pi-btw already preserves the main editor draft while handling side questions outside the main conversation.
+
+- [#132](https://github.com/HerbertGao/pi-extensions/pull/132) [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Advance reviewed pi-cc-extensions provenance through 0.8.68 while preserving local viewport clipping, renderer lifecycle, Markdown, mouse, and rich-diff hardening.
+
+- [#132](https://github.com/HerbertGao/pi-extensions/pull/132) [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Review pi-subagents 0.19.0 and adopt readable bounded-result counts while retaining the unsigned worktree-preservation safeguard that upstream still lacks.
+
+- [#132](https://github.com/HerbertGao/pi-extensions/pull/132) [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pi-automode to 1.14.0, Preferred Thinking to 1.0.1, pi-mcp-adapter to 2.30.0, and pi-web-access to 0.26.0 with bounded classifier streams, explicit subagent thinking, safer runtime MCP composition, XCrawl search, and stronger query and extraction fallbacks.
+
+- Updated dependencies [[`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4), [`e873d36`](https://github.com/HerbertGao/pi-extensions/commit/e873d36513deb902028faa0bf095641a57cb2ae4)]:
+  - @herbertgao/pi-cc-extensions@0.8.60
+  - @herbertgao/pi-subagents@0.17.1
+
 ## 2026.8.13
 
 ### Minor Changes
