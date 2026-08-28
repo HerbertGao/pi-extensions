@@ -597,7 +597,8 @@ async function startMockServer() {
         if (prompt.startsWith("RUN_WEB_SMOKE") && toolResults === 0) {
           name = "web_search"
           args = {
-            query: "aggregate web access smoke",
+            query:
+              '["aggregate web access smoke", "aggregate web access smoke follow-up"]',
             provider: "openai",
             workflow: "none",
           }
@@ -762,6 +763,7 @@ async function assertNewReleaseFeatures({
       },
       firecrawlBaseUrl: `http://127.0.0.1:${firecrawlPort}/firecrawl`,
       firecrawlApiKey: "smoke-firecrawl-key",
+      xcrawlApiKey: "smoke-xcrawl-key",
     })
     const jiti = await createPackageJiti(webAccessEntry)
     const authFetch = await jiti.import(
@@ -819,6 +821,97 @@ async function assertNewReleaseFeatures({
       () => fetchParams.normalizeFetchContentParams({ auth: "   " }),
       /auth must be/,
     )
+
+    const originalFetch = globalThis.fetch
+    const xcrawlCalls = []
+    globalThis.fetch = async (input, init) => {
+      if (String(input) !== "https://run.xcrawl.com/v1/serp") {
+        return originalFetch(input, init)
+      }
+      xcrawlCalls.push({
+        authorization: new Headers(init?.headers).get("authorization"),
+        body: JSON.parse(init?.body),
+      })
+      return new Response(
+        JSON.stringify({
+          search_metadata: { status: "completed" },
+          organic_results: [
+            {
+              title: "XCrawl smoke",
+              link: "/goto?url=smoke",
+              snippet: "Explicit provider result",
+            },
+            {
+              title: "Filtered result",
+              link: "https://other.example/result",
+              snippet: "Excluded by domain filter",
+            },
+          ],
+        }),
+      )
+    }
+    try {
+      const searchProvider = await jiti.import(
+        join(dirname(webAccessEntry), "gemini-search.ts"),
+      )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("xcrawl"),
+        false,
+        "XCrawl must remain explicit-only",
+      )
+      const xcrawl = await searchProvider.search("xcrawl smoke", {
+        provider: "xcrawl",
+        domainFilter: ["run.xcrawl.com"],
+      })
+      assert.equal(xcrawl.provider, "xcrawl")
+      assert.deepEqual(xcrawl.results, [
+        {
+          title: "XCrawl smoke",
+          url: "https://run.xcrawl.com/goto?url=smoke",
+          snippet: "Explicit provider result",
+        },
+      ])
+      assert.deepEqual(xcrawlCalls, [
+        {
+          authorization: "Bearer smoke-xcrawl-key",
+          body: { engine: "google_search", q: "xcrawl smoke" },
+        },
+      ])
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+
+    const extract = await jiti.import(
+      join(dirname(webAccessEntry), "extract.ts"),
+    )
+    const paragraph =
+      "This is substantial article text that should be extracted as the page's main content. "
+    const defuddleFailureHtml = `<!doctype html><html><head><title>Defuddle selector failure</title></head><body><nav><a href="/">Home</a></nav><template id="B:0"></template><div hidden id="S:a"><h1>Defuddle selector failure</h1><p>${paragraph.repeat(20)}</p></div><template id="P:a"></template><footer><p>Copyright 2026 Example Inc. All rights reserved.</p></footer></body></html>`
+    const originalConsoleError = console.error
+    const defuddleConsoleErrors = []
+    globalThis.fetch = async () =>
+      new Response(defuddleFailureHtml, {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      })
+    console.error = (...args) => defuddleConsoleErrors.push(args)
+    let defuddleFailure
+    try {
+      defuddleFailure = await extract.extractContent(
+        "https://example.com/defuddle-selector-failure",
+        undefined,
+        { lookup: async () => [{ address: "93.184.216.34", family: 4 }] },
+      )
+    } finally {
+      globalThis.fetch = originalFetch
+      console.error = originalConsoleError
+    }
+    assert.equal(defuddleConsoleErrors.length, 0)
+    assert.match(
+      defuddleFailure.error,
+      /Defuddle failed to process document: Unknown pseudo-class :a/,
+    )
+    assert.doesNotMatch(defuddleFailure.content, /Copyright 2026/)
 
     const firecrawl = await jiti.import(
       join(dirname(webAccessEntry), "firecrawl.ts"),
@@ -1015,15 +1108,14 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
     assert.equal(searchEnds.length, 3)
     for (const event of searchEnds) {
       assert.equal(event.isError, false, JSON.stringify(event.result, null, 2))
-      assert.equal(
-        event.result.details.successfulQueries,
-        1,
-        JSON.stringify(event.result, null, 2),
-      )
     }
     assert.deepEqual(
-      searchEnds.map((event) => event.result.details.totalResults),
+      searchEnds.map((event) => event.result.details.successfulQueries),
       [2, 1, 1],
+    )
+    assert.deepEqual(
+      searchEnds.map((event) => event.result.details.totalResults),
+      [4, 1, 1],
     )
     assert.match(
       resultText(searchEnds[0]),
@@ -1035,8 +1127,8 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
     assert.ok(responseId, "Jina web_search did not externalize inline content")
     assert.equal(
       mock.requests.filter((request) => request.path === "/responses").length,
-      1,
-      "web_search did not use the configured OpenAI Responses endpoint",
+      2,
+      "web_search did not expand the JSON-array query through OpenAI Responses",
     )
 
     const fetchEnd = firstEvents.find(

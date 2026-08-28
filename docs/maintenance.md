@@ -8,31 +8,38 @@
 
 ## Source baselines
 
-| Local package set      | Upstream                   | Imported baseline                                | Notes                                                                                                                                                         |
-| ---------------------- | -------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tifan-derived packages | `tifandotme/pi-extensions` | `b39d1e6` (`pi-stash@0.2.0`); reviewed `cca1906` | Only Stash remains locally maintained; eight equivalent packages are bundled directly, and Fixed Editor source was removed.                                   |
-| `pi-subagents`         | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`)                             | The fork preserves warning recovery, runtime compatibility, package identity, parent-session persistence, nested delegation, and local UI surfaces.           |
-| `pi-cc-extensions`     | `minuque/pi-cc-extensions` | `bc58504` (`0.8.67`)                             | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes. |
-| `resume-from`          | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)                              | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                   |
+| Local package set  | Upstream                   | Imported baseline    | Notes                                                                                                                                                                            |
+| ------------------ | -------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons. |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `1ca144c` (`0.8.68`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                    |
+| `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                      |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
-| Local package                  | Upstream package          | Imported version | Imported commit |
-| ------------------------------ | ------------------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.67`         | `bc58504`       |
-| `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `e1dad0d`       |
-| `@herbertgao/pi-stash`         | `@tifan/pi-stash`         | `0.2.0`          | `b39d1e6`       |
-| `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `ad81024`       |
+| Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
+| ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.68`         | `0.8.68`         | `1ca144c`       |
+| `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
+| `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `0.19.0`         | `ad81024`       |
 
-`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow without changing the Issue state.
+`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
 
 ### Direct Tifan package migration
 
-After review through `cca1906`, the aggregate stopped republishing eight packages whose maintained behavior no longer justified a parallel source copy. It now pins and bundles these original packages directly: copy-response `0.2.6`, handoff `2.0.1`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.0`, Recap `0.4.5`, Rename `0.5.1`, and Titlebar Spinner `0.1.3`.
+The aggregate pins and bundles eight original Tifan packages directly: copy-response `0.2.6`, handoff `2.0.1`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.5`, Rename `0.5.1`, and Titlebar Spinner `0.1.3`.
 
 Normalized package comparisons established that copy-response, inline-skills, Mermaid Open, and Titlebar Spinner were source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename already catch malformed config at their outer initialization boundary; and Handoff differs only in its rename-package namespace. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response now produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
 
-The nine redundant local package sources, including Fixed Editor, are removed without compatibility wrappers; prior npm releases remain outside this repository's maintained package set. Stash remains forked because its local `Alt+S` binding avoids the upstream `Ctrl+S` conflict with Pi.
+All Tifan-derived local package sources are removed without compatibility wrappers. Issue #131 removes the last one, `pi-stash`: bundled `pi-btw` already preserves the main editor draft while handling side questions outside the main conversation, so maintaining a Fork solely for `Alt+S` is not justified. Prior `@herbertgao/*` npm releases remain available but outside this repository's maintained package set.
+
+### Tifan Preferred Thinking 1.0.1 review
+
+The range `cca1906..82986ef` affects only Preferred Thinking:
+
+- `fa87930` is accepted directly: a subagent launched with both `PI_SUBAGENT_ID` and an explicit `--thinking` argument keeps that invocation choice instead of being overwritten by the global model preference.
+- `82986ef` publishes `@tifan/pi-preferred-thinking@1.0.1`; runtime dependencies and MIT terms are unchanged.
+
+The direct pin and Tifan repository review cursor advance to `1.0.1` at `82986ef`.
 
 ### Tifan pi-rename 0.5.1 review
 
@@ -55,6 +62,16 @@ The range `efc30c3..08ecbf7` and the matching published tags were reviewed packa
 - `pi-review` is a new optional product rather than an update to an imported package. It is reviewed but **not imported**: adding another aggregate extension is outside this maintenance issue and has no existing local compatibility contract.
 
 The repository review cursor advances to `08ecbf7`; documentation-only commits after the published tags do not change package provenance.
+
+### pi-cc-extensions 0.8.68 and post-release review
+
+The range `dba37e5..e029f67` was reviewed commit by commit:
+
+- `937e158` renames the fixed tool-input-name limit to `inputClip`; the local implementation already clips against the live viewport instead of a fixed character count, so only release provenance advances.
+- `1ca144c` publishes `v0.8.68` and is the imported release baseline.
+- `e029f67` removes old upstream compatibility paths. Its live mouse-state access is already present locally; upstream-only session references, legacy-renderer cleanup, fixed clipping, and global subagent-manager fallbacks are not copied.
+
+The Fork still keeps its renderer lifecycle, malformed-agent recovery, Markdown fence protection, terminal-width behavior, and rich-diff/write-state correctness tests. Package provenance advances to released `v0.8.68` at `1ca144c`; the repository review cursor advances through `e029f67`.
 
 ### pi-cc-extensions 0.8.67 and post-release review
 
@@ -86,6 +103,18 @@ The released range `6b7447e..4709081` was reviewed commit by commit:
 - `4709081` is **ported**: expanded thinking wraps use bounded per-message/run/width caching, collapse evicts only that run, and double-click identity survives component rebuilds without crossing runs.
 
 The fork keeps its renderer-first compact-thinking lifecycle bridge, message-display hardening, live mouse TUI slot, terminal-width handling, Markdown fence/inline protection, compact-thinking coexistence, rich diff ANSI/CRLF/write metadata, and dedicated Agent renderer. Package provenance and the repository review cursor advance to released `v0.8.64` at `4709081`.
+
+### pi-subagents 0.19.0 release review
+
+The range `bd446fc..4f572ea` completes the previously reviewed workflow release:
+
+- `3d91023` is **selectively ported**: the local conversation viewer keeps its bounded prefix and failed-Markdown cache, and now reports omitted UTF-16 characters with a readable exact/k/M magnitude plus focused astral and narrow-width regressions.
+- `5df1882` is changelog-only; `4f572ea` is a workflow-test lint annotation.
+- The workflow engine, agent mentions, and remembered-agent defaults remain deliberately unimported product surface rather than missing compatibility fixes.
+
+The imported baseline remains `0.18.2` at `ad81024`. `x-upstream.reviewedVersion` records audited `0.19.0`, and the repository review cursor advances to the release `gitHead` at `4f572ea`, preventing repeat alerts without claiming that the workflow engine was imported.
+
+The core comparison also confirms that malformed-agent recovery, tolerant model resolution, parent/nested ownership, foreground pooling, and RPC scope/session/consume behavior now have upstream equivalents. Naming, color, package identity, badge, FleetView, and viewer presentation are disposable local deltas. The only required behavior still missing upstream is `--no-gpg-sign` on worktree preservation commits; without it, mandatory signing failure can enter cleanup and lose the worktree while reporting no changes.
 
 ### pi-subagents 0.18.1, 0.18.2, and 0.19 workflow review
 
@@ -123,10 +152,21 @@ Both package provenance and the repository review cursor advance to the released
 
 The complete v0.2.0 source and test suite are imported at `e1dad0d`. The local package preserves upstream formatting and its MIT license. The maintained patch reads repository ownership from the earliest main-session record instead of the current active chain, whose cwd may change after Claude Code resets or compacts the transcript.
 
+## Fork retirement review after PR #125
+
+| Package            | Direct upstream reference | Remaining requirement                                                                                                                                                                           |
+| ------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pi-stash`         | Removed in issue #131     | None. `/btw` preserves the main draft for side questions; the same-thread interruption workflow did not justify a dedicated Fork.                                                               |
+| `resume-from`      | Not yet                   | Upstream must release the earliest-main-session repository ownership fix from issue #5 / PR #6.                                                                                                 |
+| `pi-subagents`     | Close                     | Add `--no-gpg-sign` to asynchronous worktree preservation commits and retain its signer-failure regression. Then decide whether to accept or disable upstream workflow/mention/memory defaults. |
+| `pi-cc-extensions` | Not yet                   | Upstream still lacks local terminal-width, Markdown safety, renderer teardown, malformed-agent, mouse/Working lifecycle, and rich-diff/write-state fixes.                                       |
+
+For Subagents, local package identity, display names, colors, badges, FleetView, and viewer styling can be deleted; they are not reasons to retain a Fork. Once the unsigned preservation fix is released, direct migration should compare only observable core behavior and explicit product defaults.
+
 ## Upstream contribution follow-ups
 
-- The stable Claude Code repository-ownership fix is tracked by upstream [issue #5](https://github.com/alexei-led/resume-from/issues/5) and [PR #6](https://github.com/alexei-led/resume-from/pull/6); drop the local patch after an equivalent upstream release is reviewed.
-- The `pi-subagents` agent display-name/color customization is merged upstream at `2d5b904`; keep the local implementation for the maintained package identity and compatibility patches, and re-audit it on future upstream syncs.
+- The stable Claude Code repository-ownership fix is tracked by upstream [issue #5](https://github.com/alexei-led/resume-from/issues/5) and [PR #6](https://github.com/alexei-led/resume-from/pull/6); both remain open as of the issue #131 review. Drop the local patch after an equivalent release is reviewed.
+- Contribute one focused `pi-subagents` patch: restore `--no-gpg-sign` in `src/worktree.ts`'s preservation commit and port the failing-signer regression from local `test/worktree.test.ts`. No name, color, identity, or optional UI changes belong in that PR.
 - Propose the `pi-cc-extensions` fence/inline-code-safe circled-number normalization and its focused Markdown regression tests to `minuque/pi-cc-extensions`; keep the local implementation until upstream accepts an equivalent change.
 - Propose the `pi-cc-extensions` renderer-first compact-thinking lifecycle bridge and package-entry teardown regression test to `minuque/pi-cc-extensions`; without the bridge, shutdown can leave a stale compact-thinking prototype wrapper beneath compact mode.
 - Split the post-`0.8.54` review fixes into focused upstream PRs: agent discovery resilience, Working footer lifecycle guards, renderer timer/cache/shutdown ownership, live mouse-state reads, Markdown fence protection, and diff ANSI/line-ending/write-metadata correctness. Keep the local regressions until upstream accepts equivalents.
@@ -146,16 +186,23 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-handoff`                  | `2.0.1`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-inline-skills`            | `1.0.5`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-mermaid-open`             | `0.2.0`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-preferred-thinking`       | `1.0.0`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-preferred-thinking`       | `1.0.1`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-recap`                    | `0.4.5`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-rename`                   | `0.5.1`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-titlebar-spinner`         | `0.1.3`  | `tifandotme/pi-extensions`  |
-| `pi-mcp-adapter`                     | `2.29.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.30.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `4.1.2`  | `apmantza/pi-lens`          |
-| `pi-web-access`                      | `0.25.0` | `nicobailon/pi-web-access`  |
+| `pi-web-access`                      | `0.26.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
-| `@czottmann/pi-automode`             | `1.13.0` | `czottmann/pi-automode`     |
+| `@czottmann/pi-automode`             | `1.14.0` | `czottmann/pi-automode`     |
+
+The issue #131 companion review accepted four released updates:
+
+- `pi-automode@1.14.0` applies the classifier timeout to the complete response stream and allows deletion only below validated OS temp roots. Temp roots, HOME/system aliases, malicious `TMPDIR` values, and timeouts above Node's timer limit remain protected. Its MIT license and `unbash@4.0.10` dependency are unchanged.
+- `@tifan/pi-preferred-thinking@1.0.1` preserves an explicit subagent `--thinking` argument instead of overwriting it from global model preferences.
+- `pi-mcp-adapter@2.30.0` exposes fail-closed snapshots for one runtime-registered server, supports an explicit HTTPS OAuth metadata URL, and hardens namespace names, raw server-scoped calls, installed token CLI loading, and Windows cleanup. Its MIT license and dependency versions are unchanged.
+- `pi-web-access@0.26.0` adds explicit-only XCrawl search, expands JSON-array strings from local models into separate searches, resolves safe XCrawl links, and contains Defuddle fallback failures. Its MIT license and runtime dependency set are unchanged.
 
 The issue #126 companion review accepted two released updates:
 
@@ -194,20 +241,26 @@ Treat every `*-upstream` remote as fetch-only even though Git records a push URL
 Use merge-based history for released code:
 
 ```bash
-git fetch --all --tags
+git fetch origin --tags --prune
+git fetch tifan-upstream master
+git fetch tintinweb-upstream master
+git fetch minuque-upstream main
+git fetch alexei-upstream master
 git switch master
-git switch -c sync/tifan-YYYYMMDD
-# Merge or selectively port the upstream changes, preserving @herbertgao metadata.
+git merge --ff-only origin/master
+git switch -c chore/upstream-issue-N
+# Selectively port reviewed behavior while preserving local provenance.
 bun install
 bun run check
-bun changeset
 git diff master...HEAD
 ```
+
+Fetch upstream tags only when needed with an explicit refspec; standalone repositories reuse tag names, so `git fetch --all --tags` can clobber unrelated local tags.
 
 For subagents, compare the recorded baseline before porting:
 
 ```bash
-git diff 4cc4738..tintinweb-upstream/master -- src test README.md package.json
+git diff ad81024825b3..tintinweb-upstream/master -- src test README.md package.json
 ```
 
 Paths from that standalone repository map under `packages/pi-subagents/` here. Review package manifests and docs separately because this monorepo intentionally uses different npm scope, repository metadata, lockfile, and release tooling.
@@ -231,7 +284,7 @@ Maintained child packages use SemVer and normally preserve their imported upstre
 
 Recommended configuration files may be shipped under `packages/pi-extensions/examples/`, but package installation must not write into `~/.pi` or replace existing user configuration. Keep examples valid against the pinned companion version and assert their presence and parsing in the aggregate smoke test.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 23 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 22 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 

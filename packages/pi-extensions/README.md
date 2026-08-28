@@ -10,7 +10,7 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer.
 
-The package bundles 4 active `@herbertgao/*` child packages—`pi-cc-extensions`, `resume-from`, `pi-stash`, and `pi-subagents`—plus the following upstream packages under their original names:
+The package bundles 3 active `@herbertgao/*` child packages—`pi-cc-extensions`, `resume-from`, and `pi-subagents`—plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.7.1`
@@ -21,20 +21,22 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-cc-extensions`
 - `@tifan/pi-handoff@2.0.1`
 - `@tifan/pi-inline-skills@1.0.5`
 - `@tifan/pi-mermaid-open@0.2.0`
-- `@tifan/pi-preferred-thinking@1.0.0`
+- `@tifan/pi-preferred-thinking@1.0.1`
 - `@tifan/pi-recap@0.4.5`
 - `@tifan/pi-rename@0.5.1`
 - `@tifan/pi-titlebar-spinner@0.1.3`
-- `pi-mcp-adapter@2.29.0`
+- `pi-mcp-adapter@2.30.0`
 - `pi-footer@0.5.1`
 - `pi-lens@4.1.2`
-- `pi-web-access@0.25.0`
+- `pi-web-access@0.26.0`
 - `remote-pi@0.7.0`
-- `@czottmann/pi-automode@1.13.0`
+- `@czottmann/pi-automode@1.14.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
-`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.2` improves delayed LSP diagnostics, stale-result cleanup, process cleanup, and snapshot completeness. `pi-automode@1.13.0` parses shell commands before applying policy and migrates legacy configuration safely. `pi-web-access@0.25.0` adds opt-in proxy and cloud-auth providers plus GitHub-aware fetching and a Defuddle extraction fallback.
+`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.2` improves delayed LSP diagnostics, stale-result cleanup, process cleanup, and snapshot completeness. `pi-automode@1.14.0` bounds classifier streams and permits only validated temporary-directory subtrees. `pi-web-access@0.26.0` adds explicit XCrawl search plus safer query and extraction fallbacks. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice.
+
+`pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 
 If `pi-footer` was installed separately before upgrading to an aggregate release that includes it, remove the standalone source shown by `pi list` so only the bundled copy loads. For the pinned standalone install used while preparing this integration:
 

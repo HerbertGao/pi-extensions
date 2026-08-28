@@ -686,7 +686,7 @@ describe("ConversationViewer", () => {
 
       expect(out).toContain("line 100") // far past the old 500-char cut
       expect(out).not.toContain("line 2999") // but still bounded
-      expect(out).toMatch(/\.\.\. \(truncated, \d+ more characters\)/)
+      expect(out).toMatch(/\.\.\. \(truncated, [\d.]+[kM]? more characters\)/)
     })
 
     it("puts the truncation notice outside the code fence it cut into", () => {
@@ -699,7 +699,24 @@ describe("ConversationViewer", () => {
 
       // Appended into the content it lands inside the unterminated fence, where
       // it picks up the code-block indent and reads as a line of the tool's source.
-      expect(note).toMatch(/^\.\.\. \(truncated, \d+ more characters\)$/)
+      expect(note).toMatch(
+        /^\.\.\. \(truncated, [\d.]+[kM]? more characters\)$/,
+      )
+    })
+
+    it("reports and abbreviates omitted character counts", () => {
+      const exact = `${"x".repeat(RESULT_MAX_CHARS)}😀x`
+      const exactContent = (
+        (viewerFor(result(exact)) as any).buildContentLines(76) as string[]
+      ).map(strip)
+      expect(exactContent).toContain("... (truncated, 3 more characters)")
+
+      const large = `${"x".repeat(RESULT_MAX_CHARS)}${"y".repeat(999_999)}`
+      const note = viewerFor(result(large))
+        .render(50)
+        .map(strip)
+        .find((line) => line.includes("truncated,"))
+      expect(note).toContain("1M more characters")
     })
 
     it("falls back to literal wrapping once for an unsafe streaming prefix", () => {
@@ -732,12 +749,15 @@ describe("ConversationViewer", () => {
         content: [{ type: "text", text: `${"row\n".repeat(4500)}` }],
       }
       const viewer = viewerFor([msg])
-      const elided = () =>
-        Number(
-          strip(
-            ((viewer as any).buildContentLines(76) as string[]).join("\n"),
-          ).match(/truncated, (\d+) more/)?.[1],
+      const elided = () => {
+        const match = strip(
+          ((viewer as any).buildContentLines(76) as string[]).join("\n"),
+        ).match(/truncated, ([\d.]+)([kM]?) more/)
+        return (
+          Number(match?.[1]) *
+          (match?.[2] === "M" ? 1e6 : match?.[2] === "k" ? 1e3 : 1)
         )
+      }
 
       const before = elided()
       msg.content[0].text += "row\n".repeat(1000)
@@ -770,7 +790,7 @@ describe("ConversationViewer", () => {
       ]
       const out = strip(viewerFor(messages).render(80).join("\n"))
 
-      expect(out).toMatch(/\.\.\. \(truncated, \d+ more characters\)/)
+      expect(out).toMatch(/\.\.\. \(truncated, [\d.]+[kM]? more characters\)/)
     })
 
     it("keeps tool results dim even when rendering them as Markdown", () => {
