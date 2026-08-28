@@ -48,6 +48,9 @@ try {
   }
 
   const packed = parseNpmPackOutput(packResult.stdout, "npm pack output")
+  if (packed.files.some(({ path }) => path.includes("pi-stash"))) {
+    throw new Error("Packed aggregate still contains removed pi-stash files")
+  }
   const tarballPath = join(stageDir, packed.filename)
   const installDir = join(stageDir, "install")
   run(
@@ -124,6 +127,15 @@ try {
   if (!automodeLicense.startsWith("# MIT License")) {
     throw new Error(
       "Bundled pi-automode LICENSE.md is not the expected MIT text",
+    )
+  }
+  const expectedUnbashVersion = automodeManifest.dependencies?.unbash
+  if (
+    !expectedUnbashVersion ||
+    sourceManifest.dependencies.unbash !== expectedUnbashVersion
+  ) {
+    throw new Error(
+      `Expected promoted unbash dependency ${expectedUnbashVersion}, got ${sourceManifest.dependencies.unbash}`,
     )
   }
 
@@ -1044,13 +1056,14 @@ try {
   // 0.55.4's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
-    `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, updateBtwSettings };\n`,
+    `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
     { filename: btwEntry, async: true, forceTranspile: true },
   )
   const {
     BtwTranscriptPager,
     createBtwFullscreenTui,
     pickMainEntry,
+    runBtwMenuPreservingEditor,
     updateBtwSettings,
   } = btwProbe
   const styleTheme = {
@@ -1088,6 +1101,39 @@ try {
   )
   if ((await failingClipboardTui.copySelection("copy me")) !== false) {
     throw new Error("pi-btw fullscreen clipboard failure was not reported")
+  }
+
+  let mainDraft = "original main draft"
+  const menuResult = await runBtwMenuPreservingEditor(
+    {
+      mode: "tui",
+      hasUI: true,
+      ui: {
+        getEditorText: () => mainDraft,
+        setEditorText: (text) => {
+          mainDraft = text
+        },
+        custom: async (factory) => {
+          let outcome
+          mainDraft = "latest main draft"
+          factory({}, styleTheme, {}, (value) => {
+            outcome = value
+          })
+          mainDraft = "clobbered during menu teardown"
+          return outcome
+        },
+      },
+    },
+    async ({ ui }) => {
+      await ui.custom((_tui, _theme, _keybindings, done) => {
+        done({ kind: "closed" })
+        return {}
+      })
+      return { kind: "closed" }
+    },
+  )
+  if (menuResult.kind !== "closed" || mainDraft !== "latest main draft") {
+    throw new Error("pi-btw did not preserve the live main editor draft")
   }
 
   const btwSettingsPath = join(stageDir, "pi-btw-settings.json")
@@ -1487,6 +1533,69 @@ try {
       return undefined
     }),
   )
+
+  const preferredThinkingEntry = join(
+    packageRoot,
+    "node_modules/@tifan/pi-preferred-thinking/src/index.ts",
+  )
+  const preferredThinkingRequire = createRequire(preferredThinkingEntry)
+  const { createJiti: createPreferredThinkingJiti } = await import(
+    pathToFileURL(preferredThinkingRequire.resolve("jiti"))
+  )
+  const initializePreferredThinking = (
+    await createPreferredThinkingJiti(preferredThinkingEntry, {
+      moduleCache: false,
+    }).import(preferredThinkingEntry)
+  ).default
+  const preferredHandlers = new Map()
+  const thinkingUpdates = []
+  initializePreferredThinking({
+    registerCommand() {},
+    on(event, handler) {
+      preferredHandlers.set(event, handler)
+    },
+    getThinkingLevel: () => "low",
+    setThinkingLevel: (level) => thinkingUpdates.push(level),
+  })
+  const preferredModel = {
+    provider: "smoke",
+    id: "reasoning-model",
+    reasoning: true,
+  }
+  const preferredContext = {
+    model: preferredModel,
+    scopedModels: [{ model: preferredModel, thinkingLevel: "high" }],
+    hasUI: false,
+    ui: { setWidget() {} },
+  }
+  const preferredSessionStart = preferredHandlers.get("session_start")
+  const preferredModelSelect = preferredHandlers.get("model_select")
+  if (
+    typeof preferredSessionStart !== "function" ||
+    typeof preferredModelSelect !== "function"
+  ) {
+    throw new Error("Preferred Thinking lost its model lifecycle handlers")
+  }
+  const previousSubagentId = process.env.PI_SUBAGENT_ID
+  const originalArgvLength = process.argv.length
+  process.env.PI_SUBAGENT_ID = "aggregate-smoke"
+  process.argv.push("--thinking=medium")
+  try {
+    await preferredSessionStart({}, preferredContext)
+    await preferredModelSelect({ model: preferredModel }, preferredContext)
+  } finally {
+    process.argv.length = originalArgvLength
+    if (previousSubagentId === undefined) delete process.env.PI_SUBAGENT_ID
+    else process.env.PI_SUBAGENT_ID = previousSubagentId
+  }
+  if (thinkingUpdates.length !== 0) {
+    throw new Error("Preferred Thinking overrode explicit subagent thinking")
+  }
+  await preferredModelSelect({ model: preferredModel }, preferredContext)
+  if (JSON.stringify(thinkingUpdates) !== JSON.stringify(["high"])) {
+    throw new Error("Preferred Thinking no longer applies ordinary model pins")
+  }
+
   const tifanNotices = await readFile(
     join(packageRoot, "THIRD_PARTY_NOTICES.md"),
     "utf8",
@@ -1568,15 +1677,28 @@ try {
   const mcpRuntimeSmokePath = join(stageDir, "mcp-runtime-smoke.ts")
   await writeFile(
     mcpRuntimeSmokePath,
-    `import mcpAdapter, { registerMcpServer } from ${JSON.stringify(resolve(mcpRoot, mcpEntryRelative))}\n\n` +
-      `export default async function runtimeSmoke(pi) {\n` +
-      `  mcpAdapter(pi)\n` +
-      `  const registration = registerMcpServer({ pi, name: "aggregate-runtime", definition: { command: "node", args: ["server.mjs"], directTools: true } })\n` +
+    `import { createMcpAdapter, getRuntimeMcpServerSnapshot, registerMcpServer } from ${JSON.stringify(resolve(mcpRoot, mcpEntryRelative))}\n\n` +
+      `export default function runtimeSmoke(pi) {\n` +
+      `  createMcpAdapter({ config: { mcpServers: {} } })(pi)\n` +
+      `  const definition = { url: "https://snapshot.test/mcp", directTools: ["search"], headers: { Authorization: "Bearer test" } }\n` +
+      `  const registration = registerMcpServer({ pi, name: "aggregate-runtime", definition })\n` +
+      `  let inactiveRejected = false\n` +
+      `  try { getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" }) } catch (error) { inactiveRejected = error instanceof Error && error.message.includes("no active state") }\n` +
+      `  if (!inactiveRejected) throw new Error("inactive runtime MCP snapshot did not fail closed")\n` +
       `  let duplicateRejected = false\n` +
-      `  try { registerMcpServer({ pi, name: "aggregate-runtime", definition: { command: "node", args: ["other.mjs"] } }) } catch (error) { duplicateRejected = error instanceof Error && error.message.includes("already registered") }\n` +
+      `  try { registerMcpServer({ pi, name: "aggregate-runtime", definition: { url: "https://duplicate.test/mcp" } }) } catch (error) { duplicateRejected = error instanceof Error && error.message.includes("already registered") }\n` +
       `  if (!duplicateRejected) throw new Error("duplicate runtime MCP server accepted")\n` +
-      `  await registration.dispose()\n` +
-      `  await registerMcpServer({ pi, name: "aggregate-runtime", definition: { command: "node", args: ["replacement.mjs"] } }).dispose()\n` +
+      `  pi.on("input", async () => {\n` +
+      `    const snapshot = getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" })\n` +
+      `    if (!snapshot.runtime || snapshot.persisted || snapshot.definition.directTools?.[0] !== "search") throw new Error("runtime MCP snapshot lost its detached contract")\n` +
+      `    snapshot.definition.headers.Authorization = "changed"\n` +
+      `    if (getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" }).definition.headers.Authorization !== "Bearer test") throw new Error("runtime MCP snapshot leaked a mutable definition")\n` +
+      `    await registration.dispose()\n` +
+      `    let disposedRejected = false\n` +
+      `    try { getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" }) } catch (error) { disposedRejected = error instanceof Error && error.message.includes("disposed") }\n` +
+      `    if (!disposedRejected) throw new Error("disposed runtime MCP snapshot remained readable")\n` +
+      `    await registerMcpServer({ pi, name: "aggregate-runtime", definition: { url: "https://replacement.test/mcp" } }).dispose()\n` +
+      `  })\n` +
       `}\n`,
   )
   const mcpRuntimeSmoke = await loadExtensions(
@@ -1588,6 +1710,48 @@ try {
       `pi-mcp-adapter runtime registration smoke failed:\n${JSON.stringify(mcpRuntimeSmoke.errors, null, 2)}`,
     )
   }
+  Object.assign(mcpRuntimeSmoke.runtime, {
+    getAllTools: () => [],
+    getActiveTools: () => [],
+    setActiveTools: () => {},
+    getCommands: () => [],
+  })
+  const mcpRuntimeExtension = mcpRuntimeSmoke.extensions[0]
+  if (!mcpRuntimeExtension) {
+    throw new Error("pi-mcp-adapter runtime smoke extension did not load")
+  }
+  const mcpRuntimeContext = {
+    mode: "print",
+    hasUI: false,
+    cwd: installDir,
+    model: undefined,
+    modelRegistry: undefined,
+    signal: undefined,
+    ui: { setStatus() {}, notify() {}, setWidget() {} },
+  }
+  for (const handler of mcpRuntimeExtension.handlers.get("session_start") ??
+    []) {
+    // Lifecycle hooks must run in registration order, matching Pi.
+    // eslint-disable-next-line no-await-in-loop
+    await handler({}, mcpRuntimeContext)
+  }
+  await new Promise((resolvePromise) => setImmediate(resolvePromise))
+  await new Promise((resolvePromise) => setImmediate(resolvePromise))
+  for (const handler of mcpRuntimeExtension.handlers.get("input") ?? []) {
+    // Lifecycle hooks must run in registration order, matching Pi.
+    // eslint-disable-next-line no-await-in-loop
+    await handler(
+      { source: "interactive", text: "aggregate runtime snapshot smoke" },
+      mcpRuntimeContext,
+    )
+  }
+  for (const handler of mcpRuntimeExtension.handlers.get("session_shutdown") ??
+    []) {
+    // Lifecycle hooks must run in registration order, matching Pi.
+    // eslint-disable-next-line no-await-in-loop
+    await handler({ reason: "quit" }, mcpRuntimeContext)
+  }
+
   const result = await loadExtensions(extensionPaths, installDir)
   if (result.errors.length > 0) {
     throw new Error(

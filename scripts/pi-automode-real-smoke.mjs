@@ -78,7 +78,7 @@ function sendSse(response, delta, finishReason = "stop") {
   response.end("data: [DONE]\n\n")
 }
 
-async function startMockProvider(blockedClassifierPath) {
+async function startMockProvider(blockedClassifierPath, hangingClassifierPath) {
   const requests = []
   const server = createServer((request, response) => {
     let raw = ""
@@ -99,6 +99,15 @@ async function startMockProvider(blockedClassifierPath) {
         requests.push({ body, classifier })
 
         if (classifier) {
+          if (allText.includes(hangingClassifierPath)) {
+            response.writeHead(200, {
+              "cache-control": "no-cache",
+              connection: "keep-alive",
+              "content-type": "text/event-stream",
+            })
+            response.write(": classifier stream intentionally left open\n\n")
+            return
+          }
           const detailed = allText.includes("Return only JSON exactly matching")
           const shouldBlock = allText.includes(blockedClassifierPath)
           if (detailed) {
@@ -244,7 +253,7 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
   await lstat(automodeEntry)
   await lstat(piCli)
 
-  const stageDir = await mkdtemp(join(tmpdir(), "pi-automode-real-smoke-"))
+  const stageDir = await mkdtemp(join(tmpdir(), "automode-real-smoke-"))
   const randomHome = `/var/home/pi-smoke-${randomBytes(18).toString("hex")}`
   try {
     try {
@@ -258,16 +267,23 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
     const outsideDir = join(stageDir, "outside")
     const agentDir = join(stageDir, "agent")
     const ordinaryHome = join(stageDir, "home")
+    const declaredTempRoot = join(stageDir, "declared-temp")
+    const declaredTempChild = join(declaredTempRoot, "cleanup-child")
     await Promise.all([
       mkdir(workDir, { recursive: true }),
       mkdir(outsideDir, { recursive: true }),
       mkdir(agentDir, { recursive: true }),
       mkdir(ordinaryHome, { recursive: true }),
+      mkdir(declaredTempChild, { recursive: true }),
     ])
     await writeFile(join(workDir, "inside.txt"), "inside-smoke-marker\n")
     await writeFile(join(workDir, "blocked.txt"), "denied-smoke-marker\n")
     await writeFile(join(outsideDir, "outside.txt"), "outside-smoke-marker\n")
     await writeFile(join(outsideDir, "secret.txt"), "secret-smoke-marker\n")
+    await writeFile(
+      join(declaredTempChild, "temporary.txt"),
+      "temporary-smoke-marker\n",
+    )
     await symlink(outsideDir, join(workDir, "link-out"))
 
     // macOS aliases /tmp to /private/tmp. Policy patterns must use the same
@@ -275,7 +291,17 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
     const canonicalWork = await realpath(workDir)
     const canonicalOutside = await realpath(outsideDir)
     const blockedClassifierPath = `${randomHome}/never-created-child`
-    const mock = await startMockProvider(blockedClassifierPath)
+    const hangingClassifierPath = join(
+      declaredTempRoot,
+      "hanging-classifier-child",
+    )
+    const hangingSentinelPath = join(hangingClassifierPath, "sentinel.txt")
+    await mkdir(hangingClassifierPath, { recursive: true })
+    await writeFile(hangingSentinelPath, "classifier-timeout-sentinel\n")
+    const mock = await startMockProvider(
+      blockedClassifierPath,
+      hangingClassifierPath,
+    )
     try {
       await writeFile(
         join(agentDir, "models.json"),
@@ -335,21 +361,25 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
         "--print",
       ]
 
-      async function runCase(name, { config, home = ordinaryHome, prompt }) {
+      async function runCase(
+        name,
+        { config, home = ordinaryHome, extraEnv = {}, prompt },
+      ) {
         const requestStart = mock.requests.length
-        const env = {
+        const environment = {
           ...process.env,
+          ...extraEnv,
           HOME: home,
           PI_CODING_AGENT_DIR: agentDir,
         }
         if (config !== undefined) {
-          env.PI_AUTOMODE_SETTINGS_JSON = JSON.stringify(config)
+          environment.PI_AUTOMODE_SETTINGS_JSON = JSON.stringify(config)
         } else {
-          delete env.PI_AUTOMODE_SETTINGS_JSON
+          delete environment.PI_AUTOMODE_SETTINGS_JSON
         }
         const result = await runPi([...baseArgs, prompt], {
           cwd: canonicalWork,
-          env,
+          env: environment,
         })
         assert(
           result.stderr.trim() === "",
@@ -508,6 +538,88 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
         tokenRequests[0].body,
       )
 
+      const timedOut = await runCase("classifier-stream-timeout", {
+        config: { autoMode: { classifierTimeoutMs: 1_000 } },
+        extraEnv: { TMPDIR: declaredTempRoot },
+        prompt: `CALL bash rm -rf ${hangingClassifierPath}`,
+      })
+      assert(
+        classifierRequests(timedOut.requests).length === 1,
+        "classifier-stream-timeout: expected one hanging classifier request",
+        timedOut.requests,
+      )
+      assert(
+        timedOut.state.blockedActions === 1 &&
+          /timed out after 1000 ms/i.test(timedOut.state.lastReason ?? ""),
+        "classifier-stream-timeout: timeout did not fail closed",
+        timedOut.state,
+      )
+      const timedOutTool = timedOut.events.find(
+        (event) => event.type === "tool_execution_end",
+      )
+      assert(
+        timedOutTool?.isError === true,
+        "classifier-stream-timeout: blocked command was reported as successful",
+        timedOutTool,
+      )
+      await lstat(hangingSentinelPath)
+
+      const tempRoot = await runCase("temp-root", {
+        config: {},
+        extraEnv: { TMPDIR: declaredTempRoot },
+        prompt: `CALL bash rm -rf ${declaredTempRoot}`,
+      })
+      assert(
+        classifierRequests(tempRoot.requests).length === 0 &&
+          tempRoot.state.recentDenials?.at(-1)?.kind ===
+            "deterministic-hard-deny",
+        "temp-root: declared temp root was not hard-denied",
+        tempRoot.state,
+      )
+      await lstat(declaredTempRoot)
+
+      const tempChild = await runCase("temp-child", {
+        config: {},
+        extraEnv: { TMPDIR: declaredTempRoot },
+        prompt: `CALL bash rm -rf ${declaredTempChild}`,
+      })
+      assert(
+        classifierRequests(tempChild.requests).length === 1 &&
+          tempChild.state.classifierAllowed === 1,
+        "temp-child: disposable temp subtree did not reach the classifier",
+        tempChild.state,
+      )
+      try {
+        await lstat(declaredTempChild)
+        throw new Error(
+          "temp-child: cleanup command did not remove the subtree",
+        )
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error
+      }
+
+      const protectedTmpTarget = `/etc/automode-smoke-${randomBytes(12).toString("hex")}`
+      try {
+        await lstat(protectedTmpTarget)
+        throw new Error(
+          `Refusing to use existing protected-path fixture: ${protectedTmpTarget}`,
+        )
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error
+      }
+      const invalidTmpdir = await runCase("invalid-tmpdir", {
+        config: {},
+        extraEnv: { TMPDIR: "/" },
+        prompt: `CALL bash rm -rf ${protectedTmpTarget}`,
+      })
+      assert(
+        classifierRequests(invalidTmpdir.requests).length === 0 &&
+          invalidTmpdir.state.recentDenials?.at(-1)?.kind ===
+            "deterministic-hard-deny",
+        "invalid-tmpdir: TMPDIR=/ weakened protected-path denial",
+        invalidTmpdir.state,
+      )
+
       const homeChild = await runCase("var-home-child", {
         config: {},
         home: randomHome,
@@ -578,7 +690,7 @@ export async function runPiAutomodeRealSmoke({ automodeEntry }) {
       )
 
       process.stdout.write(
-        "Real Pi automode smoke passed: 11 cases, packed extension, localhost mock provider\n",
+        "Real Pi automode smoke passed: 15 cases, packed extension, localhost mock provider\n",
       )
     } finally {
       await mock.close()

@@ -56,6 +56,7 @@ function validate(manifests, monitor, aggregate) {
         localPackage: manifest.name,
         package: upstream.package,
         version: upstream.version,
+        reviewedVersion: upstream.reviewedVersion ?? upstream.version,
         repository: upstream.repository,
         commit: upstream.commit,
       }
@@ -65,6 +66,8 @@ function validate(manifests, monitor, aggregate) {
     if (
       !entry.package ||
       !entry.version ||
+      typeof entry.reviewedVersion !== "string" ||
+      !entry.reviewedVersion.trim() ||
       !entry.repository ||
       !entry.commit
     ) {
@@ -179,15 +182,15 @@ function markdownReport({
     "",
     "## Imported package baselines",
     "",
-    "| Local package | Upstream package | Imported version | Imported commit |",
-    "| --- | --- | --- | --- |",
+    "| Local package | Upstream package | Imported version | Reviewed version | Imported commit |",
+    "| --- | --- | --- | --- | --- |",
   ]
 
   for (const entry of derived.toSorted((a, b) =>
     a.localPackage.localeCompare(b.localPackage),
   )) {
     lines.push(
-      `| \`${entry.localPackage}\` | [\`${entry.package}\`](${entry.repository}) | \`${entry.version}\` | \`${entry.commit.slice(0, 12)}\` |`,
+      `| \`${entry.localPackage}\` | [\`${entry.package}\`](${entry.repository}) | \`${entry.version}\` | \`${entry.reviewedVersion}\` | \`${entry.commit.slice(0, 12)}\` |`,
     )
   }
 
@@ -344,9 +347,9 @@ async function main() {
     derived.map(async (entry) => {
       try {
         const latest = await latestNpmVersion(entry.package)
-        if (latest !== entry.version) {
+        if (latest !== entry.reviewedVersion) {
           releaseUpdates.push(
-            `\`${entry.localPackage}\`: upstream npm \`${entry.package}\` is \`${latest}\` (imported \`${entry.version}\`).`,
+            `\`${entry.localPackage}\`: upstream npm \`${entry.package}\` is \`${latest}\` (reviewed \`${entry.reviewedVersion}\`; imported \`${entry.version}\`).`,
           )
         }
       } catch (error) {

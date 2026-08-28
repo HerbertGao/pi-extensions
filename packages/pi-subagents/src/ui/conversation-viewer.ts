@@ -156,8 +156,15 @@ function capResult(text: string): { text: string; elided: number } {
   }
 }
 
+function humanCount(count: number): string {
+  if (count < 1_000) return `${count}`
+  const thousands = count < 999_950
+  const value = thousands ? count / 1_000 : count / 1_000_000
+  return `${value.toFixed(1).replace(/\.0$/, "")}${thousands ? "k" : "M"}`
+}
+
 function truncationNote(elided: number): string {
-  return `... (truncated, ${elided} more character${elided === 1 ? "" : "s"})`
+  return `... (truncated, ${humanCount(elided)} more character${elided === 1 ? "" : "s"})`
 }
 
 export class ConversationViewer implements Component {

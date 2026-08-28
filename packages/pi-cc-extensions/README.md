@@ -102,5 +102,5 @@ bun run typecheck
 
 ## 致谢
 
-- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.67](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.67)（`bc58504`）衍生维护。
+- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.68](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.68)（`1ca144c`）衍生维护。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
