@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-extensions",
-  "version": "2026.8.14",
+  "version": "2026.8.15",
   "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
   "keywords": [
     "extensions",
