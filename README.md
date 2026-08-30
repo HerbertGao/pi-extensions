@@ -16,6 +16,7 @@ The aggregate package bundles the active maintained packages below plus the pinn
 
 | Package                                                     | Description                                                               | Source                                                                 |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [`@herbertgao/pi-bark`](packages/pi-bark)                   | Bark notifications when Pi finishes or needs user input.                  | This repository                                                        |
 | [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions) | Claude Code-style output, fullscreen interaction, context and references. | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)      |
 | [`@herbertgao/resume-from`](packages/resume-from)           | Continue sessions across Pi, Claude Code, and Codex.                      | [`resume-from`](https://github.com/alexei-led/resume-from)             |
 | [`@herbertgao/pi-subagents`](packages/pi-subagents)         | Autonomous subagents with lifecycle and compatibility hardening.          | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) |

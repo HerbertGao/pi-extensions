@@ -275,7 +275,7 @@ Every publishable package must have:
 - explicit `license`, `files`, `repository.directory`, `homepage`, and `bugs`;
 - `publishConfig.access = public` and `publishConfig.provenance = true`;
 - a Pi resource manifest;
-- `x-upstream` provenance for derived packages;
+- `x-upstream` provenance for derived packages, or `x-origin: original` for packages authored in this repository;
 - original copyright and license notices.
 
 Cross-package dependencies use `@herbertgao/*`. The aggregate package pins exact versions and lists every maintained child and upstream companion in `bundledDependencies` so Pi can load resources through `node_modules/` under one isolated package root.

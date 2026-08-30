@@ -10,7 +10,7 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer.
 
-The package bundles 3 active `@herbertgao/*` child packages—`pi-cc-extensions`, `resume-from`, and `pi-subagents`—plus the following upstream packages under their original names:
+The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, and `pi-subagents`—plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.7.1`
@@ -33,6 +33,10 @@ The package bundles 3 active `@herbertgao/*` child packages—`pi-cc-extensions`
 - `@czottmann/pi-automode@1.14.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
+
+### Bark notifications
+
+`@herbertgao/pi-bark` sends localized Bark pushes when a user-facing Pi run fully settles or `@juicesharp/rpiv-ask-user-question` needs an answer. Notifications include emoji-labeled machine/path metadata and support the bundled official Pi badge through Bark's `icon` parameter. Configure it in `$PI_CODING_AGENT_DIR/bark.json` (normally `~/.pi/agent/bark.json`); see the [package README](../pi-bark/README.md). Without a valid endpoint it stays inactive.
 
 `@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.2` improves delayed LSP diagnostics, stale-result cleanup, process cleanup, and snapshot completeness. `pi-automode@1.14.0` bounds classifier streams and permits only validated temporary-directory subtrees. `pi-web-access@0.26.0` adds explicit XCrawl search plus safer query and extraction fallbacks. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice.
 

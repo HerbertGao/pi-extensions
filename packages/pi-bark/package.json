@@ -1,0 +1,53 @@
+{
+  "name": "@herbertgao/pi-bark",
+  "version": "0.1.0",
+  "description": "Send Bark notifications when Pi finishes or needs user input.",
+  "keywords": [
+    "bark",
+    "notifications",
+    "pi-extension",
+    "pi-package"
+  ],
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-bark#readme",
+  "bugs": {
+    "url": "https://github.com/HerbertGao/pi-extensions/issues"
+  },
+  "license": "MIT",
+  "author": "Herbert Gao",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
+    "directory": "packages/pi-bark"
+  },
+  "files": [
+    "assets",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "test": "node --test tests/**/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "x-origin": "original"
+}
