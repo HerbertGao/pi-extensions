@@ -1,5 +1,13 @@
 # @herbertgao/pi-extensions
 
+## 2026.8.15
+
+### Patch Changes
+
+- [#135](https://github.com/HerbertGao/pi-extensions/pull/135) [`97ba71d`](https://github.com/HerbertGao/pi-extensions/commit/97ba71d2ea5994354768ae88b90d5d8a0492dc2c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle the new `@herbertgao/pi-bark` extension with localized completion/input notifications, host and path emoji metadata, and an official Pi badge for Bark's custom icon.
+
+- [#137](https://github.com/HerbertGao/pi-extensions/pull/137) [`da54604`](https://github.com/HerbertGao/pi-extensions/commit/da54604a365e4c00ff0737a728e4e458aa932593) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the reviewed Automode, Ask User Question, BTW, Handoff, Recap, Rename, Lens, MCP Adapter, and Web Access companions; require Pi 0.84.4; and remove the deprecated Titlebar Spinner package.
+
 ## 2026.8.14
 
 ### Patch Changes
