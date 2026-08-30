@@ -311,13 +311,22 @@ Recommended configuration files may be shipped under `packages/pi-extensions/exa
 The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 22.22.2 or newer plus npm 12 or newer for the `npm trust` command:
 
 ```bash
+npm install --global npm@12.0.2
 node --version
+npm --version
 npm login
 npm whoami
-npm install --global npm@12.0.2
 ```
 
-For each new scoped package, publish once locally before configuring Trusted Publishing:
+### New scoped package release gate
+
+A feature PR that introduces a new `@herbertgao/*` package may merge first, but **do not merge its Changesets “Version Packages” PR** until the new package has completed this one-time npm bootstrap:
+
+1. Confirm `npm view @herbertgao/<package> version` still returns 404; this proves it is a genuinely new npm package rather than an ordinary release.
+2. Publish the package's current version manually and publicly.
+3. Configure npm Trusted Publishing for `.github/workflows/release.yml`.
+4. Confirm `npm view @herbertgao/<package> version` returns the exact local version.
+5. Only then merge the Version Packages PR and let the Release workflow publish the aggregate.
 
 ```bash
 cd packages/<package>
@@ -327,7 +336,14 @@ npm trust github @herbertgao/<package> \
   --file release.yml \
   --allow-publish \
   --yes
+npm view @herbertgao/<package> version
 ```
+
+Both `npm publish` and `npm trust` may stop with `EOTP` and print a browser authorization URL. Open that URL, complete the challenge, and wait for or rerun the command until it exits with status 0. Preliminary output such as `Publishing to ...` or `Establishing trust ...` is not success. Verify publication with `npm view`; treat Trusted Publishing as incomplete unless the `npm trust` command itself exits successfully.
+
+**Do not treat a successful aggregate pack, install, or partial publish as proof that the child exists on npm.** `scripts/aggregate-bundle.mjs` embeds workspace child tarballs inside `@herbertgao/pi-extensions`, so the aggregate can publish and install successfully while the standalone child still returns npm 404. Changesets then reports the overall Release run as failed even if the aggregate itself was published. This happened when `@herbertgao/pi-extensions@2026.8.15` published but first-time `@herbertgao/pi-bark@0.1.0` failed with `ENEEDAUTH`.
+
+If that partial-publish state occurs, bootstrap the missing child at the version already present in `master`, verify it with `npm view`, then rerun the failed Release workflow. Do not bump or republish the aggregate solely to recover the missing child.
 
 Run the aggregate package last, after all exact child versions exist. Do not create a long-lived `NPM_TOKEN` or a granular token that bypasses 2FA; the release workflow authenticates with GitHub OIDC and publishes with provenance. Enable the repository variable only after every package trusts the workflow:
 
