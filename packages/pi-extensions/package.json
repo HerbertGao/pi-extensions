@@ -43,6 +43,7 @@
     "@earendil-works/pi-tui": "^0.84.2",
     "@effect/platform-node": "4.0.0-beta.103",
     "@effect/platform-node-shared": "4.0.0-beta.103",
+    "@herbertgao/pi-bark": "0.1.0",
     "@herbertgao/pi-cc-extensions": "0.8.60",
     "@herbertgao/pi-subagents": "0.17.1",
     "@herbertgao/resume-from": "0.2.0",
@@ -113,6 +114,7 @@
   "bundledDependencies": [
     "@czottmann/pi-automode",
     "@dietrichgebert/ponytail",
+    "@herbertgao/pi-bark",
     "@herbertgao/pi-cc-extensions",
     "@herbertgao/pi-subagents",
     "@herbertgao/resume-from",
@@ -153,6 +155,7 @@
       "./node_modules/@herbertgao/pi-subagents/src/index.ts",
       "./node_modules/@tifan/pi-titlebar-spinner/src/index.ts",
       "./node_modules/@juicesharp/rpiv-ask-user-question/index.ts",
+      "./node_modules/@herbertgao/pi-bark/src/index.ts",
       "./node_modules/@luxusai/pi-hindsight/extensions/index.ts",
       "./node_modules/@narumitw/pi-btw/dist/index.ts",
       "./node_modules/@pi-plugins/fast-mode/dist/index.mjs",

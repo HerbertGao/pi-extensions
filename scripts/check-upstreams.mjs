@@ -49,7 +49,11 @@ function githubSlug(repository) {
 function validate(manifests, monitor, aggregate) {
   const errors = []
   const derived = manifests
-    .filter((manifest) => manifest.name !== "@herbertgao/pi-extensions")
+    .filter(
+      (manifest) =>
+        manifest.name !== "@herbertgao/pi-extensions" &&
+        manifest["x-origin"] !== "original",
+    )
     .map((manifest) => {
       const upstream = manifest["x-upstream"] ?? {}
       return {
