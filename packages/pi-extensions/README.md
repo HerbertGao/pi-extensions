@@ -8,29 +8,28 @@ Aggregate installer for HerbertGao-maintained Pi extensions and pinned upstream 
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer.
+Requires Node.js 24 or newer and Pi 0.84.4 or newer.
 
 The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, and `pi-subagents`—plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
-- `@juicesharp/rpiv-ask-user-question@2.7.1`
+- `@juicesharp/rpiv-ask-user-question@2.8.0`
 - `@luxusai/pi-hindsight@0.12.0`
-- `@narumitw/pi-btw@0.55.4`
+- `@narumitw/pi-btw@0.56.0`
 - `@pi-plugins/fast-mode@0.1.10`
 - `@tifan/pi-copy-response@0.2.6`
-- `@tifan/pi-handoff@2.0.1`
+- `@tifan/pi-handoff@2.2.0`
 - `@tifan/pi-inline-skills@1.0.5`
 - `@tifan/pi-mermaid-open@0.2.0`
 - `@tifan/pi-preferred-thinking@1.0.1`
-- `@tifan/pi-recap@0.4.5`
-- `@tifan/pi-rename@0.5.1`
-- `@tifan/pi-titlebar-spinner@0.1.3`
-- `pi-mcp-adapter@2.30.0`
+- `@tifan/pi-recap@0.4.6`
+- `@tifan/pi-rename@0.6.0`
+- `pi-mcp-adapter@2.31.0`
 - `pi-footer@0.5.1`
-- `pi-lens@4.1.2`
-- `pi-web-access@0.26.0`
+- `pi-lens@4.1.3`
+- `pi-web-access@0.27.0`
 - `remote-pi@0.7.0`
-- `@czottmann/pi-automode@1.14.0`
+- `@czottmann/pi-automode@1.15.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
@@ -38,7 +37,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `@herbertgao/pi-bark` sends localized Bark pushes when a user-facing Pi run fully settles or `@juicesharp/rpiv-ask-user-question` needs an answer. Notifications include emoji-labeled machine/path metadata and support the bundled official Pi badge through Bark's `icon` parameter. Configure it in `$PI_CODING_AGENT_DIR/bark.json` (normally `~/.pi/agent/bark.json`); see the [package README](../pi-bark/README.md). Without a valid endpoint it stays inactive.
 
-`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.2` improves delayed LSP diagnostics, stale-result cleanup, process cleanup, and snapshot completeness. `pi-automode@1.14.0` bounds classifier streams and permits only validated temporary-directory subtrees. `pi-web-access@0.26.0` adds explicit XCrawl search plus safer query and extraction fallbacks. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice.
+`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.3` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-automode@1.15.0` preserves dynamic providers on legacy registries. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 

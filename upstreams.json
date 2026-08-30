@@ -4,7 +4,7 @@
     {
       "name": "Tifan Pi extensions",
       "repository": "https://github.com/tifandotme/pi-extensions",
-      "reviewedCommit": "82986efecd311abf621fa0fc216b9ff3985daf4f"
+      "reviewedCommit": "8559ef790b4273310f109a3ca2b9611f69b11c41"
     },
     {
       "name": "pi-subagents",
@@ -69,10 +69,6 @@
     },
     {
       "package": "@tifan/pi-rename",
-      "repository": "https://github.com/tifandotme/pi-extensions"
-    },
-    {
-      "package": "@tifan/pi-titlebar-spinner",
       "repository": "https://github.com/tifandotme/pi-extensions"
     },
     {

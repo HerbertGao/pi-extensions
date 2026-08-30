@@ -18,7 +18,7 @@ import {
 } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { basename, dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
@@ -763,6 +763,12 @@ async function assertNewReleaseFeatures({
       },
       firecrawlBaseUrl: `http://127.0.0.1:${firecrawlPort}/firecrawl`,
       firecrawlApiKey: "smoke-firecrawl-key",
+      fetch: {
+        ...baseConfig.fetch,
+        timeout: 7,
+        answerProvider: "smoke",
+        answerModel: "answer-model",
+      },
       xcrawlApiKey: "smoke-xcrawl-key",
     })
     const jiti = await createPackageJiti(webAccessEntry)
@@ -884,6 +890,45 @@ async function assertNewReleaseFeatures({
     const extract = await jiti.import(
       join(dirname(webAccessEntry), "extract.ts"),
     )
+    assert.equal(extract.resolveFetchTimeoutMs(), 7_000)
+    assert.equal(extract.resolveFetchTimeoutMs({ timeoutMs: 321 }), 321)
+
+    const pageQuery = await jiti.import(
+      join(dirname(webAccessEntry), "page-query.ts"),
+    )
+    const answerContext = {
+      cwd: agentDir,
+      isProjectTrusted: () => false,
+      model: undefined,
+      modelRegistry: {
+        find: () => undefined,
+        getAvailable: () => [],
+      },
+    }
+    await assert.rejects(
+      pageQuery.answerFromPage(
+        {
+          question: "What changed?",
+          pageText: "Smoke page",
+          sourceUrl: "https://example.com/page",
+        },
+        answerContext,
+      ),
+      /Answer model not found: smoke\/answer-model \(from fetch\.answerProvider\/fetch\.answerModel/,
+    )
+    await assert.rejects(
+      pageQuery.answerFromPage(
+        {
+          question: "What changed?",
+          pageText: "Smoke page",
+          sourceUrl: "https://example.com/page",
+          model: "override/model",
+        },
+        answerContext,
+      ),
+      /Answer model not found: override\/model$/,
+    )
+
     const paragraph =
       "This is substantial article text that should be extracted as the page's main content. "
     const defuddleFailureHtml = `<!doctype html><html><head><title>Defuddle selector failure</title></head><body><nav><a href="/">Home</a></nav><template id="B:0"></template><div hidden id="S:a"><h1>Defuddle selector failure</h1><p>${paragraph.repeat(20)}</p></div><template id="P:a"></template><footer><p>Copyright 2026 Example Inc. All rights reserved.</p></footer></body></html>`
@@ -912,6 +957,28 @@ async function assertNewReleaseFeatures({
       /Defuddle failed to process document: Unknown pseudo-class :a/,
     )
     assert.doesNotMatch(defuddleFailure.content, /Copyright 2026/)
+
+    const relativeCanonicalHtml = `<!doctype html><html><head><title>Relative canonical</title><link rel="canonical" href="/canonical-article"></head><body><main><h1>Relative canonical</h1><p>${paragraph.repeat(20)}</p></main></body></html>`
+    const relativeCanonicalErrors = []
+    globalThis.fetch = async () =>
+      new Response(relativeCanonicalHtml, {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      })
+    console.error = (...args) => relativeCanonicalErrors.push(args)
+    let relativeCanonical
+    try {
+      relativeCanonical = await extract.extractContent(
+        "https://example.com/relative-canonical",
+        undefined,
+        { lookup: async () => [{ address: "93.184.216.34", family: 4 }] },
+      )
+    } finally {
+      globalThis.fetch = originalFetch
+      console.error = originalConsoleError
+    }
+    assert.equal(relativeCanonicalErrors.length, 0)
+    assert.match(relativeCanonical.content, /substantial article text/)
 
     const firecrawl = await jiti.import(
       join(dirname(webAccessEntry), "firecrawl.ts"),
@@ -1262,27 +1329,30 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
     assert.match(resultText(githubEnd), /sentinel-link  \(outside repo\)/)
     const cloneArgs = JSON.parse(await readFile(fakeGhLog, "utf8"))
     const realCloneRoot = await realpath(cloneRoot)
-    const expectedClonePath = join(
-      realCloneRoot,
-      createHash("sha256")
-        .update(JSON.stringify([githubOwner, githubRepo, githubRef]))
-        .digest("hex"),
-    )
-    assert.deepEqual(cloneArgs, [
-      "repo",
-      "clone",
-      `${githubOwner}/${githubRepo}`,
-      expectedClonePath,
-      "--",
-      "--depth",
-      "1",
-      "--single-branch",
-      "--branch",
-      githubRef,
-    ])
+    const expectedCloneDigest = createHash("sha256")
+      .update(JSON.stringify([githubOwner, githubRepo, githubRef]))
+      .digest("hex")
     const clonedPath = cloneArgs[3]
-    assert.equal(clonedPath, expectedClonePath)
+    const runtimeRoot = dirname(clonedPath)
+    assert.deepEqual(
+      [...cloneArgs.slice(0, 3), ...cloneArgs.slice(4)],
+      [
+        "repo",
+        "clone",
+        `${githubOwner}/${githubRepo}`,
+        "--",
+        "--depth",
+        "1",
+        "--single-branch",
+        "--branch",
+        githubRef,
+      ],
+    )
+    assert.equal(dirname(runtimeRoot), realCloneRoot)
+    assert.match(basename(runtimeRoot), /^runtime-/)
+    assert.equal(basename(clonedPath), expectedCloneDigest)
     await assert.rejects(stat(clonedPath), { code: "ENOENT" })
+    await assert.rejects(stat(runtimeRoot), { code: "ENOENT" })
     assert.equal(
       await readFile(join(sentinelDir, "keep.txt"), "utf8"),
       "sentinel survives",

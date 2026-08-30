@@ -26,11 +26,21 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 ### Direct Tifan package migration
 
-The aggregate pins and bundles eight original Tifan packages directly: copy-response `0.2.6`, handoff `2.0.1`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.5`, Rename `0.5.1`, and Titlebar Spinner `0.1.3`.
+The aggregate pins and bundles seven original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.0`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.6`, and Rename `0.6.0`.
 
-Normalized package comparisons established that copy-response, inline-skills, Mermaid Open, and Titlebar Spinner were source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename already catch malformed config at their outer initialization boundary; and Handoff differs only in its rename-package namespace. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response now produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
+Normalized package comparisons established that copy-response, inline-skills, and Mermaid Open are source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename catch malformed config at their outer initialization boundary; and Handoff intentionally depends on Rename for generated session names. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
 
-All Tifan-derived local package sources are removed without compatibility wrappers. Issue #131 removes the last one, `pi-stash`: bundled `pi-btw` already preserves the main editor draft while handling side questions outside the main conversation, so maintaining a Fork solely for `Alt+S` is not justified. Prior `@herbertgao/*` npm releases remain available but outside this repository's maintained package set.
+All Tifan-derived local package sources are removed without compatibility wrappers. Issue #131 removes the last one, `pi-stash`: bundled `pi-btw` already preserves the main editor draft while handling side questions outside the main conversation, so maintaining a Fork solely for `Alt+S` is not justified. Issue #134 also removes deprecated `@tifan/pi-titlebar-spinner`: its 1.x line retargets Herdr tab labels and can overwrite Rename's session-owned label, so the aggregate keeps Rename as the single tab-naming owner. Prior `@herbertgao/*` npm releases remain available but outside this repository's maintained package set.
+
+### Issue #134 Tifan release review
+
+The range `82986ef..8559ef7` and its published packages were reviewed commit by commit:
+
+- `d26bad8`, `f79df86`, `8f8b3fd`, and `5c82baf` are accepted through `@tifan/pi-rename@0.6.0` and `@tifan/pi-handoff@2.2.0`: generated names are localized and capped at 30 characters, handoff sessions receive descriptive names through Rename, and config export preserves unrelated fields. Handoff's new `@tifan/pi-rename@^0.6.0` dependency is satisfied by the aggregate's direct pin.
+- `f0024a8` is accepted through `@tifan/pi-recap@0.4.6`: a failed compaction suppresses the next away recap instead of generating one from a failed transition. Its Pi peer requires `>=0.84.3`, so the aggregate host baseline advances to 0.84.4.
+- `74b4e82` and `a154029` move Titlebar Spinner from the terminal title into Herdr tab labels. `8a9b0b1`, `c4c964f`, and release `ee46f8b` then deprecate and freeze that package. It is **removed**, not upgraded: retaining it would introduce a second writer that restores an old tab label after Rename has established a newer session label.
+- `84335ef` is accepted through `@tifan/pi-handoff@2.2.0`: inside Herdr, a handoff opens and focuses a new tab while retaining the parent session; outside Herdr, the existing replacement-session behavior remains. The implementation persists the child session before `tab create --focus`, `agent start`, and `agent prompt`; partial command failures may therefore leave empty Herdr/session resources. This limitation is accepted explicitly; aggregate smoke executes the published flow against a fake Herdr CLI and verifies the persisted child-session header plus all three commands.
+- `b16eb77` is tooling-only and `ec411f7` records completed work; release commits `d9fa55f`, `12b5745`, `ee46f8b`, and `8559ef7` are represented by the direct pins and removal above. The Tifan repository review cursor advances through `8559ef7`.
 
 ### Tifan Preferred Thinking 1.0.1 review
 
@@ -178,24 +188,34 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.7.1`  | `juicesharp/rpiv-mono`      |
+| `@juicesharp/rpiv-ask-user-question` | `2.8.0`  | `juicesharp/rpiv-mono`      |
 | `@luxusai/pi-hindsight`              | `0.12.0` | `luxus/pi-hindsight`        |
-| `@narumitw/pi-btw`                   | `0.55.4` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-btw`                   | `0.56.0` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.6`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-handoff`                  | `2.0.1`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-handoff`                  | `2.2.0`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-inline-skills`            | `1.0.5`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-mermaid-open`             | `0.2.0`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-preferred-thinking`       | `1.0.1`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-recap`                    | `0.4.5`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-rename`                   | `0.5.1`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-titlebar-spinner`         | `0.1.3`  | `tifandotme/pi-extensions`  |
-| `pi-mcp-adapter`                     | `2.30.0` | `nicobailon/pi-mcp-adapter` |
+| `@tifan/pi-recap`                    | `0.4.6`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
+| `pi-mcp-adapter`                     | `2.31.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-lens`                            | `4.1.2`  | `apmantza/pi-lens`          |
-| `pi-web-access`                      | `0.26.0` | `nicobailon/pi-web-access`  |
+| `pi-lens`                            | `4.1.3`  | `apmantza/pi-lens`          |
+| `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
-| `@czottmann/pi-automode`             | `1.14.0` | `czottmann/pi-automode`     |
+| `@czottmann/pi-automode`             | `1.15.0` | `czottmann/pi-automode`     |
+
+The issue #134 companion review accepted six independent releases:
+
+- `pi-automode@1.15.0` keeps runtime-registry completion as the primary classifier path and lazily loads the compatibility completion functions only for legacy registries. Its MIT license, Pi resources, and `unbash@4.0.10` dependency are unchanged.
+- `rpiv-ask-user-question@2.8.0` is source-identical to 2.7.1 outside release metadata and advances `rpiv-config` to `^2.8.0`; the stable `rpiv:ask-user:prompt` event used by `pi-bark` is unchanged.
+- `pi-btw@0.56.0` adds configurable fullscreen selection copying. Automatic copy remains the default; manual copy uses Pi 0.84.4's selection APIs and fails closed on older hosts. Aggregate smoke covers the new factory signature and unsupported-host guard.
+- `pi-lens@4.1.3` adds CSS/HTML NAPI ast-grep delivery, byte-bounded and pin-aware FactStore retention, multi-root session/instance accounting, and a process-singleton LSP service. Aggregate smoke exercises each contract rather than accepting the larger internal diff from manifest checks alone.
+- `pi-mcp-adapter@2.31.0` adds full-URL manual completion for pre-registered HTTPS OAuth redirects and advertises MCP Apps UI support. Aggregate smoke verifies callback state validation, manual completion, and the UI capability declaration; runtime dependencies and MIT terms are unchanged.
+- `pi-web-access@0.27.0` adds configurable fetch deadlines and default answer models, suppresses Defuddle's relative-canonical noise, and isolates GitHub clone work beneath per-process runtime directories. The real Pi smoke covers config/override precedence, canonical handling, and clone cleanup.
+
+All accepted paths use the aggregate's Pi 0.84.4 host. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
 
 The issue #131 companion review accepted four released updates:
 

@@ -9,7 +9,6 @@ The aggregate package bundles the following packages from [tifandotme/pi-extensi
 - `@tifan/pi-preferred-thinking`
 - `@tifan/pi-recap`
 - `@tifan/pi-rename`
-- `@tifan/pi-titlebar-spinner`
 
 They are distributed under the following MIT license:
 
