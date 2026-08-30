@@ -51,6 +51,11 @@ try {
   if (packed.files.some(({ path }) => path.includes("pi-stash"))) {
     throw new Error("Packed aggregate still contains removed pi-stash files")
   }
+  if (packed.files.some(({ path }) => path.includes("pi-titlebar-spinner"))) {
+    throw new Error(
+      "Packed aggregate still contains deprecated pi-titlebar-spinner files",
+    )
+  }
   const tarballPath = join(stageDir, packed.filename)
   const installDir = join(stageDir, "install")
   run(
@@ -366,7 +371,7 @@ try {
     )
   }
   if (
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.2" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.4" ||
     sourceManifest.dependencies.typebox !== "^1.1.38"
   ) {
     throw new Error("Aggregate pi-lens host ranges are no longer compatible")
@@ -427,6 +432,175 @@ try {
       "LICENSE",
     ].map((path) => stat(join(lensRoot, path))),
   )
+
+  const astGrepNapi = await import(
+    pathToFileURL(
+      join(lensRoot, "dist/clients/dispatch/runners/ast-grep-napi.js"),
+    )
+  )
+  for (const [file, language] of [
+    ["style.css", "css"],
+    ["page.html", "html"],
+    ["page.htm", "html"],
+  ]) {
+    if (
+      !astGrepNapi.canHandle(file) ||
+      astGrepNapi.ruleLanguageForFile(file) !== language ||
+      astGrepNapi.AST_GREP_LSP_ONLY_RULE_LANGUAGES.includes(language)
+    ) {
+      throw new Error(`pi-lens lost NAPI ${language} routing for ${file}`)
+    }
+  }
+  await Promise.all(
+    [
+      "rules/ast-grep-rules/rules/no-important.yml",
+      "rules/ast-grep-rules/rule-tests/no-important-test.yml",
+    ].map((path) => stat(join(lensRoot, path))),
+  )
+  const lensFileKinds = await import(
+    pathToFileURL(join(lensRoot, "dist/clients/file-kinds.js"))
+  )
+  const sgModule = await astGrepNapi.loadSg()
+  for (const [file, source, expectedMessage] of [
+    ["smoke.css", ".button { color: red !important; }", "!important"],
+    ["smoke.html", "<main><h1>Smoke</h1></main>", undefined],
+  ]) {
+    const language = astGrepNapi.getLang(file, sgModule)
+    const rootNode = language?.parse(source).root()
+    if (!rootNode) throw new Error(`pi-lens could not parse ${file}`)
+    const diagnostics = astGrepNapi.evaluateAstGrepRules(
+      file,
+      rootNode,
+      stageDir,
+      lensFileKinds.detectFileKind(file),
+    )
+    if (
+      expectedMessage
+        ? !diagnostics.some((diagnostic) =>
+            diagnostic.message.includes(expectedMessage),
+          )
+        : diagnostics.length !== 0
+    ) {
+      throw new Error(`pi-lens did not execute ${file} NAPI diagnostics`)
+    }
+  }
+
+  const factStoreModule = await import(
+    pathToFileURL(join(lensRoot, "dist/clients/dispatch/fact-store.js"))
+  )
+  const factStoreReports = []
+  const previousFactStoreReporter =
+    factStoreModule.getFactStoreEvictionReporter()
+  factStoreModule.setFactStoreEvictionReporter((...entry) =>
+    factStoreReports.push(entry),
+  )
+  try {
+    const factStore = new factStoreModule.FactStore("dispatch")
+    const pinnedFile = join(stageDir, "lens-pinned.ts")
+    const otherFile = join(stageDir, "lens-other.ts")
+    const pinnedBytes = 65 * 1024 * 1024
+    factStore.beginDispatchFor(pinnedFile)
+    factStore.setFileFact(pinnedFile, "file.content", "x".repeat(pinnedBytes))
+    factStore.setFileFact(otherFile, "file.content", "test")
+    if (
+      factStore.getPinnedContentBytes() !== pinnedBytes ||
+      factStore.getRetainedContentBytes() !== pinnedBytes + 4 ||
+      !factStore.hasFileFact(pinnedFile, "file.content") ||
+      !factStore.hasFileFact(otherFile, "file.content") ||
+      factStoreReports.length !== 1 ||
+      factStoreReports[0]?.[0] !== "dispatch" ||
+      factStoreReports[0]?.[1] !== "pinned-over-budget"
+    ) {
+      throw new Error("pi-lens FactStore lost its pinned byte-cap contract")
+    }
+    factStore.endDispatchFor(pinnedFile)
+    if (
+      factStore.getPinnedContentBytes() !== 0 ||
+      factStore.getRetainedContentBytes() !== 4 ||
+      factStore.hasFileFact(pinnedFile, "file.content") ||
+      !factStore.hasFileFact(otherFile, "file.content")
+    ) {
+      throw new Error("pi-lens FactStore did not release its pinned content")
+    }
+  } finally {
+    factStoreModule.setFactStoreEvictionReporter(previousFactStoreReporter)
+  }
+
+  const sessionRoots = await import(
+    pathToFileURL(join(lensRoot, "dist/clients/lsp/session-roots.js"))
+  )
+  const primaryRoot = join(stageDir, "lens-primary")
+  const nestedRoot = join(primaryRoot, "nested")
+  sessionRoots.resetSessionRootsForTests()
+  try {
+    sessionRoots.registerSessionRoot(primaryRoot)
+    sessionRoots.registerSessionRoot(nestedRoot)
+    if (
+      sessionRoots.isOutsideAllSessionRoots(join(primaryRoot, "a.ts")) ||
+      sessionRoots.isOutsideAllSessionRoots(join(nestedRoot, "b.ts")) ||
+      !sessionRoots.isOutsideAllSessionRoots(join(stageDir, "outside.ts")) ||
+      sessionRoots.shouldInitializeSessionRoot(
+        primaryRoot,
+        new Set([resolve(primaryRoot)]),
+      ) ||
+      !sessionRoots.shouldInitializeSessionRoot(
+        nestedRoot,
+        new Set([resolve(primaryRoot)]),
+      )
+    ) {
+      throw new Error("pi-lens lost its multi-root session registry contract")
+    }
+  } finally {
+    sessionRoots.resetSessionRootsForTests()
+  }
+
+  const instanceRegistry = await import(
+    pathToFileURL(join(lensRoot, "dist/clients/instance-registry.js"))
+  )
+  const primaryInstanceRoot = join(stageDir, "instance-primary")
+  let instanceRoots = [primaryInstanceRoot]
+  for (let index = 1; index <= 40; index++) {
+    instanceRoots = instanceRegistry.mergeInstanceRoots(
+      instanceRoots,
+      join(stageDir, `instance-${index}`),
+    )
+  }
+  const footprint = instanceRegistry.computeResourceFootprint([
+    {
+      pid: 42,
+      projectRoot: primaryInstanceRoot,
+      projectRoots: instanceRoots.slice(0, 2),
+      rssBytes: 10,
+      cpuPercent: 1,
+      lspChildren: [{ rssBytes: 3, cpuPercent: 2 }],
+    },
+  ])
+  if (
+    instanceRoots.length !== 32 ||
+    instanceRoots[0] !== primaryInstanceRoot ||
+    instanceRoots[1] !== join(stageDir, "instance-10") ||
+    instanceRoots.at(-1) !== join(stageDir, "instance-40") ||
+    footprint.totalRssBytes !== 13 ||
+    footprint.totalCpuPercent !== 3 ||
+    footprint.totalLspChildCount !== 1 ||
+    JSON.stringify(footprint.perInstance[0]?.projectRoots) !==
+      JSON.stringify(instanceRoots.slice(0, 2))
+  ) {
+    throw new Error("pi-lens lost its bounded instance-root accounting")
+  }
+  const lensLspUrl = pathToFileURL(
+    join(lensRoot, "dist/clients/lsp/index.js"),
+  ).href
+  const [lensLspFirst, lensLspSecond] = await Promise.all([
+    import(`${lensLspUrl}?aggregate-smoke=first`),
+    import(`${lensLspUrl}?aggregate-smoke=second`),
+  ])
+  if (lensLspFirst.getLSPService() !== lensLspSecond.getLSPService()) {
+    throw new Error(
+      "pi-lens LSP service is not shared across module generations",
+    )
+  }
+  lensLspSecond.resetLSPService({ reason: "quit" })
 
   // Exercise the published ask-user-question state seams as well as its manifest:
   // Slack-style bindings must keep newline ahead of submit, while submit still
@@ -953,6 +1127,56 @@ try {
   ) {
     throw new Error("pi-mcp-adapter RPC panel lost its text fallback guard")
   }
+  const mcpAuthFlow = await mcpJiti.import(join(mcpRoot, "mcp-auth-flow.ts"))
+  if (
+    mcpAuthFlow.parseAuthorizationCodeInput(
+      "https://callback.test/complete?code=smoke-code&state=smoke-state",
+      "smoke-state",
+    ) !== "smoke-code"
+  ) {
+    throw new Error("pi-mcp-adapter lost full callback URL parsing")
+  }
+  let mismatchedOAuthStateRejected = false
+  try {
+    mcpAuthFlow.parseAuthorizationCodeInput(
+      "https://callback.test/complete?code=smoke-code&state=wrong",
+      "smoke-state",
+    )
+  } catch (error) {
+    mismatchedOAuthStateRejected =
+      error instanceof Error && error.message.includes("state mismatch")
+  }
+  if (!mismatchedOAuthStateRejected) {
+    throw new Error("pi-mcp-adapter accepted a mismatched OAuth state")
+  }
+  const manualOAuth = await mcpAuthFlow.waitForAuthorizationResponse(
+    new Promise(() => {}),
+    "https://auth.test/authorize",
+    "smoke-state",
+    async () =>
+      "https://callback.test/complete?code=manual-code&state=smoke-state",
+  )
+  if (
+    manualOAuth.source !== "manual" ||
+    manualOAuth.input.code !== "manual-code"
+  ) {
+    throw new Error("pi-mcp-adapter lost manual HTTPS OAuth completion")
+  }
+  const { McpServerManager } = await mcpJiti.import(
+    join(mcpRoot, "server-manager.ts"),
+  )
+  const mcpClientCapabilities =
+    McpServerManager.prototype.buildClientCapabilities.call({
+      samplingConfig: undefined,
+      elicitationConfig: undefined,
+    })
+  if (
+    JSON.stringify(
+      mcpClientCapabilities.extensions?.["io.modelcontextprotocol/ui"],
+    ) !== JSON.stringify({ mimeTypes: ["text/html;profile=mcp-app"] })
+  ) {
+    throw new Error("pi-mcp-adapter lost its MCP UI client capability")
+  }
 
   const webAccessRoot = join(packageRoot, "node_modules", "pi-web-access")
   const webAccessManifestPath = join(webAccessRoot, "package.json")
@@ -1002,7 +1226,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.55.4"
+  const expectedBtwVersion = "0.56.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1053,7 +1277,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.55.4's public entry is the bundled dist. Add test-only exports in memory
+  // 0.56.0's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
@@ -1074,9 +1298,13 @@ try {
     underline: (text) => `underline:${text}`,
   }
   const copiedSelections = []
+  const btwKeybindings = { matches: () => false }
   const fullscreenTui = createBtwFullscreenTui(
     { terminal: {}, getShowHardwareCursor: () => false },
     styleTheme,
+    btwKeybindings,
+    true,
+    false,
     () => {},
     async (text) => {
       copiedSelections.push(text)
@@ -1094,6 +1322,9 @@ try {
   const failingClipboardTui = createBtwFullscreenTui(
     { terminal: {}, getShowHardwareCursor: () => false },
     styleTheme,
+    btwKeybindings,
+    true,
+    false,
     () => {},
     async () => {
       throw new Error("clipboard unavailable")
@@ -1101,6 +1332,56 @@ try {
   )
   if ((await failingClipboardTui.copySelection("copy me")) !== false) {
     throw new Error("pi-btw fullscreen clipboard failure was not reported")
+  }
+  let manualSelectionRejected = false
+  try {
+    createBtwFullscreenTui(
+      { terminal: {}, getShowHardwareCursor: () => false },
+      styleTheme,
+      btwKeybindings,
+      false,
+      false,
+      () => {},
+      async () => {},
+    )
+  } catch (error) {
+    manualSelectionRejected =
+      error instanceof Error &&
+      error.message.includes(
+        "Manual fullscreen selection copying is unavailable",
+      )
+  }
+  if (!manualSelectionRejected) {
+    throw new Error("pi-btw manual selection copy did not fail closed")
+  }
+  const manualCopyFlashes = []
+  let manualCopyCount = 0
+  const manualCopyTui = createBtwFullscreenTui(
+    { terminal: {}, getShowHardwareCursor: () => false },
+    styleTheme,
+    {
+      matches: (data, key) => data === "COPY" && key === "app.message.copy",
+    },
+    false,
+    true,
+    () => {},
+    async () => {},
+  )
+  manualCopyTui.hasActiveSelection = () => true
+  manualCopyTui.copyActiveSelectionToClipboard = async () => {
+    manualCopyCount++
+  }
+  manualCopyTui.flash = (message) => manualCopyFlashes.push(message)
+  manualCopyTui.handleTerminalInput("COPY")
+  await new Promise((resolvePromise) => setImmediate(resolvePromise))
+  manualCopyTui.hasActiveSelection = () => false
+  manualCopyTui.handleTerminalInput("COPY")
+  if (
+    manualCopyCount !== 1 ||
+    JSON.stringify(manualCopyFlashes) !==
+      JSON.stringify(["No selection to copy"])
+  ) {
+    throw new Error("pi-btw manual selection copy path is not operational")
   }
 
   let mainDraft = "original main draft"
@@ -1401,11 +1682,11 @@ try {
   }
   if (
     sourceManifest.dependencies["@earendil-works/pi-coding-agent"] !==
-      "^0.84.2" ||
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.2"
+      "^0.84.4" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.4"
   ) {
     throw new Error(
-      'Aggregate Pi host ranges must be exactly "^0.84.2"; update this check when the host is bumped',
+      'Aggregate Pi host ranges must be exactly "^0.84.4"; update this check when the host is bumped',
     )
   }
   const installedHosts = await Promise.all(
@@ -1427,9 +1708,9 @@ try {
     // Keep the 0.84 line pinned while accepting compatible later patches;
     // bump the source range and this guard together when Pi moves again.
     const patch = /^0\.84\.(\d+)$/.exec(version)?.[1]
-    if (patch === undefined || Number(patch) < 2) {
+    if (patch === undefined || Number(patch) < 4) {
       throw new Error(
-        `Expected remote-pi ${hostDependency} host compatible with ^0.84.2, got ${version}`,
+        `Expected remote-pi ${hostDependency} host compatible with ^0.84.4, got ${version}`,
       )
     }
   }
@@ -1491,7 +1772,6 @@ try {
     "@tifan/pi-preferred-thinking",
     "@tifan/pi-recap",
     "@tifan/pi-rename",
-    "@tifan/pi-titlebar-spinner",
   ]
   await Promise.all(
     directTifanPackages.map(async (packageName) => {
@@ -1533,6 +1813,209 @@ try {
       return undefined
     }),
   )
+
+  const handoffEntry = join(
+    packageRoot,
+    "node_modules/@tifan/pi-handoff/src/index.ts",
+  )
+  const handoffSource = await readFile(handoffEntry, "utf8")
+  const handoffRequire = createRequire(handoffEntry)
+  const { createJiti: createHandoffJiti } = await import(
+    pathToFileURL(handoffRequire.resolve("jiti"))
+  )
+  const previousHandoffAgentDir = process.env.PI_CODING_AGENT_DIR
+  const handoffAgentDir = join(stageDir, "handoff-agent")
+  process.env.PI_CODING_AGENT_DIR = handoffAgentDir
+  try {
+    const handoffProbe = await createHandoffJiti(handoffEntry, {
+      alias: {
+        "@earendil-works/pi-ai": join(
+          root,
+          "node_modules/@earendil-works/pi-ai/dist/index.js",
+        ),
+        "@earendil-works/pi-ai/compat": join(
+          root,
+          "node_modules/@earendil-works/pi-ai/dist/compat.js",
+        ),
+        "@earendil-works/pi-coding-agent": join(
+          root,
+          "node_modules/@earendil-works/pi-coding-agent/dist/index.js",
+        ),
+        "@earendil-works/pi-tui": join(
+          root,
+          "node_modules/@earendil-works/pi-tui/dist/index.js",
+        ),
+      },
+      moduleCache: false,
+    }).evalModule(`${handoffSource}\nexport { startHandoffInHerdr };\n`, {
+      filename: handoffEntry,
+      async: true,
+      forceTranspile: true,
+    })
+    const handoffCwd = join(stageDir, "handoff-cwd")
+    const handoffPath = join(handoffCwd, "handoff.md")
+    const handoffCalls = []
+    await mkdir(handoffCwd, { recursive: true })
+    await handoffProbe.startHandoffInHerdr({
+      pi: {
+        exec: async (command, args, options) => {
+          handoffCalls.push({ command, args, options })
+          return args[0] === "tab"
+            ? {
+                code: 0,
+                stdout: JSON.stringify({
+                  result: { root_pane: { pane_id: "pane-smoke" } },
+                }),
+                stderr: "",
+              }
+            : { code: 0, stdout: "", stderr: "" }
+        },
+      },
+      ctx: {
+        cwd: handoffCwd,
+        model: { provider: "smoke-provider", id: "smoke-model" },
+      },
+      handoffPath,
+      parentSession: "/parent/session.jsonl",
+      sessionName: "smoke-handoff",
+      workspaceId: "workspace-smoke",
+    })
+    const [createTab, startAgent, promptAgent] = handoffCalls
+    const sessionArgumentIndex = startAgent?.args.indexOf("--session") ?? -1
+    const childSessionPath = startAgent?.args[sessionArgumentIndex + 1]
+    const childHeader = childSessionPath
+      ? JSON.parse((await readFile(childSessionPath, "utf8")).split("\n")[0])
+      : undefined
+    if (
+      handoffCalls.length !== 3 ||
+      createTab.command !== "herdr" ||
+      JSON.stringify(createTab.args.slice(0, 2)) !==
+        JSON.stringify(["tab", "create"]) ||
+      !createTab.args.includes("--focus") ||
+      !createTab.args.includes("workspace-smoke") ||
+      createTab.options?.timeout !== 5_000 ||
+      startAgent.command !== "herdr" ||
+      JSON.stringify(startAgent.args.slice(0, 2)) !==
+        JSON.stringify(["agent", "start"]) ||
+      !startAgent.args.includes("pane-smoke") ||
+      !startAgent.args.includes("smoke-provider") ||
+      !startAgent.args.includes("smoke-model") ||
+      startAgent.options?.timeout !== 35_000 ||
+      promptAgent.command !== "herdr" ||
+      JSON.stringify(promptAgent.args.slice(0, 2)) !==
+        JSON.stringify(["agent", "prompt"]) ||
+      !promptAgent.args.at(-1)?.includes(handoffPath) ||
+      childHeader?.cwd !== handoffCwd ||
+      childHeader?.parentSession !== "/parent/session.jsonl"
+    ) {
+      throw new Error("Bundled Handoff lost its focused Herdr tab flow")
+    }
+  } finally {
+    if (previousHandoffAgentDir === undefined) {
+      delete process.env.PI_CODING_AGENT_DIR
+    } else {
+      process.env.PI_CODING_AGENT_DIR = previousHandoffAgentDir
+    }
+  }
+
+  const recapEntry = join(
+    packageRoot,
+    "node_modules/@tifan/pi-recap/src/index.ts",
+  )
+  const recapRequire = createRequire(recapEntry)
+  const { createJiti: createRecapJiti } = await import(
+    pathToFileURL(recapRequire.resolve("jiti"))
+  )
+  const initializeRecap = (
+    await createRecapJiti(recapEntry, { moduleCache: false }).import(recapEntry)
+  ).default
+  const recapHandlers = new Map()
+  initializeRecap({
+    registerCommand() {},
+    on(event, handler) {
+      recapHandlers.set(event, handler)
+    },
+  })
+  const scheduledRecaps = []
+  const originalSetTimeout = globalThis.setTimeout
+  globalThis.setTimeout = (_callback, delay) => {
+    scheduledRecaps.push(delay)
+    return { unref() {} }
+  }
+  try {
+    recapHandlers.get("session_compact_failed")({ willRetry: false })
+    recapHandlers.get("agent_settled")({}, {})
+    if (scheduledRecaps.length !== 0) {
+      throw new Error("Recap scheduled work after failed compaction")
+    }
+    recapHandlers.get("agent_settled")({}, {})
+    if (JSON.stringify(scheduledRecaps) !== JSON.stringify([300_000])) {
+      throw new Error("Recap did not re-arm after skipping one away recap")
+    }
+  } finally {
+    globalThis.setTimeout = originalSetTimeout
+  }
+
+  const renameEntry = join(
+    packageRoot,
+    "node_modules/@tifan/pi-rename/src/index.ts",
+  )
+  const renameRequire = createRequire(renameEntry)
+  const { createJiti: createRenameJiti } = await import(
+    pathToFileURL(renameRequire.resolve("jiti"))
+  )
+  const previousRenameAgentDir = process.env.PI_CODING_AGENT_DIR
+  const renameAgentDir = join(stageDir, "rename-agent")
+  process.env.PI_CODING_AGENT_DIR = renameAgentDir
+  try {
+    const renameJiti = createRenameJiti(renameEntry, { moduleCache: false })
+    const renameModels = await renameJiti.import(
+      join(dirname(renameEntry), "models.ts"),
+    )
+    const renameSanitize = await renameJiti.import(
+      join(dirname(renameEntry), "sanitize.ts"),
+    )
+    const renameNaming = await renameJiti.import(
+      join(dirname(renameEntry), "naming.ts"),
+    )
+    const renameConfigDir = join(renameAgentDir, "extensions")
+    const renameConfigPath = join(renameConfigDir, "pi-rename.json")
+    await mkdir(renameConfigDir, { recursive: true })
+    await writeFile(
+      renameConfigPath,
+      `${JSON.stringify({ model: "old/model", language: "en", keep: "sentinel" })}\n`,
+    )
+    renameModels.saveRenameLanguage("zh-CN")
+    renameModels.saveModelPreference({ provider: "new", id: "model" })
+    const savedRenameConfig = parseJson(
+      await readFile(renameConfigPath, "utf8"),
+      renameConfigPath,
+    )
+    const localizedName = renameSanitize.sanitizeRenameText(
+      "这是一个非常长的中文会话名称用于测试三十字符限制和本地化行为",
+      "zh-CN",
+    )
+    if (
+      savedRenameConfig.model !== "new/model" ||
+      savedRenameConfig.language !== "zh-CN" ||
+      savedRenameConfig.keep !== "sentinel" ||
+      !localizedName.includes("中文") ||
+      [...localizedName].length > 30 ||
+      !renameNaming
+        .buildRenameSystemPrompt("zh-CN")
+        .includes("BCP 47 tag zh-CN")
+    ) {
+      throw new Error(
+        "Bundled Rename lost config preservation, localization, or name limits",
+      )
+    }
+  } finally {
+    if (previousRenameAgentDir === undefined) {
+      delete process.env.PI_CODING_AGENT_DIR
+    } else {
+      process.env.PI_CODING_AGENT_DIR = previousRenameAgentDir
+    }
+  }
 
   const preferredThinkingEntry = join(
     packageRoot,

@@ -8,7 +8,7 @@ A collection of HerbertGao-maintained and pinned upstream extensions for the [Pi
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer.
+Requires Node.js 24 or newer and Pi 0.84.4 or newer.
 
 The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual maintained packages can also be installed separately.
 
@@ -29,24 +29,23 @@ These packages retain their original names and upstream maintainers. The aggrega
 | Package                                                                         | Pinned version | Purpose                                       |
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
 | [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.9.0`        | Minimal coding mode and maintenance skills.   |
-| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.7.1`        | Structured user questionnaires.               |
+| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.8.0`        | Structured user questionnaires.               |
 | [`@luxusai/pi-hindsight`](https://github.com/luxus/pi-hindsight)                | `0.12.0`       | Hindsight-backed cross-host project memory.   |
-| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.55.4`       | Parallel side questions outside main history. |
+| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.56.0`       | Parallel side questions outside main history. |
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.10`       | Priority service tier for selected models.    |
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.6`        | Pick and copy an assistant response.          |
-| [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.0.1`        | Session handoffs and queries.                 |
+| [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.0`        | Session handoffs and queries.                 |
 | [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.5`        | Inline `/skill` autocomplete.                 |
 | [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.0`        | Extract and open Mermaid diagrams.            |
 | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.1`        | Persist thinking levels per model.            |
-| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.5`        | Generate one-line session recaps.             |
-| [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.5.1`        | Generate session names and rename Herdr.      |
-| [`@tifan/pi-titlebar-spinner`](https://github.com/tifandotme/pi-extensions)     | `0.1.3`        | Show activity in the terminal titlebar.       |
-| [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.30.0`       | MCP tools and skills.                         |
+| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.6`        | Generate one-line session recaps.             |
+| [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
+| [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.31.0`       | MCP tools and skills.                         |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.2`        | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.26.0`       | Web search and content access.                |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.3`        | Code diagnostics and skills.                  |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.27.0`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
-| [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.14.0`       | Auto-mode guardrails and diagnostics.         |
+| [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.15.0`       | Auto-mode guardrails and diagnostics.         |
 
 ### Remote Pi trust boundary
 
@@ -60,7 +59,7 @@ The aggregate enables `pi-footer` and ships [`packages/pi-extensions/examples/pi
 
 ## Native fullscreen
 
-Pi 0.84.1's native `fullscreen` TUI owns transcript scrolling and the fixed bottom dock. `@herbertgao/pi-cc-extensions` integrates its mouse interactions with that native viewport.
+Pi 0.84.4's native `fullscreen` TUI owns transcript scrolling and the fixed bottom dock. `@herbertgao/pi-cc-extensions` integrates its mouse interactions with that native viewport.
 
 ## Maintenance
 
