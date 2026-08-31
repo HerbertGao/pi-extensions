@@ -83,6 +83,12 @@ steps:
     with:
       bun-version: 1.3.14
       no-cache: true
+  - name: Expose Bun to agent sandbox
+    run: |
+      bun_dir="$RUNNER_TOOL_CACHE/gh-aw-bun/bin"
+      mkdir -p "$bun_dir"
+      install -m 0755 "$(command -v bun)" "$bun_dir/bun"
+      "$bun_dir/bun" --version
   - name: Install dependencies
     run: bun install --frozen-lockfile
 timeout-minutes: 90
@@ -120,7 +126,9 @@ For every accepted behavior change, identify an observable regression boundary a
 - bundled companion behavior belongs in `scripts/aggregate-package-smoke.mjs`;
 - Pi-host integration belongs in an existing real smoke script when it can be deterministic.
 
-Do not add tests that only mirror version strings or obvious mappings. Preserve explicit external-validation boundaries for Herdr, OAuth/browser callbacks, clipboard/terminal integration, live providers, or other platform behavior that cannot be deterministic in Actions.
+Do not add tests that only mirror version strings or obvious mappings. When behavior changes from present to absent, replace its positive assertion with an explicit negative assertion instead of deleting coverage. Preserve explicit external-validation boundaries for Herdr, OAuth/browser callbacks, clipboard/terminal integration, live providers, or other platform behavior that cannot be deterministic in Actions.
+
+Bun 1.3.14 is preinstalled in the Agent sandbox. If `command -v bun` fails, call `report_incomplete`; do not download or install another copy.
 
 Run focused checks while working, then run:
 
