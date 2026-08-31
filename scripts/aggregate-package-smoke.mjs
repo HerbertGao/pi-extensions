@@ -1852,6 +1852,8 @@ try {
       async: true,
       forceTranspile: true,
     })
+    const handoffSessionName =
+      handoffProbe.formatHandoffSessionName("smoke-handoff")
     const handoffCwd = join(stageDir, "handoff-cwd")
     const handoffPath = join(handoffCwd, "handoff.md")
     const handoffCalls = []
@@ -1877,10 +1879,12 @@ try {
       },
       handoffPath,
       parentSession: "/parent/session.jsonl",
-      sessionName: "smoke-handoff",
+      sessionName: handoffSessionName,
       workspaceId: "workspace-smoke",
     })
     const [createTab, startAgent, promptAgent] = handoffCalls
+    const tabLabelArgumentIndex = createTab?.args.indexOf("--label") ?? -1
+    const tabLabel = createTab?.args[tabLabelArgumentIndex + 1]
     const sessionArgumentIndex = startAgent?.args.indexOf("--session") ?? -1
     const childSessionPath = startAgent?.args[sessionArgumentIndex + 1]
     const childHeader = childSessionPath
@@ -1891,7 +1895,9 @@ try {
       createTab.command !== "herdr" ||
       JSON.stringify(createTab.args.slice(0, 2)) !==
         JSON.stringify(["tab", "create"]) ||
-      !createTab.args.includes("--focus") ||
+      handoffSessionName !== "[handoff] smoke-handoff" ||
+      createTab.args.includes("--focus") ||
+      tabLabel !== handoffSessionName ||
       !createTab.args.includes("workspace-smoke") ||
       createTab.options?.timeout !== 5_000 ||
       startAgent.command !== "herdr" ||
@@ -1908,7 +1914,7 @@ try {
       childHeader?.cwd !== handoffCwd ||
       childHeader?.parentSession !== "/parent/session.jsonl"
     ) {
-      throw new Error("Bundled Handoff lost its focused Herdr tab flow")
+      throw new Error("Bundled Handoff lost its background Herdr tab flow")
     }
   } finally {
     if (previousHandoffAgentDir === undefined) {
