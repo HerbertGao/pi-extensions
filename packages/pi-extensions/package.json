@@ -63,7 +63,7 @@
     "@shikijs/cli": "^4.0.2",
     "@sinclair/typebox": "^0.34.49",
     "@tifan/pi-copy-response": "0.2.6",
-    "@tifan/pi-handoff": "2.2.0",
+    "@tifan/pi-handoff": "2.2.1",
     "@tifan/pi-inline-skills": "1.0.5",
     "@tifan/pi-mermaid-open": "0.2.0",
     "@tifan/pi-preferred-thinking": "1.0.1",

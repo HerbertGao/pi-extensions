@@ -47,11 +47,21 @@ gh aw validate upstream-upgrade --strict
 
 ### Direct Tifan package migration
 
-The aggregate pins and bundles seven original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.0`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.6`, and Rename `0.6.0`.
+The aggregate pins and bundles seven original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.1`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.6`, and Rename `0.6.0`.
 
 Normalized package comparisons established that copy-response, inline-skills, and Mermaid Open are source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename catch malformed config at their outer initialization boundary; and Handoff intentionally depends on Rename for generated session names. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
 
 All Tifan-derived local package sources are removed without compatibility wrappers. Issue #131 removes the last one, `pi-stash`: bundled `pi-btw` already preserves the main editor draft while handling side questions outside the main conversation, so maintaining a Fork solely for `Alt+S` is not justified. Issue #134 also removes deprecated `@tifan/pi-titlebar-spinner`: its 1.x line retargets Herdr tab labels and can overwrite Rename's session-owned label, so the aggregate keeps Rename as the single tab-naming owner. Prior `@herbertgao/*` npm releases remain available but outside this repository's maintained package set.
+
+### Issue #139 Tifan pi-handoff 2.2.1 review
+
+The range `8559ef7..7294704` and its published package were reviewed commit by commit:
+
+- `890ca9c` is **accepted** through `@tifan/pi-handoff@2.2.1`: new handoff sessions are prefixed `[handoff] ` both as the session name and Herdr label, making them visually distinct in the tab bar; `tab create` no longer passes `--focus` so the current tab stays active while the handoff opens in a new tab in the background. Aggregate smoke removes the `--focus` assertion on `tab create` to match. Upstream adds a focused `formatHandoffSessionName` unit test; the smoke already verifies end-to-end labelling through `--label smoke-handoff` so no additional coverage is needed here.
+- `55fcb3a` is a test-only fix to align Unicode truncation expectations with the 30-character `pi-rename` cap. No `pi-rename` source changed; the fix is not ported since our test suite does not include this test case.
+- `7294704` is the version bump commit and is represented by the direct pin advancement.
+
+The Tifan repository review cursor advances through `72947049`.
 
 ### Issue #134 Tifan release review
 
@@ -214,7 +224,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@narumitw/pi-btw`                   | `0.56.0` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.6`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-handoff`                  | `2.2.0`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-handoff`                  | `2.2.1`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-inline-skills`            | `1.0.5`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-mermaid-open`             | `0.2.0`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-preferred-thinking`       | `1.0.1`  | `tifandotme/pi-extensions`  |

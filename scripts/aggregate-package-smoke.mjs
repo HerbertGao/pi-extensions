@@ -1891,7 +1891,6 @@ try {
       createTab.command !== "herdr" ||
       JSON.stringify(createTab.args.slice(0, 2)) !==
         JSON.stringify(["tab", "create"]) ||
-      !createTab.args.includes("--focus") ||
       !createTab.args.includes("workspace-smoke") ||
       createTab.options?.timeout !== 5_000 ||
       startAgent.command !== "herdr" ||

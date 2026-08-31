@@ -82,7 +82,7 @@
         "@shikijs/cli": "^4.0.2",
         "@sinclair/typebox": "^0.34.49",
         "@tifan/pi-copy-response": "0.2.6",
-        "@tifan/pi-handoff": "2.2.0",
+        "@tifan/pi-handoff": "2.2.1",
         "@tifan/pi-inline-skills": "1.0.5",
         "@tifan/pi-mermaid-open": "0.2.0",
         "@tifan/pi-preferred-thinking": "1.0.1",
@@ -754,7 +754,7 @@
 
     "@tifan/pi-copy-response": ["@tifan/pi-copy-response@0.2.6", "", {}, "sha512-wtLZrTnVQKgR+cDjy1nWGKqsNTFzn8MpsU50y/hMyPcsJBDSlkFP8VNoU9DqEmqr/irChqOu3BWVide6hkPQ7A=="],
 
-    "@tifan/pi-handoff": ["@tifan/pi-handoff@2.2.0", "", { "dependencies": { "@tifan/pi-rename": "^0.6.0" } }, "sha512-ACArCrP3h0LI4Kl1MG+o1FHb1SATjIwFwqVwjmugt1Wyf1uyKyAJSIgegsMEm/iN8dwmBcIRkxWgY/sDIfAEDg=="],
+    "@tifan/pi-handoff": ["@tifan/pi-handoff@2.2.1", "", { "dependencies": { "@tifan/pi-rename": "^0.6.0" } }, "sha512-HtK/wPLVzED2/9n1+pgvo8+jBMFasdbjE39SGa90EAIUBhoyCZ5rdlU9AZfKHayn+DGe8TNxExqBKhf0SQ0UlA=="],
 
     "@tifan/pi-inline-skills": ["@tifan/pi-inline-skills@1.0.5", "", {}, "sha512-rS0NQTkHeyxxb4jLIXOKGU9OwFay/CLy/Ww6KZn6YopuNpVZdI/DT+f9PJW8Wj7fijq8Sa77rVDQQvqTOmJTvw=="],
 
