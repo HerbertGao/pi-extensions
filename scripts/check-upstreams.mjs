@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { appendFileSync, readFileSync, readdirSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
@@ -9,6 +10,21 @@ const packageRoot = resolve(root, "packages")
 const aggregatePath = resolve(packageRoot, "pi-extensions/package.json")
 const monitorPath = resolve(root, "upstreams.json")
 const issueTitle = "chore: upstream updates available"
+const dispatchMarkerPattern =
+  /\n*<!-- upstream-agent-dispatched:([a-f0-9]{64}) -->\s*$/
+
+function normalizedTrackingReport(report) {
+  return report
+    .replace(dispatchMarkerPattern, "")
+    .replace(/^Generated: .*$/m, "")
+    .trimEnd()
+}
+
+export function trackingReportFingerprint(report) {
+  return createHash("sha256")
+    .update(normalizedTrackingReport(report))
+    .digest("hex")
+}
 
 function readJson(path) {
   try {
@@ -293,16 +309,29 @@ export async function syncTrackingIssue(
   if (action === "open") {
     const body = JSON.stringify({ title: issueTitle, body: report })
     if (issue) {
+      const dispatchedFingerprint =
+        typeof issue.body === "string"
+          ? issue.body.match(dispatchMarkerPattern)?.[1]
+          : undefined
+      if (
+        typeof issue.body === "string" &&
+        normalizedTrackingReport(issue.body) ===
+          normalizedTrackingReport(report) &&
+        dispatchedFingerprint === trackingReportFingerprint(report)
+      ) {
+        return
+      }
       const updated = await request(
         `/repos/${repository}/issues/${issue.number}`,
         { method: "PATCH", body },
       )
-      if (updated.state === "open") return
+      if (updated.state === "open") return updated.number
     }
-    await request(`/repos/${repository}/issues`, {
+    const created = await request(`/repos/${repository}/issues`, {
       method: "POST",
       body,
     })
+    return created.number
   } else if (action === "close" && issue) {
     await request(`/repos/${repository}/issues/${issue.number}`, {
       method: "PATCH",
@@ -320,7 +349,7 @@ async function syncIssue(report, action) {
   if (!process.env.GITHUB_TOKEN || !repository) {
     throw new Error("--sync-issue requires GITHUB_TOKEN and GITHUB_REPOSITORY")
   }
-  await syncTrackingIssue(repository, report, action)
+  return syncTrackingIssue(repository, report, action)
 }
 
 async function main() {
@@ -420,7 +449,16 @@ async function main() {
   process.stdout.write(report)
 
   if (shouldSyncIssue) {
-    await syncIssue(report, issueSyncAction(releaseUpdates, errors))
+    const changedIssueNumber = await syncIssue(
+      report,
+      issueSyncAction(releaseUpdates, errors),
+    )
+    if (changedIssueNumber && process.env.GITHUB_OUTPUT) {
+      appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `changed_issue_number=${changedIssueNumber}\nreport_fingerprint=${trackingReportFingerprint(report)}\n`,
+      )
+    }
   }
   if (errors.length > 0) process.exitCode = 1
 }
