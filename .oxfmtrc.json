@@ -1,5 +1,6 @@
 {
   "ignorePatterns": [
+    ".github/workflows/*.lock.yml",
     "packages/pi-cc-extensions/**",
     "packages/resume-from/**",
     "packages/pi-subagents/examples/agent-tool-description.md",

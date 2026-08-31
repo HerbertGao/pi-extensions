@@ -3,10 +3,11 @@ name: Upstream Monitor
 
 "on":
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "17 1 * * *"
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: read
   issues: write
 
@@ -32,9 +33,83 @@ jobs:
           node-version: 22.23.1
 
       - name: Check upstream releases and commits
+        id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o pipefail
           node scripts/check-upstreams.mjs --sync-issue |
             tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Check agentic workflow credentials
+        if: steps.check.outputs.changed_issue_number != ''
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GH_AW_CI_TRIGGER_TOKEN: ${{ secrets.GH_AW_CI_TRIGGER_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
+        run: |
+          set -euo pipefail
+          missing=()
+          if [[ -z "$COPILOT_GITHUB_TOKEN" ]]; then
+            missing+=(COPILOT_GITHUB_TOKEN)
+          fi
+          if [[ -z "$GH_AW_CI_TRIGGER_TOKEN" ]]; then
+            missing+=(GH_AW_CI_TRIGGER_TOKEN)
+          fi
+          if (( ${#missing[@]} == 0 )); then
+            exit 0
+          fi
+
+          marker="<!-- upstream-agent-credentials-missing -->"
+          if ! gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+            --jq '.[].body' | grep -Fq "$marker"; then
+            body_file="$RUNNER_TEMP/upstream-agent-credentials.md"
+            {
+              echo "$marker"
+              echo
+              echo "@HerbertGao upstream upgrade blocked"
+              echo
+              printf 'Missing required Actions secrets:'
+              printf ' `%s`' "${missing[@]}"
+              echo ". Configure them as documented in docs/maintenance.md,"
+              echo "then rerun Upstream Monitor to retry this Issue."
+            } > "$body_file"
+            gh issue comment "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file "$body_file"
+          fi
+          printf 'Missing required Actions secrets: %s\n' "${missing[*]}" >&2
+          exit 1
+
+      - name: Start reviewed upstream upgrade
+        if: steps.check.outputs.changed_issue_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
+        run: |
+          gh workflow run upstream-upgrade.lock.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            --field issue_number="$ISSUE_NUMBER"
+
+      - name: Acknowledge agentic workflow dispatch
+        if: steps.check.outputs.changed_issue_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
+          REPORT_FINGERPRINT: ${{ steps.check.outputs.report_fingerprint }}
+        run: |
+          set -euo pipefail
+          [[ "$REPORT_FINGERPRINT" =~ ^[0-9a-f]{64}$ ]]
+          body_file="$RUNNER_TEMP/upstream-issue-body.md"
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json body \
+            --jq .body > "$body_file"
+          printf '\n\n<!-- upstream-agent-dispatched:%s -->\n' \
+            "$REPORT_FINGERPRINT" >> "$body_file"
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --body-file "$body_file"

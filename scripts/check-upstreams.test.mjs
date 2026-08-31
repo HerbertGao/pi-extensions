@@ -5,6 +5,7 @@ import {
   findOpenTrackingIssue,
   issueSyncAction,
   syncTrackingIssue,
+  trackingReportFingerprint,
 } from "./check-upstreams.mjs"
 
 test("opens the rolling issue only for upstream releases", () => {
@@ -38,6 +39,7 @@ test("finds an open tracking issue on a later page without creating a duplicate"
     number: 37,
     title: "chore: upstream updates available",
     state: "open",
+    body: "old report",
   }
   const calls = []
   const request = async (path, init = {}) => {
@@ -54,13 +56,78 @@ test("finds an open tracking issue on a later page without creating a duplicate"
     throw new Error(`Unexpected request: ${path}`)
   }
 
-  await syncTrackingIssue("owner/repo", "report", "open", request)
+  const changedIssueNumber = await syncTrackingIssue(
+    "owner/repo",
+    "report",
+    "open",
+    request,
+  )
 
   assert.deepEqual(
     calls.map(({ init }) => init.method ?? "GET"),
     ["GET", "GET", "PATCH"],
   )
   assert.equal(calls[2].path, "/repos/owner/repo/issues/37")
+  assert.equal(changedIssueNumber, 37)
+})
+
+test("does not redispatch an acknowledged unchanged tracking issue", async () => {
+  const report = "Generated: 2026-08-31T00:00:00.000Z\n\nreport"
+  const fingerprint = trackingReportFingerprint(report)
+  const open = {
+    number: 37,
+    title: "chore: upstream updates available",
+    state: "open",
+    body: `Generated: 2026-08-30T00:00:00.000Z\n\nreport\n\n<!-- upstream-agent-dispatched:${fingerprint} -->`,
+  }
+  const calls = []
+  const request = async (path, init = {}) => {
+    calls.push({ path, init })
+    if (path.includes("?state=open")) return [open]
+    throw new Error(`Unexpected request: ${path}`)
+  }
+
+  const changedIssueNumber = await syncTrackingIssue(
+    "owner/repo",
+    report,
+    "open",
+    request,
+  )
+
+  assert.equal(changedIssueNumber, undefined)
+  assert.deepEqual(
+    calls.map(({ init }) => init.method ?? "GET"),
+    ["GET"],
+  )
+})
+
+test("redispatches an unchanged report when dispatch was not acknowledged", async () => {
+  const open = {
+    number: 37,
+    title: "chore: upstream updates available",
+    state: "open",
+    body: "Generated: 2026-08-30T00:00:00.000Z\n\nreport",
+  }
+  const calls = []
+  const request = async (path, init = {}) => {
+    calls.push({ path, init })
+    if (path.includes("?state=open")) return [open]
+    if (init.method === "PATCH") return open
+    throw new Error(`Unexpected request: ${path}`)
+  }
+
+  const changedIssueNumber = await syncTrackingIssue(
+    "owner/repo",
+    "Generated: 2026-08-31T00:00:00.000Z\n\nreport",
+    "open",
+    request,
+  )
+
+  assert.equal(changedIssueNumber, 37)
+  assert.deepEqual(
+    calls.map(({ init }) => init.method ?? "GET"),
+    ["GET", "PATCH"],
+  )
 })
 
 test("creates a tracking issue when no matching open issue exists", async () => {
@@ -72,13 +139,19 @@ test("creates a tracking issue when no matching open issue exists", async () => 
     throw new Error(`Unexpected request: ${path}`)
   }
 
-  await syncTrackingIssue("owner/repo", "report", "open", request)
+  const createdIssueNumber = await syncTrackingIssue(
+    "owner/repo",
+    "report",
+    "open",
+    request,
+  )
 
   assert.deepEqual(
     calls.map(({ init }) => init.method ?? "GET"),
     ["GET", "POST"],
   )
   assert.equal(calls[1].path, "/repos/owner/repo/issues")
+  assert.equal(createdIssueNumber, 38)
 })
 
 test("creates a replacement when the tracking issue closes during update", async () => {
@@ -96,12 +169,18 @@ test("creates a replacement when the tracking issue closes during update", async
     throw new Error(`Unexpected request: ${path}`)
   }
 
-  await syncTrackingIssue("owner/repo", "report", "open", request)
+  const createdIssueNumber = await syncTrackingIssue(
+    "owner/repo",
+    "report",
+    "open",
+    request,
+  )
 
   assert.deepEqual(
     calls.map(({ init }) => init.method ?? "GET"),
     ["GET", "PATCH", "POST"],
   )
+  assert.equal(createdIssueNumber, 38)
   assert.equal("state" in JSON.parse(calls[1].init.body), false)
   assert.deepEqual(JSON.parse(calls[2].init.body), {
     title: "chore: upstream updates available",
