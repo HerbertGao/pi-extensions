@@ -57,7 +57,7 @@ All Tifan-derived local package sources are removed without compatibility wrappe
 
 The range `8559ef7..7294704` and its published package were reviewed commit by commit:
 
-- `890ca9c` is **accepted** through `@tifan/pi-handoff@2.2.1`: new handoff sessions are prefixed `[handoff] ` both as the session name and Herdr label, making them visually distinct in the tab bar; `tab create` no longer passes `--focus` so the current tab stays active while the handoff opens in a new tab in the background. Aggregate smoke removes the `--focus` assertion on `tab create` to match. Upstream adds a focused `formatHandoffSessionName` unit test; the smoke already verifies end-to-end labelling through `--label smoke-handoff` so no additional coverage is needed here.
+- `890ca9c` is **accepted** through `@tifan/pi-handoff@2.2.1`: new handoff sessions are prefixed `[handoff]` both as the session name and Herdr label, making them visually distinct in the tab bar; `tab create` no longer passes `--focus` so the current tab stays active while the handoff opens in a new tab in the background. Aggregate smoke verifies the formatted `[handoff] smoke-handoff` label and asserts that `--focus` is absent from `tab create`.
 - `55fcb3a` is a test-only fix to align Unicode truncation expectations with the 30-character `pi-rename` cap. No `pi-rename` source changed; the fix is not ported since our test suite does not include this test case.
 - `7294704` is the version bump commit and is represented by the direct pin advancement.
 
