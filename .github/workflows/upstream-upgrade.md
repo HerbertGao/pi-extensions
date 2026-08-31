@@ -38,6 +38,8 @@ safe-outputs:
     max: 1
   create-pull-request:
     title-prefix: "feat: "
+    base-branch: master
+    allowed-base-branches: [master]
     reviewers: [HerbertGao]
     assignees: [HerbertGao]
     draft: true
@@ -133,7 +135,7 @@ A pull request is allowed only when `bun run check` passes.
 
 Call exactly one safe output as the final action:
 
-- **Validated coherent changes:** call `create_pull_request`. Use title `sync reviewed upstream updates`. The body must start with `Closes #${{ github.event.inputs.issue_number }}` and contain `## Summary`, `## Verification`, plus `## Deliberately not imported` and/or `## External validation boundary` when applicable. Report exact commands and results; never claim checks not run.
+- **Validated coherent changes:** call `create_pull_request`. Use title `sync reviewed upstream updates` and base branch `master`; never use `main`. The body must start with `Closes #${{ github.event.inputs.issue_number }}` and contain `## Summary`, `## Verification`, plus `## Deliberately not imported` and/or `## External validation boundary` when applicable. Report exact commands and results; never claim checks not run.
 - **Repository-level blocker:** call `add_comment` on the configured Issue target. Begin with `@HerbertGao upstream upgrade blocked` and state completed analysis, the concrete blocker, evidence or failing command, and the exact human decision/action needed. Do not create a speculative partial PR when the unresolved blocker makes it incoherent.
 - **Missing tool/data or workflow infrastructure failure:** call `report_incomplete` with actionable details.
 - **Already handled or no valid change:** call `noop` with the reason.
