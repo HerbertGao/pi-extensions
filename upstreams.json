@@ -40,6 +40,10 @@
       "repository": "https://github.com/narumiruna/pi-extensions"
     },
     {
+      "package": "@narumitw/pi-caffeinate",
+      "repository": "https://github.com/narumiruna/pi-extensions"
+    },
+    {
       "package": "@pi-plugins/fast-mode",
       "repository": "https://github.com/k3dom/pi-plugins"
     },

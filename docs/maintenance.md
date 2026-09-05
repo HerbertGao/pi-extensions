@@ -222,6 +222,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@juicesharp/rpiv-ask-user-question` | `2.8.0`  | `juicesharp/rpiv-mono`      |
 | `@luxusai/pi-hindsight`              | `0.12.0` | `luxus/pi-hindsight`        |
 | `@narumitw/pi-btw`                   | `0.56.0` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.6`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-handoff`                  | `2.2.1`  | `tifandotme/pi-extensions`  |
@@ -236,6 +237,8 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.15.0` | `czottmann/pi-automode`     |
+
+The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
 
 The issue #134 companion review accepted six independent releases:
 
@@ -335,7 +338,7 @@ Maintained child packages use SemVer and normally preserve their imported upstre
 
 Recommended configuration files may be shipped under `packages/pi-extensions/examples/`, but package installation must not write into `~/.pi` or replace existing user configuration. Keep examples valid against the pinned companion version and assert their presence and parsing in the aggregate smoke test.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 22 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 23 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 
