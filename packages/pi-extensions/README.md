@@ -16,6 +16,7 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `@juicesharp/rpiv-ask-user-question@2.8.0`
 - `@luxusai/pi-hindsight@0.12.0`
 - `@narumitw/pi-btw@0.56.0`
+- `@narumitw/pi-caffeinate@0.49.7`
 - `@pi-plugins/fast-mode@0.1.10`
 - `@tifan/pi-copy-response@0.2.6`
 - `@tifan/pi-handoff@2.2.0`
@@ -36,6 +37,8 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 ### Bark notifications
 
 `@herbertgao/pi-bark` sends localized Bark pushes when a user-facing Pi run fully settles or `@juicesharp/rpiv-ask-user-question` needs an answer. Notifications include emoji-labeled machine/path metadata and support the bundled official Pi badge through Bark's `icon` parameter. Configure it in `$PI_CODING_AGENT_DIR/bark.json` (normally `~/.pi/agent/bark.json`); see the [package README](../pi-bark/README.md). Without a valid endpoint it stays inactive.
+
+`@narumitw/pi-caffeinate@0.49.7` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends.
 
 `@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.3` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-automode@1.15.0` preserves dynamic providers on legacy registries. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
