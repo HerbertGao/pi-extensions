@@ -1,5 +1,32 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.0
+
+### Minor Changes
+
+- [#151](https://github.com/HerbertGao/pi-extensions/pull/151) [`77f3750`](https://github.com/HerbertGao/pi-extensions/commit/77f3750ce1471cc779d6648c5dceb5917783b618) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `@narumitw/pi-caffeinate@0.49.7` so Pi can keep the host computer awake during agent runs through the platform's native sleep inhibitor.
+
+### Patch Changes
+
+- [#147](https://github.com/HerbertGao/pi-extensions/pull/147) [`6154049`](https://github.com/HerbertGao/pi-extensions/commit/6154049fc4ac66c7c7f3b2cc1464a056f9920a20) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance companion pins for `@juicesharp/rpiv-ask-user-question` to `2.9.0` and `pi-mcp-adapter` to `2.32.1`.
+
+  - `@juicesharp/rpiv-ask-user-question@2.9.0`: dependency-only update advancing `@juicesharp/rpiv-config` to `^2.9.0`; no source behavior changes. `@juicesharp/rpiv-config` companion promoted to `^2.9.0` to match.
+  - `pi-mcp-adapter@2.32.1`: includes enable/disable MCP servers from the `/mcp` panel (`ctrl+d`), clearer `/mcp setup` project vs. global write-target picker, reliable MCP App sandbox proxy, improved MCP 2026 input flows and catalog listen recovery, OAuth credential reuse fix, and per-server status clarity.
+
+- [#149](https://github.com/HerbertGao/pi-extensions/pull/149) [`4ebde3b`](https://github.com/HerbertGao/pi-extensions/commit/4ebde3b491e1fb68a93ccf321d52a2187605f1c6) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance `@narumitw/pi-btw` companion pin to `0.57.0`.
+
+  - `@narumitw/pi-btw@0.57.0`: defer Ctrl+C terminal restoration until input dispatch finishes so Windows fullscreen sessions redraw and scroll correctly (patch fix; no API or behavior change on non-Windows platforms).
+
+- [#150](https://github.com/HerbertGao/pi-extensions/pull/150) [`76c6af7`](https://github.com/HerbertGao/pi-extensions/commit/76c6af71d1bd5c99a1ab38a8f37e6daaf10418fa) Thanks [@github-actions](https://github.com/apps/github-actions)! - Port `pi-cc-extensions` 0.8.69: separate `expandedInputMaxLines` (default 5) and `expandedOutputMaxLines` (default 10) config fields so tool card Input and Output sections can be capped independently; the show-more "… +N more lines • click to show more" hint moves to the truncated tail line instead of the section header; double-click collapse now uses a mouseup-arm/unarm pattern to prevent terminals that emit synthetic press events from misidentifying a single click as a double click; Pi 0.85's official "Jump to latest" overlay is suppressed when the local scroll-to-bottom button is active to avoid two overlapping controls. Advance companion `@narumitw/pi-btw` pin to 0.57.0 (adds a themed, clickable Jump to latest control).
+
+- [#143](https://github.com/HerbertGao/pi-extensions/pull/143) [`c01ccb3`](https://github.com/HerbertGao/pi-extensions/commit/c01ccb3f8001ac0b065cae48eabb3f5daccc0b93) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance `@tifan/pi-handoff` companion pin to `2.2.1`.
+
+  - New handoff sessions are prefixed `[handoff]` in both the session name and the Herdr tab label, making them visually distinct.
+  - `tab create` no longer passes `--focus`; the current Herdr tab stays active while the handoff opens in a background tab.
+
+- Updated dependencies [[`76c6af7`](https://github.com/HerbertGao/pi-extensions/commit/76c6af71d1bd5c99a1ab38a8f37e6daaf10418fa)]:
+  - @herbertgao/pi-cc-extensions@0.9.0
+
 ## 2026.8.15
 
 ### Patch Changes
