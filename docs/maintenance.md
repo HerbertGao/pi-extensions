@@ -221,7 +221,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
 | `@juicesharp/rpiv-ask-user-question` | `2.8.0`  | `juicesharp/rpiv-mono`      |
 | `@luxusai/pi-hindsight`              | `0.12.0` | `luxus/pi-hindsight`        |
-| `@narumitw/pi-btw`                   | `0.56.0` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-btw`                   | `0.56.1` | `narumiruna/pi-extensions`  |
 | `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.6`  | `tifandotme/pi-extensions`  |
