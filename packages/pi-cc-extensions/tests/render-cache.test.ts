@@ -106,8 +106,12 @@ test("ExpandedToolIoView wraps Input/Output at the viewport width", () => {
 	const lines = view.render(100);
 	assert.ok(lines.some((line) => visibleWidth(line) > 80));
 	assert.ok(lines.every((line) => visibleWidth(line) <= 100));
-	assert.ok(lines.find((line) => line.includes("Input"))?.includes(SHOW_MORE_LABEL));
-	assert.ok(lines.find((line) => line.includes("Output"))?.includes(SHOW_MORE_LABEL));
+	const plain = lines.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
+	const outputHeaderIndex = plain.findIndex((l) => l.includes("Output"));
+	const inputSection = plain.slice(0, outputHeaderIndex);
+	const outputSection = plain.slice(outputHeaderIndex);
+	assert.ok(inputSection.some((line) => line.includes(SHOW_MORE_LABEL)));
+	assert.ok(outputSection.some((line) => line.includes(SHOW_MORE_LABEL)));
 });
 
 test("ExpandedToolIoView shows click to show more when Input/Output exceed the line cap", () => {
@@ -125,25 +129,35 @@ test("ExpandedToolIoView shows click to show more when Input/Output exceed the l
 	const longInput = Array.from({ length: 20 }, (_, i) => `field${i}: value${i}`).join("\n");
 	const view = new ExpandedToolIoView(theme, longInput, longOutput, false, 5, 5);
 	const rawLines = view.render(80);
-	const lines = rawLines.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
-	const inputHeader = lines.find((line) => line.includes("Input"));
-	const outputHeader = lines.find((line) => line.includes("Output"));
-	assert.ok(inputHeader?.includes(SHOW_MORE_LABEL), "Input header shows show more");
-	assert.ok(outputHeader?.includes(SHOW_MORE_LABEL), "Output header shows show more");
-	assert.equal(view.matchShowMoreLine(inputHeader!), "input");
-	assert.equal(view.matchShowMoreLine(outputHeader!), "output");
-	assert.ok(lines.some((line) => /\+15 more lines/.test(line) || /\+\d+ more lines/.test(line)));
+	const allLines = rawLines.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
+	const outputHeaderIndex = allLines.findIndex((line) => line.includes("Output"));
+	const inputShowMore = allLines
+		.slice(0, outputHeaderIndex)
+		.find((line) => line.includes("… +") && line.includes(SHOW_MORE_LABEL));
+	const outputShowMore = allLines
+		.slice(outputHeaderIndex + 1)
+		.find((line) => line.includes("… +") && line.includes(SHOW_MORE_LABEL));
+	assert.ok(inputShowMore, "Input section shows show more on footer");
+	assert.ok(outputShowMore, "Output section shows show more on footer");
+	assert.equal(view.matchShowMoreLine(inputShowMore!), "input");
+	assert.equal(view.matchShowMoreLine(outputShowMore!), "output");
+	assert.ok(allLines.some((line) => /\+15 more lines/.test(line) || /\+\d+ more lines/.test(line)));
 	view.setHoveredSection("input");
-	const hoveredInput = view.render(80).find((line) => line.includes("Input"));
-	const hoveredOutput = view.render(80).find((line) => line.includes("Output"));
+	const hoveredLines = view.render(80).map((line) => line);
+	const hoveredInputFooter = hoveredLines.find(
+		(line) => line.includes("│") && /\+\d+ more lines/.test(line),
+	);
+	const hoveredOutputFooter = hoveredLines
+		.slice(hoveredLines.findIndex((line) => line.includes("Output")) + 1)
+		.find((line) => !line.includes("│") && /\+\d+ more lines/.test(line));
 	assert.ok(
-		hoveredInput?.includes(`\x1b[90m •\x1b[39m\x1b[37m click to show more\x1b[39m`),
+		hoveredInputFooter?.includes(`\x1b[90m •\x1b[39m\x1b[37m click to show more\x1b[39m`),
 		"hover keeps the bullet dim and highlights only the text",
 	);
-	assert.ok(hoveredOutput?.includes(`\x1b[90m •\x1b[39m\x1b[90m click to show more\x1b[39m`));
+	assert.ok(hoveredOutputFooter?.includes(`\x1b[90m •\x1b[39m\x1b[90m click to show more\x1b[39m`));
 });
 
-test("ExpandedToolIoView records exact show-more header rows, not body text", () => {
+test("ExpandedToolIoView records exact show-more footer rows, not body text", () => {
 	const theme = {
 		fg(_color: string, text: string) {
 			return text;
@@ -157,7 +171,7 @@ test("ExpandedToolIoView records exact show-more header rows, not body text", ()
 	const view = new ExpandedToolIoView(theme, "", decoy, false, 3, 3);
 	const lines = view.render(80);
 	const headers = view.showMoreHeaderLineIndexes();
-	assert.deepEqual(headers, [{ section: "output", line: 0 }]);
+	assert.deepEqual(headers, [{ section: "output", line: 4 }]);
 	const decoyRow = lines.findIndex(
 		(line, index) => index > 0 && line.includes("Input") && line.includes(SHOW_MORE_LABEL),
 	);

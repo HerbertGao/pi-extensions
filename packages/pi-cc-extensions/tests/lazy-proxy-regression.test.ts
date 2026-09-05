@@ -77,6 +77,10 @@ function runtime() {
 	};
 }
 
+function armExpandDoubleClick() {
+	return new Promise((resolve) => setTimeout(resolve, 60));
+}
+
 function theme() {
 	return { fg: (color: string, text: string) => `<${color}>${text}</${color}>` };
 }
@@ -420,9 +424,11 @@ test("lazy-proxy tui: fullscreen tool clicks expand and official input passes th
 	assert.equal(renderer.officialInputs.length, 0, "hint click consumed before official chain");
 	assert.deepEqual(ui.widget.render(), []);
 
-	// 展开卡单击不收起；双击折叠。
+	// 展开卡单击不收起；mouseup + 第二次按下折叠。
 	tui.handleViewportInput(`\x1b[<0;20;2M`);
 	assert.equal(tool.expanded, true, "single click on expanded card does not collapse");
+	tui.handleViewportInput(`\x1b[<0;20;2m`);
+	await armExpandDoubleClick();
 	tui.handleViewportInput(`\x1b[<0;20;2M`);
 	assert.equal(tool.expanded, false);
 
@@ -507,7 +513,7 @@ test("lazy-proxy tui: fullscreen tool clicks expand and official input passes th
 		);
 	}
 
-	// show-more：expanded 工具卡渲染截断 Input/Output 头，点击 [show more] 打开预览。
+	// show-more：expanded 工具卡渲染截断体末行，点击 [show more] 打开预览。
 	// 真实 ANSI 主题：拆分样式（点 dim / 文字 text）后 indexOf 仍按可见文本命中。
 	const ansiTheme = {
 		fg: (color: string, text: string) =>
@@ -515,7 +521,7 @@ test("lazy-proxy tui: fullscreen tool clicks expand and official input passes th
 	};
 	const longOutput = Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n");
 	const ioView = new ExpandedToolIoView(ansiTheme, "arg: 1", longOutput, false, 3, 3);
-	ioView.render(80); // 触发截断状态与 show-more 头行记录
+	ioView.render(80); // 触发截断状态与 show-more 末行记录
 	const showMoreTool = createTool("tool-show-more");
 	showMoreTool.expanded = true;
 	showMoreTool.resultRendererComponent = ioView;
@@ -584,7 +590,7 @@ test("lazy-proxy tui: fullscreen tool clicks expand and official input passes th
 	assert.equal(renderer.wheelScrollLines, 1, "teardown restores native wheel step");
 });
 
-test("lazy-proxy tui: fullscreen compact assistant hint toggles and hovers", () => {
+test("lazy-proxy tui: fullscreen compact assistant hint toggles and hovers", async () => {
 	const previousMode = config.mode;
 	const previousTheme = getMessageDisplayTheme();
 	config.mode = "compact";
@@ -625,6 +631,8 @@ test("lazy-proxy tui: fullscreen compact assistant hint toggles and hovers", () 
 		renderer.currentLayout = fullscreenLayout(assistant, null);
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
 		assert.equal(assistant.expanded, true, "single click on expanded assistant does not collapse");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
+		await armExpandDoubleClick();
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
 		assert.equal(assistant.expanded, false, "double-click collapses the assistant card");
 	} finally {
@@ -694,7 +702,7 @@ test("lazy-proxy tui: fullscreen hover uses scroll ancestor content width after 
 	installToolMouseInteraction({});
 });
 
-test("lazy-proxy tui: fullscreen multitool group hover and click toggle", () => {
+test("lazy-proxy tui: fullscreen multitool group hover and click toggle", async () => {
 	const patch = { groups: new Set(), theme: { fg: (_color: string, text: string) => text } };
 	const group = new ToolGroupComponent(patch as any);
 	const first = Object.assign(createTool("group-1"), {
@@ -722,12 +730,14 @@ test("lazy-proxy tui: fullscreen multitool group hover and click toggle", () => 
 	assert.equal((group as any).expanded, true, "group click expands all children");
 	tui.handleViewportInput(`\x1b[<0;${hintCol};2M`);
 	assert.equal((group as any).expanded, true, "single click on expanded group does not collapse");
+	tui.handleViewportInput(`\x1b[<0;20;2m`);
+	await armExpandDoubleClick();
 	tui.handleViewportInput(`\x1b[<0;${hintCol};2M`);
 	assert.equal((group as any).expanded, false, "double-click collapses all children");
 	installToolMouseInteraction({});
 });
 
-test("lazy-proxy tui: fullscreen thinking preview hint toggles and hovers", () => {
+test("lazy-proxy tui: fullscreen thinking preview hint toggles and hovers", async () => {
 	const dirHandlers = new Map<string, Function[]>();
 	const pi = {
 		on(name: string, handler: Function) {
@@ -781,6 +791,8 @@ test("lazy-proxy tui: fullscreen thinking preview hint toggles and hovers", () =
 		renderer.currentLayout = fullscreenLayout(block, null);
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
 		assert.equal(block.expanded, true, "single click on expanded thinking does not collapse");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
+		await armExpandDoubleClick();
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
 		assert.equal(block.expanded, false, "double-click collapses thinking");
 	} finally {
@@ -789,7 +801,7 @@ test("lazy-proxy tui: fullscreen thinking preview hint toggles and hovers", () =
 	}
 });
 
-test("lazy-proxy tui: double-click collapses thinking after preview rebuild", () => {
+test("lazy-proxy tui: double-click collapses thinking after preview rebuild", async () => {
 	const dirHandlers = new Map<string, Function[]>();
 	const pi = {
 		on(name: string, handler: Function) {
@@ -834,9 +846,11 @@ test("lazy-proxy tui: double-click collapses thinking after preview rebuild", ()
 		assert.equal(first.expanded, true);
 		renderer.currentLayout = fullscreenLayout(first, null);
 		tui.handleViewportInput("\x1b[<0;2;1M");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
 		const rebuilt = makeBlock();
 		assert.equal(rebuilt.expanded, true, "rebuild keeps expanded via timestamp");
 		renderer.currentLayout = fullscreenLayout(rebuilt, null);
+		await armExpandDoubleClick();
 		tui.handleViewportInput("\x1b[<0;2;1M");
 		assert.equal(rebuilt.expanded, false, "double-click uses timestamp, not instance");
 	} finally {
@@ -845,7 +859,7 @@ test("lazy-proxy tui: double-click collapses thinking after preview rebuild", ()
 	}
 });
 
-test("lazy-proxy tui: thinking double-click identity is per run", () => {
+test("lazy-proxy tui: thinking double-click identity is per run", async () => {
 	const dirHandlers = new Map<string, Function[]>();
 	const pi = {
 		on(name: string, handler: Function) {
@@ -904,9 +918,13 @@ test("lazy-proxy tui: thinking double-click identity is per run", () => {
 		renderer.currentLayout = fullscreenLayout(runA, null);
 		tui.handleViewportInput("\x1b[<0;2;1M");
 		assert.equal(runA.expanded, true, "first click on run A does not collapse");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
+		await armExpandDoubleClick();
 		renderer.currentLayout = fullscreenLayout(runB, null);
 		tui.handleViewportInput("\x1b[<0;2;1M");
 		assert.equal(runB.expanded, true, "click on run B is not a double-click of run A");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
+		await armExpandDoubleClick();
 		tui.handleViewportInput("\x1b[<0;2;1M");
 		assert.equal(runB.expanded, false, "second click on run B collapses that run");
 		assert.equal(runA.expanded, true, "run A instance stays expanded");
@@ -916,7 +934,7 @@ test("lazy-proxy tui: thinking double-click identity is per run", () => {
 	}
 });
 
-test("lazy-proxy tui: fullscreen skill hint click expands like other cards", () => {
+test("lazy-proxy tui: fullscreen skill hint click expands like other cards", async () => {
 	const previousMode = config.mode;
 	config.mode = "on";
 	const dispose = installMessageDisplayRendering();
@@ -948,6 +966,8 @@ test("lazy-proxy tui: fullscreen skill hint click expands like other cards", () 
 		renderer.currentLayout = fullscreenLayout(skill, null);
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
 		assert.equal((skill as any).expanded, true, "single click on expanded skill does not collapse");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
+		await armExpandDoubleClick();
 		tui.handleViewportInput(`\x1b[<0;2;1M`);
 		assert.equal((skill as any).expanded, false, "double-click collapses skill");
 	} finally {
@@ -957,7 +977,7 @@ test("lazy-proxy tui: fullscreen skill hint click expands like other cards", () 
 	}
 });
 
-test("lazy-proxy tui: fullscreen expanded group child show-more hover highlights the header", () => {
+test("lazy-proxy tui: fullscreen expanded group child show-more hover highlights the footer", async () => {
 	const patch = {
 		groups: new Set(),
 		theme: { fg: (_color: string, text: string) => text },
@@ -996,10 +1016,10 @@ test("lazy-proxy tui: fullscreen expanded group child show-more hover highlights
 		const row = lines.findIndex(
 			(line, index) =>
 				index > 1 &&
-				stripAnsi(line).includes("Output") &&
+				/\+\d+ more lines/.test(stripAnsi(line)) &&
 				stripAnsi(line).includes(SHOW_MORE_LABEL),
 		);
-		assert.ok(row > 1, "grouped child renders an Output show-more header");
+		assert.ok(row > 1, "grouped child renders an Output show-more footer");
 		const col = stripAnsi(lines[row]).indexOf(SHOW_MORE_LABEL) + 1;
 		const before = lines[row];
 
@@ -1012,15 +1032,30 @@ test("lazy-proxy tui: fullscreen expanded group child show-more hover highlights
 		tui.handleViewportInput(`\x1b[<0;${col};${row + 1}M`);
 		assert.equal(ui.notifications.length, 1, "child show-more click opens preview");
 		assert.equal(group.expanded, true, "show-more click keeps the group expanded");
-		const bodyRow = group.render(80).findIndex((line) => line.includes("line 0"));
-		assert.ok(bodyRow > row);
+		const bodyRow = group.render(80).findIndex((line) => line.includes("line 1"));
+		assert.ok(bodyRow >= 0);
 		tui.handleViewportInput(`\x1b[<0;10;${bodyRow + 1}M`);
 		assert.equal(group.expanded, true, "single click on expanded group body does not collapse");
+		tui.handleViewportInput(`\x1b[<0;20;2m`);
+		await armExpandDoubleClick();
 		tui.handleViewportInput(`\x1b[<0;10;${bodyRow + 1}M`);
 		assert.equal(group.expanded, false, "double-click collapses the whole group");
 	} finally {
 		installToolMouseInteraction({});
 	}
+});
+
+test("lazy-proxy tui: official jump-to-latest overlay is disabled", () => {
+	const tool = createTool("tool-overlay");
+	const { terminal } = createTerminalFixture();
+	const renderer = new FullscreenRenderer(tool, null, terminal);
+	(renderer as any).scrollToEndIndicator = () => "Jump to latest message";
+	const tui = createLazyProxy(() => renderer);
+	const ui = createUi(tui);
+	installToolMouseInteraction(ui.ctx);
+	ui.widget.render(80);
+	assert.equal((renderer as any).scrollToEndIndicator, undefined, "官方 overlay 已关掉");
+	installToolMouseInteraction({});
 });
 
 test("lazy-proxy tui: fullscreen hover ignores non-IO result renderer components", () => {

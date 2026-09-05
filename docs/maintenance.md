@@ -11,14 +11,14 @@
 | Local package set  | Upstream                   | Imported baseline    | Notes                                                                                                                                                                            |
 | ------------------ | -------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons. |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `1ca144c` (`0.8.68`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                    |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `5d7a266` (`0.8.69`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                    |
 | `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                      |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.68`         | `0.8.68`         | `1ca144c`       |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.69`         | `0.8.69`         | `5d7a266`       |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `0.19.0`         | `ad81024`       |
 

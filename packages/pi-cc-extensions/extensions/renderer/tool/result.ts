@@ -246,7 +246,7 @@ export class ExpandedToolIoView {
 	private hoveredSection: ToolIoSection | null = null;
 	/** Which sections currently show the show-more affordance (after last render). */
 	private truncated: { input: boolean; output: boolean } = { input: false, output: false };
-	/** 0-based header line indexes that carry show-more after last render. */
+	/** 0-based body/footer line indexes that carry show-more after last render. */
 	private showMoreHeaderRows: { input?: number; output?: number } = {};
 
 	constructor(
@@ -306,12 +306,12 @@ export class ExpandedToolIoView {
 		this.invalidate();
 	}
 
-	/** True when the plain header line is a truncated section with show-more. */
+	/** True when the plain footer line is a truncated section with show-more. */
 	matchShowMoreLine(plainLine: string): ToolIoSection | null {
 		const line = plainLine.replace(/\x1b\[[0-9;]*m/g, "");
-		if (!line.includes(` • ${showMoreHintText()}`)) return null;
-		if (/\bInput\b/.test(line) && this.truncated.input) return "input";
-		if (/\bOutput\b/.test(line) && this.truncated.output) return "output";
+		if (!line.includes(` • ${showMoreHintText()}`) || !/\+\d+ more lines/.test(line)) return null;
+		if (this.truncated.input && line.includes("│")) return "input";
+		if (this.truncated.output) return "output";
 		return null;
 	}
 
@@ -355,24 +355,13 @@ export class ExpandedToolIoView {
 		this.truncated = { input: false, output: false };
 		this.showMoreHeaderRows = {};
 
-		const pushHeader = (
-			corner: "├" | "└",
-			label: string,
-			section: ToolIoSection,
-			showMore: boolean,
-		) => {
+		const pushHeader = (corner: "├" | "└", label: string) => {
 			const mark = theme.fg("dim", ` ${corner} `);
 			const title = theme.fg(
 				"accent",
 				typeof theme.bold === "function" ? theme.bold(label) : label,
 			);
-			// hover 只高亮文字，圆点保持 dim（与 group hint 一致）。
-			const more = showMore
-				? theme.fg("dim", " •") +
-					theme.fg(this.hoveredSection === section ? "text" : "dim", ` ${showMoreHintText()}`)
-				: "";
-			if (showMore) this.showMoreHeaderRows[section] = lines.length;
-			lines.push(truncateToWidth(mark + title + more, safeWidth, ""));
+			lines.push(truncateToWidth(mark + title, safeWidth, ""));
 		};
 
 		const pushRailLine = (styledContent: string, continued = true) => {
@@ -394,7 +383,7 @@ export class ExpandedToolIoView {
 
 		const pushBody = (
 			body: string,
-			opts: { input?: boolean; limit: number; continued?: boolean },
+			opts: { input?: boolean; limit: number; continued?: boolean; section: ToolIoSection },
 		): boolean /* truncated */ => {
 			const raw = body.replace(/\t/g, "   ").replace(/\n+$/, "");
 			if (!raw.trim()) {
@@ -417,7 +406,14 @@ export class ExpandedToolIoView {
 			if (truncated) {
 				const hidden = Math.max(0, wrapped.length - visible.length);
 				if (hidden > 0) {
-					pushRailLine(theme.fg("dim", `… +${hidden} more lines`), opts.continued);
+					const more =
+						theme.fg("dim", " •") +
+						theme.fg(
+							this.hoveredSection === opts.section ? "text" : "dim",
+							` ${showMoreHintText()}`,
+						);
+					pushRailLine(theme.fg("dim", `… +${hidden} more lines`) + more, opts.continued);
+					this.showMoreHeaderRows[opts.section] = lines.length - 1;
 				}
 			}
 			return truncated;
@@ -426,7 +422,6 @@ export class ExpandedToolIoView {
 		const hasInput = this.inputBody.trim().length > 0;
 		const outputText = this.getOutputBody();
 
-		// Decide show-more from the same truncation rules as pushBody.
 		const inputWouldTruncate =
 			hasInput &&
 			bodyExceedsLineLimit(this.inputBody, this.maxInputLines, contentWidth, true, theme);
@@ -441,20 +436,21 @@ export class ExpandedToolIoView {
 
 		if (hasInput) {
 			this.truncated.input = inputWouldTruncate;
-			pushHeader("├", "Input", "input", inputWouldTruncate);
+			pushHeader("├", "Input");
 			pushBody(this.inputBody, {
 				input: true,
 				limit: this.maxInputLines,
 				continued: true,
+				section: "input",
 			});
 			pushBlankRail();
 			this.truncated.output = outputWouldTruncate;
-			pushHeader("└", "Output", "output", outputWouldTruncate);
-			pushBody(outputText, { limit: this.maxOutputLines, continued: false });
+			pushHeader("└", "Output");
+			pushBody(outputText, { limit: this.maxOutputLines, continued: false, section: "output" });
 		} else {
 			this.truncated.output = outputWouldTruncate;
-			pushHeader("└", "Output", "output", outputWouldTruncate);
-			pushBody(outputText, { limit: this.maxOutputLines, continued: false });
+			pushHeader("└", "Output");
+			pushBody(outputText, { limit: this.maxOutputLines, continued: false, section: "output" });
 		}
 
 		this.cachedWidth = width;
@@ -655,16 +651,24 @@ export function renderExpandedToolResult(
 ): ExpandedToolIoView | ExpandedToolResultText | Text {
 	const inputBody = formatToolInputArgs(args);
 	const outputBody = body;
-	const maxLines = config.expandedPreviewMaxLines;
+	const maxOutputLines = config.expandedOutputMaxLines;
+	const maxInputLines = config.expandedInputMaxLines;
 
 	// Prefer structured Input/Output when we have args or non-empty output.
 	if (inputBody.trim() || outputBody.trim()) {
 		let view: ExpandedToolIoView;
 		if (isExpandedToolIoView(lastComponent)) {
-			lastComponent.setContent(inputBody, outputBody, isError, maxLines, maxLines);
+			lastComponent.setContent(inputBody, outputBody, isError, maxOutputLines, maxInputLines);
 			view = lastComponent;
 		} else {
-			view = new ExpandedToolIoView(theme, inputBody, outputBody, isError, maxLines, maxLines);
+			view = new ExpandedToolIoView(
+				theme,
+				inputBody,
+				outputBody,
+				isError,
+				maxOutputLines,
+				maxInputLines,
+			);
 		}
 		if (context) rememberIoView(context, view);
 		return view;
@@ -701,7 +705,7 @@ function frameViewId(view: ExpandedToolIoView): number | null {
 function withIoViewMarkers(view: ExpandedToolIoView, lines: string[]): string[] {
 	const id = frameViewId(view);
 	if (id === null) return lines;
-	// Mark by exact header row from render — never scan body text for Input/Output labels.
+	// Mark by exact recorded show-more row from render — never scan body text heuristically.
 	const marked = lines.slice();
 	for (const { section, line } of view.showMoreHeaderLineIndexes()) {
 		if (line < 0 || line >= marked.length) continue;

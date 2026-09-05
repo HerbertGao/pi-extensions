@@ -75,7 +75,7 @@
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@mozilla/readability": "^0.6.0",
         "@napi-rs/keyring": "^1.3.0",
-        "@narumitw/pi-btw": "0.56.0",
+        "@narumitw/pi-btw": "0.57.0",
         "@narumitw/pi-tui-kit": "^0.59.0",
         "@noble/ed25519": "^3.1.0",
         "@pi-plugins/fast-mode": "0.1.10",
@@ -564,7 +564,7 @@
 
     "@napi-rs/keyring-win32-x64-msvc": ["@napi-rs/keyring-win32-x64-msvc@1.3.0", "", { "os": "win32", "cpu": "x64" }, "sha512-4DnCWXwDc0HRKwyRlG5y0VhKZW2tNRQfKKfyj6IX/KWfDNyq9hn4n+GL1auyDcOO/v8PwnhmYo2+rOOqCkvvOg=="],
 
-    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.56.0", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.59.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-A48E2K63vh+w/Sug5KSQ2cpPk2Awm/nE+AZkyInrHdsYmeNQs9boWAOQJI60EFepL0VhS37TfEUumWMY8fT9FQ=="],
+    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.57.0", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.59.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-myJAX122oupTJX3NYDL8Gs6O6Xkurb1t6ddQgWLXXq+2L9sTMdW9TnVq2Rk9OWlGAkMfP1MSpur3kmdXy8gPfA=="],
 
     "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.59.0", "", { "dependencies": { "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-KBbOcciJD+HVbeduUwBUiSy2AehMGYeOwiRPXvac5tcjuh3SDoQ+7qsNPt2s/ku6exJKZp0GYtAVsiu5ySddmA=="],
 
