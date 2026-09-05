@@ -1252,6 +1252,44 @@ try {
       `Expected aggregate and bundled pi-tui-kit dependency ${expectedTuiKitRange}`,
     )
   }
+  const caffeinateRoot = join(
+    packageRoot,
+    "node_modules",
+    "@narumitw",
+    "pi-caffeinate",
+  )
+  const caffeinateManifestPath = join(caffeinateRoot, "package.json")
+  const caffeinateManifest = parseJson(
+    await readFile(caffeinateManifestPath, "utf8"),
+    caffeinateManifestPath,
+  )
+  const expectedCaffeinateVersion =
+    sourceManifest.dependencies["@narumitw/pi-caffeinate"]
+  if (
+    caffeinateManifest.name !== "@narumitw/pi-caffeinate" ||
+    caffeinateManifest.version !== expectedCaffeinateVersion ||
+    caffeinateManifest.license !== "MIT"
+  ) {
+    throw new Error(
+      "Bundled pi-caffeinate does not match its pinned MIT package contract",
+    )
+  }
+  const caffeinateEntryRelative = "./dist/index.ts"
+  if (!caffeinateManifest.pi?.extensions?.includes(caffeinateEntryRelative)) {
+    throw new Error(
+      "Bundled pi-caffeinate no longer declares its expected Pi entry",
+    )
+  }
+  const expectedDbusRange = caffeinateManifest.dependencies?.["dbus-native"]
+  if (
+    !expectedDbusRange ||
+    sourceManifest.dependencies["dbus-native"] !== expectedDbusRange
+  ) {
+    throw new Error(
+      `Expected promoted dbus-native dependency ${expectedDbusRange}, got ${sourceManifest.dependencies["dbus-native"]}`,
+    )
+  }
+
   const btwEntry = join(btwRoot, btwEntryRelative)
   const btwDistSource = await readFile(btwEntry, "utf8")
   await stat(`${btwEntry}.map`)
@@ -2107,6 +2145,12 @@ try {
   ) {
     throw new Error("Aggregate pi-hindsight third-party notice is incomplete")
   }
+  if (
+    !tifanNotices.includes("`@narumitw/pi-caffeinate`") ||
+    !tifanNotices.includes("Copyright (c) 2026 narumiruna")
+  ) {
+    throw new Error("Aggregate pi-caffeinate third-party notice is incomplete")
+  }
 
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
@@ -2123,6 +2167,7 @@ try {
       "node_modules/@dietrichgebert/ponytail/LICENSE",
       "node_modules/@juicesharp/rpiv-ask-user-question/LICENSE",
       "node_modules/@narumitw/pi-btw/LICENSE",
+      "node_modules/@narumitw/pi-caffeinate/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
       "node_modules/@luxusai/pi-hindsight/README.md",
       "node_modules/@luxusai/pi-hindsight/skills/hindsight-memory-doctor/SKILL.md",
@@ -2402,6 +2447,19 @@ try {
     )
   }
   await runPiWebAccessRealSmoke({ webAccessEntry })
+
+  const caffeinateEntry = resolve(caffeinateRoot, caffeinateEntryRelative)
+  if (!extensionPaths.includes(caffeinateEntry)) {
+    throw new Error(
+      "Packed aggregate is missing the pi-caffeinate extension entry",
+    )
+  }
+  const loadedCaffeinate = result.extensions.find(
+    (extension) => extension.resolvedPath === caffeinateEntry,
+  )
+  if (!loadedCaffeinate?.commands.has("caffeinate")) {
+    throw new Error("Packed pi-caffeinate did not register /caffeinate")
+  }
 
   if (!extensionPaths.includes(btwEntry)) {
     throw new Error("Packed aggregate is missing the pi-btw extension entry")
