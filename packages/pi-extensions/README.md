@@ -15,7 +15,7 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.8.0`
 - `@luxusai/pi-hindsight@0.12.0`
-- `@narumitw/pi-btw@0.56.1`
+- `@narumitw/pi-btw@0.57.0`
 - `@narumitw/pi-caffeinate@0.49.7`
 - `@pi-plugins/fast-mode@0.1.10`
 - `@tifan/pi-copy-response@0.2.6`

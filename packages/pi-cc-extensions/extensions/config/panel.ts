@@ -18,6 +18,8 @@ import {
 	DIFF_SPLIT_MIN_WIDTH_VALUES,
 	DIFF_VIEW_MODES,
 	EXCLUDE_RENDERER_CANDIDATES,
+	EXPANDED_INPUT_MAX_LINES_VALUES,
+	EXPANDED_OUTPUT_MAX_LINES_VALUES,
 	EXPANDED_PREVIEW_MAX_LINES_VALUES,
 	formatExcludeRenderers,
 	getCompactThinkingConfig,
@@ -324,6 +326,24 @@ export async function showCcstylePanel(
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
 				buildNumberInputSubmenu(theme, expandedMaxSetting, closeSubmenu),
 		};
+		const expandedInputSetting = {
+			id: "expandedInputMaxLines",
+			label: "Expanded Input max lines",
+			description: "Max Input body lines before the show-more footer appears.",
+			currentValue: String(config.expandedInputMaxLines),
+			values: [...EXPANDED_INPUT_MAX_LINES_VALUES],
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
+				buildNumberInputSubmenu(theme, expandedInputSetting, closeSubmenu),
+		};
+		const expandedOutputSetting = {
+			id: "expandedOutputMaxLines",
+			label: "Expanded Output max lines",
+			description: "Max Output body lines before the show-more footer appears.",
+			currentValue: String(config.expandedOutputMaxLines),
+			values: [...EXPANDED_OUTPUT_MAX_LINES_VALUES],
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
+				buildNumberInputSubmenu(theme, expandedOutputSetting, closeSubmenu),
+		};
 		const thinkingTitleSetting = {
 			id: "useSummaryTitlesAsThinkingTitle",
 			label: "Summary title",
@@ -500,6 +520,24 @@ export async function showCcstylePanel(
 					);
 					expandedMaxSetting.currentValue = String(config.expandedPreviewMaxLines);
 					break;
+				case "expandedInputMaxLines":
+					config.expandedInputMaxLines = pickPositiveInt(
+						value,
+						DEFAULT_CONFIG.expandedInputMaxLines,
+						1,
+						5_000,
+					);
+					expandedInputSetting.currentValue = String(config.expandedInputMaxLines);
+					break;
+				case "expandedOutputMaxLines":
+					config.expandedOutputMaxLines = pickPositiveInt(
+						value,
+						DEFAULT_CONFIG.expandedOutputMaxLines,
+						1,
+						5_000,
+					);
+					expandedOutputSetting.currentValue = String(config.expandedOutputMaxLines);
+					break;
 				case "useSummaryTitlesAsThinkingTitle":
 					config.useSummaryTitlesAsThinkingTitle = value === "on";
 					break;
@@ -554,10 +592,8 @@ export async function showCcstylePanel(
 					diffViewSetting,
 					diffIndicatorSetting,
 					diffSplitSetting,
-					diffCollapsedSetting,
 					writeDiffCollapsedSetting,
 					diffWordWrapSetting,
-					expandedMaxSetting,
 				],
 			},
 			{
@@ -573,7 +609,14 @@ export async function showCcstylePanel(
 			{
 				id: "ui",
 				label: "UI",
-				items: [startupHeaderSetting, scrollStepSetting],
+				items: [
+					expandedMaxSetting,
+					expandedInputSetting,
+					expandedOutputSetting,
+					diffCollapsedSetting,
+					startupHeaderSetting,
+					scrollStepSetting,
+				],
 			},
 			{
 				id: "feature",

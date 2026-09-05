@@ -1226,7 +1226,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.56.1"
+  const expectedBtwVersion = "0.57.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1315,7 +1315,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.56.0's public entry is the bundled dist. Add test-only exports in memory
+  // 0.57.0's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,

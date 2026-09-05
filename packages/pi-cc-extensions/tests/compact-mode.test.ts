@@ -189,7 +189,13 @@ test("config normalize keeps compact, defaults feature toggles on, and orders mo
 	assert.equal(normalizeConfig({ mode: "legacy" }).mode, "on");
 	assert.equal(normalizeConfig({}).dimThinkingText, false);
 	assert.equal(normalizeConfig({ dimThinkingText: true }).dimThinkingText, true);
+	assert.equal(normalizeConfig({}).expandedInputMaxLines, 5);
+	assert.equal(normalizeConfig({}).expandedOutputMaxLines, 10);
+	assert.equal(normalizeConfig({ expandedInputMaxLines: 20 }).expandedInputMaxLines, 20);
+	assert.equal(normalizeConfig({ expandedOutputMaxLines: 40 }).expandedOutputMaxLines, 40);
 	assert.match(formatConfigStatus(normalizeConfig({})), /thinkingDim=off/);
+	assert.match(formatConfigStatus(normalizeConfig({})), /expandedInput=5/);
+	assert.match(formatConfigStatus(normalizeConfig({})), /expandedOutput=10/);
 
 	let completions: Array<{ value: string }> = [];
 	const pi: any = {
