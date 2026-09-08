@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.1
+
+### Patch Changes
+
+- [#153](https://github.com/HerbertGao/pi-extensions/pull/153) [`aba3a9a`](https://github.com/HerbertGao/pi-extensions/commit/aba3a9ad5ac113d8f242d6919f4cc61d0afbf06a) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance companion pins for `@pi-plugins/fast-mode` to `0.1.11` and `pi-web-access` to `0.28.0`.
+
+  - `@pi-plugins/fast-mode@0.1.11`: adds GPT-6 Astra to the default fast-mode model list for the OpenAI and OpenAI Codex providers; no API or behaviour change for other providers.
+  - `pi-web-access@0.28.0`: adds opt-in X post search (xAI), Mistral web search, parallel batch search with concurrency limit, `responseId` in search output for stored-result retrieval, Perplexity now keeps all cited sources, configured proxies are now scoped to web-tool requests only, abandoned GitHub clone directories are cleaned up after crashes, and `~/.pi/web-search.json` is respected when `XDG_CONFIG_HOME` is set but no config exists there.
+
+- [#156](https://github.com/HerbertGao/pi-extensions/pull/156) [`1d1c65d`](https://github.com/HerbertGao/pi-extensions/commit/1d1c65db2e93fa9a4182764507809809f38a7b8b) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance bundled companion pins: `@czottmann/pi-automode` to 1.16.0 (bounded existing-file authorization, OpenCode session-header fix, missing project-trust API fix) and `pi-lens` to 4.1.4 (test-runner failure delivery, shared config core, LSP registry consolidation, and agent worktree hygiene).
+
 ## 2026.9.0
 
 ### Minor Changes
