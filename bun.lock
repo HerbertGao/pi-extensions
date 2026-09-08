@@ -56,7 +56,7 @@
       "dependencies": {
         "@ast-grep/cli": "^0.45.0",
         "@ast-grep/napi": "^0.45.0",
-        "@czottmann/pi-automode": "1.15.0",
+        "@czottmann/pi-automode": "1.16.0",
         "@dietrichgebert/ponytail": "4.9.0",
         "@earendil-works/pi-coding-agent": "^0.84.4",
         "@earendil-works/pi-tui": "^0.84.4",
@@ -109,7 +109,7 @@
         "open": "^10.2.0",
         "p-limit": "^6.1.0",
         "pi-footer": "0.5.1",
-        "pi-lens": "4.1.3",
+        "pi-lens": "4.1.4",
         "pi-mcp-adapter": "2.32.1",
         "pi-web-access": "0.28.0",
         "pidusage": "^4.0.1",
@@ -352,7 +352,7 @@
 
     "@changesets/write": ["@changesets/write@0.4.0", "", { "dependencies": { "@changesets/types": "^6.1.0", "fs-extra": "^7.0.1", "human-id": "^4.1.1", "prettier": "^2.7.1" } }, "sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q=="],
 
-    "@czottmann/pi-automode": ["@czottmann/pi-automode@1.15.0", "", { "dependencies": { "unbash": "4.0.10" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "*" } }, "sha512-JUA31sRoThmPdZ/31o4oci+f/Vp3kFj1LlXC+9As3nGeMNmrkN0T+AAMbG1+NToWaB/CQHDjsSXVNryYJlVcMQ=="],
+    "@czottmann/pi-automode": ["@czottmann/pi-automode@1.16.0", "", { "dependencies": { "unbash": "4.0.10" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "*" } }, "sha512-rMoQZYl5+gCBhB1ghWX0nXbqWhVcptN27rKpIiow573SL+aMh/GxKTdycCAEeIMpiSmnqoJjHKoWiZqRtVddMg=="],
 
     "@dietrichgebert/ponytail": ["@dietrichgebert/ponytail@4.9.0", "", {}, "sha512-OSdybtBZ3uDd5m/+zyz4h8/+BVBR9nGFhqTDmQkQb1v7k4Vfc1qql78naY64UjocdBPqR94htZEkKu2wpKTJaw=="],
 
@@ -1514,7 +1514,7 @@
 
     "pi-footer": ["pi-footer@0.5.1", "", { "dependencies": { "chalk": "^6.0.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-8CcySBJF5nOWZxmrfizjChNa3c/Lo45Y9T6ZbzQ8DLjvsTh3wyuEZuEsOALQ/RO7HORa2XA7UJR1/QyX8fOApQ=="],
 
-    "pi-lens": ["pi-lens@4.1.3", "", { "dependencies": { "@ast-grep/cli": "^0.45.0", "@ast-grep/napi": "^0.45.0", "js-yaml": "^5.2.2", "minimatch": "^10.2.6", "pidusage": "^4.0.1", "vscode-jsonrpc": "^9.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "^0.84.1", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-qCG0j2zs1jxBjbH7uWeIG/WZwp/AAXF7euC8IwIxqsDZ9aZqYWFCvrOSe5hOgCNIfb5xMWixkXOYUjhNiag03A=="],
+    "pi-lens": ["pi-lens@4.1.4", "", { "dependencies": { "@ast-grep/cli": "^0.45.0", "@ast-grep/napi": "^0.45.0", "js-yaml": "^5.2.2", "minimatch": "^10.2.6", "pidusage": "^4.0.1", "vscode-jsonrpc": "^9.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "^0.84.1 || ^0.85.0", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-CVTjvRdbTJoQy5cGVEKg6Q+tFdGvjZd7WsKSkXlsw/FKOCZ/DR55TTa7R2lyRDR8eTa3liF5yEGKY1n9H4RuNA=="],
 
     "pi-mcp-adapter": ["pi-mcp-adapter@2.32.1", "", { "dependencies": { "@modelcontextprotocol/client": "2.0.0", "@modelcontextprotocol/core": "2.0.0", "@modelcontextprotocol/ext-apps": "^1.2.2", "@napi-rs/keyring": "^1.3.0", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "cross-spawn": "^7.0.6", "open": "^10.2.0", "recheck": "^4.5.0", "smol-toml": "^1.6.1", "strip-json-comments": "^5.0.3", "zod": "^3.25.0 || ^4.0.0" }, "peerDependencies": { "@earendil-works/pi-ai": "^0.84.1", "@earendil-works/pi-tui": "*", "typebox": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-mcp-adapter": "cli.js" } }, "sha512-GNLYa2U9T5ZqIhZmhx/RTenEjfakJTelq/z6Q+At5SIxyuYvrvobriDEVsnx+lqetVDizUCudTWLfdZytQu0rg=="],
 
