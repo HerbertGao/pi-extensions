@@ -8,16 +8,19 @@ on:
         description: Upstream monitor issue number
         required: true
         type: string
+concurrency:
+  job-discriminator: ${{ github.run_id }}
 permissions:
   actions: read
   contents: read
   issues: read
   pull-requests: read
-engine: copilot
+engine: gemini
+model: gemini-3.8-flash
 strict: true
 sandbox:
   agent:
-    sudo: false
+    model-fallback: false
 checkout:
   fetch-depth: 0
 network:
@@ -33,6 +36,8 @@ tools:
   bash:
     - "*"
 safe-outputs:
+  # Gemini is not supported by gh-aw v0.89.1 threat detection; avoid Copilot fallback.
+  threat-detection: false
   mentions:
     allowed: [HerbertGao]
     max: 1
@@ -83,16 +88,11 @@ steps:
     with:
       bun-version: 1.3.14
       no-cache: true
-  - name: Expose Bun to agent sandbox
-    run: |
-      bun_dir="$RUNNER_TOOL_CACHE/gh-aw-bun/bin"
-      mkdir -p "$bun_dir"
-      install -m 0755 "$(command -v bun)" "$bun_dir/bun"
-      "$bun_dir/bun" --version
   - name: Install dependencies
     run: bun install --frozen-lockfile
+max-ai-credits: 80
 timeout-minutes: 90
-max-turns: 200
+max-turns: 100
 ---
 
 # Reviewed upstream upgrade
