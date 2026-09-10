@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.2
+
+### Patch Changes
+
+- [#158](https://github.com/HerbertGao/pi-extensions/pull/158) [`9a3bda8`](https://github.com/HerbertGao/pi-extensions/commit/9a3bda86d77867c9055342ff20a799d3b1fa3e3d) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance bundled companion pins: `@narumitw/pi-btw` to `0.58.0` (adds configurable BTW-only exit, thinking-cycle, and bring-to-main keybindings in `/btw` → Settings) and `pi-lens` to `4.1.5` (internal bug fixes including LSP lifecycle improvements and managed npm deduplication).
+
 ## 2026.9.1
 
 ### Patch Changes
