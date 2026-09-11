@@ -1802,6 +1802,27 @@ try {
     )
   }
 
+  const solPiRoot = join(packageRoot, "node_modules", "@herbertgao", "sol-pi")
+  const solPiManifestPath = join(solPiRoot, "package.json")
+  const solPiManifest = parseJson(
+    await readFile(solPiManifestPath, "utf8"),
+    solPiManifestPath,
+  )
+  const expectedSolPiVersion = sourceManifest.dependencies["@herbertgao/sol-pi"]
+  if (
+    solPiManifest.name !== "@herbertgao/sol-pi" ||
+    solPiManifest.version !== expectedSolPiVersion ||
+    solPiManifest.license !== "MIT"
+  ) {
+    throw new Error(
+      `Expected bundled @herbertgao/sol-pi ${expectedSolPiVersion}, got ${solPiManifest.version}`,
+    )
+  }
+  const solPiEntryRelative = "./src/sol-pi/index.ts"
+  if (!solPiManifest.pi?.extensions?.includes(solPiEntryRelative)) {
+    throw new Error("Bundled SoL-Pi no longer declares its expected Pi entry")
+  }
+
   const directTifanPackages = [
     "@tifan/pi-copy-response",
     "@tifan/pi-handoff",
@@ -2152,6 +2173,13 @@ try {
     throw new Error("Aggregate pi-caffeinate third-party notice is incomplete")
   }
 
+  if (
+    !tifanNotices.includes("`@herbertgao/sol-pi`") ||
+    !tifanNotices.includes("NVIDIA CORPORATION & AFFILIATES")
+  ) {
+    throw new Error("Aggregate SoL-Pi third-party notices are incomplete")
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
@@ -2180,6 +2208,7 @@ try {
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
       "node_modules/@herbertgao/resume-from/LICENSE",
+      "node_modules/@herbertgao/sol-pi/LICENSE",
       "node_modules/remote-pi/service-templates/launchd.plist.template",
       "node_modules/remote-pi/service-templates/systemd.service.template",
       "node_modules/remote-pi/service-templates/task-launcher.vbs.template",
@@ -2342,6 +2371,21 @@ try {
   }
   if (!loadedLens.commands.has("lens-widget-toggle")) {
     throw new Error("Packed pi-lens did not register lens-widget-toggle")
+  }
+
+  const solPiEntry = resolve(solPiRoot, solPiEntryRelative)
+  if (!extensionPaths.includes(solPiEntry)) {
+    throw new Error("Packed aggregate is missing the SoL-Pi extension entry")
+  }
+  const loadedSolPi = result.extensions.find(
+    (extension) => extension.resolvedPath === solPiEntry,
+  )
+  if (!loadedSolPi?.handlers.has("session_start")) {
+    throw new Error("Packed SoL-Pi did not register its session_start handler")
+  }
+  const solPiLicense = await readFile(join(solPiRoot, "LICENSE"), "utf8")
+  if (!solPiLicense.startsWith("Copyright (c) 2026 NVIDIA CORPORATION")) {
+    throw new Error("Bundled SoL-Pi LICENSE is not the expected MIT text")
   }
 
   const automodeEntry = resolve(automodeRoot, automodeEntryRelative)

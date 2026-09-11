@@ -3,7 +3,8 @@
   "ignorePatterns": [
     "packages/pi-cc-extensions/**",
     "packages/pi-subagents/**",
-    "packages/resume-from/**"
+    "packages/resume-from/**",
+    "packages/sol-pi/**"
   ],
   "categories": {
     "correctness": "error",

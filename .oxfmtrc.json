@@ -3,6 +3,7 @@
     ".github/workflows/*.lock.yml",
     "packages/pi-cc-extensions/**",
     "packages/resume-from/**",
+    "packages/sol-pi/**",
     "packages/pi-subagents/examples/agent-tool-description.md",
     "packages/pi-subagents/test/fixtures/.pi/**"
   ],

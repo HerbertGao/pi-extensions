@@ -66,6 +66,7 @@
         "@herbertgao/pi-cc-extensions": "0.9.0",
         "@herbertgao/pi-subagents": "0.17.1",
         "@herbertgao/resume-from": "0.2.0",
+        "@herbertgao/sol-pi": "0.1.0",
         "@juicesharp/rpiv-ask-user-question": "2.9.0",
         "@juicesharp/rpiv-config": "^2.9.0",
         "@luxusai/pi-hindsight": "0.12.0",
@@ -169,6 +170,22 @@
         "typescript": "^7.0.2",
         "typescript-compiler-api": "npm:typescript@6.0.3",
         "vitest": "^4.1.10",
+      },
+    },
+    "packages/sol-pi": {
+      "name": "@herbertgao/sol-pi",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^7.0.2",
+        "vitest": "^4.0.18",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-agent-core": ">=0.84.2",
+        "@earendil-works/pi-ai": ">=0.84.2",
+        "@earendil-works/pi-coding-agent": ">=0.84.2",
+        "@earendil-works/pi-tui": ">=0.84.2",
+        "typebox": ">=1.3.7",
       },
     },
   },
@@ -454,6 +471,8 @@
 
     "@herbertgao/resume-from": ["@herbertgao/resume-from@workspace:packages/resume-from"],
 
+    "@herbertgao/sol-pi": ["@herbertgao/sol-pi@workspace:packages/sol-pi"],
+
     "@hono/node-server": ["@hono/node-server@2.1.0", "", { "peerDependencies": { "hono": "^4" } }, "sha512-XovyyCCnBzW+zKu+z/zq8hwNs4KOR5rEMAOxo2f40Q5xoOI37IMm6MIg2COOUtUApo0i6850MTBKH2u4QLGIqg=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
@@ -569,6 +588,7 @@
     "@narumitw/pi-btw": ["@narumitw/pi-btw@0.58.0", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.59.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-KvQS98UBCUZZyp5IDuEkjPpjPN+zUs4YuHjFulg9ASBneOHyAnDhIOuIMUZndR9JAhxas1kVtCVS4FIqGbdykw=="],
 
     "@narumitw/pi-caffeinate": ["@narumitw/pi-caffeinate@0.49.7", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.59.0", "dbus-native": "^0.15.2" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-2f970FLJ2JpbI3X7XP8mKTKtTbLCIL9nZSyHI2Koy1PVj1e1blM4ZlvDPjLa8mjnNfyyiu3QRV2Ycmrx3l2wUA=="],
+
 
     "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.59.0", "", { "dependencies": { "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-KBbOcciJD+HVbeduUwBUiSy2AehMGYeOwiRPXvac5tcjuh3SDoQ+7qsNPt2s/ku6exJKZp0GYtAVsiu5ySddmA=="],
 

@@ -13,6 +13,7 @@
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons. |
 | `pi-cc-extensions` | `minuque/pi-cc-extensions` | `5d7a266` (`0.8.69`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                    |
 | `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                      |
+| `sol-pi`           | `NVlabs/SoL-Pi`            | `8f8c139` (`0.1.0`)  | Source import and aggregate entry are covered by smoke; write ownership, automode, and subagent compaction guards are maintained locally.                                        |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
@@ -21,6 +22,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.69`         | `0.8.69`         | `5d7a266`       |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `0.19.0`         | `ad81024`       |
+| `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `8f8c139`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
 
@@ -194,6 +196,10 @@ Both package provenance and the repository review cursor advance to the released
 ### resume-from 0.2.0 import
 
 The complete v0.2.0 source and test suite are imported at `e1dad0d`. The local package preserves upstream formatting and its MIT license. The maintained patch reads repository ownership from the earliest main-session record instead of the current active chain, whose cwd may change after Claude Code resets or compacts the transcript.
+
+### SoL-Pi 0.1.0 import
+
+The standalone SoL-Pi source and test suite are imported at `8f8c139`. The local package republishes the MIT-licensed source as `@herbertgao/sol-pi` with its upstream provenance retained in `package.json`. The compatibility pass leaves extension-owned `write` tools intact, disables nested `then_run` when pi-automode is present, and suppresses boundary compaction while the optional pi-subagents registry reports running work. Aggregate loading is covered by the package smoke.
 
 ## Fork retirement review after PR #125
 
