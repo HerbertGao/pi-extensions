@@ -1,0 +1,58 @@
+name: OpenCode Go Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require OpenCode Go credential
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$OPENCODE_API_KEY" ]]; then
+            echo "::error::OPENCODE_API_KEY is required for the OpenCode Go smoke test"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          check-latest: false
+          cache: npm
+
+      - name: Install Pi
+        run: |
+          npm install --global --ignore-scripts @earendil-works/pi-coding-agent@0.85.1
+          pi --version
+
+      - name: Run read-only OpenCode Go smoke
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          pi \
+            --no-extensions \
+            --no-skills \
+            --no-context-files \
+            --no-session \
+            --provider opencode-go \
+            --model deepseek-flash \
+            --api-key "$OPENCODE_API_KEY" \
+            --tools read \
+            --print \
+            -p 'Use the read tool to inspect package.json, then reply exactly: OPENCODE_GO_SMOKE_OK' \
+            | tee "$output"
+          grep -Fq 'OPENCODE_GO_SMOKE_OK' "$output"
+          echo 'OpenCode Go smoke passed: Pi + deepseek-flash + read tool'
