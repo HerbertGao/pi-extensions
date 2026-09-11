@@ -333,7 +333,7 @@ try {
     throw new Error("Bundled pi-lens no longer declares its expected Pi entry")
   }
   if (
-    JSON.stringify(lensManifest.pi?.skills) !== JSON.stringify(["../../skills"])
+    JSON.stringify(lensManifest.pi?.skills) !== JSON.stringify(["./skills"])
   ) {
     throw new Error("Bundled pi-lens no longer declares its skills")
   }
@@ -347,7 +347,7 @@ try {
   }
   const expectedLensPeers = {
     "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "^0.84.1",
+    "@earendil-works/pi-tui": "^0.84.1 || ^0.85.0",
     typebox: "^1.0.0",
   }
   for (const [dependency, range] of Object.entries(expectedLensPeers)) {
@@ -1226,7 +1226,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.56.0"
+  const expectedBtwVersion = "0.58.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1315,7 +1315,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.56.0's public entry is the bundled dist. Add test-only exports in memory
+  // 0.58.0's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,

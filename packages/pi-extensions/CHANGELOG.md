@@ -1,5 +1,49 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.2
+
+### Patch Changes
+
+- [#158](https://github.com/HerbertGao/pi-extensions/pull/158) [`9a3bda8`](https://github.com/HerbertGao/pi-extensions/commit/9a3bda86d77867c9055342ff20a799d3b1fa3e3d) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance bundled companion pins: `@narumitw/pi-btw` to `0.58.0` (adds configurable BTW-only exit, thinking-cycle, and bring-to-main keybindings in `/btw` → Settings) and `pi-lens` to `4.1.5` (internal bug fixes including LSP lifecycle improvements and managed npm deduplication).
+
+## 2026.9.1
+
+### Patch Changes
+
+- [#153](https://github.com/HerbertGao/pi-extensions/pull/153) [`aba3a9a`](https://github.com/HerbertGao/pi-extensions/commit/aba3a9ad5ac113d8f242d6919f4cc61d0afbf06a) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance companion pins for `@pi-plugins/fast-mode` to `0.1.11` and `pi-web-access` to `0.28.0`.
+
+  - `@pi-plugins/fast-mode@0.1.11`: adds GPT-6 Astra to the default fast-mode model list for the OpenAI and OpenAI Codex providers; no API or behaviour change for other providers.
+  - `pi-web-access@0.28.0`: adds opt-in X post search (xAI), Mistral web search, parallel batch search with concurrency limit, `responseId` in search output for stored-result retrieval, Perplexity now keeps all cited sources, configured proxies are now scoped to web-tool requests only, abandoned GitHub clone directories are cleaned up after crashes, and `~/.pi/web-search.json` is respected when `XDG_CONFIG_HOME` is set but no config exists there.
+
+- [#156](https://github.com/HerbertGao/pi-extensions/pull/156) [`1d1c65d`](https://github.com/HerbertGao/pi-extensions/commit/1d1c65db2e93fa9a4182764507809809f38a7b8b) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance bundled companion pins: `@czottmann/pi-automode` to 1.16.0 (bounded existing-file authorization, OpenCode session-header fix, missing project-trust API fix) and `pi-lens` to 4.1.4 (test-runner failure delivery, shared config core, LSP registry consolidation, and agent worktree hygiene).
+
+## 2026.9.0
+
+### Minor Changes
+
+- [#151](https://github.com/HerbertGao/pi-extensions/pull/151) [`77f3750`](https://github.com/HerbertGao/pi-extensions/commit/77f3750ce1471cc779d6648c5dceb5917783b618) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `@narumitw/pi-caffeinate@0.49.7` so Pi can keep the host computer awake during agent runs through the platform's native sleep inhibitor.
+
+### Patch Changes
+
+- [#147](https://github.com/HerbertGao/pi-extensions/pull/147) [`6154049`](https://github.com/HerbertGao/pi-extensions/commit/6154049fc4ac66c7c7f3b2cc1464a056f9920a20) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance companion pins for `@juicesharp/rpiv-ask-user-question` to `2.9.0` and `pi-mcp-adapter` to `2.32.1`.
+
+  - `@juicesharp/rpiv-ask-user-question@2.9.0`: dependency-only update advancing `@juicesharp/rpiv-config` to `^2.9.0`; no source behavior changes. `@juicesharp/rpiv-config` companion promoted to `^2.9.0` to match.
+  - `pi-mcp-adapter@2.32.1`: includes enable/disable MCP servers from the `/mcp` panel (`ctrl+d`), clearer `/mcp setup` project vs. global write-target picker, reliable MCP App sandbox proxy, improved MCP 2026 input flows and catalog listen recovery, OAuth credential reuse fix, and per-server status clarity.
+
+- [#149](https://github.com/HerbertGao/pi-extensions/pull/149) [`4ebde3b`](https://github.com/HerbertGao/pi-extensions/commit/4ebde3b491e1fb68a93ccf321d52a2187605f1c6) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance `@narumitw/pi-btw` companion pin to `0.57.0`.
+
+  - `@narumitw/pi-btw@0.57.0`: defer Ctrl+C terminal restoration until input dispatch finishes so Windows fullscreen sessions redraw and scroll correctly (patch fix; no API or behavior change on non-Windows platforms).
+
+- [#150](https://github.com/HerbertGao/pi-extensions/pull/150) [`76c6af7`](https://github.com/HerbertGao/pi-extensions/commit/76c6af71d1bd5c99a1ab38a8f37e6daaf10418fa) Thanks [@github-actions](https://github.com/apps/github-actions)! - Port `pi-cc-extensions` 0.8.69: separate `expandedInputMaxLines` (default 5) and `expandedOutputMaxLines` (default 10) config fields so tool card Input and Output sections can be capped independently; the show-more "… +N more lines • click to show more" hint moves to the truncated tail line instead of the section header; double-click collapse now uses a mouseup-arm/unarm pattern to prevent terminals that emit synthetic press events from misidentifying a single click as a double click; Pi 0.85's official "Jump to latest" overlay is suppressed when the local scroll-to-bottom button is active to avoid two overlapping controls. Advance companion `@narumitw/pi-btw` pin to 0.57.0 (adds a themed, clickable Jump to latest control).
+
+- [#143](https://github.com/HerbertGao/pi-extensions/pull/143) [`c01ccb3`](https://github.com/HerbertGao/pi-extensions/commit/c01ccb3f8001ac0b065cae48eabb3f5daccc0b93) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance `@tifan/pi-handoff` companion pin to `2.2.1`.
+
+  - New handoff sessions are prefixed `[handoff]` in both the session name and the Herdr tab label, making them visually distinct.
+  - `tab create` no longer passes `--focus`; the current Herdr tab stays active while the handoff opens in a background tab.
+
+- Updated dependencies [[`76c6af7`](https://github.com/HerbertGao/pi-extensions/commit/76c6af71d1bd5c99a1ab38a8f37e6daaf10418fa)]:
+  - @herbertgao/pi-cc-extensions@0.9.0
+
 ## 2026.8.15
 
 ### Patch Changes

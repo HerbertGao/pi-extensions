@@ -15,6 +15,7 @@ import claudeCodeStyleExtension, {
 	isMcpToolDefinition,
 	preservesOriginalRenderer,
 } from "../extensions/renderer/index.ts";
+import { config, setConfig, normalizeConfig, DEFAULT_CONFIG } from "../extensions/config/config.ts";
 
 initTheme("dark");
 
@@ -260,8 +261,13 @@ test("MCP detection, titles, details, and custom tools use the global wrapper", 
 			const collapsed = component.render(100).join("\n");
 			assert.match(collapsed, new RegExp(expected));
 			assert.match(collapsed, /2 lines returned.*click to show more/);
+			// Details can exceed the default expandedOutputMaxLines; raise limit for this check.
+			const prevConfig = { ...config };
+			setConfig(normalizeConfig({ ...DEFAULT_CONFIG, expandedOutputMaxLines: 40 }));
 			component.setExpanded(true);
 			const expanded = component.render(100).join("\n");
+			component.setExpanded(false);
+			setConfig(normalizeConfig(prevConfig));
 			assert.match(expanded, /first block[\s\S]*second block[\s\S]*Details:/);
 			assert.match(expanded, /1n/);
 			assert.match(expanded, /Circular/);

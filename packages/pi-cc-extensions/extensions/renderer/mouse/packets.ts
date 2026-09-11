@@ -53,6 +53,12 @@ export function isSgrLeftPress(packet: SgrMousePacket): boolean {
 	return packet.final === "M" && baseButton === 0 && (packet.code & 32) === 0;
 }
 
+/** 是否为左键松开。 */
+export function isSgrLeftRelease(packet: SgrMousePacket): boolean {
+	const baseButton = packet.code & ~(4 | 8 | 16 | 32);
+	return packet.final === "m" && baseButton === 0 && (packet.code & 32) === 0;
+}
+
 /** 仅剥离终端序列、保留原布局（换行/空白不动），用于命中区间计算。 */
 export function stripTerminalSequencesPreservingLayout(value: string): string {
 	return value

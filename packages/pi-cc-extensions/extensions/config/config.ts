@@ -21,6 +21,8 @@ export type Config = {
 	writeDiffCollapsedLines: number;
 	diffWordWrap: boolean;
 	expandedPreviewMaxLines: number;
+	expandedInputMaxLines: number;
+	expandedOutputMaxLines: number;
 	useSummaryTitlesAsThinkingTitle: boolean;
 	previewLines: number;
 	animationIntervalMs: number;
@@ -46,6 +48,8 @@ export const DIFF_COLLAPSED_LINES_VALUES = ["12", "24", "36", "48", "80", "120"]
 export const WRITE_DIFF_COLLAPSED_LINES_VALUES = ["0", "4", "8", "12", "24", "36"];
 /** Presets for expanded body height — keep low options first so cycling stays TUI-friendly. */
 export const EXPANDED_PREVIEW_MAX_LINES_VALUES = ["40", "60", "80", "120", "200", "500", "2000"];
+export const EXPANDED_INPUT_MAX_LINES_VALUES = ["5", "10", "20", "40", "80"];
+export const EXPANDED_OUTPUT_MAX_LINES_VALUES = ["10", "20", "40", "80", "120"];
 export const THINKING_PREVIEW_LINES_VALUES = ["0", "1", "3", "5", "10"];
 export const THINKING_ANIMATION_INTERVAL_VALUES = ["40", "60", "90", "120", "180"];
 /** fullscreen 滚轮步进行数预设。 */
@@ -73,6 +77,8 @@ export const DEFAULT_CONFIG: Config = {
 	writeDiffCollapsedLines: DEFAULT_TOOL_DISPLAY_CONFIG.writeDiffCollapsedLines,
 	diffWordWrap: DEFAULT_TOOL_DISPLAY_CONFIG.diffWordWrap,
 	expandedPreviewMaxLines: DEFAULT_TOOL_DISPLAY_CONFIG.expandedPreviewMaxLines,
+	expandedInputMaxLines: 5,
+	expandedOutputMaxLines: 10,
 	useSummaryTitlesAsThinkingTitle: true,
 	previewLines: 3,
 	animationIntervalMs: 90,
@@ -159,6 +165,18 @@ export function normalizeConfig(input: unknown): Config {
 			10,
 			50_000,
 		),
+		expandedInputMaxLines: pickPositiveInt(
+			source.expandedInputMaxLines,
+			DEFAULT_CONFIG.expandedInputMaxLines,
+			1,
+			5_000,
+		),
+		expandedOutputMaxLines: pickPositiveInt(
+			source.expandedOutputMaxLines,
+			DEFAULT_CONFIG.expandedOutputMaxLines,
+			1,
+			5_000,
+		),
 		useSummaryTitlesAsThinkingTitle: source.useSummaryTitlesAsThinkingTitle !== false,
 		previewLines: pickPositiveInt(
 			source.previewLines,
@@ -217,6 +235,8 @@ export function formatConfigStatus(source: Config = config): string {
 		`writeCollapsed=${source.writeDiffCollapsedLines}`,
 		`diffWordWrap=${source.diffWordWrap ? "on" : "off"}`,
 		`expandedMax=${source.expandedPreviewMaxLines}`,
+		`expandedInput=${source.expandedInputMaxLines}`,
+		`expandedOutput=${source.expandedOutputMaxLines}`,
 		`thinkingTitle=${source.useSummaryTitlesAsThinkingTitle ? "summary" : "default"}`,
 		`thinkingPreview=${source.previewLines}`,
 		`thinkingAnimation=${source.animationIntervalMs}ms`,
