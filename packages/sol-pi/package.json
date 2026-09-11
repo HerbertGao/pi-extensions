@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/sol-pi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Token-efficient context and tool extensions for Pi, maintained from NVlabs/SoL-Pi.",
   "keywords": [
     "pi-package",
