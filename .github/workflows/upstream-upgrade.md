@@ -50,7 +50,7 @@ tools:
   bash:
     - "*"
 safe-outputs:
-  # Gemini is not supported by gh-aw v0.89.1 threat detection; avoid Copilot fallback.
+  # Gemini is not supported by gh-aw v0.89.3 threat detection; avoid Copilot fallback.
   threat-detection: false
   mentions:
     allowed: [HerbertGao]
