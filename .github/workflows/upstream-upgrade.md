@@ -17,6 +17,17 @@ permissions:
   pull-requests: read
 engine: gemini
 model: gemini-3.8-flash
+models:
+  allowed:
+    - gemini-3.8-flash
+  providers:
+    google:
+      models:
+        gemini-3.8-flash:
+          cost:
+            input: "7.5e-07"
+            output: "3.75e-06"
+            cache_read: "7.5e-08"
 strict: true
 sandbox:
   agent:
