@@ -29,7 +29,6 @@ jobs:
         with:
           node-version: 24
           check-latest: false
-          cache: npm
 
       - name: Install Pi
         run: |
