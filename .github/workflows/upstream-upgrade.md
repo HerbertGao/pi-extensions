@@ -102,6 +102,14 @@ steps:
     with:
       bun-version: 1.3.14
       no-cache: true
+  # setup-bun installs outside the sandbox-mounted tool cache; expose the pinned binary to AWF.
+  - name: Expose Bun to agent sandbox
+    run: |
+      set -euo pipefail
+      bun_dir="$RUNNER_TOOL_CACHE/gh-aw-bun/bin"
+      mkdir -p "$bun_dir"
+      install -m 0755 "$(command -v bun)" "$bun_dir/bun"
+      "$bun_dir/bun" --version
   - name: Install dependencies
     run: bun install --frozen-lockfile
 max-ai-credits: 80
