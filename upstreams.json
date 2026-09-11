@@ -24,7 +24,7 @@
     {
       "name": "NVlabs SoL-Pi",
       "repository": "https://github.com/NVlabs/SoL-Pi",
-      "reviewedCommit": "8f8c13916c97fb54c32008e41c05421f9b69ac3b"
+      "reviewedCommit": "22277b7e0c3c46ba1259a6687f31fe39ade421a5"
     }
   ],
   "companions": [
