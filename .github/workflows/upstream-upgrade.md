@@ -74,6 +74,20 @@ safe-outputs:
   report-failure-as-issue: true
   messages:
     run-failure: "@HerbertGao Reviewed Upstream Upgrade failed: {status}. Inspect {run_url}."
+pre-agent-steps:
+  # Gemini CLI 0.59.0 rejects AWF gateway auth unless this type is explicit.
+  - name: Select Gemini API-key auth
+    run: |
+      set -euo pipefail
+      settings="$HOME/.gemini/settings.json"
+      mkdir -p "$(dirname "$settings")"
+      tmp="$(mktemp)"
+      if [[ -f "$settings" ]]; then
+        jq '.security.auth.selectedType = "gemini-api-key"' "$settings" > "$tmp"
+      else
+        printf '%s\n' '{"security":{"auth":{"selectedType":"gemini-api-key"}}}' > "$tmp"
+      fi
+      mv "$tmp" "$settings"
 steps:
   - name: Require CI trigger credential
     env:
