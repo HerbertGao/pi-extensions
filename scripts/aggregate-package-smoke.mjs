@@ -1226,7 +1226,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.58.0"
+  const expectedBtwVersion = "0.58.1"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1315,7 +1315,7 @@ try {
     fsCache: false,
     moduleCache: false,
   })
-  // 0.58.0's public entry is the bundled dist. Add test-only exports in memory
+  // 0.58.1's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
@@ -2360,11 +2360,9 @@ try {
   const loadedLens = result.extensions.find(
     (extension) => extension.resolvedPath === lensEntry,
   )
-  for (const toolName of [
-    "lens_diagnostics",
-    "lsp_diagnostics",
-    "pi_lens_activate_tools",
-  ]) {
+  // pi-lens 4.1.6 folds lsp_diagnostics into lens_diagnostics (source=lsp);
+  // only the MCP surface keeps a one-release lsp compatibility shim.
+  for (const toolName of ["lens_diagnostics", "pi_lens_activate_tools"]) {
     if (!loadedLens?.tools.has(toolName)) {
       throw new Error(`Packed pi-lens did not register ${toolName}`)
     }
