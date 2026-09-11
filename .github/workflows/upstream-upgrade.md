@@ -21,13 +21,16 @@ strict: true
 sandbox:
   agent:
     model-fallback: false
+    token-steering: false
 checkout:
   fetch-depth: 0
 network:
   allowed:
     - defaults
     - node
+    - play.googleapis.com
 tools:
+  timeout: 600
   cli-proxy: true
   github:
     mode: gh-proxy
@@ -159,7 +162,7 @@ bun install
 bun run check
 ```
 
-A pull request is allowed only when `bun run check` passes.
+Run the full check once. If it fails because the sandbox cannot reach a package registry or a command reaches its timeout, do not retry, edit smoke scripts, or alter dependency files just to bypass the failure; call `report_incomplete` with the exact evidence. A pull request is allowed only when `bun run check` passes.
 
 ## Final action
 
