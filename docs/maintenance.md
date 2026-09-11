@@ -385,7 +385,7 @@ Both `npm publish` and `npm trust` may stop with `EOTP` and print a browser auth
 
 **Do not treat a successful aggregate pack, install, or partial publish as proof that the child exists on npm.** `scripts/aggregate-bundle.mjs` embeds workspace child tarballs inside `@herbertgao/pi-extensions`, so the aggregate can publish and install successfully while the standalone child still returns npm 404. Changesets then reports the overall Release run as failed even if the aggregate itself was published. This happened when `@herbertgao/pi-extensions@2026.8.15` published but first-time `@herbertgao/pi-bark@0.1.0` failed with `ENEEDAUTH`.
 
-If that partial-publish state occurs, bootstrap the missing child at the version already present in `master`, verify it with `npm view`, then rerun the failed Release workflow. Do not bump or republish the aggregate solely to recover the missing child.
+If that partial-publish state occurs, the release job's `Verify published package versions` step identifies every local public package version still missing from npm. The recovery owner is HerbertGao: bootstrap the missing child at the version already present in `master`, verify it with `npm view` (or `node scripts/verify-published-packages.mjs`), then rerun the failed Release workflow. Do not bump or republish the aggregate solely to recover the missing child.
 
 Run the aggregate package last, after all exact child versions exist. Do not create a long-lived `NPM_TOKEN` or a granular token that bypasses 2FA; the release workflow authenticates with GitHub OIDC and publishes with provenance. Enable the repository variable only after every package trusts the workflow:
 

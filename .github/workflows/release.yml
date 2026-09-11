@@ -29,7 +29,7 @@ jobs:
         # v6.0.0
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903
         with:
-          node-version: 22.23.1
+          node-version: 24.20.0
 
       - name: Cache Bun
         # v6.1.0
@@ -67,3 +67,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+
+      - name: Verify published package versions
+        if: always() && steps.changesets.outputs.published == 'true'
+        run: node scripts/verify-published-packages.mjs

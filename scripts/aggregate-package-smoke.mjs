@@ -35,7 +35,66 @@ async function pathExists(path) {
 }
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
+const diagnosticsDir = process.env.AGGREGATE_SMOKE_ARTIFACT_DIR
+const phaseLog = []
+let currentPhase
+
+function beginPhase(name) {
+  if (currentPhase) {
+    currentPhase.endedAt = new Date().toISOString()
+    currentPhase.status = "passed"
+  }
+  currentPhase = {
+    name,
+    startedAt: new Date().toISOString(),
+    status: "running",
+  }
+  phaseLog.push(currentPhase)
+  process.stdout.write(`[aggregate-smoke] phase=${name}\n`)
+}
+
+function finishPhase(status, error) {
+  if (!currentPhase) return
+  currentPhase.endedAt = new Date().toISOString()
+  currentPhase.status = status
+  if (error) {
+    currentPhase.error = error instanceof Error ? error.message : String(error)
+  }
+}
+
+async function preserveFailureArtifact(error) {
+  if (!diagnosticsDir) return
+  try {
+    await mkdir(diagnosticsDir, { recursive: true })
+    const details = error instanceof Error ? error : new Error(String(error))
+    await writeFile(
+      join(diagnosticsDir, "aggregate-package-smoke.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          status: "failed",
+          runId: process.env.GITHUB_RUN_ID ?? null,
+          phase: currentPhase?.name ?? "initialization",
+          phases: phaseLog,
+          error: {
+            name: details.name,
+            message: details.message,
+            stack: details.stack?.slice(0, 4000),
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    )
+  } catch (artifactError) {
+    process.stderr.write(
+      `[aggregate-smoke] failed to preserve diagnostics: ${artifactError instanceof Error ? artifactError.message : String(artifactError)}\n`,
+    )
+  }
+}
+
 try {
+  beginPhase("pack-and-install")
   const packResult = run("npm", [
     "pack",
     "--json",
@@ -72,6 +131,7 @@ try {
     { cwd: stageDir },
   )
 
+  beginPhase("manifest-and-package-contracts")
   const packageRoot = join(
     installDir,
     "node_modules",
@@ -2315,6 +2375,7 @@ try {
     await handler({ reason: "quit" }, mcpRuntimeContext)
   }
 
+  beginPhase("extension-registration-and-contracts")
   const result = await loadExtensions(extensionPaths, installDir)
   if (result.errors.length > 0) {
     throw new Error(
@@ -2402,6 +2463,7 @@ try {
   if (!loadedAutomode?.tools.has("automode_inspect")) {
     throw new Error("Packed pi-automode did not register automode_inspect")
   }
+  beginPhase("runtime-smokes")
   await runPiAutomodeRealSmoke({ automodeEntry })
 
   const mcpEntry = resolve(mcpRoot, mcpEntryRelative)
@@ -2560,6 +2622,7 @@ try {
   }
   await runRemotePiRealSmoke({ remotePiEntry })
 
+  beginPhase("bundle-contracts")
   const bundled = new Set(packed.bundled)
   const missingBundles = manifest.bundledDependencies.filter(
     (name) => !bundled.has(name),
@@ -2593,10 +2656,15 @@ try {
     throw new Error("Aggregate tarball unexpectedly contains child test files")
   }
 
+  finishPhase("passed")
   process.stdout.write(
     `Aggregate smoke passed: ${result.extensions.length} extensions, ` +
       `${bundled.size} bundled dependencies\n`,
   )
+} catch (error) {
+  finishPhase("failed", error)
+  await preserveFailureArtifact(error)
+  throw error
 } finally {
   await rm(stageDir, { recursive: true, force: true })
 }
