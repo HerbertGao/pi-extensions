@@ -1,5 +1,24 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.3
+
+### Minor Changes
+
+- [#164](https://github.com/HerbertGao/pi-extensions/pull/164) [`52558be`](https://github.com/HerbertGao/pi-extensions/commit/52558be6f06659cb9354b8d80a1e9321c35acbcb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `@narumitw/pi-caffeinate@0.49.7` so Pi can keep the host computer awake during agent runs through the platform's native sleep inhibitor.
+
+- [#164](https://github.com/HerbertGao/pi-extensions/pull/164) [`52558be`](https://github.com/HerbertGao/pi-extensions/commit/52558be6f06659cb9354b8d80a1e9321c35acbcb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Import the MIT-licensed NVlabs/SoL-Pi efficiency mechanisms as a maintained package with upstream provenance, with guards for extension-owned writes, pi-automode, and active subagents.
+
+### Patch Changes
+
+- [#176](https://github.com/HerbertGao/pi-extensions/pull/176) [`ace22e9`](https://github.com/HerbertGao/pi-extensions/commit/ace22e9d73d9dae2c64efcd3a9846d9566ec92f9) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Advance bundled companion pins:
+
+  - `@narumitw/pi-btw@0.58.1`: honor the API base URL returned by Pi's authentication resolver for both inherited and explicitly configured side-thread models, fixing GitHub Copilot requests routed to a different endpoint.
+  - `pi-lens@4.1.6`: fold `lsp_diagnostics` into `lens_diagnostics` with `source=lsp` (the MCP surface keeps a one-release compatibility shim), unify Pi/MCP result rendering, add per-tool `enabled` configuration, and improve LSP cwd/root resolution plus Windows and runner fixes.
+  - `pi-web-access@0.29.0`: add SerpApi Google search, a self-hosted Crawl4AI extraction fallback, SOCKS proxy support, and 1Password service-account credentials; load extraction and AI features on demand; fix provider fallback, cache pruning, credential routing, and default web-search config discovery.
+
+- Updated dependencies [[`52558be`](https://github.com/HerbertGao/pi-extensions/commit/52558be6f06659cb9354b8d80a1e9321c35acbcb), [`ceeece0`](https://github.com/HerbertGao/pi-extensions/commit/ceeece0b2db2ff962eec513a0b7f766471743057)]:
+  - @herbertgao/sol-pi@0.2.0
+
 ## 2026.9.2
 
 ### Patch Changes
