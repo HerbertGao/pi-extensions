@@ -1,0 +1,76 @@
+{
+  "name": "@herbertgao/sol-pi",
+  "version": "0.1.0",
+  "description": "Token-efficient context and tool extensions for Pi, maintained from NVlabs/SoL-Pi.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "context-management",
+    "token-efficiency"
+  ],
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/sol-pi#readme",
+  "bugs": {
+    "url": "https://github.com/HerbertGao/pi-extensions/issues"
+  },
+  "license": "MIT",
+  "author": "Herbert Gao",
+  "contributors": [
+    "NVIDIA Corporation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
+    "directory": "packages/sol-pi"
+  },
+  "files": [
+    "src/sol-pi",
+    "assets",
+    "docs/compatibility.md",
+    "docs/configuration.md",
+    "scripts/check-pi-compat.mjs",
+    "scripts/check-sol-pi-config.mjs",
+    "agents-install.md",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
+    "sol-pi.example.json"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test && npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": ">=0.84.2",
+    "@earendil-works/pi-ai": ">=0.84.2",
+    "@earendil-works/pi-coding-agent": ">=0.84.2",
+    "@earendil-works/pi-tui": ">=0.84.2",
+    "typebox": ">=1.3.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/sol-pi/index.ts"
+    ]
+  },
+  "x-upstream": {
+    "package": "sol-pi",
+    "version": "0.1.0",
+    "reviewedVersion": "0.1.0",
+    "repository": "https://github.com/NVlabs/SoL-Pi",
+    "commit": "8f8c13916c97fb54c32008e41c05421f9b69ac3b"
+  }
+}

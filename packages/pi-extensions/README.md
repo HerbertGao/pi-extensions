@@ -10,7 +10,7 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer and Pi 0.84.4 or newer.
 
-The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, and `pi-subagents`—plus the following upstream packages under their original names:
+The package bundles 5 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.8.0`
@@ -40,7 +40,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `@narumitw/pi-caffeinate@0.49.7` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends.
 
-`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `pi-lens@4.1.3` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-automode@1.15.0` preserves dynamic providers on legacy registries. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
+`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.1.3` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-automode@1.15.0` preserves dynamic providers on legacy registries. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 

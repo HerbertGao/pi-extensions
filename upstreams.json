@@ -20,6 +20,11 @@
       "name": "resume-from",
       "repository": "https://github.com/alexei-led/resume-from",
       "reviewedCommit": "e1dad0dd4ae5fb6a5a50b905dd4359a29fd0910e"
+    },
+    {
+      "name": "NVlabs SoL-Pi",
+      "repository": "https://github.com/NVlabs/SoL-Pi",
+      "reviewedCommit": "8f8c13916c97fb54c32008e41c05421f9b69ac3b"
     }
   ],
   "companions": [
