@@ -1,5 +1,18 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.4
+
+### Minor Changes
+
+- [#180](https://github.com/HerbertGao/pi-extensions/pull/180) [`4da6bf4`](https://github.com/HerbertGao/pi-extensions/commit/4da6bf4ad5ce31743bdd4c622a647e7c6c583040) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle the MIT-licensed `pi-antigravity@0.7.2` provider under its original package name with reviewed upstream provenance.
+
+### Patch Changes
+
+- [#182](https://github.com/HerbertGao/pi-extensions/pull/182) [`ab02286`](https://github.com/HerbertGao/pi-extensions/commit/ab022861e15c8549ba947365111aa54b7664cbfa) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Port `pi-cc-extensions` 0.8.70: the rich-diff parser accepts Pi's space-delimited numbered rows only while no hunk header has been seen, so unified hunks keep numeric source content instead of treating it as a gutter, and Pi's blank-number `...` omission rows render as metadata without invented line numbers. Long path summaries are relativized against the tool cwd and middle-truncated so the filename stays visible in single-tool, tool-group, and compact edit/write summaries while keeping live-viewport clipping.
+
+- Updated dependencies [[`ab02286`](https://github.com/HerbertGao/pi-extensions/commit/ab022861e15c8549ba947365111aa54b7664cbfa)]:
+  - @herbertgao/pi-cc-extensions@0.9.1
+
 ## 2026.9.3
 
 ### Minor Changes
