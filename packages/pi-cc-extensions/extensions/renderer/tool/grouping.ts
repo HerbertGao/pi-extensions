@@ -8,6 +8,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
+import { fitToolCallSummary, pathSummary, type ToolCallSummary } from "./result.ts";
 import { isToolTuiFullscreen, showMoreHintText } from "../show-more-hint.ts";
 
 const PATCH_KEY = Symbol.for("pi.ccstyle.tool-grouping-patch");
@@ -172,7 +173,7 @@ function humanizeToolName(name: string): string {
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function toolSummary(tool: any): { main: string; detail: string } {
+function toolSummary(tool: any): ToolCallSummary {
 	const name = toolName(tool);
 	const lowerName = name.toLowerCase();
 	const args = tool?.args ?? {};
@@ -232,10 +233,11 @@ function toolSummary(tool: any): { main: string; detail: string } {
 			args.offset !== undefined ? `offset=${args.offset}` : "",
 			args.limit !== undefined ? `limit=${args.limit}` : "",
 		].filter(Boolean);
-		return {
-			main: `Read ${oneLine(args.path || "...")}`,
-			detail: details.length ? ` (${details.join(", ")})` : "",
-		};
+		const detail = details.length ? ` (${details.join(", ")})` : "";
+		if (typeof args.path === "string" && args.path) {
+			return pathSummary("Read", args.path, tool?.cwd, detail);
+		}
+		return { main: "Read ...", detail };
 	}
 	if (name === "bash") return { main: `Bash ${oneLine(args.command || "...")}`, detail: "" };
 	if (name === "grep") {
@@ -456,11 +458,14 @@ export class ToolGroupComponent extends Container {
 			const continuation = index === total - 1 ? "  " : "│ ";
 			if (!this._expanded) {
 				const summary = toolSummary(tool);
+				const prefix = ` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `;
+				const detail = fg("dim", summary.detail);
+				const mainWidth = Math.max(0, width - visibleWidth(prefix) - visibleWidth(detail));
 				lines.push(
 					truncateToWidth(
-						` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} ${fg("toolTitle", summary.main)}${fg("dim", summary.detail)}`,
+						`${prefix}${fg("toolTitle", fitToolCallSummary(summary, mainWidth))}${detail}`,
 						width,
-						"…",
+						"",
 					),
 				);
 				continue;

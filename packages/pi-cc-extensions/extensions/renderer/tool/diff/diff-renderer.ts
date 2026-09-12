@@ -52,7 +52,7 @@ interface DiffTheme {
 type DiffLineKind = "add" | "remove" | "context";
 type DiffEntryKind = "line" | "meta" | "hunk" | "file";
 
-interface DiffLineEntry {
+export interface DiffLineEntry {
 	kind: "line";
 	lineKind: DiffLineKind;
 	oldLineNumber: number | null;
@@ -72,7 +72,7 @@ interface DiffMetaEntry {
 
 type ParsedDiffEntry = DiffLineEntry | DiffMetaEntry;
 
-interface ParsedDiff {
+export interface ParsedDiff {
 	entries: ParsedDiffEntry[];
 	stats: DiffStats;
 }
@@ -131,7 +131,9 @@ type CodeLineHighlighter = (line: string, entry: DiffLineEntry) => string;
 
 const CANONICAL_LINE_PATTERN = /^([+\- ])(\s*\d+)\|(.*)$/;
 const HASHLINE_ANCHOR_LINE_PATTERN = /^([+\- ])(\s*\d+)#([A-Za-z0-9]+| {2}):(.*)$/;
+// Pi 仍使用空格分隔的行号格式；仅在无 hunk 头时可安全识别。
 const LEGACY_LINE_PATTERN = /^([+\- ])(\s*\d+)\s(.*)$/;
+const PI_OMISSION_LINE_PATTERN = /^ {3,}\.\.\.$/;
 const HUNK_HEADER_PATTERN = /^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@(.*)$/;
 const SPLIT_SEPARATOR = " │ ";
 const MIN_LINE_NUMBER_WIDTH = 2;
@@ -374,7 +376,10 @@ function toParsedDiffLine(
 	return { lineKind: "context", lineNumber: normalizedLineNumber, content };
 }
 
-function parseCanonicalDiffLine(line: string): {
+function parseCanonicalDiffLine(
+	line: string,
+	allowPiFormat: boolean,
+): {
 	lineKind: DiffLineKind;
 	lineNumber: string;
 	content: string;
@@ -393,7 +398,7 @@ function parseCanonicalDiffLine(line: string): {
 	}
 
 	const canonicalMatch = line.match(CANONICAL_LINE_PATTERN);
-	const legacyMatch = canonicalMatch ? null : line.match(LEGACY_LINE_PATTERN);
+	const legacyMatch = canonicalMatch || !allowPiFormat ? null : line.match(LEGACY_LINE_PATTERN);
 	const matched = canonicalMatch ?? legacyMatch;
 	if (!matched) {
 		return null;
@@ -486,7 +491,7 @@ function ensureImplicitHunk(currentHunk: number): number {
 	return currentHunk > 0 ? currentHunk : 1;
 }
 
-function parseDiff(diffText: string): ParsedDiff {
+export function parseDiff(diffText: string): ParsedDiff {
 	const stats: DiffStats = {
 		added: 0,
 		removed: 0,
@@ -505,12 +510,14 @@ function parseDiff(diffText: string): ParsedDiff {
 	let oldLineCursor: number | null = null;
 	let newLineCursor: number | null = null;
 	let lineNumberDelta = 0;
+	let hasHunkHeader = false;
 
 	for (const rawLine of diffText.replace(/\r/g, "").split("\n")) {
 		stats.lines++;
 
 		const hunkMatch = rawLine.match(HUNK_HEADER_PATTERN);
 		if (hunkMatch) {
+			hasHunkHeader = true;
 			hunkIndex++;
 			stats.hunks = Math.max(stats.hunks, hunkIndex);
 			oldLineCursor = toNumber(hunkMatch[1]);
@@ -535,7 +542,14 @@ function parseDiff(diffText: string): ParsedDiff {
 			lineNumberDelta = 0;
 		}
 
-		const canonical = parseCanonicalDiffLine(rawLine);
+		// Pi 用空白行号填充省略上下文；它不是源码行，也不推进行号游标。
+		if (!hasHunkHeader && PI_OMISSION_LINE_PATTERN.test(rawLine)) {
+			entries.push(createMetaEntry(rawLine, hunkIndex));
+			continue;
+		}
+
+		// Pi 无 hunk 头时的数字行号与 unified hunk 中的数字源码文本存在歧义。
+		const canonical = parseCanonicalDiffLine(rawLine, !hasHunkHeader);
 		if (canonical) {
 			hunkIndex = ensureImplicitHunk(hunkIndex);
 			stats.hunks = Math.max(stats.hunks, hunkIndex);

@@ -707,6 +707,32 @@ test("compact edit/write stays single-line when collapsed and reuses rich diff w
 	}
 });
 
+test("compact edit/write summaries preserve filenames for long cwd paths", () => {
+	const { restore } = installHooks();
+	try {
+		const path = join(
+			process.cwd(),
+			"extensions",
+			"very-long-feature-name",
+			"nested-renderer-implementation",
+			"target-file.ts",
+		);
+		for (const [name, id] of [
+			["edit", "long-edit"],
+			["write", "long-write"],
+		] as const) {
+			const component = tool(name, id, { path });
+			component.updateResult({ content: [], isError: false });
+			const title = renderText(component, 50).find((line) => line.includes(name));
+			assert.match(title!, new RegExp(`${name} .*….*target-file\\.ts`));
+			assert.doesNotMatch(title!, new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+			assert.ok(visibleWidth(title!) <= 50, "summary stays within the render width");
+		}
+	} finally {
+		restore();
+	}
+});
+
 test("sync collects mounted resume components before applying global expansion", () => {
 	const previousMode = config.mode;
 	config.mode = "compact";
