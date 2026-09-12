@@ -69,8 +69,8 @@
 	},
 	"x-upstream": {
 		"package": "pi-cc-extensions",
-		"version": "0.8.69",
+		"version": "0.8.70",
 		"repository": "https://github.com/minuque/pi-cc-extensions",
-		"commit": "5d7a2666f51da9f450bd019af10200c88cc1df98"
+		"commit": "9f200064951ffb148ecec2e1cf0dab7a2940f823"
 	}
 }

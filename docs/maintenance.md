@@ -8,21 +8,21 @@
 
 ## Source baselines
 
-| Local package set  | Upstream                   | Imported baseline    | Notes                                                                                                                                                                            |
-| ------------------ | -------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons. |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `5d7a266` (`0.8.69`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                    |
-| `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                      |
-| `sol-pi`           | `NVlabs/SoL-Pi`            | `8f8c139` (`0.1.0`)  | Source import and aggregate entry are covered by smoke; write ownership, automode, and subagent compaction guards are maintained locally.                                        |
+| Local package set  | Upstream                   | Imported baseline    | Notes                                                                                                                                                                                       |
+| ------------------ | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons.            |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `9f20006` (`0.8.70`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                               |
+| `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                                 |
+| `sol-pi`           | `NVlabs/SoL-Pi`            | `22277b7` (`0.1.0`)  | Source import and aggregate entry are covered by smoke; write ownership, automode, and subagent compaction guards are maintained locally. Docs-only commits through `d7ecfc0` are reviewed. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.69`         | `0.8.69`         | `5d7a266`       |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.70`         | `0.8.70`         | `9f20006`       |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `0.19.0`         | `ad81024`       |
-| `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `8f8c139`       |
+| `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
 
@@ -107,6 +107,16 @@ The range `efc30c3..08ecbf7` and the matching published tags were reviewed packa
 - `pi-review` is a new optional product rather than an update to an imported package. It is reviewed but **not imported**: adding another aggregate extension is outside this maintenance issue and has no existing local compatibility contract.
 
 The repository review cursor advances to `08ecbf7`; documentation-only commits after the published tags do not change package provenance.
+
+### pi-cc-extensions 0.8.70 review
+
+The released range `5d7a266..9f20006` was reviewed commit by commit:
+
+- `b8b2d89` and its `3b2d49c` follow-up are **ported** into the local rich-diff parser: Pi's space-delimited numbered rows are accepted only while no hunk header has been seen, so unified hunks keep numeric source content instead of treating it as a gutter; blank-number `...` omission rows are metadata and no longer acquire invented line numbers or advance source cursors. Focused real-producer, unified-hunk, omission, and literal-ellipsis regressions are included.
+- `26aa98d` is **selectively ported**: long path summaries are relativized against the tool cwd and middle-truncated so the filename stays visible in single-tool, grouping, and compact edit/write summaries. The local implementation keeps live-viewport clipping instead of upstream's fixed `inputClip` ceiling.
+- `2299ac9` merges the diff-parser pull request without independent changes, and `9f20006` is release metadata represented through local provenance.
+
+The Fork continues to preserve its renderer lifecycle, malformed-agent recovery, Markdown fence protection, terminal-width behavior, and rich-diff/write-state correctness tests. Package provenance advances to released `v0.8.70` at `9f20006`; the repository review cursor advances to the same commit.
 
 ### pi-cc-extensions 0.8.68 and post-release review
 
@@ -201,6 +211,8 @@ The complete v0.2.0 source and test suite are imported at `e1dad0d`. The local p
 
 The standalone SoL-Pi source and test suite are imported at `8f8c139`. The local package republishes the MIT-licensed source as `@herbertgao/sol-pi` with its upstream provenance retained in `package.json`. The compatibility pass leaves extension-owned `write` tools intact, disables nested `then_run` when pi-automode is present, and suppresses boundary compaction while the optional pi-subagents registry reports running work. Aggregate loading is covered by the package smoke.
 
+The Action Fusion file-URL resolution fix is synced at `22277b7`; the only later commits through `d7ecfc0` touch the upstream README's Star History section, so no package source changes. The repository review cursor advances to `d7ecfc0` without changing imported provenance. Upstream declares the package `private: true` and never publishes `sol-pi` to npm, so the monitor's npm latest check reports a permanent 404 for that original name; the published `@herbertgao/sol-pi` package is unaffected.
+
 ## Fork retirement review after PR #125
 
 | Package            | Direct upstream reference | Remaining requirement                                                                                                                                                                           |
@@ -245,6 +257,8 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.15.0` | `czottmann/pi-automode`     |
+
+The reviewed `pi-mcp-adapter@2.33.0` release is **deferred**, so the aggregate pin and bundled copy remain at `2.32.1`. Its OAuth transaction support still resolves `@modelcontextprotocol/client` and `@modelcontextprotocol/core` from pinned `pkg.pr.new` preview tarballs while npm latest is `2.0.0`, it adds an `undici@^6.28.1` dependency that conflicts with the aggregate's single `undici@^8.9.0` contract, and it adds the native `fs-native-extensions@1.5.1` package. Re-evaluate when the MCP SDK publishes the corresponding release and the undici range can be reconciled.
 
 The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
 

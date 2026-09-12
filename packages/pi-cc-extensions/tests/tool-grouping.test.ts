@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import test from "node:test";
 import {
 	AssistantMessageComponent,
@@ -124,7 +125,38 @@ test("tool summaries use the available window width", () => {
 				.find((line) => line.includes("Read "))
 				?.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "") ?? "";
 		assert.ok(visibleWidth(narrowRead) <= 80, "narrow windows still clip to their actual width");
-		assert.match(narrowRead, /…$/);
+		assert.match(
+			narrowRead,
+			/…[\\/]contract_service\.py \(offset=1, limit=240\)$/,
+			"narrow windows keep the filename instead of only the head",
+		);
+	} finally {
+		hooks.shutdown();
+	}
+});
+
+test("collapsed groups preserve filenames for long cwd paths", () => {
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		const path = join(
+			process.cwd(),
+			"extensions",
+			"very-long-feature-name",
+			"nested-renderer-implementation",
+			"target-file.ts",
+		);
+		parent.addChild(tool("read", "long-read", { path }));
+		parent.addChild(tool("bash", "separator", { command: "echo ok" }));
+		const rendered = parent.children[0]
+			.render(48)
+			.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""));
+		const readLine = rendered.find((line: string) => line.includes("Read"));
+		assert.match(readLine!, /Read extensions.*…[\\/]target-file\.ts$/);
+		assert.doesNotMatch(
+			readLine!,
+			new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+		);
 	} finally {
 		hooks.shutdown();
 	}

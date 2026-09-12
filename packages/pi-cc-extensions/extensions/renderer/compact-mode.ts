@@ -34,8 +34,8 @@ import {
 import { renderRichToolResult } from "./tool/diff/index.ts";
 import type { WriteExecutionMetadataStore } from "./tool/diff/write-execution.ts";
 import {
+	formatDisplayPath,
 	insetComponent,
-	oneLine,
 	renderExpandedToolResult,
 	scheduleAnimation,
 } from "./tool/result.ts";
@@ -552,7 +552,8 @@ function compactEditWriteLine(
 		visibleWidth(statsText) +
 		visibleWidth(hintText);
 	const pathWidth = Math.max(0, width - fixedWidth - (path ? 1 : 0));
-	const pathPart = pathWidth > 0 && path ? ` ${oneLine(path, pathWidth)}` : "";
+	const pathPart =
+		pathWidth > 0 && path ? ` ${formatDisplayPath(path, component.cwd, pathWidth)}` : "";
 	const line = `${iconPart}${namePart}${theme.fg("toolTitle", pathPart)}${statsStyled}${hintText ? theme.fg("dim", hintText) : ""}`;
 	return ["", truncateToWidth(line, width, "")];
 }

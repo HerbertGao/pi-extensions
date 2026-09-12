@@ -10,12 +10,13 @@ import { config, getToolDisplayConfig, type CompactStyleMode } from "../config/c
 import { isToolCallHovered } from "./mouse/interaction.ts";
 import {
 	countLines,
+	fitToolCallSummary,
 	hasExpandableDetail,
-	headTruncateToWidth,
 	insetComponent,
 	isToolExpanded,
 	oneLine,
 	outputLineCount,
+	pathSummary,
 	pendingIcon,
 	renderCollapsedToolResultToWidth,
 	renderExpandedToolResult,
@@ -26,6 +27,7 @@ import {
 	textFromResult,
 	toolIconColor,
 	toolViewportWidth,
+	type ToolCallSummary,
 } from "./tool/result.ts";
 import { showMoreHintText } from "./show-more-hint.ts";
 import { renderRichToolResult, type WriteExecutionMetadataStore } from "./tool/diff/index.ts";
@@ -152,7 +154,8 @@ function singleToolCallSummary(
 	toolName: string,
 	label: string,
 	args: any,
-): { main: string; detail: string } {
+	cwd?: string,
+): ToolCallSummary {
 	const title = label === toolName ? humanizeToolLabel(label) : label;
 	if (!args || typeof args !== "object") return { main: title, detail: "" };
 	const name = toolName.toLowerCase();
@@ -201,14 +204,17 @@ function singleToolCallSummary(
 			args.offset !== undefined ? `offset=${args.offset}` : "",
 			args.limit !== undefined ? `limit=${args.limit}` : "",
 		].filter(Boolean);
-		return {
-			main: `${title}${args.path ? ` ${oneLine(args.path)}` : ""}`,
-			detail: details.length ? ` (${details.join(", ")})` : "",
-		};
+		const detail = details.length ? ` (${details.join(", ")})` : "";
+		if (typeof args.path === "string" && args.path) {
+			return pathSummary(title, args.path, cwd, detail);
+		}
+		return { main: title, detail };
+	}
+	const preferredPath = args.path ?? args.file_path;
+	if (typeof preferredPath === "string" && preferredPath) {
+		return pathSummary(title, preferredPath, cwd);
 	}
 	const preferred =
-		args.path ??
-		args.file_path ??
 		args.command ??
 		args.query ??
 		args.question ??
@@ -324,7 +330,7 @@ function createCcstyleTool(
 				visualState === "success"
 					? `${BRIGHT_GREEN}${rawIcon}${ANSI_FG_RESET}`
 					: theme.fg(toolIconColor(context), rawIcon);
-			const summary = singleToolCallSummary(toolName, label, args);
+			const summary = singleToolCallSummary(toolName, label, args, context?.cwd);
 			let cachedWidth: number | undefined;
 			let cachedLine: string | undefined;
 			return {
@@ -334,8 +340,7 @@ function createCcstyleTool(
 					const callWidth = Math.max(0, viewportWidth - visibleWidth(icon) - 2);
 					const mainWidth = Math.max(0, callWidth - visibleWidth(summary.detail));
 					cachedWidth = width;
-					// 纯文本先截断再着色（省略号不带 ANSI）；从头截断，与多 tool 一致
-					const line = ` ${icon} ${theme.fg("toolTitle", headTruncateToWidth(summary.main, mainWidth))}${theme.fg("dim", summary.detail)}`;
+					const line = ` ${icon} ${theme.fg("toolTitle", fitToolCallSummary(summary, mainWidth))}${theme.fg("dim", summary.detail)}`;
 					cachedLine = truncateToWidth(line, viewportWidth, "");
 					return [cachedLine];
 				},
