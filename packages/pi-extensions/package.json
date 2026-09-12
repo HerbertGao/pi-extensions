@@ -90,6 +90,7 @@
     "nanoid": "^5.0.0",
     "open": "^10.2.0",
     "p-limit": "^6.1.0",
+    "pi-antigravity": "0.7.2",
     "pi-footer": "0.5.1",
     "pi-lens": "4.1.6",
     "pi-mcp-adapter": "2.32.1",
@@ -133,6 +134,7 @@
     "@tifan/pi-preferred-thinking",
     "@tifan/pi-recap",
     "@tifan/pi-rename",
+    "pi-antigravity",
     "pi-footer",
     "pi-lens",
     "pi-mcp-adapter",
@@ -166,6 +168,7 @@
       "./node_modules/pi-mcp-adapter/index.ts",
       "./node_modules/pi-lens/dist/index.js",
       "./node_modules/pi-web-access/index.ts",
+      "./node_modules/pi-antigravity/src/index.ts",
       "./node_modules/remote-pi/dist/index.js",
       "./node_modules/@czottmann/pi-automode/extensions/auto-mode.ts",
       "./node_modules/pi-footer/src/index.ts"

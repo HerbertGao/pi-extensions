@@ -25,6 +25,11 @@
       "name": "NVlabs SoL-Pi",
       "repository": "https://github.com/NVlabs/SoL-Pi",
       "reviewedCommit": "22277b7e0c3c46ba1259a6687f31fe39ade421a5"
+    },
+    {
+      "name": "pi-antigravity",
+      "repository": "https://github.com/Rahularya01/pi-antigravity",
+      "reviewedCommit": "86f76ab08f16784be5bfc281dda9c645651a433b"
     }
   ],
   "companions": [

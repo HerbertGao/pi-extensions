@@ -10,8 +10,9 @@ pi install npm:@herbertgao/pi-extensions
 
 Requires Node.js 24 or newer and Pi 0.84.4 or newer.
 
-The package bundles 5 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
+The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, `pi-subagents`, `sol-pi`, and the maintained Antigravity provider mirror—plus the following upstream packages under their original names:
 
+- `pi-antigravity@0.7.2`
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.8.0`
 - `@luxusai/pi-hindsight@0.12.0`
