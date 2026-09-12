@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises"
+import { setTimeout as sleep } from "node:timers/promises"
 import { spawnSync } from "node:child_process"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -21,23 +22,33 @@ for (const entry of entries) {
   }
 }
 
+async function lookupPublishedVersion(name, version) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const result = spawnSync(
+      "npm",
+      ["view", `${name}@${version}`, "version", "--json"],
+      {
+        cwd: root,
+        encoding: "utf8",
+      },
+    )
+    let publishedVersion = ""
+    try {
+      const parsed = JSON.parse(result.stdout.trim())
+      publishedVersion = Array.isArray(parsed) ? (parsed.at(-1) ?? "") : parsed
+    } catch {
+      publishedVersion = result.stdout.trim().replace(/^"|"$/g, "")
+    }
+    if (result.status === 0 && publishedVersion === version)
+      return publishedVersion
+    if (attempt < 4) await sleep(2_000 * (attempt + 1))
+  }
+  return ""
+}
+
 const missing = []
 for (const { name, version } of publishable) {
-  const result = spawnSync(
-    "npm",
-    ["view", `${name}@${version}`, "version", "--json"],
-    {
-      cwd: root,
-      encoding: "utf8",
-    },
-  )
-  let publishedVersion = ""
-  try {
-    publishedVersion = JSON.parse(result.stdout.trim())
-  } catch {
-    publishedVersion = result.stdout.trim().replace(/^"|"$/g, "")
-  }
-  if (result.status !== 0 || publishedVersion !== version) {
+  if ((await lookupPublishedVersion(name, version)) !== version) {
     missing.push(`${name}@${version}`)
   }
 }
