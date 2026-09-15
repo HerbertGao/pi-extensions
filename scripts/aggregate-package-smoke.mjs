@@ -52,6 +52,7 @@ async function pathExists(path) {
 }
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
+process.env.PI_CODING_AGENT_DIR = join(stageDir, ".pi-agent")
 const diagnosticsDir = process.env.AGGREGATE_SMOKE_ARTIFACT_DIR
 const phaseLog = []
 let currentPhase
@@ -1061,6 +1062,10 @@ try {
   for (const [dependency, range] of Object.entries(
     mcpManifest.dependencies ?? {},
   )) {
+    if (dependency === "undici") {
+      // undici is shared with pi-web-access and promoted to the newer ^8.9.0 range.
+      continue
+    }
     if (sourceManifest.dependencies[dependency] !== range) {
       throw new Error(
         `Expected pi-mcp-adapter dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
@@ -1713,10 +1718,11 @@ try {
       )
     }
   }
-  const expectedEffectVersion = fastModeManifest.dependencies.effect
+  const expectedEffectVersion = fastModeManifest.dependencies?.effect
   if (
+    expectedEffectVersion &&
     sourceManifest.dependencies["@effect/platform-node-shared"] !==
-    expectedEffectVersion
+      expectedEffectVersion
   ) {
     throw new Error(
       `Expected platform-node-shared compatibility pin ${expectedEffectVersion}, got ${sourceManifest.dependencies["@effect/platform-node-shared"]}`,

@@ -42,11 +42,13 @@ import {
 	isScrollBottomInput,
 	renderScrollButton,
 	resetScrollButtonState,
+	restoreOfficialScrollToEnd,
 	scheduleScrollButtonSync,
 	setScrollButtonHovered,
 	setScrollButtonVisible,
 	setScrollButtonWidget,
 	setToolMouseTui,
+	syncOfficialScrollToEnd,
 	getScrollButtonVisible,
 	getScrollButtonWidget,
 	getToolMouseTui,
@@ -879,6 +881,7 @@ export function teardownToolMouseInteraction(
 	}
 	restoreToolMouseRenderPatch();
 	restoreFullscreenViewportInput(getToolMouseTui());
+	restoreOfficialScrollToEnd(getToolMouseTui());
 	resetScrollButtonState();
 	setToolMouseTui(null);
 	toolMouseUi = null;
@@ -894,6 +897,7 @@ export function resetToolHoverState(): void {
 	setHoveredCompactAssistant(null);
 	setScrollButtonVisible(false);
 	setScrollButtonHovered(false);
+	restoreOfficialScrollToEnd(getToolMouseTui());
 	releaseFullscreenToolMouseMotion(getToolMouseTui());
 }
 
@@ -916,12 +920,12 @@ export function installToolMouseInteraction(
 		setToolMouseTui(tui);
 		setToolTuiFullscreen(fullscreenLazyTui(tui));
 		if (isLazyProxyTui(tui)) {
-			disableOfficialScrollToEnd(tui);
+			syncOfficialScrollToEnd(tui);
 			patchFullscreenViewportInput(tui);
 			ensureFullscreenToolMouseMotion(tui);
 			setScrollButtonWidget({
 				render: (width: number) => {
-					disableOfficialScrollToEnd(tui);
+					syncOfficialScrollToEnd(tui);
 					patchFullscreenViewportInput(tui);
 					ensureFullscreenToolMouseMotion(tui);
 					return renderScrollButton(width, theme);

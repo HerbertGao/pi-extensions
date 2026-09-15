@@ -50,7 +50,7 @@ interface DiffTheme {
 }
 
 type DiffLineKind = "add" | "remove" | "context";
-type DiffEntryKind = "line" | "meta" | "hunk" | "file";
+type DiffEntryKind = "line" | "omission" | "meta" | "hunk" | "file";
 
 export interface DiffLineEntry {
 	kind: "line";
@@ -64,13 +64,19 @@ export interface DiffLineEntry {
 	hunkIndex: number;
 }
 
-interface DiffMetaEntry {
-	kind: Exclude<DiffEntryKind, "line">;
+export interface DiffOmissionEntry {
+	kind: "omission";
 	raw: string;
 	hunkIndex: number;
 }
 
-type ParsedDiffEntry = DiffLineEntry | DiffMetaEntry;
+interface DiffMetaEntry {
+	kind: Exclude<DiffEntryKind, "line" | "omission">;
+	raw: string;
+	hunkIndex: number;
+}
+
+type ParsedDiffEntry = DiffLineEntry | DiffOmissionEntry | DiffMetaEntry;
 
 export interface ParsedDiff {
 	entries: ParsedDiffEntry[];
@@ -94,6 +100,7 @@ interface RenderedRow {
 interface SplitDiffRow {
 	left?: DiffLineEntry;
 	right?: DiffLineEntry;
+	omission?: DiffOmissionEntry;
 	meta?: DiffMetaEntry;
 	hunkIndex: number | null;
 }
@@ -544,7 +551,7 @@ export function parseDiff(diffText: string): ParsedDiff {
 
 		// Pi 用空白行号填充省略上下文；它不是源码行，也不推进行号游标。
 		if (!hasHunkHeader && PI_OMISSION_LINE_PATTERN.test(rawLine)) {
-			entries.push(createMetaEntry(rawLine, hunkIndex));
+			entries.push({ kind: "omission", raw: rawLine, hunkIndex });
 			continue;
 		}
 
@@ -814,6 +821,12 @@ function buildSplitRows(entries: ParsedDiffEntry[]): SplitDiffRow[] {
 		const entry = entries[index];
 		if (!entry) {
 			break;
+		}
+
+		if (entry.kind === "omission") {
+			rows.push({ omission: entry, hunkIndex: entry.hunkIndex || null });
+			index++;
+			continue;
 		}
 
 		if (entry.kind !== "line") {
@@ -1799,8 +1812,44 @@ interface DiffRenderContext {
 	showHashlineAnchors: boolean;
 }
 
-function processDiffEntries(
+const OMISSION_GLYPH = "⋮";
+
+function createOmissionRenderLine(entry: DiffOmissionEntry, compact = false): DiffLineEntry {
+	return {
+		kind: "line",
+		lineKind: "context",
+		oldLineNumber: null,
+		newLineNumber: null,
+		fallbackLineNumber: compact ? "" : OMISSION_GLYPH,
+		content: compact ? OMISSION_GLYPH : "",
+		raw: entry.raw,
+		hunkIndex: entry.hunkIndex,
+	};
+}
+
+function materializeOmissionEntries(
 	entries: ParsedDiffEntry[],
+	compact = false,
+): (DiffLineEntry | DiffMetaEntry)[] {
+	return entries.map((entry) =>
+		entry.kind === "omission" ? createOmissionRenderLine(entry, compact) : entry,
+	);
+}
+
+function omitTerminalOmissions(entries: ParsedDiffEntry[]): ParsedDiffEntry[] {
+	let lastLineIndex = -1;
+	for (let index = entries.length - 1; index >= 0; index--) {
+		if (entries[index]?.kind === "line") {
+			lastLineIndex = index;
+			break;
+		}
+	}
+
+	return entries.filter((entry, index) => entry.kind !== "omission" || index < lastLineIndex);
+}
+
+function processDiffEntries(
+	entries: (DiffLineEntry | DiffMetaEntry)[],
 	ctx: DiffRenderContext,
 	processLine: (entry: DiffLineEntry) => string[],
 ): RenderedRow[] {
@@ -1821,7 +1870,7 @@ function renderUnified(
 	ctx: DiffRenderContext,
 	lineNumberWidth: number,
 ): RenderedRow[] {
-	return processDiffEntries(entries, ctx, (entry) => {
+	return processDiffEntries(materializeOmissionEntries(entries), ctx, (entry) => {
 		const lineNumber =
 			entry.lineKind === "add"
 				? formatLineNumberLabel(
@@ -1871,6 +1920,10 @@ function toUnifiedFallbackRows(
 ): RenderedRow[] {
 	const flattened: ParsedDiffEntry[] = [];
 	for (const row of rows) {
+		if (row.omission) {
+			flattened.push(row.omission);
+			continue;
+		}
 		if (row.meta) {
 			flattened.push(row.meta);
 			continue;
@@ -1886,7 +1939,7 @@ function toUnifiedFallbackRows(
 }
 
 function renderCompact(entries: ParsedDiffEntry[], ctx: DiffRenderContext): RenderedRow[] {
-	return processDiffEntries(entries, ctx, (entry) => {
+	return processDiffEntries(materializeOmissionEntries(entries, true), ctx, (entry) => {
 		const codeText = normalizeCodeWhitespace(
 			getCompactLineRenderContent(entry, ctx.showHashlineAnchors),
 		);
@@ -2105,8 +2158,9 @@ function renderSplit(
 			continue;
 		}
 
+		const omissionLine = row.omission ? createOmissionRenderLine(row.omission) : undefined;
 		const leftCells = renderSplitCell(
-			row.left,
+			omissionLine ?? row.left,
 			"left",
 			leftWidth,
 			splitLineNumberWidth,
@@ -2120,7 +2174,7 @@ function renderSplit(
 			showHashlineAnchors,
 		);
 		const rightCells = renderSplitCell(
-			row.right,
+			omissionLine ?? row.right,
 			"right",
 			rightWidth,
 			splitLineNumberWidth,
@@ -2575,18 +2629,19 @@ export function renderEditDiffResult(
 		return new Text(theme.fg("muted", "↳ no diff data"), 0, 0);
 	}
 
-	const splitRows = buildSplitRows(parsed.entries);
+	const renderEntries = omitTerminalOmissions(parsed.entries);
+	const splitRows = buildSplitRows(renderEntries);
 	const showHashlineAnchors =
 		options.expanded === true &&
-		parsed.entries.some((entry) => entry.kind === "line" && !!entry.hashlineAnchorContent);
-	const lineNumberWidth = getLineNumberWidth(parsed.entries, showHashlineAnchors);
+		renderEntries.some((entry) => entry.kind === "line" && !!entry.hashlineAnchorContent);
+	const lineNumberWidth = getLineNumberWidth(renderEntries, showHashlineAnchors);
 	const palette = resolveDiffPalette(theme);
 	// Rich diffs use ccstyle's self shell. Keep the panel transparent so the
 	// separator cannot leak toolSuccessBg across the entire new column.
 	const containerBgAnsi = undefined;
 	const language = resolveLanguageFromPath(options.filePath);
 	const cache = createDiffRenderCache();
-	const highlightLine = createCodeLineHighlighter(language, theme, parsed.entries, () => {
+	const highlightLine = createCodeLineHighlighter(language, theme, renderEntries, () => {
 		cache.invalidate();
 		options.invalidate?.();
 	});
@@ -2635,7 +2690,7 @@ export function renderEditDiffResult(
 			const processBudget = resolveDiffProcessBudget(displayLimit, wordWrap);
 			// Only highlight/render a prefix that can fill the display limit; full-diff
 			// LCS + syntax highlight on thousands of hidden lines is pure waste when collapsed.
-			const entryBudget = takeEntriesForLineBudget(parsed.entries, processBudget);
+			const entryBudget = takeEntriesForLineBudget(renderEntries, processBudget);
 			const splitBudget = takeSplitRowsForBudget(splitRows, processBudget);
 			const inlineHighlights = buildInlineHighlightMap(splitBudget.rows);
 			const renderCtx: DiffRenderContext = {

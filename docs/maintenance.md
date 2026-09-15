@@ -11,7 +11,7 @@
 | Local package set  | Upstream                   | Imported baseline    | Notes                                                                                                                                                                                       |
 | ------------------ | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons.            |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `9f20006` (`0.8.70`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                               |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `e43e004` (`0.8.71`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                               |
 | `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                                 |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `22277b7` (`0.1.0`)  | Source import and aggregate entry are covered by smoke; write ownership, automode, and subagent compaction guards are maintained locally. Docs-only commits through `d7ecfc0` are reviewed. |
 
@@ -19,7 +19,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.70`         | `0.8.70`         | `9f20006`       |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.8.71`         | `e43e004`       |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `0.19.0`         | `ad81024`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
@@ -238,29 +238,35 @@ The aggregate package also pins the following npm packages under their original 
 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
-| `@dietrichgebert/ponytail`           | `4.9.0`  | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.8.0`  | `juicesharp/rpiv-mono`      |
+| `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`   |
+| `@juicesharp/rpiv-ask-user-question` | `2.10.1` | `juicesharp/rpiv-mono`      |
 | `@luxusai/pi-hindsight`              | `0.12.0` | `luxus/pi-hindsight`        |
-| `@narumitw/pi-btw`                   | `0.57.0` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-btw`                   | `0.58.1` | `narumiruna/pi-extensions`  |
 | `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
-| `@pi-plugins/fast-mode`              | `0.1.10` | `k3dom/pi-plugins`          |
-| `@tifan/pi-copy-response`            | `0.2.6`  | `tifandotme/pi-extensions`  |
+| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`          |
+| `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-handoff`                  | `2.2.1`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-inline-skills`            | `1.0.5`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-mermaid-open`             | `0.2.0`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-preferred-thinking`       | `1.0.1`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-recap`                    | `0.4.6`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-mermaid-open`             | `0.2.1`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions`  |
+| `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
-| `pi-mcp-adapter`                     | `2.31.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.34.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-lens`                            | `4.1.3`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 | `@czottmann/pi-automode`             | `1.15.0` | `czottmann/pi-automode`     |
 
-The reviewed `pi-mcp-adapter@2.33.0` release is **deferred**, so the aggregate pin and bundled copy remain at `2.32.1`. Its OAuth transaction support still resolves `@modelcontextprotocol/client` and `@modelcontextprotocol/core` from pinned `pkg.pr.new` preview tarballs while npm latest is `2.0.0`, it adds an `undici@^6.28.1` dependency that conflicts with the aggregate's single `undici@^8.9.0` contract, and it adds the native `fs-native-extensions@1.5.1` package. Re-evaluate when the MCP SDK publishes the corresponding release and the undici range can be reconciled.
-
 The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #184 companion review accepted ten released updates:
+
+- `@dietrichgebert/ponytail@4.10.0`: asset and runtime hook updates.
+- `@juicesharp/rpiv-ask-user-question@2.10.1`: option list and tab bar view refinements; advances `rpiv-config` to `^2.10.1`.
+- `@pi-plugins/fast-mode@0.1.12`: inlines its Effect dependencies, allowing removal of unneeded `@effect/platform-node`, `@effect/platform-node-shared`, and `effect` from aggregate dependencies.
+- `@tifan/pi-copy-response@0.2.7`, `@tifan/pi-inline-skills@1.0.6`, `@tifan/pi-mermaid-open@0.2.1`, `@tifan/pi-preferred-thinking@1.0.2`, `@tifan/pi-recap@0.4.7`: released updates from `tifandotme/pi-extensions`.
+- `pi-mcp-adapter@2.34.0`: adds agent-plugin and Claude-plugin loaders, auth flow enhancements, and lazily defers session runtime when no eager servers are configured; reconciles shared `undici` with `pi-web-access` on `^8.9.0`.
 
 The issue #134 companion review accepted six independent releases:
 

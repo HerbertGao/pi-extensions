@@ -83,9 +83,31 @@ export function fullscreenLazyTui(tui: any): boolean {
 	return isLazyProxyTui(tui) && tui.mode === "fullscreen";
 }
 
+const OFFICIAL_SCROLL_TO_END_KEY = Symbol.for("pi.ccstyle.official-scroll-to-end");
+
 /** 关掉 pi 0.85 Jump to latest overlay，避免和本仓库 dock 按钮叠两层。 */
 export function disableOfficialScrollToEnd(tui: any): void {
-	if (typeof tui?.scrollToEndIndicator === "function") tui.scrollToEndIndicator = undefined;
+	if (!tui) return;
+	const current = tui.scrollToEndIndicator;
+	if (typeof current !== "function") return;
+	if (!tui[OFFICIAL_SCROLL_TO_END_KEY]) {
+		tui[OFFICIAL_SCROLL_TO_END_KEY] = { original: current };
+	}
+	tui.scrollToEndIndicator = undefined;
+}
+
+/** /ccstyle off 或 teardown 时还回官方 overlay。 */
+export function restoreOfficialScrollToEnd(tui: any): void {
+	if (!tui) return;
+	const original = tui[OFFICIAL_SCROLL_TO_END_KEY]?.original;
+	if (typeof original === "function") tui.scrollToEndIndicator = original;
+	tui[OFFICIAL_SCROLL_TO_END_KEY] = undefined;
+}
+
+/** on/compact 用 dock 按钮；off 还回 pi 原生 Jump to latest。 */
+export function syncOfficialScrollToEnd(tui: any): void {
+	if (toolMouseInteractionActive()) disableOfficialScrollToEnd(tui);
+	else restoreOfficialScrollToEnd(tui);
 }
 
 /** 官方 fullscreen：是否已跟随 transcript 底部（按钮隐藏条件）。 */
