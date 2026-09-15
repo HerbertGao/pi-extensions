@@ -334,6 +334,7 @@ export function createAutocompleteProvider(
 	current: AutocompleteProvider,
 	getReferences: () => Promise<SessionReference[]>,
 	currentCwd: string,
+	isCurrent: () => boolean = () => true,
 ): AutocompleteProvider {
 	return {
 		triggerCharacters: ["@"],
@@ -346,14 +347,15 @@ export function createAutocompleteProvider(
 			const currentLine = lines[cursorLine] ?? "";
 			const query = extractMentionQuery(currentLine.slice(0, cursorCol));
 			if (query === undefined) {
-				return current.getSuggestions(lines, cursorLine, cursorCol, options);
+				const suggestions = await current.getSuggestions(lines, cursorLine, cursorCol, options);
+				return options.signal.aborted || !isCurrent() ? null : suggestions;
 			}
 
 			const [baseSuggestions, references] = await Promise.all([
 				current.getSuggestions(lines, cursorLine, cursorCol, options),
 				getReferences(),
 			]);
-			if (options.signal.aborted) return null;
+			if (options.signal.aborted || !isCurrent()) return null;
 
 			const sessionItems = filterSessions(references, query, currentCwd);
 			const fileItems = baseSuggestions?.prefix === `@${query}` ? baseSuggestions.items : [];
@@ -416,6 +418,7 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 		subagentIds.clear();
 		clearLiveSubagentRecords();
 		let loadErrorShown = false;
+		const currentCwd = ctx.cwd;
 		const currentSessionId = ctx.sessionManager.getSessionId();
 		const currentSessionFile = ctx.sessionManager.getSessionFile();
 		let sessionsPromise: Promise<SessionInfo[]> | undefined;
@@ -429,7 +432,7 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 					),
 				)
 				.catch((error: unknown) => {
-					if (!loadErrorShown) {
+					if (!loadErrorShown && generation === sessionGeneration) {
 						loadErrorShown = true;
 						const reason = error instanceof Error ? error.message : String(error);
 						ctx.ui.notify(`session-reference: failed to load sessions: ${reason}`, "error");
@@ -445,6 +448,8 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 			| undefined;
 		const getReferences = async (): Promise<SessionReference[]> => {
 			const sessions = await getSessions();
+			// Session replacement can invalidate this closure while listAll() is pending.
+			if (generation !== sessionGeneration) return [];
 			const subagentKey = [...subagentIds].join("\0");
 			if (
 				referencesCache &&
@@ -455,21 +460,27 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 			}
 			const ordered = orderSessionReferences(
 				mergeReferences(sessions, liveSubagentReferences(subagentIds, currentSessionId)),
-				ctx.cwd,
+				currentCwd,
 			);
 			referencesCache = { sessions, subagentKey, ordered };
 			return ordered;
 		};
 
 		getAvailableReferences = getReferences;
-		if (ctx.mode === "tui") {
+		const isTui = ctx.mode === "tui";
+		if (isTui) {
 			void getReferences();
 			// Register after other session_start handlers. pi-fff claims every @
 			// prefix, so a provider installed before it would never see session mentions.
 			setTimeout(() => {
 				if (generation !== sessionGeneration) return;
 				ctx.ui.addAutocompleteProvider((current) =>
-					createAutocompleteProvider(current, getReferences, ctx.cwd),
+					createAutocompleteProvider(
+						current,
+						getReferences,
+						currentCwd,
+						() => generation === sessionGeneration,
+					),
 				);
 			}, 0);
 		}
@@ -479,14 +490,23 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 		const referenceIds = extractSessionReferenceIds(event.prompt);
 		if (referenceIds.length === 0) return;
 
+		const generation = sessionGeneration;
 		const currentSessionId = ctx.sessionManager.getSessionId();
 		const references = await (getAvailableReferences?.() ??
-			SessionManager.listAll().then((sessions) =>
-				mergeReferences(
-					sessions.filter((session) => session.id !== currentSessionId),
-					liveSubagentReferences(subagentIds, currentSessionId),
-				),
-			));
+			SessionManager.listAll()
+				.then((sessions) =>
+					mergeReferences(
+						sessions.filter((session) => session.id !== currentSessionId),
+						liveSubagentReferences(subagentIds, currentSessionId),
+					),
+				)
+				.catch((error: unknown) => {
+					if (generation !== sessionGeneration) return [];
+					const reason = error instanceof Error ? error.message : String(error);
+					ctx.ui.notify(`session-reference: failed to load sessions: ${reason}`, "error");
+					return [];
+				}));
+		if (generation !== sessionGeneration) return;
 		const referencesById = new Map<string, SessionReference>();
 		const referencesByName = new Map<string, SessionReference>();
 		const ambiguousNames = new Set<string>();
@@ -565,9 +585,7 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("session_before_switch", () => {
-		subagentIds.clear();
-		clearLiveSubagentRecords();
-		getAvailableReferences = undefined;
+		// This event can cancel; preserve current-session state until shutdown.
 	});
 
 	pi.on("session_shutdown", () => {
