@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  */
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext, SessionEntry, Theme, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import { tmpdir } from "node:os";
@@ -116,9 +116,20 @@ export class FakePi {
 		options: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn" } | undefined;
 	}> = [];
 	readonly sessionManager: FakeSessionManager;
+	thinkingLevel: ThinkingLevel = "off";
+	readonly thinkingLevelChanges: ThinkingLevel[] = [];
 
 	constructor(sessionManager: FakeSessionManager = new FakeSessionManager()) {
 		this.sessionManager = sessionManager;
+	}
+
+	getThinkingLevel(): ThinkingLevel {
+		return this.thinkingLevel;
+	}
+
+	setThinkingLevel(level: ThinkingLevel): void {
+		this.thinkingLevelChanges.push(level);
+		this.thinkingLevel = level;
 	}
 
 	on(event: string, handler: unknown): void {

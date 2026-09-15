@@ -119,12 +119,14 @@ describe("Online Context Compact extension", () => {
 		});
 		const abort = vi.fn();
 		const compactCalls: CompactOptions[] = [];
+		let compactionThinkingLevel: ReturnType<FakePi["getThinkingLevel"]> | undefined;
 		let finishCompaction!: () => void;
 		const compactionGate = new Promise<void>((resolve) => {
 			finishCompaction = resolve;
 		});
 		let context: ExtensionContext;
 		const compact = (options: CompactOptions = {}): void => {
+			compactionThinkingLevel = pi.getThinkingLevel();
 			compactCalls.push(options);
 			void compactionGate.then(() => pi
 				.emit(
@@ -152,9 +154,11 @@ describe("Online Context Compact extension", () => {
 					tokensBefore: 195_000,
 				}));
 		};
+		pi.thinkingLevel = "max";
 		context = fakeContext(manager, {
 			abort,
 			compact,
+			model: { reasoning: true } as ExtensionContext["model"],
 			isIdle: () => idle,
 			getSystemPrompt: () => "test prompt",
 			getContextUsage: () => ({ tokens: 195_000, contextWindow: 200_000, percent: 97.5 }),
@@ -205,6 +209,9 @@ describe("Online Context Compact extension", () => {
 		await vi.waitFor(() => expect(pi.sentMessages).toHaveLength(1));
 
 		expect(compactCalls).toHaveLength(1);
+		expect(compactionThinkingLevel).toBe("medium");
+		expect(pi.thinkingLevelChanges).toEqual(["medium", "max"]);
+		expect(pi.thinkingLevel).toBe("max");
 		expect(compactCalls[0]?.customInstructions).toBe(BOUNDARY_COMPACTION_INSTRUCTIONS);
 		expect(firstSettlementFinished).toBe(false);
 		expect(pi.sentMessages).toEqual([

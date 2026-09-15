@@ -37,7 +37,7 @@ const PROGRESS = {
 
 type CompactionRequest = { customInstructions?: string; reason: string };
 
-async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void> {
+async function runCompactionScenario(requestedCompactions: 1 | 2, nativeCompaction = false): Promise<void> {
 	const cwd = await mkdtemp(join(tmpdir(), "sol-pi-occ-session-"));
 	const agentDir = join(cwd, "agent");
 	await mkdir(agentDir);
@@ -46,11 +46,18 @@ async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void>
 	try {
 		const finalReply = `final reply after ${requestedCompactions} online compaction${requestedCompactions === 1 ? "" : "s"}`;
 		const faux = fauxProvider({
-			provider: `sol-pi-occ-session-${requestedCompactions}`,
-			api: `sol-pi-occ-session-api-${requestedCompactions}`,
-			models: [{ id: `sol-pi-occ-session-model-${requestedCompactions}`, contextWindow: 4_096, maxTokens: 1_024 }],
+			provider: `sol-pi-occ-session-${requestedCompactions}-${nativeCompaction ? "native" : "extension"}`,
+			api: `sol-pi-occ-session-api-${requestedCompactions}-${nativeCompaction ? "native" : "extension"}`,
+			models: [{
+				id: `sol-pi-occ-session-model-${requestedCompactions}-${nativeCompaction ? "native" : "extension"}`,
+				reasoning: nativeCompaction,
+				contextWindow: 4_096,
+				maxTokens: 1_024,
+			}],
 		});
 		const responses: FauxResponseStep[] = [];
+		const nativeReasoningLevels: unknown[] = [];
+		const continuationReasoningLevels: unknown[] = [];
 		for (let ordinal = 1; ordinal <= requestedCompactions; ordinal++) {
 			const openPlan = fauxToolCall("update_plan", { steps: OPEN }, { id: `plan-open-${ordinal}` });
 			responses.push(
@@ -67,8 +74,15 @@ async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void>
 					{ stopReason: "toolUse" },
 				),
 			);
+			if (nativeCompaction) {
+				responses.push(async (_context, options) => {
+					nativeReasoningLevels.push(options?.reasoning);
+					return fauxAssistantMessage(`native summary ${ordinal}`);
+				});
+			}
 		}
-		responses.push(async () => {
+		responses.push(async (_context, options) => {
+			continuationReasoningLevels.push(options?.reasoning);
 			await new Promise((resolve) => setTimeout(resolve, 80));
 			return fauxAssistantMessage(finalReply);
 		});
@@ -78,16 +92,18 @@ async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void>
 		const extension: ExtensionFactory = (pi) => {
 			pi.registerProvider(faux.provider);
 			createOnlineContextCompactExtension({ cacheWriteReadRatio: 0, keepRecentTokens: 150 })(pi);
-			pi.on("session_before_compact", (event) => {
-				compactionRequests.push({ customInstructions: event.customInstructions, reason: event.reason });
-				return {
-					compaction: {
-						summary: `deterministic compacted history ${"s".repeat(6_000)}`,
-						firstKeptEntryId: event.preparation.firstKeptEntryId,
-						tokensBefore: event.preparation.tokensBefore,
-					},
-				};
-			});
+			if (!nativeCompaction) {
+				pi.on("session_before_compact", (event) => {
+					compactionRequests.push({ customInstructions: event.customInstructions, reason: event.reason });
+					return {
+						compaction: {
+							summary: `deterministic compacted history ${"s".repeat(6_000)}`,
+							firstKeptEntryId: event.preparation.firstKeptEntryId,
+							tokensBefore: event.preparation.tokensBefore,
+						},
+					};
+				});
+			}
 		};
 
 		const settingsManager = SettingsManager.inMemory({
@@ -120,7 +136,7 @@ async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void>
 			cwd,
 			agentDir,
 			model: faux.getModel(),
-			thinkingLevel: "off",
+			thinkingLevel: nativeCompaction ? "high" : "off",
 			tools: ["update_plan"],
 			resourceLoader,
 			sessionManager,
@@ -138,10 +154,12 @@ async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void>
 		});
 
 		expect(compactionRequests).toEqual(
-			Array.from({ length: requestedCompactions }, () => ({
-				customInstructions: BOUNDARY_COMPACTION_INSTRUCTIONS,
-				reason: "manual",
-			})),
+			nativeCompaction
+				? []
+				: Array.from({ length: requestedCompactions }, () => ({
+						customInstructions: BOUNDARY_COMPACTION_INSTRUCTIONS,
+						reason: "manual",
+					})),
 		);
 		const branch = sessionManager.getBranch();
 		expect(branch.filter((entry) => entry.type === "compaction")).toHaveLength(requestedCompactions);
@@ -154,7 +172,11 @@ async function runCompactionScenario(requestedCompactions: 1 | 2): Promise<void>
 					entry.display === false,
 			),
 		).toHaveLength(requestedCompactions);
-		expect(faux.state.callCount).toBe(requestedCompactions * 2 + 1);
+		expect(faux.state.callCount).toBe(requestedCompactions * (nativeCompaction ? 3 : 2) + 1);
+		if (nativeCompaction) {
+			expect(nativeReasoningLevels).toEqual(Array(requestedCompactions).fill("medium"));
+			expect(continuationReasoningLevels).toEqual(["high"]);
+		}
 		expect(session.getLastAssistantText()).toBe(finalReply);
 		expect(settledCount).toBe(requestedCompactions + 1);
 		expect(session.isStreaming).toBe(false);
@@ -172,5 +194,9 @@ describe("Online Context Compact with a real AgentSession", () => {
 
 	it("settles two consecutive automatic compactions before the original prompt returns", async () => {
 		await runCompactionScenario(2);
+	}, 10_000);
+
+	it("lowers high thinking for native compaction summaries", async () => {
+		await runCompactionScenario(1, true);
 	}, 10_000);
 });
