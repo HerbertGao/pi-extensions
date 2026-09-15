@@ -39,6 +39,8 @@ network:
   allowed:
     - defaults
     - node
+    - github.com
+    - api.github.com
     - play.googleapis.com
 tools:
   timeout: 600
@@ -102,6 +104,14 @@ pre-agent-steps:
         printf '%s\n' '{"security":{"auth":{"selectedType":"gemini-api-key"}}}' > "$tmp"
       fi
       mv "$tmp" "$settings"
+  - name: Configure proxy for agent tools
+    run: |
+      set -euo pipefail
+      prefix="$(npm config get prefix)"
+      mkdir -p "$prefix/etc"
+      printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" > "$prefix/etc/npmrc"
+      printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" >> "$HOME/.npmrc"
+      git config --global http.proxy http://172.30.0.10:3128
 steps:
   - name: Require CI trigger credential
     env:
@@ -126,6 +136,8 @@ steps:
       "$bun_dir/bun" --version
   - name: Install dependencies
     run: bun install --frozen-lockfile
+  - name: Prewarm npm cache for aggregate packaging
+    run: (cd packages/pi-extensions && npm pack --dry-run)
 max-ai-credits: 80
 timeout-minutes: 90
 max-turns: 100

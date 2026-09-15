@@ -15,11 +15,24 @@ import { fileURLToPath } from "node:url"
 import { parseJson, parseNpmPackOutput } from "./npm-pack-json.mjs"
 import { run } from "./process.mjs"
 
+const proxy =
+  process.env.HTTPS_PROXY ||
+  process.env.https_proxy ||
+  process.env.HTTP_PROXY ||
+  process.env.http_proxy
 const npmEnv = {
   ...process.env,
   // Outer `npm pack --dry-run` must not suppress staging tarballs.
   NPM_CONFIG_DRY_RUN: "false",
   npm_config_dry_run: "false",
+  ...(proxy
+    ? {
+        npm_config_proxy: proxy,
+        npm_config_https_proxy: proxy,
+        http_proxy: proxy,
+        https_proxy: proxy,
+      }
+    : {}),
 }
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const aggregateDir = join(root, "packages", "pi-extensions")
@@ -125,6 +138,7 @@ async function buildMaterializedNodeModules(stageDir) {
     "npm",
     [
       "install",
+      "--prefer-offline",
       "--ignore-scripts",
       "--legacy-peer-deps",
       "--package-lock=false",
