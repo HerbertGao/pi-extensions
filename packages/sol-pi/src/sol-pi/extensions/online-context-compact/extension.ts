@@ -2,12 +2,13 @@
  * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  */
-import type { AgentMessage, AgentToolResult } from "@earendil-works/pi-agent-core";
+import type { AgentMessage, AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import {
 	buildSessionContext,
 	estimateTokens,
 	findCutPoint,
 	sessionEntryToContextMessages,
+	type ExtensionAPI,
 	type ExtensionContext,
 	type ExtensionFactory,
 	type SessionEntry,
@@ -165,6 +166,37 @@ function validPositiveInteger(value: unknown): value is number {
 	return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
+type CompactionThinkingOverride = {
+	readonly previous: ThinkingLevel;
+	readonly applied: ThinkingLevel;
+};
+
+// Native summaries share their output cap with reasoning; reserve the cap for summary text.
+function lowerCompactionThinking(
+	pi: ExtensionAPI,
+	reasoning: boolean,
+): CompactionThinkingOverride | undefined {
+	if (!reasoning) return;
+	try {
+		const previous = pi.getThinkingLevel();
+		if (previous !== "high" && previous !== "xhigh" && previous !== "max") return;
+		pi.setThinkingLevel("medium");
+		const applied = pi.getThinkingLevel();
+		return applied === previous ? undefined : { previous, applied };
+	} catch {
+		return;
+	}
+}
+
+function restoreCompactionThinking(pi: ExtensionAPI, override: CompactionThinkingOverride | undefined): void {
+	if (!override) return;
+	try {
+		if (pi.getThinkingLevel() === override.applied) pi.setThinkingLevel(override.previous);
+	} catch {
+		// A compaction result must not be masked by a best-effort state restore.
+	}
+}
+
 function releaseParentContinuation(continuation: PendingContinuation | undefined): void {
 	if (continuation) setTimeout(continuation.resolve, 0);
 }
@@ -182,6 +214,7 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 		let activeDebt: CacheDebt | undefined;
 		let nextContinuation: PendingContinuation | undefined;
 		let compactionInFlight = false;
+		let compactionThinkingOverride: CompactionThinkingOverride | undefined;
 
 		const releaseContinuation = (): void => {
 			const continuation = nextContinuation;
@@ -349,6 +382,7 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 			let compactionError: Error | undefined;
 			try {
 				compactionInFlight = true;
+				compactionThinkingOverride = lowerCompactionThinking(pi, context.model?.reasoning === true);
 				await new Promise<void>((resolve) => {
 					let finished = false;
 					const finish = (): void => {
@@ -382,6 +416,8 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 						},
 					});
 				});
+				restoreCompactionThinking(pi, compactionThinkingOverride);
+				compactionThinkingOverride = undefined;
 				compactionInFlight = false;
 				if (
 					compactionError &&
@@ -422,6 +458,8 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 					await continuation.promise;
 				}
 			} finally {
+				restoreCompactionThinking(pi, compactionThinkingOverride);
+				compactionThinkingOverride = undefined;
 				compactionInFlight = false;
 				activeDebt = undefined;
 				releaseParentContinuation(parentContinuation);
@@ -445,6 +483,8 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 		});
 
 		pi.on("session_shutdown", () => {
+			restoreCompactionThinking(pi, compactionThinkingOverride);
+			compactionThinkingOverride = undefined;
 			releaseContinuation();
 			pendingBoundary = undefined;
 			selected = undefined;
