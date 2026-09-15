@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-extensions",
-  "version": "2026.9.4",
+  "version": "2026.9.5",
   "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
   "keywords": [
     "extensions",
@@ -42,7 +42,7 @@
     "@earendil-works/pi-coding-agent": "^0.84.4",
     "@earendil-works/pi-tui": "^0.84.4",
     "@herbertgao/pi-bark": "0.1.0",
-    "@herbertgao/pi-cc-extensions": "0.9.1",
+    "@herbertgao/pi-cc-extensions": "0.9.2",
     "@herbertgao/pi-subagents": "0.17.1",
     "@herbertgao/resume-from": "0.2.0",
     "@herbertgao/sol-pi": "0.2.0",
