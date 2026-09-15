@@ -1,5 +1,22 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.5
+
+### Patch Changes
+
+- [#196](https://github.com/HerbertGao/pi-extensions/pull/196) [`6eb3639`](https://github.com/HerbertGao/pi-extensions/commit/6eb36392071592619fa3e4a84e12ac4f8f819502) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync reviewed upstream companion packages and port `pi-cc-extensions` 0.8.71:
+
+  - Port `pi-cc-extensions` 0.8.71: render Pi omission markers in line-number gutters with `⋮`, omit trailing terminal markers, and restore official fullscreen scroll-to-end button when `/ccstyle off` or on teardown.
+  - Advance bundled companion pins:
+    - `@dietrichgebert/ponytail@4.10.0`: assets and runtime hooks updates.
+    - `@juicesharp/rpiv-ask-user-question@2.10.1`: option list and tab bar view refinements.
+    - `@pi-plugins/fast-mode@0.1.12`: schema and match helpers update.
+    - `@tifan/pi-copy-response@0.2.7`, `@tifan/pi-inline-skills@1.0.6`, `@tifan/pi-mermaid-open@0.2.1`, `@tifan/pi-preferred-thinking@1.0.2`, `@tifan/pi-recap@0.4.7`: latest bugfixes and compatibility maintenance.
+    - `pi-mcp-adapter@2.34.0`: add plugin loaders, auth flow enhancements, and dependency updates.
+
+- Updated dependencies [[`36375ab`](https://github.com/HerbertGao/pi-extensions/commit/36375abba98b73b7b49f6ded5f84db8c81c9e1d9), [`6eb3639`](https://github.com/HerbertGao/pi-extensions/commit/6eb36392071592619fa3e4a84e12ac4f8f819502)]:
+  - @herbertgao/pi-cc-extensions@0.9.2
+
 ## 2026.9.4
 
 ### Minor Changes
