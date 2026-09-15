@@ -218,9 +218,8 @@ export function decideCompaction(input: {
 		carriedDebtTokens: input.carriedDebtTokens,
 		cacheDebtRepaymentTokens: input.cacheDebtRepaymentTokens,
 		compact,
-		reason: !compressible
-			? "non_positive_saving"
-			: windowProtection
+		reason: compressible
+			? windowProtection
 				? "window_protection"
 				: economic
 					? "economic"
@@ -232,6 +231,7 @@ export function decideCompaction(input: {
 								? "deferred_subsequent_margin"
 								: !firstCompaction && baseEconomic && !carriedDebtGateOpen
 									? "deferred_carried_debt"
-									: "deferred_economic",
+									: "deferred_economic"
+			: "non_positive_saving",
 	};
 }

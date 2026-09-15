@@ -111,6 +111,7 @@ pre-agent-steps:
       mkdir -p "$prefix/etc"
       printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" > "$prefix/etc/npmrc"
       printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" >> "$HOME/.npmrc"
+      git config --system http.proxy http://172.30.0.10:3128 || true
       git config --global http.proxy http://172.30.0.10:3128
 steps:
   - name: Require CI trigger credential
@@ -137,8 +138,8 @@ steps:
   - name: Install dependencies
     run: bun install --frozen-lockfile
   - name: Prewarm npm cache for aggregate packaging
-    run: (cd packages/pi-extensions && npm pack --dry-run)
-max-ai-credits: 80
+    run: bun run test:aggregate
+max-ai-credits: 120
 timeout-minutes: 90
 max-turns: 100
 ---
