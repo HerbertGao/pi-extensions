@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { config } from "../extensions/config/config.ts";
+
 import {
+	disableOfficialScrollToEnd,
 	renderScrollButton,
 	resetScrollButtonState,
+	restoreOfficialScrollToEnd,
 	scheduleScrollButtonSync,
 	setToolMouseTui,
+	syncOfficialScrollToEnd,
 } from "../extensions/renderer/mouse/scroll.ts";
 
 /** 伪造官方 fullscreen 惰性 Proxy TUI：requestRender 每次 get 返回新函数。 */
@@ -59,4 +64,53 @@ test("scroll button: schedule → immediate teardown → reinstall stays safe", 
 	// 3. 清理
 	resetScrollButtonState();
 	setToolMouseTui(null);
+});
+
+// 0.85 关掉官方 overlay，本仓库 dock 按钮照常。
+test("scroll button: disable official overlay keeps dock button", async () => {
+	const { tui, count } = lazyFullscreenTui();
+	tui.scrollToEndIndicator = () => "Jump to latest message";
+	setToolMouseTui(tui);
+	disableOfficialScrollToEnd(tui);
+	assert.equal(tui.scrollToEndIndicator, undefined);
+
+	scheduleScrollButtonSync(tui, WHEEL_DOWN_INPUT);
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.ok(count() >= 1);
+	assert.ok(
+		renderScrollButton(80, fakeTheme()).some((line) => line.includes("Back to bottom")),
+		"关掉官方 overlay 后 dock 按钮仍可见",
+	);
+
+	resetScrollButtonState();
+	setToolMouseTui(null);
+});
+
+// /ccstyle off：还回官方 overlay，不画本仓库 dock 按钮。
+test("scroll button: off mode restores official overlay", () => {
+	const previousMode = config.mode;
+	const { tui } = lazyFullscreenTui();
+	const indicator = () => "Jump to latest message";
+	tui.scrollToEndIndicator = indicator;
+	try {
+		config.mode = "on";
+		disableOfficialScrollToEnd(tui);
+		assert.equal(tui.scrollToEndIndicator, undefined);
+
+		config.mode = "off";
+		syncOfficialScrollToEnd(tui);
+		assert.equal(tui.scrollToEndIndicator, indicator);
+		assert.deepEqual(renderScrollButton(80, fakeTheme()), []);
+
+		config.mode = "on";
+		syncOfficialScrollToEnd(tui);
+		assert.equal(tui.scrollToEndIndicator, undefined);
+
+		restoreOfficialScrollToEnd(tui);
+		assert.equal(tui.scrollToEndIndicator, indicator);
+	} finally {
+		config.mode = previousMode;
+		resetScrollButtonState();
+		setToolMouseTui(null);
+	}
 });

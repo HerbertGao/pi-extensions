@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { stripVTControlCharacters } from "node:util";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -568,7 +569,7 @@ for (const [lineCount, omission] of [
 		const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
 		const parsed = parseDiff(diff);
 
-		assert.deepEqual(parsed.entries.at(-1), { kind: "meta", raw: omission, hunkIndex: 1 });
+		assert.deepEqual(parsed.entries.at(-1), { kind: "omission", raw: omission, hunkIndex: 1 });
 		assert.equal(parsed.stats.context, 5, "omitted context is not an actual source row");
 	});
 }
@@ -580,7 +581,7 @@ test("Pi leading, intermediate, and trailing omissions stay out of source counts
 	);
 	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
 	const parsed = parseDiff(diff);
-	const omissions = parsed.entries.filter((entry) => entry.kind === "meta");
+	const omissions = parsed.entries.filter((entry) => entry.kind === "omission");
 
 	assert.deepEqual(
 		omissions.map((entry) => entry.raw),
@@ -648,3 +649,92 @@ for (const format of ["pi", "unified"] as const) {
 		);
 	});
 }
+
+test("pi omissions use split number gutters and omit the terminal marker", () => {
+	const diff = [
+		"     ...",
+		"  67           src = ./.;",
+		"  68           # Non-vendored: go.mod/go.sum are the source of truth; a single",
+		"  69           # vendorHash covers the whole fetched dependency set. It changes only",
+		"  70           # when dependencies change.",
+		"- 71           vendorHash = pkgs.lib.fakeHash;",
+		'+ 71           vendorHash = "sha256-hf+aCbbDjGOHABCEvj2F7MbsZullpbdSqmkedd7sfIA=";',
+		"  72 ",
+		"  73           # CGO off -> a truly static binary on Linux. On Darwin, Go always links",
+		"  74           # libSystem (Apple ships no fully-static binaries), so the aarch64-darwin",
+		'  75           # artifact is self-contained except for libSystem. The "single static',
+		"     ...",
+	].join("\n");
+	const component = renderEditDiffResult(
+		{ diff },
+		{ expanded: true, filePath: "flake.nix" },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "split", diffIndicatorMode: "bars" },
+		theme,
+		"",
+	);
+	const rows = output(component, 180).map(stripVTControlCharacters);
+	const omissionRows = rows.filter((row) => row.includes("⋮"));
+
+	assert.equal(omissionRows.length, 1, "only the leading omission is useful");
+	assert.equal(omissionRows[0]?.match(/⋮/g)?.length, 2, "both number gutters show the omission");
+	assert.match(omissionRows[0] ?? "", /^\s*⋮\s*│\s*│\s*⋮\s*│/);
+	assert.ok(
+		rows.every((row) => !row.includes("...")),
+		"raw omission text is not source content",
+	);
+	assert.equal(
+		rows.findIndex((row) => /\b75\s*│/.test(row)),
+		rows.length - 1,
+		"the diff ends on the final real context row",
+	);
+	assert.ok(rows.every((row) => visibleWidth(row) <= 180));
+});
+
+test("pi omissions use the unified number gutter", () => {
+	const before = Array.from({ length: 30 }, (_, index) => `line-${index + 1}`);
+	const after = before.map((line, index) => (index === 10 ? `${line} changed` : line));
+	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
+	const component = renderEditDiffResult(
+		{ diff },
+		{ expanded: true, filePath: "sample.txt" },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "unified", diffIndicatorMode: "bars" },
+		theme,
+		"",
+	);
+	const rows = output(component, 80).map(stripVTControlCharacters);
+	const omissionRows = rows.filter((row) => row.includes("⋮"));
+
+	assert.equal(omissionRows.length, 1, "the terminal omission is hidden");
+	assert.match(omissionRows[0] ?? "", /^\s*⋮\s*│/);
+	assert.ok(
+		rows.every((row) => !row.includes("...")),
+		"raw omission text is not rendered",
+	);
+});
+
+test("pi intermediate omissions retain split number gutters", () => {
+	const before = Array.from({ length: 40 }, (_, index) => `line-${index + 1}`);
+	const after = before.map((line, index) =>
+		index === 10 || index === 29 ? `${line} changed` : line,
+	);
+	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
+	const component = renderEditDiffResult(
+		{ diff },
+		{ expanded: true, filePath: "sample.txt" },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "split", diffIndicatorMode: "bars" },
+		theme,
+		"",
+	);
+	const rows = output(component, 140).map(stripVTControlCharacters);
+	const omissionRows = rows.filter((row) => row.includes("⋮"));
+
+	assert.equal(omissionRows.length, 2, "the leading and intermediate omissions remain visible");
+	assert.ok(
+		omissionRows.every((row) => row.match(/⋮/g)?.length === 2 && /^\s*⋮\s*│\s*│\s*⋮\s*│/.test(row)),
+		"each omission stays inside both line-number gutters",
+	);
+	assert.ok(
+		rows.every((row) => !row.includes("...")),
+		"the terminal raw marker is omitted",
+	);
+});
