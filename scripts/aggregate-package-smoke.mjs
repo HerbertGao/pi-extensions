@@ -116,28 +116,28 @@ try {
     )
   }
   const tarballPath = join(stageDir, packed.filename)
-  const installDir = join(stageDir, "install")
-  run(
-    "npm",
-    [
-      "install",
-      "--ignore-scripts",
-      "--no-audit",
-      "--no-fund",
-      "--prefix",
-      installDir,
-      tarballPath,
-    ],
-    { cwd: stageDir },
-  )
+  // The tarball bundles its companion packages. Extract it directly so this
+  // smoke test does not turn a local package check into a registry request.
+  run("tar", ["-xzf", tarballPath, "-C", stageDir], { cwd: stageDir })
+  const packageRoot = join(stageDir, "package")
+  // Resolve non-bundled dependencies from Bun's CI cache, never the registry.
+  const installManifestPath = join(packageRoot, "package.json")
+  const installManifestText = await readFile(installManifestPath, "utf8")
+  const installManifest = JSON.parse(installManifestText)
+  for (const dependency of installManifest.bundledDependencies ?? []) {
+    delete installManifest.dependencies?.[dependency]
+  }
+  await writeFile(installManifestPath, `${JSON.stringify(installManifest)}\n`)
+  try {
+    run("bun", ["install", "--offline", "--no-save", "--ignore-scripts"], {
+      cwd: packageRoot,
+    })
+  } finally {
+    await writeFile(installManifestPath, installManifestText)
+  }
+  const installDir = packageRoot
 
   beginPhase("manifest-and-package-contracts")
-  const packageRoot = join(
-    installDir,
-    "node_modules",
-    "@herbertgao",
-    "pi-extensions",
-  )
   const manifestPath = join(packageRoot, "package.json")
   const manifest = parseJson(await readFile(manifestPath, "utf8"), manifestPath)
   const sourceManifestPath = join(aggregateDir, "package.json")
