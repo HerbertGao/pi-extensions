@@ -97,6 +97,7 @@ describe("Online Context Compact state snapshots", () => {
 
 		expect(after).toMatchObject({
 			epoch: 1,
+			plan: PLAN,
 			pendingProgress: [],
 			nativeCompactionCount: 1,
 			cacheDebtTokens: 1_200,

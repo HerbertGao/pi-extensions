@@ -180,7 +180,9 @@ export function recordCompaction(
 	return {
 		...state,
 		epoch: state.epoch + 1,
-		plan: [],
+		// Keep the plan so the post-compaction rebuild does not reclassify
+		// already-completed steps as a new boundary.
+		plan: [...state.plan],
 		pendingProgress: [],
 		lastContextTokens: null,
 		positiveContextDeltaTotal: 0,
