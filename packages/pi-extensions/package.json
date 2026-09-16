@@ -20,7 +20,6 @@
     "directory": "packages/pi-extensions"
   },
   "files": [
-    "examples/pi-footer.json",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
@@ -37,7 +36,6 @@
   "dependencies": {
     "@ast-grep/cli": "^0.45.0",
     "@ast-grep/napi": "^0.45.0",
-    "@czottmann/pi-automode": "1.16.0",
     "@dietrichgebert/ponytail": "4.10.0",
     "@earendil-works/pi-coding-agent": "^0.84.4",
     "@earendil-works/pi-tui": "^0.84.4",
@@ -112,7 +110,6 @@
     "web-tree-sitter": "0.25.10"
   },
   "bundledDependencies": [
-    "@czottmann/pi-automode",
     "@dietrichgebert/ponytail",
     "@herbertgao/pi-bark",
     "@herbertgao/pi-cc-extensions",
@@ -167,7 +164,6 @@
       "./node_modules/pi-web-access/index.ts",
       "./node_modules/pi-antigravity/src/index.ts",
       "./node_modules/remote-pi/dist/index.js",
-      "./node_modules/@czottmann/pi-automode/extensions/auto-mode.ts",
       "./node_modules/pi-footer/src/index.ts"
     ],
     "themes": [
@@ -175,7 +171,6 @@
       "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-light.json"
     ],
     "skills": [
-      "./node_modules/@czottmann/pi-automode/skills",
       "./node_modules/@dietrichgebert/ponytail/skills",
       "./node_modules/@luxusai/pi-hindsight/skills",
       "./node_modules/pi-mcp-adapter/skills",

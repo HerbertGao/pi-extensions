@@ -21,7 +21,7 @@ Action Fusion decodes `file://` targets with Node's `fileURLToPath()` before res
 
 The queue covers only fused operations registered by this SoL-Pi instance. External processes, direct built-in-tool calls outside the replacement, and unrelated extensions are not globally locked. SoL-Pi hashes the target immediately before launching `then_run` and skips the command if it observes an intervening content change.
 
-When another extension already owns `write`, Action Fusion leaves that tool in place and only registers its `edit` replacement. When `pi-automode` exposes `automode_inspect`, Action Fusion registers neither mutation replacement: nested `then_run` cannot re-enter Pi's public `tool_call` permission pipeline, so disabling the fusion is the safe fallback.
+When another extension already owns `write`, Action Fusion leaves that tool in place and only registers its `edit` replacement.
 
 ## ObservationPack
 

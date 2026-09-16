@@ -80,11 +80,6 @@ export function createActionFusionExtension(options: ActionFusionOptions = {}): 
 	const baseWrite = memoizeByCwd((cwd: string) => createWriteToolDefinition(cwd, options.writeOptions));
 
 	return (pi: ExtensionAPI) => {
-		// then_run executes Bash inside the mutation tool, so it cannot pass through
-		// Pi's public tool_call permission handlers. Leave it to automode instead of
-		// creating a nested shell escape hatch.
-		if (hasExternalToolOwner(pi, "automode_inspect")) return;
-
 		const editTemplate = baseEdit(process.cwd());
 		const writeTemplate = baseWrite(process.cwd());
 
