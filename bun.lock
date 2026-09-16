@@ -33,7 +33,7 @@
     },
     "packages/pi-cc-extensions": {
       "name": "@herbertgao/pi-cc-extensions",
-      "version": "0.9.1",
+      "version": "0.9.2",
       "dependencies": {
         "@shikijs/cli": "^4.0.2",
         "grok-mermaid": "^0.2.2",
@@ -52,16 +52,15 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.9.4",
+      "version": "2026.9.5",
       "dependencies": {
         "@ast-grep/cli": "^0.45.0",
         "@ast-grep/napi": "^0.45.0",
-        "@czottmann/pi-automode": "1.16.0",
         "@dietrichgebert/ponytail": "4.10.0",
         "@earendil-works/pi-coding-agent": "^0.84.4",
         "@earendil-works/pi-tui": "^0.84.4",
         "@herbertgao/pi-bark": "0.1.0",
-        "@herbertgao/pi-cc-extensions": "0.9.1",
+        "@herbertgao/pi-cc-extensions": "0.9.2",
         "@herbertgao/pi-subagents": "0.17.1",
         "@herbertgao/resume-from": "0.2.0",
         "@herbertgao/sol-pi": "0.2.0",
@@ -366,8 +365,6 @@
     "@changesets/types": ["@changesets/types@6.1.0", "", {}, "sha512-rKQcJ+o1nKNgeoYRHKOS07tAMNd3YSN0uHaJOZYjBAgxfV7TUE7JE+z4BzZdQwb5hKaYbayKN5KrYV7ODb2rAA=="],
 
     "@changesets/write": ["@changesets/write@0.4.0", "", { "dependencies": { "@changesets/types": "^6.1.0", "fs-extra": "^7.0.1", "human-id": "^4.1.1", "prettier": "^2.7.1" } }, "sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q=="],
-
-    "@czottmann/pi-automode": ["@czottmann/pi-automode@1.16.0", "", { "dependencies": { "unbash": "4.0.10" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "*" } }, "sha512-rMoQZYl5+gCBhB1ghWX0nXbqWhVcptN27rKpIiow573SL+aMh/GxKTdycCAEeIMpiSmnqoJjHKoWiZqRtVddMg=="],
 
     "@dietrichgebert/ponytail": ["@dietrichgebert/ponytail@4.10.0", "", {}, "sha512-O2H+RWO0ojk8D8yz9q1F82ybKTXpYtrBb7mHkQT+/iCtsXndAxJo05KU1hkLPjV203ABq+cj89Th9jFvdnc6Mg=="],
 
