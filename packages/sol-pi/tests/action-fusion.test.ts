@@ -94,18 +94,6 @@ describe("action fusion then_run", () => {
 		expect([...registered.keys()]).toEqual(["edit"]);
 	});
 
-	it("does not create nested commands when automode is installed", () => {
-		const registered = new Map<string, ToolDefinition>();
-		const pi = {
-			registerTool: (tool: ToolDefinition) => registered.set(tool.name, tool),
-			getAllTools: () => [{ name: "automode_inspect", sourceInfo: { source: "pi-automode" } }],
-		} as unknown as ExtensionAPI;
-
-		createActionFusionExtension()(pi);
-
-		expect(registered).toEqual(new Map());
-	});
-
 	it("adds an optional command and timeout object to edit and write", () => {
 		const { edit, write } = loadFusedTools();
 

@@ -32,7 +32,6 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `pi-lens@4.1.3`
 - `pi-web-access@0.27.0`
 - `remote-pi@0.7.0`
-- `@czottmann/pi-automode@1.15.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
@@ -42,7 +41,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `@narumitw/pi-caffeinate@0.49.7` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends.
 
-`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.1.3` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-automode@1.15.0` preserves dynamic providers on legacy registries. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
+`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.1.3` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 
@@ -52,18 +51,9 @@ If `pi-footer` was installed separately before upgrading to an aggregate release
 pi remove npm:pi-footer@0.5.1
 ```
 
-### Recommended footer
+### Footer
 
-`pi-footer` is enabled by the aggregate. To use the recommended compact layout for MCP, Auto mode, LSP, Ponytail, Remote Pi, and Subagents, copy the bundled example to Pi's user config directory:
-
-```bash
-agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
-mkdir -p "$agent_dir/extensions"
-cp "$agent_dir/npm/node_modules/@herbertgao/pi-extensions/examples/pi-footer.json" \
-  "$agent_dir/extensions/pi-footer.json"
-```
-
-The same copy is linked here as [`examples/pi-footer.json`](examples/pi-footer.json). The example preserves the native path, Git branch, session, token/context, model, and thinking information. It uses a gray `•` separator and shows Remote Pi/Subagents only when those extensions publish status. Restart Pi or run `/reload` after copying. Existing config is intentionally never overwritten automatically.
+`pi-footer` is enabled by the aggregate. It preserves the native path, Git branch, session, token/context, model, and thinking information. Configure it in `$PI_CODING_AGENT_DIR/extensions/pi-footer.json`; use `/footer` for interactive changes. Only one footer-replacement extension should be enabled at a time.
 
 For the intended compact status text, merge these optional companion settings into existing files rather than replacing the files:
 
@@ -83,8 +73,6 @@ For the intended compact status text, merge these optional companion settings in
   }
 }
 ```
-
-The copy command replaces an existing `pi-footer.json`; review or back it up first. Only one footer-replacement extension should be enabled at a time. Use `/footer` for interactive changes.
 
 Pi 0.84.1 or newer should use native `fullscreen` TUI mode.
 

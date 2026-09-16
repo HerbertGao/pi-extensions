@@ -16,7 +16,6 @@ import {
   parseJson,
   parseNpmPackOutput,
 } from "./npm-pack-json.mjs"
-import { runPiAutomodeRealSmoke } from "./pi-automode-real-smoke.mjs"
 import { runPiWebAccessRealSmoke } from "./pi-web-access-real-smoke.mjs"
 import { runRemotePiRealSmoke } from "./remote-pi-real-smoke.mjs"
 import { run } from "./process.mjs"
@@ -171,56 +170,9 @@ try {
     )
   }
 
-  const automodeRoot = join(
-    packageRoot,
-    "node_modules",
-    "@czottmann",
-    "pi-automode",
-  )
-  const automodeManifestPath = join(automodeRoot, "package.json")
-  const automodeManifest = parseJson(
-    await readFile(automodeManifestPath, "utf8"),
-    automodeManifestPath,
-  )
-  const expectedAutomodeVersion =
-    sourceManifest.dependencies["@czottmann/pi-automode"]
-  if (automodeManifest.version !== expectedAutomodeVersion) {
-    throw new Error(
-      `Expected bundled pi-automode ${expectedAutomodeVersion}, got ${automodeManifest.version}`,
-    )
-  }
-  if (automodeManifest.license !== "MIT") {
-    throw new Error(
-      `Expected pi-automode MIT license, got ${automodeManifest.license}`,
-    )
-  }
-  const automodeEntryRelative = "./extensions/auto-mode.ts"
-  if (!automodeManifest.pi?.extensions?.includes(automodeEntryRelative)) {
-    throw new Error(
-      "Bundled pi-automode no longer declares its expected Pi entry",
-    )
-  }
-  const automodeSkillsRelative = "./skills"
-  if (!automodeManifest.pi?.skills?.includes(automodeSkillsRelative)) {
-    throw new Error("Bundled pi-automode no longer declares its skills")
-  }
-  const automodeLicense = await readFile(
-    join(automodeRoot, "LICENSE.md"),
-    "utf8",
-  )
-  if (!automodeLicense.startsWith("# MIT License")) {
-    throw new Error(
-      "Bundled pi-automode LICENSE.md is not the expected MIT text",
-    )
-  }
-  const expectedUnbashVersion = automodeManifest.dependencies?.unbash
-  if (
-    !expectedUnbashVersion ||
-    sourceManifest.dependencies.unbash !== expectedUnbashVersion
-  ) {
-    throw new Error(
-      `Expected promoted unbash dependency ${expectedUnbashVersion}, got ${sourceManifest.dependencies.unbash}`,
-    )
+  const unbashVersion = sourceManifest.dependencies.unbash
+  if (!unbashVersion) {
+    throw new Error("Expected an unbash dependency in the aggregate manifest")
   }
 
   const hindsightRoot = join(
@@ -281,70 +233,6 @@ try {
     if (sourceManifest.dependencies[dependency] !== range) {
       throw new Error(
         `Expected pi-footer dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
-      )
-    }
-  }
-
-  const footerExamplePath = join(packageRoot, "examples", "pi-footer.json")
-  const footerExample = parseJson(
-    await readFile(footerExamplePath, "utf8"),
-    footerExamplePath,
-  )
-  if (
-    footerExample.separator !== "dot" ||
-    footerExample.separatorFg !== "brightBlack"
-  ) {
-    throw new Error(
-      "Recommended pi-footer config must use a gray dot separator",
-    )
-  }
-  const footerRequire = createRequire(join(footerRoot, footerEntryRelative))
-  const { createJiti: createFooterJiti } = await import(
-    pathToFileURL(footerRequire.resolve("jiti"))
-  )
-  const footerJiti = createFooterJiti(footerExamplePath, {
-    moduleCache: false,
-  })
-  const footerConfigModule = await footerJiti.import(
-    join(footerRoot, "src", "config.ts"),
-  )
-  const normalizedFooter = footerConfigModule.normalizeConfig(footerExample)
-  if (
-    normalizedFooter.separator !== "dot" ||
-    normalizedFooter.separatorFg !== "brightBlack"
-  ) {
-    throw new Error(
-      "Recommended pi-footer separator changed during normalization",
-    )
-  }
-  const footerStoreModule = await footerJiti.import(
-    join(footerRoot, "src", "widgets", "store.ts"),
-  )
-  footerStoreModule.WidgetStore.fromConfig(normalizedFooter)
-  const configuredStatusKeys = new Set(
-    normalizedFooter.lines
-      .flat()
-      .filter((widget) => widget.type === "external-status")
-      .map((widget) => widget.options.externalStatusKey),
-  )
-  const expectedStatusKeys = [
-    "mcp",
-    "pi-automode",
-    "pi-lens-lsp",
-    "ponytail",
-    "remote-pi:peer-active",
-    "remote-pi:relay",
-    "remote-pi:session",
-    "subagents",
-  ]
-  for (const statusKey of expectedStatusKeys) {
-    if (
-      !configuredStatusKeys.has(statusKey) ||
-      !normalizedFooter.extensionStatusRow.hiddenKeys.includes(statusKey) ||
-      !normalizedFooter.extensionStatusRow.knownKeys.includes(statusKey)
-    ) {
-      throw new Error(
-        `Recommended pi-footer config does not own status ${statusKey}`,
       )
     }
   }
@@ -2275,7 +2163,6 @@ try {
   )
   await Promise.all(
     [
-      "node_modules/@czottmann/pi-automode/skills/automode-diagnostics/SKILL.md",
       "node_modules/@dietrichgebert/ponytail/LICENSE",
       "node_modules/@juicesharp/rpiv-ask-user-question/LICENSE",
       "node_modules/@narumitw/pi-btw/LICENSE",
@@ -2286,7 +2173,6 @@ try {
       "node_modules/pi-footer/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
-      "examples/pi-footer.json",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
@@ -2471,24 +2357,7 @@ try {
     throw new Error("Bundled SoL-Pi LICENSE is not the expected MIT text")
   }
 
-  const automodeEntry = resolve(automodeRoot, automodeEntryRelative)
-  if (!extensionPaths.includes(automodeEntry)) {
-    throw new Error(
-      "Packed aggregate is missing the pi-automode extension entry",
-    )
-  }
-  const automodeSkills = resolve(automodeRoot, automodeSkillsRelative)
-  if (!skillPaths.includes(automodeSkills)) {
-    throw new Error("Packed aggregate is missing the pi-automode skills")
-  }
-  const loadedAutomode = result.extensions.find(
-    (extension) => extension.resolvedPath === automodeEntry,
-  )
-  if (!loadedAutomode?.tools.has("automode_inspect")) {
-    throw new Error("Packed pi-automode did not register automode_inspect")
-  }
   beginPhase("runtime-smokes")
-  await runPiAutomodeRealSmoke({ automodeEntry })
 
   const mcpEntry = resolve(mcpRoot, mcpEntryRelative)
   if (!extensionPaths.includes(mcpEntry)) {

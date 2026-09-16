@@ -47,7 +47,6 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.1.3`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.27.0`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
-| [`@czottmann/pi-automode`](https://github.com/czottmann/pi-automode)            | `1.15.0`       | Auto-mode guardrails and diagnostics.         |
 
 ### Remote Pi trust boundary
 
@@ -55,9 +54,9 @@ This aggregate enables Remote Pi's extension and agent-network skill and carries
 
 Accepted 0.7.0 limitations are documented in the aggregate package README: short-lived pairing material is persisted in Pi session data and can enter model context, same-user local IPC is unauthenticated, and cancelled first-time setup may hold its cwd lock until Pi exits.
 
-## Recommended footer
+## Footer
 
-The aggregate enables `pi-footer` and ships [`packages/pi-extensions/examples/pi-footer.json`](packages/pi-extensions/examples/pi-footer.json), a compact recommended layout for the bundled extensions. It keeps Pi's path, Git, token/context, model, and thinking information, uses a gray `•` separator, and gives MCP, Auto mode, LSP, Ponytail, Remote Pi, and Subagents dedicated rows. Copy it to `~/.pi/agent/extensions/pi-footer.json`; the package never overwrites existing user configuration.
+The aggregate enables `pi-footer`, which keeps Pi's path, Git, token/context, model, and thinking information. Configure it at `~/.pi/agent/extensions/pi-footer.json`.
 
 ## Native fullscreen
 
