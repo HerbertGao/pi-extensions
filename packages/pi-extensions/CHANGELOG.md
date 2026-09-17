@@ -1,5 +1,21 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.7
+
+### Minor Changes
+
+- [#204](https://github.com/HerbertGao/pi-extensions/pull/204) [`fafc73e`](https://github.com/HerbertGao/pi-extensions/commit/fafc73e3340219e8ef518d45860f65ce13317d26) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove the bundled `@luxusai/pi-hindsight` dependency.
+
+  Automatic memory network I/O proved cost-inefficient under continuous agent workloads, with high write volume and client timeout issues under large memory node counts.
+
+  - Drop `@luxusai/pi-hindsight`, `@vectorize-io/hindsight-client`, and `jsonc-parser` from aggregate dependencies, bundled dependencies, Pi extension entries, and Pi skill entries; remove its pin from `upstreams.json`.
+  - Remove the aggregate assertions that verified its bundled manifest, license, third-party notices, extension entries, and skills.
+  - Remove the Hindsight memory server documentation and third-party notices.
+
+### Patch Changes
+
+- [#207](https://github.com/HerbertGao/pi-extensions/pull/207) [`7eb6272`](https://github.com/HerbertGao/pi-extensions/commit/7eb62725adb808ec7b5ccd61e7509b4da7e46888) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance companion pins: `@narumitw/pi-btw` to `0.59.0` (promotes `@narumitw/pi-tui-kit` to `^0.64.0`) and `pi-lens` to `4.2.0` (maintains peer dependency ranges).
+
 ## 2026.9.6
 
 ### Minor Changes
