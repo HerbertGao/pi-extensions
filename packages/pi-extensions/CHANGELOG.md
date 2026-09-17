@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.8
+
+### Patch Changes
+
+- Bundle grok-mermaid so mermaid-related extensions load correctly.
+
 ## 2026.9.7
 
 ### Minor Changes
