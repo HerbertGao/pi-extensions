@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url"
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const packagesDir = join(root, "packages")
 const entries = await readdir(packagesDir, { withFileTypes: true })
+const retryPublish = process.env.VERIFY_RETRY_PUBLISH === "true"
 
 const publishable = (
   await Promise.all(
@@ -16,7 +17,11 @@ const publishable = (
       try {
         const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
         if (!manifest.private && manifest.publishConfig?.access === "public") {
-          return { name: manifest.name, version: manifest.version }
+          return {
+            name: manifest.name,
+            version: manifest.version,
+            dir: join(packagesDir, entry.name),
+          }
         }
       } catch (error) {
         if (error?.code !== "ENOENT") throw error
@@ -26,8 +31,8 @@ const publishable = (
   )
 ).filter(Boolean)
 
-async function lookupPublishedVersion(name, version) {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+async function lookupPublishedVersion(name, version, maxAttempts = 10) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const result = spawnSync(
       "npm",
       ["view", `${name}@${version}`, "version", "--json"],
@@ -46,22 +51,52 @@ async function lookupPublishedVersion(name, version) {
     if (result.status === 0 && publishedVersion === version)
       return publishedVersion
     // eslint-disable-next-line no-await-in-loop
-    if (attempt < 9) await sleep(Math.min(10_000, 2_000 * (attempt + 1)))
+    if (attempt < maxAttempts - 1)
+      await sleep(Math.min(10_000, 2_000 * (attempt + 1)))
   }
   return ""
+}
+
+function republish(dir) {
+  console.log(`Retrying npm publish in ${dir}…`)
+  const result = spawnSync(
+    "npm",
+    ["publish", "--access", "public", "--provenance"],
+    { cwd: dir, encoding: "utf8", stdio: "inherit" },
+  )
+  return result.status === 0
 }
 
 const verifiedResults = await Promise.all(
   publishable.map(async ({ name, version }) => {
     const published = await lookupPublishedVersion(name, version)
-    return published === version ? null : `${name}@${version}`
+    return published === version ? null : { name, version }
   }),
 )
-const missing = verifiedResults.filter(Boolean)
+let missing = verifiedResults.filter(Boolean)
+
+if (missing.length > 0 && retryPublish) {
+  console.log(
+    `\n${missing.length} package(s) missing on npm — retrying publish…`,
+  )
+  for (const { name } of missing) {
+    const pkg = publishable.find((p) => p.name === name)
+    if (pkg) republish(pkg.dir)
+  }
+  // Re-verify after retry (shorter window — 6 attempts ≈ 42 s)
+  const recheck = await Promise.all(
+    missing.map(async ({ name, version }) => {
+      const published = await lookupPublishedVersion(name, version, 6)
+      return published === version ? null : `${name}@${version}`
+    }),
+  )
+  missing = recheck.filter(Boolean)
+}
 
 if (missing.length > 0) {
   console.error(`Unpublished package versions detected (${missing.length}):`)
-  for (const packageVersion of missing) console.error(`- ${packageVersion}`)
+  for (const m of missing)
+    console.error(`- ${typeof m === "string" ? m : `${m.name}@${m.version}`}`)
   console.error(
     "Recovery owner: HerbertGao. Bootstrap the missing package's npm trusted publisher, verify with npm view, then rerun this Release workflow; do not bump the aggregate version.",
   )
