@@ -71,6 +71,3 @@ jobs:
       - name: Verify published package versions
         if: always() && steps.changesets.outputs.published == 'true'
         run: node scripts/verify-published-packages.mjs
-        env:
-          VERIFY_RETRY_PUBLISH: "true"
-          NPM_CONFIG_PROVENANCE: "true"
