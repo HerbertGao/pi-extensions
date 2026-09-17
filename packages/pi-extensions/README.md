@@ -15,7 +15,6 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `pi-antigravity@0.7.2`
 - `@dietrichgebert/ponytail@4.9.0`
 - `@juicesharp/rpiv-ask-user-question@2.8.0`
-- `@luxusai/pi-hindsight@0.12.0`
 - `@narumitw/pi-btw@0.57.0`
 
 - `@narumitw/pi-caffeinate@0.49.7`
@@ -75,10 +74,6 @@ For the intended compact status text, merge these optional companion settings in
 ```
 
 Pi 0.84.1 or newer should use native `fullscreen` TUI mode.
-
-### Hindsight memory server
-
-`@luxusai/pi-hindsight` is enabled by the aggregate, but automatic memory network I/O stays behind its setup gate until a server and coding bank are configured. Run `/hindsight` for guided setup. Prefer a self-hosted, authenticated endpoint reachable only over Tailscale or another private network; use one shared coding bank with stable project tags for cross-host development, and keep user memory disabled unless explicitly needed.
 
 ### Remote Pi trust boundary
 
