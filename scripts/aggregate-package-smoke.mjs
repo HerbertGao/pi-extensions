@@ -175,31 +175,6 @@ try {
     throw new Error("Expected an unbash dependency in the aggregate manifest")
   }
 
-  const hindsightRoot = join(
-    packageRoot,
-    "node_modules",
-    "@luxusai",
-    "pi-hindsight",
-  )
-  const hindsightManifestPath = join(hindsightRoot, "package.json")
-  const hindsightManifest = parseJson(
-    await readFile(hindsightManifestPath, "utf8"),
-    hindsightManifestPath,
-  )
-  const expectedHindsightVersion =
-    sourceManifest.dependencies["@luxusai/pi-hindsight"]
-  if (
-    hindsightManifest.name !== "@luxusai/pi-hindsight" ||
-    hindsightManifest.version !== expectedHindsightVersion ||
-    hindsightManifest.license !== "MIT" ||
-    !hindsightManifest.pi?.extensions?.includes("./extensions") ||
-    !hindsightManifest.pi?.skills?.includes("./skills")
-  ) {
-    throw new Error(
-      "Bundled @luxusai/pi-hindsight does not match its pinned MIT Pi package contract",
-    )
-  }
-
   const footerRoot = join(packageRoot, "node_modules", "pi-footer")
   const footerManifestPath = join(footerRoot, "package.json")
   const footerManifest = parseJson(
@@ -2132,13 +2107,6 @@ try {
     throw new Error("Aggregate Tifan third-party notices are incomplete")
   }
   if (
-    !tifanNotices.includes("`@luxusai/pi-hindsight`") ||
-    !tifanNotices.includes("SPDX license identifier `MIT`") ||
-    !tifanNotices.includes("does not invent one")
-  ) {
-    throw new Error("Aggregate pi-hindsight third-party notice is incomplete")
-  }
-  if (
     !tifanNotices.includes("`@narumitw/pi-caffeinate`") ||
     !tifanNotices.includes("Copyright (c) 2026 narumiruna")
   ) {
@@ -2168,8 +2136,6 @@ try {
       "node_modules/@narumitw/pi-btw/LICENSE",
       "node_modules/@narumitw/pi-caffeinate/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
-      "node_modules/@luxusai/pi-hindsight/README.md",
-      "node_modules/@luxusai/pi-hindsight/skills/hindsight-memory-doctor/SKILL.md",
       "node_modules/pi-footer/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
@@ -2309,8 +2275,6 @@ try {
       "preferred-thinking",
     ],
     ["@tifan/pi-recap/src/index.ts", "commands", "recap"],
-    ["@luxusai/pi-hindsight/extensions/index.ts", "tools", "hindsight_recall"],
-    ["@luxusai/pi-hindsight/extensions/index.ts", "commands", "hindsight"],
     ["@tifan/pi-rename/src/index.ts", "commands", "rename"],
     [
       "@herbertgao/resume-from/shims/pi/extensions/resume-from.js",

@@ -31,7 +31,6 @@ These packages retain their original names and upstream maintainers. The aggrega
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
 | [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.9.0`        | Minimal coding mode and maintenance skills.   |
 | [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.8.0`        | Structured user questionnaires.               |
-| [`@luxusai/pi-hindsight`](https://github.com/luxus/pi-hindsight)                | `0.12.0`       | Hindsight-backed cross-host project memory.   |
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.57.0`       | Parallel side questions outside main history. |
 | [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.7`       | Keep the computer awake during Pi agent runs. |
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.10`       | Priority service tier for selected models.    |

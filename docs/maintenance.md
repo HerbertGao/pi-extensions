@@ -240,7 +240,6 @@ The aggregate package also pins the following npm packages under their original 
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`   |
 | `@juicesharp/rpiv-ask-user-question` | `2.10.1` | `juicesharp/rpiv-mono`      |
-| `@luxusai/pi-hindsight`              | `0.12.0` | `luxus/pi-hindsight`        |
 | `@narumitw/pi-btw`                   | `0.58.1` | `narumiruna/pi-extensions`  |
 | `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`          |
@@ -300,8 +299,6 @@ The earlier issue #122 companion review accepted six released updates:
 - `pi-web-access@0.25.0` adds opt-in proxy and cloud-auth providers, GitHub-aware fetching, and a default Defuddle extraction fallback; its new `defuddle@0.19.3` dependency is MIT-licensed.
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
-
-`@luxusai/pi-hindsight@0.12.0` is accepted for cross-host memory through a self-hosted Hindsight server. The package declares MIT and bundles its Pi extension and memory-doctor skill, but its repository does not currently ship a standalone `LICENSE` file; preserve the package declaration, upstream attribution, and aggregate third-party notice. Keep project/user banks opt-in and do not point the extension at a public unauthenticated server.
 
 `remote-pi@0.7.0` is accepted for this personal aggregate only with a self-hosted relay restricted by Tailscale or an equivalent private network. Its relay sees routed plaintext, despite transport encryption. Re-audit before every pin change and remove these accepted exceptions when upstream fixes them: pairing URI/token data is currently persisted in Pi session data and can reach model context; local broker/supervisor IPC authenticates only through the OS-user boundary, and its Unix socket may use the process umask's default `0755` mode; cancelling first-time setup can retain the cwd lock until process exit; the setup wizard's “encrypted messages” wording overstates relay confidentiality. Do not test against or recommend the community relay.
 
