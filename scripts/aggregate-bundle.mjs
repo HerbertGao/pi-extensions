@@ -177,7 +177,7 @@ async function buildMaterializedNodeModules(stageDir) {
 
   // remote-pi 0.7.0 declares Pi host packages as runtime dependencies with a
   // 0.79-only range. Keep its published source intact, but make the bundled
-  // copy use the aggregate's single compatible Pi 0.84 host at runtime.
+  // copy use the aggregate's single compatible Pi 0.85 host at runtime.
   const remotePiManifest = childManifests.find(
     (childManifest) => childManifest.name === "remote-pi",
   )

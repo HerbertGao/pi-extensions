@@ -7,6 +7,7 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import {
 	AssistantMessageComponent,
 	ToolExecutionComponent,
+	createBashToolDefinition,
 	initTheme,
 } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
@@ -37,7 +38,8 @@ const ui = {
 } as any;
 
 function tool(name: string, id: string, args: any = {}) {
-	return new ToolExecutionComponent(name, id, args, {}, undefined, ui, process.cwd()) as any;
+	const definition = name === "bash" ? createBashToolDefinition(process.cwd()) : undefined;
+	return new ToolExecutionComponent(name, id, args, {}, definition, ui, process.cwd()) as any;
 }
 
 const renderText = (component: any, width = 120): string[] =>
