@@ -28,7 +28,7 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `@tifan/pi-rename@0.6.0`
 - `pi-mcp-adapter@2.31.0`
 - `pi-footer@0.5.1`
-- `pi-lens@4.2.0`
+- `pi-lens@4.2.1`
 - `pi-web-access@0.27.0`
 - `remote-pi@0.7.0`
 
@@ -40,7 +40,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `@narumitw/pi-caffeinate@0.49.7` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends.
 
-`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.2.0` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
+`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.2.1` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 

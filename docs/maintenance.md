@@ -240,7 +240,7 @@ The aggregate package also pins the following npm packages under their original 
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`   |
 | `@juicesharp/rpiv-ask-user-question` | `2.10.1` | `juicesharp/rpiv-mono`      |
-| `@narumitw/pi-btw`                   | `0.59.0` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-btw`                   | `0.60.0` | `narumiruna/pi-extensions`  |
 | `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`  |
@@ -252,11 +252,17 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
 | `pi-mcp-adapter`                     | `2.34.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-lens`                            | `4.2.0`  | `apmantza/pi-lens`          |
+| `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 
 The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #208 companion review accepted two released updates:
+
+- `@narumitw/pi-btw@0.60.0`: npm package update.
+- `pi-lens@4.2.1`: npm package update.
+- `Tifan Pi extensions` unreleased repository commits are consciously deferred as there are no new published package releases.
 
 The issue #202 companion review accepted three released updates:
 
