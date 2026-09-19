@@ -8,7 +8,6 @@ expect_tools_absent: "write, edit, bash, grep"
 expect_prompt_contains: "Agent Memory (read-only), Memory scope: project"
 expect_prompt_absent: "persistent memory directory"
 ---
-
 README: "The `disallowed_tools` field is respected when determining write
 capability — an agent with `tools: write` + `disallowed_tools: write` correctly
 gets read-only memory."

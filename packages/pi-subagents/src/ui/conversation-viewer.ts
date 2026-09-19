@@ -156,10 +156,16 @@ function capResult(text: string): { text: string; elided: number } {
   }
 }
 
-function humanCount(count: number): string {
-  if (count < 1_000) return `${count}`
-  const thousands = count < 999_950
-  const value = thousands ? count / 1_000 : count / 1_000_000
+/**
+ * `999` · `1.5k` · `8.4M` — a magnitude cue, not an exact count, past 1000.
+ *
+ * The bracket is chosen against the *rounded* value, so 999,999 reads `1M`
+ * rather than the `1000.0k` a naive `< 1e6` test produces.
+ */
+function humanCount(n: number): string {
+  if (n < 1_000) return `${n}`
+  const thousands = n < 999_950
+  const value = thousands ? n / 1_000 : n / 1_000_000
   return `${value.toFixed(1).replace(/\.0$/, "")}${thousands ? "k" : "M"}`
 }
 

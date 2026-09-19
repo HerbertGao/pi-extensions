@@ -17,32 +17,89 @@ export interface BootedPi {
   pi: any
   tools: Map<string, any>
   lifecycle: Map<string, any>
+  /** Custom entry renderers, by `customType`. */
+  entryRenderers: Map<string, any>
+  /** Flags the extension registered, by name. */
+  registeredFlags: Map<string, any>
+  /** Slash commands the extension registered, by name. */
+  commands: Map<string, any>
 }
 
-/** A mock ExtensionAPI that records every tool and lifecycle handler registered. */
-export function makePi(): BootedPi {
+/**
+ * A mock ExtensionAPI that records every tool and lifecycle handler registered.
+ *
+ * `flags` seeds what `pi.getFlag` returns. It is deliberately separate from the
+ * values passed to `registerFlag`: the host applies CLI values only AFTER every
+ * extension has activated, so a test that seeds them here and reads them from
+ * `session_start` reproduces the real ordering.
+ */
+export function makePi(flags: Record<string, boolean | string> = {}): BootedPi {
   const tools = new Map<string, any>()
   const lifecycle = new Map<string, any>()
+  const entryRenderers = new Map<string, any>()
+  const registeredFlags = new Map<string, any>()
+  const commands = new Map<string, any>()
+  const activeTools: string[] = []
   const pi = {
     registerMessageRenderer: vi.fn(),
-    registerTool: vi.fn((t: any) => tools.set(t.name, t)),
-    registerCommand: vi.fn(),
+    registerEntryRenderer: vi.fn((customType: string, renderer: any) =>
+      entryRenderers.set(customType, renderer),
+    ),
+    registerTool: vi.fn((t: any) => {
+      tools.set(t.name, t)
+      if (!activeTools.includes(t.name)) activeTools.push(t.name)
+    }),
+    registerCommand: vi.fn((name: string, command: any) =>
+      commands.set(name, command),
+    ),
+    registerFlag: vi.fn((name: string, options: any) =>
+      registeredFlags.set(name, options),
+    ),
+    getFlag: vi.fn((name: string) => flags[name]),
     on: vi.fn((event: string, handler: any) => lifecycle.set(event, handler)),
     events: {
       emit: vi.fn(),
       on: vi.fn(() => vi.fn()),
     },
+    // Only bound after the session exists in real pi — the extension calls these
+    // from `session_start` for exactly that reason. Default to "nothing else is
+    // registered"; a test that cares overrides them.
+    getAllTools: vi.fn(() => [] as any[]),
+    getCommands: vi.fn(() => [] as any[]),
+    // The active set starts as whatever was registered, which is what pi does
+    // for a freshly loaded extension tool. `setActiveTools` writes it back so a
+    // test can assert on a withdrawal.
+    getActiveTools: vi.fn(() => [...activeTools]),
+    setActiveTools: vi.fn((names: string[]) => {
+      activeTools.length = 0
+      activeTools.push(...names)
+    }),
     appendEntry: vi.fn(),
     sendMessage: vi.fn(),
+    exec: vi.fn(async () => ({
+      stdout: "",
+      stderr: "",
+      code: 0,
+      killed: false,
+    })),
   } as any
-  return { pi, tools, lifecycle }
+  return { pi, tools, lifecycle, entryRenderers, registeredFlags, commands }
 }
 
 /** A mock ExtensionContext — the second half of what a tool's `execute` receives. */
 export function ctx(overrides: Record<string, unknown> = {}) {
   return {
+    // The interactive mode extensions normally run in. Set explicitly because
+    // the `@handle` input hook is TUI-only, so an absent mode would make every
+    // mention test exercise the headless fall-through instead.
+    mode: "tui",
     hasUI: false,
-    ui: { setStatus: vi.fn(), setWidget: vi.fn(), notify: vi.fn() },
+    ui: {
+      setStatus: vi.fn(),
+      setWidget: vi.fn(),
+      notify: vi.fn(),
+      addAutocompleteProvider: vi.fn(),
+    },
     cwd: process.cwd(),
     model: undefined,
     modelRegistry: { find: vi.fn(), getAvailable: vi.fn(() => []) },

@@ -115,15 +115,21 @@ describe("cost display", () => {
     it("reports the cost as its own labelled field", async () => {
       const { tools } = boot({ showCost: true })
       runSpending(COST)
-      const spawned = await spawn(tools)
+      await spawn(tools)
       await flush()
-      const id = (spawned as any).details?.agentId
-      expect(id).toBeTruthy()
 
+      // The agent above ran in the foreground; look it up by the handle its
+      // type gets, which is how the orchestrator would reach it.
       const text = textOf(
         await tools
           .get("get_subagent_result")
-          .execute("tc-2", { agent_id: id }, undefined, undefined, ctx()),
+          .execute(
+            "tc-2",
+            { agent_id: "general-purpose" },
+            undefined,
+            undefined,
+            ctx(),
+          ),
       )
 
       // Pipe-separated `Label: value` fields, matching its neighbours.
@@ -133,15 +139,19 @@ describe("cost display", () => {
     it("omits the field entirely when unpriced", async () => {
       const { tools } = boot({ showCost: true })
       runSpending(0)
-      const spawned = await spawn(tools)
+      await spawn(tools)
       await flush()
-      const id = (spawned as any).details?.agentId
-      expect(id).toBeTruthy()
 
       const text = textOf(
         await tools
           .get("get_subagent_result")
-          .execute("tc-2", { agent_id: id }, undefined, undefined, ctx()),
+          .execute(
+            "tc-2",
+            { agent_id: "general-purpose" },
+            undefined,
+            undefined,
+            ctx(),
+          ),
       )
 
       expect(text).not.toContain("Cost:")

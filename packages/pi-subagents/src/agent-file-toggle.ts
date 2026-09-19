@@ -20,14 +20,13 @@
  *   discarding their comments, key order, and quoting. So the edits are line-wise
  *   and preserve everything they don't touch.
  *
- * That leaves removal best-effort: it recognizes the parser's case-insensitive
- * bare `false` spellings and trailing comments, and reports `changed: false`
- * for values it cannot rewrite, so the caller refuses honestly rather than
- * announcing a change it did not make.
+ * That leaves removal best-effort: it recognizes a lowercase bare `false`, and
+ * reports `changed: false` for the spellings it cannot rewrite, so the caller
+ * refuses honestly rather than announcing a change it did not make.
  */
 
 import { existsSync } from "node:fs"
-import { join } from "node:path"
+import { join, sep } from "node:path"
 import { getAgentDir } from "@earendil-works/pi-coding-agent"
 import { parseAgentFrontmatter } from "./custom-agents.js"
 import type { AgentConfig } from "./types.js"
@@ -61,20 +60,60 @@ export function findAgentFile(
   return undefined
 }
 
+/**
+ * Find the file behind a *loaded* agent, preferring the path the loader
+ * actually read (`AgentConfig.sourcePath`) over the `<type>.md` guess.
+ *
+ * An agent's type comes from its frontmatter `name:` now, so the two can
+ * disagree: `reviewer.md` declaring `name: code-reviewer` is loaded as
+ * `code-reviewer`, and probing for `code-reviewer.md` finds nothing. That is
+ * not a harmless miss — `/agents → Disable` would then take the no-file branch
+ * and write a NEW `code-reviewer.md` stub, which loses to `reviewer.md` on
+ * load, leaving the agent enabled while reporting success.
+ *
+ * The probe stays as the fallback: a built-in that was never ejected has no
+ * `sourcePath`, and a path can go stale between a load and this call.
+ */
+export function locateAgentFile(
+  name: string,
+  sourcePath: string | undefined,
+  cwd: string = process.cwd(),
+): { path: string; location: AgentFileLocation } | undefined {
+  if (sourcePath && existsSync(sourcePath)) {
+    return { path: sourcePath, location: classifyAgentDir(sourcePath, cwd) }
+  }
+  return findAgentFile(name, cwd)
+}
+
+/**
+ * Which discovery location a loaded agent's file came from. Only ever names
+ * a directory in a confirmation prompt, so an unrecognized parent — which
+ * loadCustomAgents cannot currently produce — reports as personal rather than
+ * widening the type for a case that has no better answer.
+ */
+function classifyAgentDir(path: string, cwd: string): AgentFileLocation {
+  if (path.startsWith(projectAgentsDir(cwd) + sep)) return "project"
+  if (path.startsWith(workspaceAgentsDir(cwd) + sep)) return "workspace"
+  return "personal"
+}
+
 export type DisableOutcome = "disabled" | "already-disabled" | "no-frontmatter"
 
-/** A line that sets `enabled: false`, accepting YAML case and comments. */
-const ENABLED_FALSE = /^[ \t]*enabled:[ \t]*false[ \t]*(?:#[^\r\n]*)?$/i
+/** A line that sets `enabled: false`, ignoring trailing whitespace / CR. */
+const ENABLED_FALSE = /^enabled:[ \t]*false[ \t]*$/
 /** An opening or closing `---` fence line. */
 const FENCE = /^---[ \t]*$/
 
 /**
  * Split a file into its frontmatter lines and everything else, agreeing with
- * what `parseAgentFrontmatter` (the load side) considers a frontmatter block.
+ * what `parseAgentFrontmatter` (the load side) considers a frontmatter block —
+ * including its BOM normalisation, which is why the fence test looks past one.
+ * The BOM itself stays in `lines[0]`: it belongs to the file's encoding, not to
+ * the block, and an edit must not strip it from the user's file.
  *
  * Lines keep their terminators, so an edit preserves the file's existing line
  * endings instead of rewriting CRLF to LF. Returns undefined when there is no
- * usable block. A leading BOM stays byte-for-byte in the file.
+ * usable block.
  */
 function splitFrontmatter(
   content: string,
@@ -83,9 +122,10 @@ function splitFrontmatter(
   | undefined {
   const lines = content.split(/(?<=\n)/)
   if (lines.length === 0) return undefined
-  const first = (
-    content.startsWith("\uFEFF") ? lines[0].slice(1) : lines[0]
-  ).replace(/\r?\n$/, "")
+  // The BOM stays where it is — it belongs to the file, not the block — so the
+  // fence test looks past it and every index below is unaffected.
+  const bom = content.startsWith("\uFEFF")
+  const first = (bom ? lines[0].slice(1) : lines[0]).replace(/\r?\n$/, "")
   if (!FENCE.test(first)) return undefined
   const closeIdx = lines.findIndex(
     (l, i) => i > 0 && FENCE.test(l.replace(/\r?\n$/, "")),

@@ -96,6 +96,8 @@ export interface NestedAgentManager {
     prompt: string,
     options: NestedSpawnOptions,
   ): string
+  /** Resolves once the spawned agent is running; rejects on a startup failure. */
+  awaitStartup(id: string): Promise<void>
   spawnAndWait(
     pi: ExtensionAPI,
     ctx: ExtensionContext,
@@ -413,38 +415,50 @@ export function createNestedSubagentTools(
       // one earlier would silently give a grandchild the wrong worktree base, the
       // wrong conversation under inherit_context, and the wrong inherited model.
       //
-      // Startup throws mean no child ran. Let them propagate so Pi marks the
-      // nested Agent tool call failed instead of presenting the message as a
-      // successful child result.
-      if (invocation.runInBackground) {
-        const id = context.manager.spawn(
+      // spawn() throws on strict worktree-isolation failure and cwd validation —
+      // report it as a tool error, like the top-level Agent tool does, instead of
+      // letting it escape into the child's turn.
+      try {
+        if (invocation.runInBackground) {
+          const id = context.manager.spawn(
+            context.pi,
+            ctx,
+            resolvedType,
+            params.prompt,
+            {
+              ...options,
+              isBackground: true,
+            },
+          )
+          // Synchronous, before the event loop yields — onSessionCreated fires
+          // asynchronously inside runAgent, so the file is attached in time.
+          attachTranscript(id)
+          // Worktree isolation starts the agent asynchronously; surface its
+          // failure as a tool error, like the synchronous throw used to.
+          await context.manager.awaitStartup(id)
+          return textResult(
+            `Nested agent started in background. Agent ID: ${id}`,
+          )
+        }
+
+        const { record } = await context.manager.spawnAndWait(
           context.pi,
           ctx,
           resolvedType,
           params.prompt,
-          {
-            ...options,
-            isBackground: true,
-          },
+          { ...options, signal },
+          attachTranscript,
         )
-        // Synchronous, before the event loop yields — onSessionCreated fires
-        // asynchronously inside runAgent, so the file is attached in time.
-        attachTranscript(id)
-        return textResult(`Nested agent started in background. Agent ID: ${id}`)
+        return textResult(
+          formatRecord(record, "inline"),
+          record.status === "error",
+        )
+      } catch (err) {
+        return textResult(
+          err instanceof Error ? err.message : String(err),
+          true,
+        )
       }
-
-      const { record } = await context.manager.spawnAndWait(
-        context.pi,
-        ctx,
-        resolvedType,
-        params.prompt,
-        { ...options, signal },
-        attachTranscript,
-      )
-      return textResult(
-        formatRecord(record, "inline"),
-        record.status === "error",
-      )
     },
   })
 

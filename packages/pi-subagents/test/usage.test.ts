@@ -144,8 +144,8 @@ describe("usage", () => {
   })
 
   describe("cost accumulation", () => {
-    it("sums cost without adding it or cache reads to the display token total", () => {
-      const usage = { input: 0, output: 0, cacheWrite: 0 }
+    it("sums cost across messages but keeps it out of the token total", () => {
+      const usage = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 }
       addUsage(usage, {
         input: 100,
         output: 50,
@@ -162,11 +162,15 @@ describe("usage", () => {
       })
 
       expect(getLifetimeCost(usage)).toBeCloseTo(0.006, 10)
+      // The load-bearing half: the display total takes neither the money nor
+      // the re-read prefix, even though both are accumulated on the same object.
       expect(getLifetimeTotal(usage)).toBe(460)
       expect(usage.cacheRead).toBe(2700)
     })
 
-    it("leaves zero cost absent and reads missing cost as zero", () => {
+    it("leaves cost absent when nothing priced anything", () => {
+      // An unpriced model reports 0 per message. Distinguishable from "counted
+      // and free" only by the field never being written at all.
       const usage: {
         input: number
         output: number
@@ -174,14 +178,19 @@ describe("usage", () => {
         cost?: number
       } = { input: 0, output: 0, cacheWrite: 0 }
       addUsage(usage, { input: 10, output: 5, cacheWrite: 0, cost: 0 })
+
       expect(usage.cost).toBeUndefined()
       expect(getLifetimeCost(usage)).toBe(0)
+    })
+
+    it("reads a missing cost as 0", () => {
       expect(getLifetimeCost(undefined)).toBe(0)
+      expect(getLifetimeCost({ input: 1, output: 1, cacheWrite: 0 })).toBe(0)
     })
   })
 
   describe("PendingUsagePool", () => {
-    it("drains a complete Pi Usage once", () => {
+    it("drains what it accumulated as a complete pi Usage", () => {
       const pool = new PendingUsagePool()
       pool.add({
         input: 100,
@@ -201,26 +210,56 @@ describe("usage", () => {
       expect(pool.drain()).toEqual({
         input: 300,
         output: 130,
+        // Summed, unlike the display total (#38): pi counts the parent's own
+        // messages this way, and the prefix is re-billed on every call.
         cacheRead: 2700,
         cacheWrite: 30,
         totalTokens: 3160,
-        cost: {
-          input: 0,
-          output: 0,
-          cacheRead: 0,
-          cacheWrite: 0,
-          total: 0.03,
-        },
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0.03 },
       })
+    })
+
+    it("empties on drain, so no message is reported twice", () => {
+      const pool = new PendingUsagePool()
+      pool.add({ input: 100, output: 50, cacheWrite: 10, cost: 0.01 })
+
+      expect(pool.drain()?.totalTokens).toBe(160)
       expect(pool.drain()).toBeUndefined()
     })
 
-    it("reports unpriced tokens but ignores a zero-spend message", () => {
+    it("handles an accumulator that never saw a cacheRead or a cost", () => {
+      // Both fields are optional and written lazily, so an agent on a provider
+      // that reports neither leaves them absent rather than zero.
+      const pool = new PendingUsagePool()
+      pool.add({ input: 100, output: 50, cacheWrite: 10 })
+
+      expect(pool.drain()).toEqual({
+        input: 100,
+        output: 50,
+        cacheRead: 0,
+        cacheWrite: 10,
+        totalTokens: 160,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      })
+    })
+
+    it("returns undefined when nothing has been added", () => {
+      expect(new PendingUsagePool().drain()).toBeUndefined()
+    })
+
+    it("still reports tokens spent by a model with no pricing", () => {
       const pool = new PendingUsagePool()
       pool.add({ input: 100, output: 50, cacheWrite: 10, cost: 0 })
-      expect(pool.drain()?.totalTokens).toBe(160)
 
+      const drained = pool.drain()
+      expect(drained?.totalTokens).toBe(160)
+      expect(drained?.cost.total).toBe(0)
+    })
+
+    it("reports nothing for a message that spent nothing", () => {
+      const pool = new PendingUsagePool()
       pool.add({ input: 0, output: 0, cacheWrite: 0, cost: 0 })
+
       expect(pool.drain()).toBeUndefined()
     })
   })

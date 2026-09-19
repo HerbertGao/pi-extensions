@@ -74,7 +74,6 @@ function makeActivity(): AgentActivity {
     toolUses: 0,
     responseText: "",
     turnCount: 1,
-    lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
   }
 }
 
@@ -88,6 +87,9 @@ function makePi() {
       tools.set(registered.name, registered)
     }),
     registerCommand: vi.fn(),
+    registerEntryRenderer: vi.fn(),
+    registerFlag: vi.fn(),
+    getFlag: vi.fn(),
     on: vi.fn((event: string, handler: unknown) =>
       handlers.set(event, handler as SessionHandler),
     ),

@@ -43,10 +43,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { runAgent } from "../../src/agent-runner.js"
 import { registerAgents } from "../../src/agent-types.js"
 import type { AgentConfig } from "../../src/types.js"
-import {
-  type FauxProviderRegistration,
-  registerFauxProvider,
-} from "../helpers/pi-ai.js"
+import { registerFauxProvider } from "../helpers/pi-ai.js"
 
 // Real pi-mono (loader + dynamic extension import + session construction).
 vi.setConfig({ testTimeout: 30_000 })
@@ -66,11 +63,11 @@ function makePi() {
 
 describe("tool veto reachability against real pi-mono", () => {
   let cwd: string
-  let faux: FauxProviderRegistration
+  let faux: ReturnType<typeof registerFauxProvider>
 
-  beforeEach(async () => {
+  beforeEach(() => {
     cwd = mkdtempSync(join(tmpdir(), "subagents-veto-"))
-    faux = await registerFauxProvider({
+    faux = registerFauxProvider({
       provider: "faux",
       models: [{ id: "faux-1", contextWindow: 200_000 }],
     })
@@ -104,11 +101,21 @@ describe("tool veto reachability against real pi-mono", () => {
     )
 
     const model = faux.getModel()
+    const modelRegistry: any = {
+      find: () => model,
+      getAll: () => [model],
+      getAvailable: () => [model],
+      hasConfiguredAuth: () => true,
+      isUsingOAuth: () => false,
+      getApiKeyAndHeaders: async () => ({ apiKey: "faux", headers: {} }),
+      registerProvider: () => {},
+      unregisterProvider: () => {},
+    }
     const ctx: any = {
       cwd,
       getSystemPrompt: () => "PARENT",
       model,
-      modelRegistry: faux.modelRegistry,
+      modelRegistry,
     }
 
     let priorIsFunction: boolean | undefined

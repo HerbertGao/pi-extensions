@@ -14,7 +14,15 @@ export interface ModelRegistry {
   getAvailable?(): any[]
 }
 
-/** Both display forms of a resolved model. */
+/**
+ * Both display forms of a model. The short one goes on tight rows (the widget,
+ * the Agent tool result), the canonical one where there is room to disambiguate
+ * two providers serving a similarly-named model (the conversation viewer).
+ *
+ * One function, because `index.ts` labels the model it resolved before the run
+ * and `agent-manager.ts` relabels it from the live session afterwards — the two
+ * must agree or the label would visibly change the moment the session starts.
+ */
 export function describeModel(model: {
   provider: string
   id: string

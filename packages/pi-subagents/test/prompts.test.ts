@@ -340,43 +340,6 @@ describe("buildAgentPrompt", () => {
     expect(prompt).not.toContain("Preloaded Skill")
   })
 
-  describe("worktree isolation block", () => {
-    const config = (promptMode: "append" | "replace"): AgentConfig => ({
-      name: "test-agent",
-      description: "Test",
-      builtinToolNames: [],
-      extensions: true,
-      skills: true,
-      systemPrompt: "Custom instructions.",
-      promptMode,
-      inheritContext: false,
-      runInBackground: false,
-      isolated: false,
-    })
-
-    it("is absent outside worktree isolation", () => {
-      const prompt = buildAgentPrompt(config("append"), "/workspace", env)
-      expect(prompt).not.toContain("<worktree_isolation>")
-    })
-
-    it("keeps both prompt modes in the worktree when inherited text names the checkout", () => {
-      for (const promptMode of ["replace", "append"] as const) {
-        const prompt = buildAgentPrompt(
-          config(promptMode),
-          "/repo-worktree",
-          env,
-          "Parent prompt names /repo as its working directory.",
-          { worktreeBase: "/repo" },
-        )
-        expect(prompt).toContain("isolated git worktree copy of /repo")
-        expect(prompt).toContain("Work only inside it — never in /repo")
-        expect(prompt.indexOf("<worktree_isolation>")).toBeGreaterThan(
-          prompt.indexOf("Working directory: /repo-worktree"),
-        )
-      }
-    })
-  })
-
   describe("active_agent tag", () => {
     it("tag is present at start of prompt in replace mode", () => {
       const config: AgentConfig = {
@@ -459,6 +422,158 @@ describe("buildAgentPrompt", () => {
         const envIndex = prompt.indexOf("# Environment")
         expect(tagIndex).toBeLessThan(envIndex)
       }
+    })
+  })
+
+  // #187: the inherited parent prompt names the main checkout as cwd, so a
+  // worktree agent needs to be told which of the two paths is really its own.
+  describe("worktree isolation block", () => {
+    function worktreeConfig(promptMode: "append" | "replace"): AgentConfig {
+      return {
+        name: "test-agent",
+        description: "Test",
+        builtinToolNames: [],
+        extensions: true,
+        skills: true,
+        systemPrompt: "Custom instructions.",
+        promptMode,
+        inheritContext: false,
+        runInBackground: false,
+        isolated: false,
+      }
+    }
+
+    it("is absent without a worktree base", () => {
+      for (const promptMode of ["replace", "append"] as const) {
+        const prompt = buildAgentPrompt(
+          worktreeConfig(promptMode),
+          "/wt/copy",
+          env,
+          "Parent.",
+          {},
+        )
+        expect(prompt).not.toContain("<worktree_isolation>")
+      }
+    })
+
+    it("names the parent checkout and follows the env block in both modes", () => {
+      for (const promptMode of ["replace", "append"] as const) {
+        const prompt = buildAgentPrompt(
+          worktreeConfig(promptMode),
+          "/wt/copy",
+          env,
+          "Parent.",
+          {
+            worktreeBase: "/repo",
+          },
+        )
+        expect(prompt).toContain("isolated git worktree copy of /repo")
+        expect(prompt).toContain(
+          "never in /repo, even if other instructions name that path",
+        )
+        expect(prompt.indexOf("<worktree_isolation>")).toBeGreaterThan(
+          prompt.indexOf("Working directory: /wt/copy"),
+        )
+      }
+    })
+
+    it("stays out of the cacheable inherited prefix", () => {
+      const prompt = buildAgentPrompt(
+        worktreeConfig("append"),
+        "/wt/copy",
+        env,
+        "Parent prompt.",
+        {
+          worktreeBase: "/repo",
+        },
+      )
+      expect(prompt.startsWith("Parent prompt.")).toBe(true)
+      expect(prompt.indexOf("<worktree_isolation>")).toBeGreaterThan(
+        prompt.indexOf("<sub_agent_context>"),
+      )
+    })
+  })
+
+  describe("workflow child block", () => {
+    function childConfig(promptMode: "append" | "replace"): AgentConfig {
+      return {
+        name: "test-agent",
+        description: "Test",
+        builtinToolNames: [],
+        extensions: true,
+        skills: true,
+        systemPrompt: "Custom instructions.",
+        promptMode,
+        inheritContext: false,
+        runInBackground: false,
+        isolated: false,
+      }
+    }
+
+    it("is absent for an ordinary subagent, whose output a person reads", () => {
+      for (const promptMode of ["replace", "append"] as const) {
+        const prompt = buildAgentPrompt(
+          childConfig(promptMode),
+          "/workspace",
+          env,
+          "Parent.",
+          {},
+        )
+        expect(prompt).not.toContain("<workflow_child>")
+      }
+    })
+
+    it("tells a workflow child its final message is the return value, in both modes", () => {
+      for (const promptMode of ["replace", "append"] as const) {
+        const prompt = buildAgentPrompt(
+          childConfig(promptMode),
+          "/workspace",
+          env,
+          "Parent.",
+          {
+            workflowChild: true,
+          },
+        )
+        expect(prompt).toContain("<workflow_child>")
+        expect(prompt).toContain("Your final message IS the return value")
+        expect(prompt).toContain("no preamble")
+        expect(prompt.indexOf("<workflow_child>")).toBeGreaterThan(
+          prompt.indexOf("Working directory: /workspace"),
+        )
+      }
+    })
+
+    it("stays out of the cacheable inherited prefix", () => {
+      const prompt = buildAgentPrompt(
+        childConfig("append"),
+        "/workspace",
+        env,
+        "Parent prompt.",
+        {
+          workflowChild: true,
+        },
+      )
+      expect(prompt.startsWith("Parent prompt.")).toBe(true)
+      expect(prompt.indexOf("<workflow_child>")).toBeGreaterThan(
+        prompt.indexOf("<sub_agent_context>"),
+      )
+    })
+
+    it("composes with worktree isolation rather than displacing it", () => {
+      const prompt = buildAgentPrompt(
+        childConfig("append"),
+        "/wt/copy",
+        env,
+        "Parent.",
+        {
+          worktreeBase: "/repo",
+          workflowChild: true,
+        },
+      )
+      expect(prompt).toContain("<worktree_isolation>")
+      expect(prompt.indexOf("<workflow_child>")).toBeGreaterThan(
+        prompt.indexOf("<worktree_isolation>"),
+      )
     })
   })
 })

@@ -45,6 +45,9 @@ function makePi() {
     registerMessageRenderer: vi.fn(),
     registerTool: vi.fn((t: any) => tools.set(t.name, t)),
     registerCommand: vi.fn(),
+    registerEntryRenderer: vi.fn(),
+    registerFlag: vi.fn(),
+    getFlag: vi.fn(),
     on: vi.fn((event: string, handler: any) => lifecycle.set(event, handler)),
     events: { emit: vi.fn(), on: vi.fn(() => vi.fn()) },
     appendEntry: vi.fn(),
@@ -268,6 +271,8 @@ describe("fallbackSubagent gates dispatch through the real Agent tool", () => {
     // is deleted or disabled — the opposite of what strict dispatch is for.
     const { tools } = boot()
     vi.mocked(runAgent).mockResolvedValue({
+      // `messages` is not optional on a real AgentSession, and a background
+      // resume reads it to anchor transcript streaming.
       responseText: "first",
       session: { dispose: vi.fn(), messages: [] } as any,
       aborted: false,

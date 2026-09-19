@@ -6,11 +6,36 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { getAgentDir } from "@earendil-works/pi-coding-agent"
 import { NO_FALLBACK } from "./agent-types.js"
-import type { JoinMode, ViewerMarkdownMode, WidgetMode } from "./types.js"
+import type {
+  AgentMentionMode,
+  JoinMode,
+  ViewerMarkdownMode,
+  WidgetMode,
+} from "./types.js"
 
 export interface SubagentsSettings {
   maxConcurrent?: number
-  /** Max concurrent blocking agents. 0 = unlimited (default). */
+  /**
+   * Max concurrent FOREGROUND (blocking) agents — `0` = unlimited, the default,
+   * which preserves the behaviour that has always applied: nothing bounded
+   * foreground work, and pi dispatches a message's tool calls through
+   * `Promise.all`, so an unqualified fan-out of blocking `Agent` calls runs all
+   * at once. Set it to bound that (#253 — on local models, parallel agents
+   * thrash the prompt cache).
+   *
+   * Deliberately independent of `maxConcurrent` rather than folded into it: a
+   * foreground agent blocks the parent anyway, so charging it to the background
+   * pool would let a saturated pool starve the main session of work it could
+   * have done itself.
+   *
+   * Bounds only spawns a caller is blocking on inline. Nested children are
+   * exempt — their parent is blocked awaiting them, so queueing a child behind
+   * its own parent would deadlock — and so are detached spawns from
+   * cross-extension RPC or `@handle` mentions, which block nobody and are
+   * documented to start immediately. Foreground `resume` is also outside the
+   * pool: it reuses an existing session and never reaches the spawn path, so
+   * several blocking resumes in one message can still exceed the limit.
+   */
   maxConcurrentForeground?: number
   /**
    * 0 = unlimited — the extension's single source of truth for that convention:
@@ -70,8 +95,14 @@ export interface SubagentsSettings {
   scopeModels?: boolean
   /**
    * When true, an unreadable or unparseable agent `.md` aborts extension load
-   * instead of being skipped with a warning. This applies only during startup;
-   * later per-call reloads remain tolerant. Defaults to false.
+   * instead of being skipped with a warning — pi exits, naming the file.
+   *
+   * Startup only, by design. Mid-session reloads (one per `Agent` call) keep
+   * warning: a bad edit at 3pm should not kill the session on the next
+   * unrelated spawn, where the failure would look disconnected from its cause.
+   * For a checked-in `.pi/agents/`, failing at startup is the point — the
+   * alternative is running a *different* agent than the file names.
+   * Defaults to false.
    */
   strictAgentFiles?: boolean
   /**
@@ -98,6 +129,34 @@ export interface SubagentsSettings {
    * the list never registers and the global key handler never captures input.
    */
   fleetView?: boolean
+  /**
+   * Whether `@handle message` typed at the prompt is routed to that subagent
+   * instead of the main model, and whether `@` offers running agents alongside
+   * pi's file completion. Defaults to `model`. Applied live.
+   *
+   *   - `model`: mentioning an agent that is not running asks the main model to
+   *     spawn it with the `Agent` tool, Claude Code's behaviour. Costs a turn,
+   *     and the model writes the agent's prompt rather than your text being it.
+   *   - `direct`: that agent is started here instead, with the typed message as
+   *     its prompt and no main-model turn spent.
+   *   - `off`: the input hook falls straight through and the stacked
+   *     autocomplete provider delegates everything back to pi's built-in one.
+   *
+   * Messaging a running agent and resuming a finished one are direct in both
+   * `model` and `direct`. The legacy booleans are still accepted: `true` reads
+   * as `model`, `false` as `off`.
+   */
+  agentMentions?: AgentMentionMode
+  /**
+   * Whether subagents persist their pi session by default, so `@handle` can
+   * reopen an agent's conversation long after its in-memory record is gone.
+   * Defaults to `true`. Per-agent `persist_session:` frontmatter overrides it
+   * in both directions. Turning it off restores the previous behaviour, where
+   * a handle stops resolving roughly ten minutes after the agent finishes and
+   * mentioning it starts a fresh run instead. Persisted sessions also appear
+   * nested under the spawning session in pi's `/resume`.
+   */
+  rememberAgents?: boolean
   /**
    * Display mode for the persistent above-editor agent widget:
    *   - `all`: show every agent (foreground + background).
@@ -143,6 +202,27 @@ export interface SubagentsSettings {
    * scheduler and the unvalidated cross-extension RPC path.
    */
   worktreeIsolation?: boolean
+  /**
+   * Master switch for scripted workflows. Defaults to `true`.
+   *
+   * Off is not a soft hide: the `SubagentWorkflow` tool is never registered, so
+   * the model is not told it exists and cannot call it, the `/agents`
+   * Workflows entry is hidden, and `--subagents-workflow-file` is refused.
+   *
+   * Absent is not the same as `true`. Unset means *auto*: on, but yielding to
+   * another extension that already offers a workflow tool, because two
+   * orchestrators in one tool spec is a worse default than none — the model
+   * has to guess which to call, and pays for both descriptions to find out.
+   * Setting it explicitly pins the answer in both directions: `true` keeps
+   * ours whatever else is loaded, `false` is off regardless. See
+   * `resolveWorkflowCollisions` in index.ts.
+   *
+   * Read once at extension init, before registration, so flipping it in
+   * `/agents → Settings` takes effect on the next pi session — the same
+   * contract `schedulingEnabled` has, and for the same reason: a tool spec is
+   * fixed once pi has it.
+   */
+  workflowsEnabled?: boolean
   /**
    * Hard ceiling on nested subagent delegation, counted from the main session:
    * main = 0, its subagents = 1, their children = 2. Defaults to `2`; `0` or `1`
@@ -202,9 +282,30 @@ export interface SubagentsSettings {
    * what the parent session counts.
    */
   showCost?: boolean
-  /** Show effective model and thinking level in running widget rows. */
+
+  /**
+   * Whether the widget's running rows name the model driving each agent and the
+   * thinking level it is running at.
+   *
+   * Off by default, unlike the tool result and the conversation viewer, which
+   * show the pair unconditionally: those have a line to themselves, while the
+   * widget row already carries the description, turns, tool uses, tokens and
+   * elapsed time, and every character it gains is one the description loses on a
+   * narrow terminal.
+   */
   showModel?: boolean
-  /** Markdown scope in the conversation viewer. Defaults to assistant. */
+  /**
+   * How much of the conversation viewer's transcript renders as Markdown.
+   * Defaults to `assistant`. Applied live — the viewer's `m` key cycles this
+   * same setting, so a choice made in the overlay persists like one made in
+   * `/agents → Settings`.
+   *
+   * Scoped rather than all-or-nothing because the two kinds of content have
+   * different contracts: assistant text is authored as Markdown, while a tool
+   * result is whatever bytes the tool produced. Rendering the latter as
+   * Markdown is lossy in ways that look like the tool misbehaved — see
+   * `ViewerMarkdownMode` for the specific rewrites — so `all` is opt-in.
+   */
   viewerMarkdown?: ViewerMarkdownMode
 }
 
@@ -224,9 +325,12 @@ export interface SettingsAppliers {
   setDisableDefaultAgents: (b: boolean) => void
   setToolDescriptionMode: (mode: ToolDescriptionMode) => void
   setFleetView: (b: boolean) => void
+  setAgentMentions: (mode: AgentMentionMode) => void
+  setRememberAgents: (b: boolean) => void
   setWidgetMode: (mode: WidgetMode) => void
   setOutputTranscript: (b: boolean) => void
   setWorktreeIsolation: (b: boolean) => void
+  setWorkflowsEnabled: (b: boolean) => void
   setMaxSubagentDepth: (n: number) => void
   setFallbackSubagent: (v: string | undefined) => void
   setReportUsage: (b: boolean) => void
@@ -252,6 +356,8 @@ const VALID_WIDGET_MODES: ReadonlySet<string> = new Set<WidgetMode>([
 ])
 const VALID_VIEWER_MARKDOWN_MODES: ReadonlySet<string> =
   new Set<ViewerMarkdownMode>(["off", "assistant", "all"])
+const VALID_AGENT_MENTION_MODES: ReadonlySet<string> =
+  new Set<AgentMentionMode>(["model", "direct", "off"])
 
 // Sanity ceilings — prevent hand-edited configs from asking for values that
 // make no operational sense (e.g. 1e6 concurrent subagents). Permissive enough
@@ -273,6 +379,8 @@ function sanitize(raw: unknown): SubagentsSettings {
   ) {
     out.maxConcurrent = r.maxConcurrent as number
   }
+  // Floor 0, not 1 like maxConcurrent above: 0 is the documented "unlimited"
+  // value and the default, so dropping it would silently be unrepresentable.
   if (
     Number.isInteger(r.maxConcurrentForeground) &&
     (r.maxConcurrentForeground as number) >= 0 &&
@@ -331,6 +439,19 @@ function sanitize(raw: unknown): SubagentsSettings {
   if (typeof r.fleetView === "boolean") {
     out.fleetView = r.fleetView
   }
+  // Was a boolean before the `model` mode existed. A hand-written or
+  // previously-written `true` means "on", which is now the default `model`.
+  if (typeof r.agentMentions === "boolean") {
+    out.agentMentions = r.agentMentions ? "model" : "off"
+  } else if (
+    typeof r.agentMentions === "string" &&
+    VALID_AGENT_MENTION_MODES.has(r.agentMentions)
+  ) {
+    out.agentMentions = r.agentMentions as AgentMentionMode
+  }
+  if (typeof r.rememberAgents === "boolean") {
+    out.rememberAgents = r.rememberAgents
+  }
   if (
     typeof r.widgetMode === "string" &&
     VALID_WIDGET_MODES.has(r.widgetMode)
@@ -357,6 +478,9 @@ function sanitize(raw: unknown): SubagentsSettings {
     VALID_VIEWER_MARKDOWN_MODES.has(r.viewerMarkdown)
   ) {
     out.viewerMarkdown = r.viewerMarkdown as ViewerMarkdownMode
+  }
+  if (typeof r.workflowsEnabled === "boolean") {
+    out.workflowsEnabled = r.workflowsEnabled
   }
   if (r.fallbackSubagent === false) {
     // The only non-string spelling worth accepting: a boolean would otherwise be
@@ -434,8 +558,9 @@ export function applySettings(
 ): void {
   if (typeof s.maxConcurrent === "number")
     appliers.setMaxConcurrent(s.maxConcurrent)
-  if (typeof s.maxConcurrentForeground === "number")
+  if (typeof s.maxConcurrentForeground === "number") {
     appliers.setMaxConcurrentForeground(s.maxConcurrentForeground)
+  }
   if (typeof s.defaultMaxTurns === "number")
     appliers.setDefaultMaxTurns(s.defaultMaxTurns)
   if (typeof s.graceTurns === "number") appliers.setGraceTurns(s.graceTurns)
@@ -456,6 +581,9 @@ export function applySettings(
   if (s.toolDescriptionMode)
     appliers.setToolDescriptionMode(s.toolDescriptionMode)
   if (typeof s.fleetView === "boolean") appliers.setFleetView(s.fleetView)
+  if (s.agentMentions) appliers.setAgentMentions(s.agentMentions)
+  if (typeof s.rememberAgents === "boolean")
+    appliers.setRememberAgents(s.rememberAgents)
   if (s.widgetMode) appliers.setWidgetMode(s.widgetMode)
   if (typeof s.outputTranscript === "boolean")
     appliers.setOutputTranscript(s.outputTranscript)
@@ -465,6 +593,8 @@ export function applySettings(
   if (typeof s.showCost === "boolean") appliers.setShowCost(s.showCost)
   if (typeof s.showModel === "boolean") appliers.setShowModel(s.showModel)
   if (s.viewerMarkdown) appliers.setViewerMarkdown(s.viewerMarkdown)
+  if (typeof s.workflowsEnabled === "boolean")
+    appliers.setWorkflowsEnabled(s.workflowsEnabled)
 }
 
 /**

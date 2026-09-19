@@ -31,10 +31,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { extensionCanonicalName, runAgent } from "../src/agent-runner.js"
 import { registerAgents } from "../src/agent-types.js"
 import type { AgentConfig } from "../src/types.js"
-import {
-  type FauxProviderRegistration,
-  registerFauxProvider,
-} from "./helpers/pi-ai.js"
+import { registerFauxProvider } from "./helpers/pi-ai.js"
 
 // These tests spin up the REAL pi-mono runtime (loader + dynamic extension
 // import + session construction), so a cold first run under full-suite CPU
@@ -56,13 +53,13 @@ function makePi() {
 
 describe("agent-runner end-to-end (real pi-mono session + real extension)", () => {
   let cwd: string
-  let faux: FauxProviderRegistration
+  let faux: ReturnType<typeof registerFauxProvider>
 
-  beforeEach(async () => {
+  beforeEach(() => {
     cwd = mkdtempSync(join(tmpdir(), "subagents-e2e-"))
     // Only used as a valid Model object for createAgentSession; we never rely
     // on it actually streaming (we assert on the pre-prompt gated tool set).
-    faux = await registerFauxProvider({
+    faux = registerFauxProvider({
       provider: "faux",
       models: [{ id: "faux-1", contextWindow: 200_000 }],
     })
@@ -97,11 +94,21 @@ describe("agent-runner end-to-end (real pi-mono session + real extension)", () =
       ]),
     )
     const model = faux.getModel()
+    const modelRegistry: any = {
+      find: () => model,
+      getAll: () => [model],
+      getAvailable: () => [model],
+      hasConfiguredAuth: () => true,
+      isUsingOAuth: () => false,
+      getApiKeyAndHeaders: async () => ({ apiKey: "faux", headers: {} }),
+      registerProvider: () => {},
+      unregisterProvider: () => {},
+    }
     const ctx: any = {
       cwd,
       getSystemPrompt: () => "PARENT",
       model,
-      modelRegistry: faux.modelRegistry,
+      modelRegistry,
     }
 
     let active: string[] = []
