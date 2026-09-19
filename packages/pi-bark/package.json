@@ -39,7 +39,7 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.84.0"
+    "@earendil-works/pi-coding-agent": "^0.84.0 || ^0.85.0"
   },
   "engines": {
     "node": ">=22.19.0"

@@ -86,8 +86,16 @@
       "repository": "https://github.com/nicobailon/pi-mcp-adapter"
     },
     {
+      "package": "pi-typesafe",
+      "repository": "https://github.com/DevMortimer/pi-typesafe"
+    },
+    {
       "package": "pi-footer",
       "repository": "https://github.com/wobondar/pi-footer"
+    },
+    {
+      "package": "pi-jev-auto-mode",
+      "repository": "https://github.com/jomatsu/pi-jev-auto-mode"
     },
     {
       "package": "pi-lens",

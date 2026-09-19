@@ -85,7 +85,7 @@ bun run typecheck
 
 ## 兼容性
 
-- Node.js `>=22.19.0`，Pi `^0.84.0`（通过根目录 `package.json` 的 `pi.extensions` 和 `pi.themes` 加载）
+- Node.js `>=22.19.0`，Pi `^0.84.0 || ^0.85.0`（通过根目录 `package.json` 的 `pi.extensions` 和 `pi.themes` 加载）
 
 ## 推荐搭配
 

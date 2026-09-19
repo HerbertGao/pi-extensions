@@ -251,7 +251,9 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
 | `pi-mcp-adapter`                     | `2.34.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-typesafe`                        | `0.5.0`  | `DevMortimer/pi-typesafe`   |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
+| `pi-jev-auto-mode`                   | `0.4.1`  | `jomatsu/pi-jev-auto-mode`  |
 | `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
@@ -263,6 +265,8 @@ The issue #208 companion review accepted two released updates:
 - `@narumitw/pi-btw@0.60.0`: npm package update.
 - `pi-lens@4.2.1`: npm package update.
 - `Tifan Pi extensions` unreleased repository commits are consciously deferred as there are no new published package releases.
+
+`pi-typesafe@0.5.0` and `pi-jev-auto-mode@0.4.1` are accepted as direct MIT companions. TypeSafe provides explicit structured Jev decisions, while Jev Auto Mode applies fail-closed gates to tool calls. `pi-typesafe` requires Pi `>=0.85.1`, so the current aggregate host baseline is 0.85.1.
 
 The issue #202 companion review accepted three released updates:
 
@@ -287,7 +291,7 @@ The issue #134 companion review accepted six independent releases:
 - `pi-mcp-adapter@2.31.0` adds full-URL manual completion for pre-registered HTTPS OAuth redirects and advertises MCP Apps UI support. Aggregate smoke verifies callback state validation, manual completion, and the UI capability declaration; runtime dependencies and MIT terms are unchanged.
 - `pi-web-access@0.27.0` adds configurable fetch deadlines and default answer models, suppresses Defuddle's relative-canonical noise, and isolates GitHub clone work beneath per-process runtime directories. The real Pi smoke covers config/override precedence, canonical handling, and clone cleanup.
 
-All accepted paths use the aggregate's Pi 0.84.4 host. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
+The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline is Pi 0.85.1 for the TypeSafe companions. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
 
 The issue #131 companion review accepted four released updates:
 
@@ -374,7 +378,7 @@ Maintained child packages use SemVer and normally preserve their imported upstre
 
 Recommended configuration files may be shipped under `packages/pi-extensions/examples/`, but package installation must not write into `~/.pi` or replace existing user configuration. Keep examples valid against the pinned companion version and assert their presence and parsing in the aggregate smoke test.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 23 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 26 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 

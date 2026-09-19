@@ -313,7 +313,7 @@ try {
     )
   }
   if (
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.4" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.85.1" ||
     sourceManifest.dependencies.typebox !== "^1.1.38"
   ) {
     throw new Error("Aggregate pi-lens host ranges are no longer compatible")
@@ -1667,11 +1667,11 @@ try {
   }
   if (
     sourceManifest.dependencies["@earendil-works/pi-coding-agent"] !==
-      "^0.84.4" ||
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.84.4"
+      "^0.85.1" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.85.1"
   ) {
     throw new Error(
-      'Aggregate Pi host ranges must be exactly "^0.84.4"; update this check when the host is bumped',
+      'Aggregate Pi host ranges must be exactly "^0.85.1"; update this check when the host is bumped',
     )
   }
   const installedHosts = await Promise.all(
@@ -1690,12 +1690,12 @@ try {
     }),
   )
   for (const { hostDependency, version } of installedHosts) {
-    // Keep the 0.84 line pinned while accepting compatible later patches;
+    // Keep the 0.85 line pinned while accepting compatible later patches;
     // bump the source range and this guard together when Pi moves again.
-    const patch = /^0\.84\.(\d+)$/.exec(version)?.[1]
-    if (patch === undefined || Number(patch) < 4) {
+    const patch = /^0\.85\.(\d+)$/.exec(version)?.[1]
+    if (patch === undefined || Number(patch) < 1) {
       throw new Error(
-        `Expected remote-pi ${hostDependency} host compatible with ^0.84.4, got ${version}`,
+        `Expected remote-pi ${hostDependency} host compatible with ^0.85.1, got ${version}`,
       )
     }
   }
@@ -2119,6 +2119,14 @@ try {
   ) {
     throw new Error("Aggregate SoL-Pi third-party notices are incomplete")
   }
+  if (
+    !tifanNotices.includes("`pi-typesafe`") ||
+    !tifanNotices.includes("Copyright (c) 2026 Ryan Gapac") ||
+    !tifanNotices.includes("`pi-jev-auto-mode`") ||
+    !tifanNotices.includes("Copyright (c) 2026 jomatsu")
+  ) {
+    throw new Error("Aggregate TypeSafe third-party notices are incomplete")
+  }
 
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
@@ -2137,8 +2145,10 @@ try {
       "node_modules/@narumitw/pi-caffeinate/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
       "node_modules/pi-footer/LICENSE",
+      "node_modules/pi-jev-auto-mode/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-mcp-adapter/LICENSE",
+      "node_modules/pi-typesafe/LICENSE",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
@@ -2450,6 +2460,53 @@ try {
   ) {
     throw new Error("Packed fast-mode extension did not load")
   }
+
+  const jevAutoRoot = join(packageRoot, "node_modules", "pi-jev-auto-mode")
+  const jevAutoEntry = resolve(jevAutoRoot, "index.ts")
+  if (!extensionPaths.includes(jevAutoEntry)) {
+    throw new Error(
+      "Packed aggregate is missing the pi-jev-auto-mode extension entry",
+    )
+  }
+  const loadedJevAuto = result.extensions.find(
+    (extension) => extension.resolvedPath === jevAutoEntry,
+  )
+  if (!loadedJevAuto?.commands.has("jev-auto-mode")) {
+    throw new Error("Packed pi-jev-auto-mode did not register /jev-auto-mode")
+  }
+  if (!loadedJevAuto.handlers.has("tool_call")) {
+    throw new Error("Packed pi-jev-auto-mode did not register its tool gate")
+  }
+  const jevAutoLicense = await readFile(join(jevAutoRoot, "LICENSE"), "utf8")
+  if (!jevAutoLicense.startsWith("MIT License\n\nCopyright (c) 2026 jomatsu")) {
+    throw new Error(
+      "Bundled pi-jev-auto-mode LICENSE is not the expected MIT text",
+    )
+  }
+
+  const typesafeRoot = join(packageRoot, "node_modules", "pi-typesafe")
+  const typesafeEntry = resolve(typesafeRoot, "extensions", "index.js")
+  if (!extensionPaths.includes(typesafeEntry)) {
+    throw new Error(
+      "Packed aggregate is missing the pi-typesafe extension entry",
+    )
+  }
+  const loadedTypesafe = result.extensions.find(
+    (extension) => extension.resolvedPath === typesafeEntry,
+  )
+  if (!loadedTypesafe?.commands.has("typesafe")) {
+    throw new Error("Packed pi-typesafe did not register /typesafe")
+  }
+  if (!loadedTypesafe.tools.has("typesafe_evaluate")) {
+    throw new Error("Packed pi-typesafe did not register typesafe_evaluate")
+  }
+  const typesafeLicense = await readFile(join(typesafeRoot, "LICENSE"), "utf8")
+  if (
+    !typesafeLicense.startsWith("MIT License\n\nCopyright (c) 2026 Ryan Gapac")
+  ) {
+    throw new Error("Bundled pi-typesafe LICENSE is not the expected MIT text")
+  }
+
   const footerEntry = resolve(footerRoot, footerEntryRelative)
   if (!extensionPaths.includes(footerEntry)) {
     throw new Error("Packed aggregate is missing the pi-footer extension entry")

@@ -85,7 +85,7 @@ bun run typecheck
 
 ## Compatibility
 
-- Node.js `>=22.19.0`, Pi `^0.84.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
+- Node.js `>=22.19.0`, Pi `^0.84.0 || ^0.85.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
 
 ## Recommended companions
 

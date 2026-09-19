@@ -8,7 +8,7 @@ A collection of HerbertGao-maintained and pinned upstream extensions for the [Pi
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer and Pi 0.84.4 or newer.
+Requires Node.js 24 or newer and Pi 0.85.1 or newer.
 
 The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual maintained packages can also be installed separately.
 
@@ -41,7 +41,9 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.1`        | Persist thinking levels per model.            |
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.6`        | Generate one-line session recaps.             |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
+| [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.4.1`        | Fail-closed Jev safety gates for tool calls.  |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.31.0`       | MCP tools and skills.                         |
+| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.5.0`        | Structured TypeSafe/Jev decisions.            |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.2.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.27.0`       | Web search and content access.                |
@@ -59,7 +61,7 @@ The aggregate enables `pi-footer`, which keeps Pi's path, Git, token/context, mo
 
 ## Native fullscreen
 
-Pi 0.84.4's native `fullscreen` TUI owns transcript scrolling and the fixed bottom dock. `@herbertgao/pi-cc-extensions` integrates its mouse interactions with that native viewport.
+Pi 0.85.1's native `fullscreen` TUI owns transcript scrolling and the fixed bottom dock. `@herbertgao/pi-cc-extensions` integrates its mouse interactions with that native viewport.
 
 ## Maintenance
 
