@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+
+### Minor Changes
+
+- [#212](https://github.com/HerbertGao/pi-extensions/pull/212) [`8e807a3`](https://github.com/HerbertGao/pi-extensions/commit/8e807a31f07ce57359366a6e6b7acc38b2806100) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Upgrade the maintained subagents extension to upstream v0.19.0 with workflow orchestration, agent mentions, structured output, journal/resume support, and the PR [#268](https://github.com/HerbertGao/pi-extensions/issues/268) worktree-cleanup safety fixes.
+
 ## 0.17.1
 
 ### Patch Changes

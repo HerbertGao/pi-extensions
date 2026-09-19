@@ -1,5 +1,12 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.10
+
+### Patch Changes
+
+- Updated dependencies [[`8e807a3`](https://github.com/HerbertGao/pi-extensions/commit/8e807a31f07ce57359366a6e6b7acc38b2806100)]:
+  - @herbertgao/pi-subagents@0.18.0
+
 ## 2026.9.9
 
 ### Minor Changes
