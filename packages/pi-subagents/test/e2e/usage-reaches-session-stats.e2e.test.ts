@@ -26,7 +26,9 @@
  * messages alone and drops the field. Running unconditionally is the point —
  * against a Pi that does not aggregate, this fails rather than skipping, which
  * is how the range stays honest. `peerDependencies` moved to `>=0.81.0` for
- * exactly this reason, so the CI floor job runs it too.
+ * exactly this reason, so the CI floor job runs it too. The floor has since moved
+ * on past it (the Workflow tool needs 0.84.0), so this no longer pins the range's
+ * lower edge — it still pins the behaviour that made 0.80.x unsupportable.
  */
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -37,6 +39,7 @@ import {
 } from "@earendil-works/pi-coding-agent"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { PendingUsagePool } from "../../src/usage.js"
+import { fauxModelBackend } from "../helpers/faux-model-backend.js"
 import { registerFauxProvider } from "../helpers/pi-ai.js"
 
 // Real pi session construction; a cold first run under full-suite CPU
@@ -45,11 +48,11 @@ vi.setConfig({ testTimeout: 30_000 })
 
 describe("subagent usage reaches the parent session's stats (real pi)", () => {
   let cwd: string
-  let faux: Awaited<ReturnType<typeof registerFauxProvider>>
+  let faux: ReturnType<typeof registerFauxProvider>
 
-  beforeEach(async () => {
+  beforeEach(() => {
     cwd = mkdtempSync(join(tmpdir(), "subagents-usage-e2e-"))
-    faux = await registerFauxProvider({
+    faux = registerFauxProvider({
       provider: "faux",
       models: [{ id: "faux-1", contextWindow: 200_000 }],
     })
@@ -62,12 +65,13 @@ describe("subagent usage reaches the parent session's stats (real pi)", () => {
   /** A real session, in memory, on a faux model. */
   async function realSession() {
     const model = faux.getModel()
+    const backend = fauxModelBackend(model)
     const { session } = await createAgentSession({
       cwd,
       sessionManager: SessionManager.inMemory(cwd),
       model: model as any,
-      modelRegistry: faux.modelRegistry,
-      modelRuntime: faux.modelRuntime,
+      modelRegistry: backend.modelRegistry,
+      modelRuntime: backend.modelRuntime,
       tools: [],
     } as any)
     return session

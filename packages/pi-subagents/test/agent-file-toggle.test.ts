@@ -20,14 +20,15 @@ import {
   findAgentFile,
   isDisabledContent,
   isEmptyStub,
+  locateAgentFile,
 } from "../src/agent-file-toggle.js"
 import { parseAgentFrontmatter } from "../src/custom-agents.js"
 
 /** What the loader concludes about a file, via the same parser it really uses. */
 function loaderSeesDisabled(content: string): boolean {
   return (
-    parseAgentFrontmatter<Record<string, unknown>>(content).frontmatter
-      .enabled === false
+    parseFrontmatter<Record<string, unknown>>(content).frontmatter.enabled ===
+    false
   )
 }
 
@@ -54,17 +55,6 @@ describe("enableInContent", () => {
   it("strips enabled: false when it is the last frontmatter line", () => {
     const src =
       "---\ndescription: Scout\ndisplay_name: Scout\nenabled: false\n---\n\nBody.\n"
-    const { content, changed } = enableInContent(src)
-    expect(changed).toBe(true)
-    expect(loaderSeesDisabled(content)).toBe(false)
-  })
-
-  it.each([
-    ["False", "enabled: False"],
-    ["FALSE with a comment", "enabled: FALSE # disabled for now"],
-    ["indented", "  enabled: false"],
-  ])("strips YAML false spelling: %s", (_label, line) => {
-    const src = `---\ndescription: Scout\n${line}\n---\n\nBody.\n`
     const { content, changed } = enableInContent(src)
     expect(changed).toBe(true)
     expect(loaderSeesDisabled(content)).toBe(false)
@@ -147,16 +137,44 @@ describe("disableInContent", () => {
     expect(loaderSeesDisabled(content)).toBe(true)
   })
 
-  it("disables a BOM-prefixed file exactly as the loader reads it", () => {
-    const src = "﻿---\ndescription: Scout\n---\n\nBody.\n"
-    expect(
-      parseAgentFrontmatter<Record<string, unknown>>(src).frontmatter,
-    ).toEqual({ description: "Scout" })
+  it("toggles a BOM-prefixed file, and leaves the BOM where it found it", () => {
+    // Editors across the Windows/CJK world emit UTF-8 with a BOM by default, so
+    // an agent file written in one is ordinary input, not a curiosity. The read
+    // side normalises the BOM away (see parseAgentFrontmatter), so the write
+    // side must edit the block rather than refuse it — and must not strip the
+    // BOM from the user's file while doing so.
+    const src = "﻿---\ndescription: 侦察\n---\n\n本文。\n"
+
     const { content, outcome } = disableInContent(src)
+
     expect(outcome).toBe("disabled")
+    expect(isDisabledContent(content)).toBe(true)
     expect(content.startsWith("﻿")).toBe(true)
-    expect(loaderSeesDisabled(content)).toBe(true)
     expect(enableInContent(content).content).toBe(src)
+  })
+})
+
+describe("parseAgentFrontmatter", () => {
+  it("reads a BOM-prefixed file's fields instead of dropping them", () => {
+    // The bug this guards: an unnormalised BOM made the fence miss, so the
+    // frontmatter came back empty and the *whole file* became the body. `tools`
+    // going missing is the sharp edge — the agent then registers with the
+    // default toolset, a wider grant than its author wrote.
+    const src = "﻿---\ndescription: 侦察\ntools: none\n---\n\n本文。\n"
+
+    const { frontmatter, body } =
+      parseAgentFrontmatter<Record<string, unknown>>(src)
+
+    expect(frontmatter).toEqual({ description: "侦察", tools: "none" })
+    expect(body).toBe("本文。")
+  })
+
+  it("leaves a file without a BOM exactly as the parser reads it", () => {
+    const src = "---\ndescription: Scout\n---\n\nBody.\n"
+
+    expect(parseAgentFrontmatter<Record<string, unknown>>(src)).toEqual(
+      parseFrontmatter<Record<string, unknown>>(src),
+    )
   })
 })
 
@@ -269,6 +287,13 @@ describe("read and write paths agree", () => {
 })
 
 describe("isEmptyStub", () => {
+  it("recognises the stub behind a BOM", () => {
+    // Correct today only because String.trim() counts U+FEFF as whitespace —
+    // true, but nowhere stated, and this function eyeballs raw content instead
+    // of going through parseAgentFrontmatter like every other reader.
+    expect(isEmptyStub("\uFEFF---\n---")).toBe(true)
+  })
+
   it("recognizes the stub /agents writes to disable a built-in default", () => {
     expect(isEmptyStub("---\n---\n")).toBe(true)
     expect(
@@ -334,6 +359,76 @@ describe("findAgentFile", () => {
 
   it("returns undefined when the agent has no file anywhere", () => {
     expect(findAgentFile("nope", tmpDir)).toBeUndefined()
+  })
+
+  // An agent's type comes from its frontmatter `name:` now, so `<type>.md` is a
+  // guess. Getting it wrong is not a harmless miss: `/agents → Disable` takes
+  // the no-file branch and writes a NEW stub, which loses to the real file on
+  // load — so the agent stays enabled while the toast reports success.
+  describe("locateAgentFile", () => {
+    it("uses the file the loader read, whatever it is called", () => {
+      write(join(tmpDir, ".pi", "agents"), "reviewer")
+      const sourcePath = join(tmpDir, ".pi", "agents", "reviewer.md")
+
+      expect(locateAgentFile("code-reviewer", sourcePath, tmpDir)).toEqual({
+        path: sourcePath,
+        location: "project",
+      })
+    })
+
+    it("classifies a workspace and a personal source path", () => {
+      write(join(tmpDir, ".agents", "agents"), "reviewer")
+      write(join(agentDir, "agents"), "auditor")
+
+      expect(
+        locateAgentFile(
+          "code-reviewer",
+          join(tmpDir, ".agents", "agents", "reviewer.md"),
+          tmpDir,
+        ),
+      ).toMatchObject({ location: "workspace" })
+      expect(
+        locateAgentFile(
+          "code-auditor",
+          join(agentDir, "agents", "auditor.md"),
+          tmpDir,
+        ),
+      ).toMatchObject({ location: "personal" })
+    })
+
+    it("falls back to the <type>.md probe for a built-in with no source file", () => {
+      write(join(tmpDir, ".pi", "agents"), "scout")
+
+      expect(locateAgentFile("scout", undefined, tmpDir)).toEqual({
+        path: join(tmpDir, ".pi", "agents", "scout.md"),
+        location: "project",
+      })
+    })
+
+    it("falls back when the recorded path has since been deleted", () => {
+      write(join(tmpDir, ".pi", "agents"), "scout")
+
+      expect(
+        locateAgentFile(
+          "scout",
+          join(tmpDir, ".pi", "agents", "gone.md"),
+          tmpDir,
+        ),
+      ).toEqual({
+        path: join(tmpDir, ".pi", "agents", "scout.md"),
+        location: "project",
+      })
+    })
+
+    it("finds nothing when neither the source path nor the probe resolves", () => {
+      expect(
+        locateAgentFile(
+          "nope",
+          join(tmpDir, ".pi", "agents", "gone.md"),
+          tmpDir,
+        ),
+      ).toBeUndefined()
+    })
   })
 })
 

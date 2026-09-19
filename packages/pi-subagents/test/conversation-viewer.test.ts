@@ -704,18 +704,38 @@ describe("ConversationViewer", () => {
       )
     })
 
-    it("reports and abbreviates omitted character counts", () => {
-      const exact = `${"x".repeat(RESULT_MAX_CHARS)}😀x`
-      const exactContent = (
-        (viewerFor(result(exact)) as any).buildContentLines(76) as string[]
-      ).map(strip)
-      expect(exactContent).toContain("... (truncated, 3 more characters)")
+    it("reports the exact omitted character count", () => {
+      // UTF-16 code units, so the astral character here counts as two.
+      const text = `${"x".repeat(RESULT_MAX_CHARS)}😀x`
+      const viewer = viewerFor(result(text))
+      const content = ((viewer as any).buildContentLines(76) as string[]).map(
+        strip,
+      )
 
-      const large = `${"x".repeat(RESULT_MAX_CHARS)}${"y".repeat(999_999)}`
-      const note = viewerFor(result(large))
+      expect(content).toContain("... (truncated, 3 more characters)")
+    })
+
+    it("abbreviates a large omitted count so the notice fits a narrow frame", () => {
+      // The notice goes through truncateToWidth at innerW (width - 4). An exact
+      // count runs to seven digits on a multi-megabyte result and pushes the
+      // notice past 46, where the unit is cut off and only a number survives.
+      const text = `${"x".repeat(RESULT_MAX_CHARS)}${"y".repeat(1_100_000)}`
+      const note = viewerFor(result(text))
         .render(50)
         .map(strip)
-        .find((line) => line.includes("truncated,"))
+        .find((l) => l.includes("truncated,"))
+
+      expect(note).toContain("1.1M more characters)")
+    })
+
+    it("rounds into the M bracket rather than reporting 1000k", () => {
+      // 999,999 / 1000 rounds to 1000.0 — the bracket has to be picked against
+      // the rounded value, not the raw one.
+      const text = `${"x".repeat(RESULT_MAX_CHARS)}${"y".repeat(999_999)}`
+      const note = strip(viewerFor(result(text)).render(80).join("\n"))
+        .split("\n")
+        .find((l) => l.includes("truncated,"))
+
       expect(note).toContain("1M more characters")
     })
 
@@ -738,6 +758,14 @@ describe("ConversationViewer", () => {
       markdownThrows = false
       expect(strip(viewer.render(80).join("\n"))).toContain("# heading")
       expect(markdownRenderCalls).toBe(1)
+
+      // Replacing the failed content can remove the unsafe prefix, so it gets
+      // one fresh Markdown attempt instead of staying literal forever.
+      messages[0].content[0].text = "## safe"
+      const replaced = strip(viewer.render(80).join("\n"))
+      expect(markdownRenderCalls).toBe(2)
+      expect(replaced).toContain("safe")
+      expect(replaced).not.toContain("## safe")
     })
 
     it("tracks a tool result that keeps growing past the cap", () => {
@@ -750,12 +778,11 @@ describe("ConversationViewer", () => {
       }
       const viewer = viewerFor([msg])
       const elided = () => {
-        const match = strip(
+        const m = strip(
           ((viewer as any).buildContentLines(76) as string[]).join("\n"),
         ).match(/truncated, ([\d.]+)([kM]?) more/)
         return (
-          Number(match?.[1]) *
-          (match?.[2] === "M" ? 1e6 : match?.[2] === "k" ? 1e3 : 1)
+          Number(m?.[1]) * (m?.[2] === "M" ? 1e6 : m?.[2] === "k" ? 1e3 : 1)
         )
       }
 

@@ -1,3 +1,12 @@
+/**
+ * agent-startup-error.test.ts — a spawn that never starts must fail the tool
+ * call, not return a message (#179).
+ *
+ * The assertion is `rejects`, and that is the whole point: pi marks a tool
+ * result failed only when `execute` throws (`isError` on a returned result is
+ * discarded), so a returned diagnostic reaches the parent model as a subagent
+ * that ran and reported this — and the model retries the same doomed call.
+ */
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -17,8 +26,11 @@ function boot() {
   const tools = new Map<string, any>()
   const pi = {
     registerMessageRenderer: vi.fn(),
-    registerTool: vi.fn((tool: any) => tools.set(tool.name, tool)),
+    registerTool: vi.fn((t: any) => tools.set(t.name, t)),
     registerCommand: vi.fn(),
+    registerEntryRenderer: vi.fn(),
+    registerFlag: vi.fn(),
+    getFlag: vi.fn(),
     on: vi.fn(),
     events: { emit: vi.fn(), on: vi.fn(() => vi.fn()) },
     appendEntry: vi.fn(),
@@ -48,7 +60,7 @@ function ctx() {
   } as any
 }
 
-describe("Agent startup failures fail the tool call", () => {
+describe("Agent startup failures fail the tool call (#179)", () => {
   beforeEach(() => {
     originalCwd = process.cwd()
     cwd = mkdtempSync(join(tmpdir(), "startup-error-"))
@@ -75,9 +87,9 @@ describe("Agent startup failures fail the tool call", () => {
 
       await expect(
         tools.get("Agent").execute(
-          "call-1",
+          "tc-1",
           {
-            prompt: "Do work",
+            prompt: "do it",
             description: "worktree probe",
             subagent_type: "general-purpose",
             isolation: "worktree",

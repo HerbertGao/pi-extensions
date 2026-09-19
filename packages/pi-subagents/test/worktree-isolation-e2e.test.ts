@@ -59,7 +59,7 @@ function initGitRepo(): string {
   git(dir, "config", "user.name", "Test")
   writeFileSync(join(dir, "README.md"), "# Test repo")
   git(dir, "add", "README.md")
-  git(dir, "-c", "commit.gpgSign=false", "commit", "-m", "initial")
+  git(dir, "commit", "--no-gpg-sign", "-m", "initial")
   return dir
 }
 

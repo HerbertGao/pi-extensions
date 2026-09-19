@@ -7,7 +7,7 @@
 
 import { truncateToWidth } from "@earendil-works/pi-tui"
 import { renderAgentName } from "../agent-color.js"
-import type { AgentManager } from "../agent-manager.js"
+import { type AgentManager, isTopLevelAgent } from "../agent-manager.js"
 import { getConfig } from "../agent-types.js"
 import type { AgentInvocation, SubagentType, WidgetMode } from "../types.js"
 import {
@@ -99,7 +99,7 @@ export interface AgentDetails {
   activity?: string
   /** Current spinner frame index (for animated running indicator). */
   spinnerFrame?: number
-  /** Short model name if different from parent (e.g. "haiku", "sonnet"). */
+  /** Short label for the model the run used, e.g. "haiku 4.5". */
   modelName?: string
   /** Notable config tags (e.g. ["thinking: high", "isolated"]). */
   tags?: string[]
@@ -223,7 +223,13 @@ export function getPromptModeLabel(type: SubagentType): string | undefined {
   return config.promptMode === "append" ? "twin" : undefined
 }
 
-/** Mode label is not included — callers add it where they want it. */
+/**
+ * Mode label is not included — callers add it where they want it.
+ *
+ * Both model forms come back so each surface can pick by width; the
+ * "(asked X)" annotation is applied here rather than by callers, so a value the
+ * spawn did not honor cannot be rendered as though it had been (#182).
+ */
 export function buildInvocationTags(invocation: AgentInvocation | undefined): {
   modelName?: string
   modelId?: string
@@ -330,7 +336,13 @@ export class AgentWidget {
      * supplies the user's `showCost` setting.
      */
     private showCost: () => boolean = () => false,
-    /** Whether running rows show the model and thinking level. */
+    /**
+     * Read live at render time, like `mode`. Whether running agents name the
+     * model driving them and the thinking level it is running at. Defaults to
+     * off — the extension supplies the user's `showModel` setting — because the
+     * row is already dense and the same pair is on the tool result and in the
+     * conversation viewer unconditionally.
+     */
     private showModel: () => boolean = () => false,
   ) {}
 
@@ -346,7 +358,7 @@ export class AgentWidget {
    *   - `all`: every agent.
    */
   private widgetAgents() {
-    const all = this.manager.listAgents().filter((a) => !a.parentAgentId)
+    const all = this.manager.listAgents().filter(isTopLevelAgent)
     switch (this.mode()) {
       case "off":
         return []
@@ -542,6 +554,9 @@ export class AgentWidget {
 
       const parts: string[] = []
       if (this.showModel()) {
+        // Leading, and paired: a thinking level means nothing without the model
+        // it applies to. The tag is taken from buildInvocationTags rather than
+        // rebuilt so the "(asked X)" annotation survives.
         const { modelName, tags } = buildInvocationTags(a.invocation)
         if (modelName) parts.push(modelName)
         const thinkingTag = tags.find((tag) => tag.startsWith("thinking: "))

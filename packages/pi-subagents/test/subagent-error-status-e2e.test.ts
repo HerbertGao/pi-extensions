@@ -4,7 +4,10 @@
  * failure, not as "completed" with an empty (or stale) result.
  *
  * Full-stack: real pi loader + real extension + real runAgent + real child
- * sessions on a faux model.
+ * sessions on a faux model. Faux is the point, not a shortcut — the scenario is
+ * a provider error with zero content, which no live model will produce on
+ * request. Each run pins `live: false` so the pre-publish smoke's global
+ * `PI_E2E_LIVE=1` can't swap a real model in and turn this suite red.
  */
 import {
   fauxAssistantMessage,
@@ -63,6 +66,7 @@ describe("issue #144 — empty-error final turns must not be 'completed'", () =>
             errorMessage: FATAL,
           }),
       }),
+      live: false,
     })
 
     // DESIRED: the orchestrator sees a failure naming the provider error —
@@ -99,6 +103,7 @@ describe("issue #144 — empty-error final turns must not be 'completed'", () =>
               ])
         },
       }),
+      live: false,
     })
 
     // The orchestrator sees the failure (not the earlier text as a clean
@@ -130,6 +135,7 @@ describe("issue #144 — empty-error final turns must not be 'completed'", () =>
             errorMessage: FATAL,
           }),
       }),
+      live: false,
     })
 
     const toolResult = agentToolResult(run.parentSession)

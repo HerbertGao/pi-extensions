@@ -105,6 +105,7 @@ beforeEach(() => {
   manager = {
     spawn,
     spawnAndWait,
+    awaitStartup: vi.fn(async () => {}),
     getRecord: (id: string) => records.get(id),
     resume: vi.fn(),
   } as any
@@ -343,6 +344,27 @@ describe("child-safe nested Agent tools", () => {
     expect(manager.resume).not.toHaveBeenCalled()
   })
 
+  it("reports a background child that fails to start as a tool error", async () => {
+    // Under isolation: "worktree" the child is not running when spawn() returns
+    // — the repo copy is awaited. The failure must reach the parent as an error
+    // result, not as "Nested agent started in background".
+    vi.mocked(manager.awaitStartup).mockRejectedValueOnce(
+      new Error('Cannot run with isolation: "worktree"'),
+    )
+    const [agent] = tools(["scout"])
+
+    const result = await execute(agent, {
+      subagent_type: "scout",
+      description: "find files",
+      prompt: "Find them",
+      run_in_background: true,
+      isolation: "worktree",
+    })
+
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('isolation: "worktree"')
+  })
+
   it("waits for a queued owned child to start and settle", async () => {
     const [, getResult] = tools()
     const record = {
@@ -427,28 +449,6 @@ describe("child-safe nested Agent tools", () => {
       setFallbackSubagent(undefined)
     }
   })
-
-  it.each([false, true])(
-    "propagates startup failures (run_in_background: %s)",
-    async (background) => {
-      const [agent] = tools()
-      const failure = new Error("child never started")
-      if (background)
-        spawn.mockImplementationOnce(() => {
-          throw failure
-        })
-      else spawnAndWait.mockRejectedValueOnce(failure)
-
-      await expect(
-        execute(agent, {
-          subagent_type: "scout",
-          description: "startup probe",
-          prompt: "Do work",
-          run_in_background: background,
-        }),
-      ).rejects.toThrow("child never started")
-    },
-  )
 
   it("hands the branch cap down to the child it spawns", async () => {
     const [agent] = tools("all", 1, 3)

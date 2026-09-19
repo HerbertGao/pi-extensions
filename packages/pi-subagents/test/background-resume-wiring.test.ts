@@ -46,6 +46,9 @@ function makePi() {
     registerMessageRenderer: vi.fn(),
     registerTool: vi.fn((tool: any) => tools.set(tool.name, tool)),
     registerCommand: vi.fn(),
+    registerEntryRenderer: vi.fn(),
+    registerFlag: vi.fn(),
+    getFlag: vi.fn(),
     on: vi.fn((event: string, handler: any) => lifecycle.set(event, handler)),
     events: {
       emit: vi.fn((event: string, payload: any) => {
@@ -323,6 +326,8 @@ describe("Agent tool — background resume wiring", () => {
     await lifecycle.get("session_shutdown")?.({}, ctx)
   })
 
+  // Resume follows the same default as a fresh spawn — background — so
+  // foreground is now the explicit case rather than the implicit one.
   it("still resumes in the foreground when run_in_background is false", async () => {
     const { pi, tools, lifecycle } = makePi()
     subagentsExtension(pi)

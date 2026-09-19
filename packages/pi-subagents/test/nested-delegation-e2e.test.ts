@@ -13,7 +13,8 @@
  *
  * Deliberately faux, not live: `PI_E2E_LIVE=1` cannot drive a three-level chain
  * deterministically, and a live model choosing not to delegate would look like
- * a passing test.
+ * a passing test. Each run therefore pins `live: false` rather than trusting the
+ * env var to leave it alone — the pre-publish smoke sets it globally.
  */
 import {
   mkdirSync,
@@ -181,6 +182,7 @@ describe("nested delegation e2e (real pi-mono, faux model)", () => {
         subagent_type: "orchestrator",
         description: "delegate",
         prompt: "Delegate this downward.",
+        // Foreground: this test reads the parent's inline Agent tool result.
         run_in_background: false,
       })
     }
@@ -189,6 +191,7 @@ describe("nested delegation e2e (real pi-mono, faux model)", () => {
       prompt: "Delegate the work.",
       cwd,
       respond,
+      live: false,
       beforeRun: () => {
         registerAgents(loadCustomAgents(cwd))
       },
@@ -256,6 +259,7 @@ describe("nested delegation e2e (real pi-mono, faux model)", () => {
         subagent_type: "orchestrator",
         description: "delegate",
         prompt: "Delegate this downward.",
+        // Foreground: this test reads the parent's inline Agent tool result.
         run_in_background: false,
       })
     }
@@ -265,6 +269,7 @@ describe("nested delegation e2e (real pi-mono, faux model)", () => {
         prompt: "Delegate the work.",
         cwd,
         respond,
+        live: false,
         beforeRun: () => {
           registerAgents(loadCustomAgents(cwd))
         },

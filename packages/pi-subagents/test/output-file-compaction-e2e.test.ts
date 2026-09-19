@@ -19,6 +19,7 @@ import {
 } from "@earendil-works/pi-coding-agent"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { streamToOutputFile, writeInitialEntry } from "../src/output-file.js"
+import { fauxModelBackend } from "./helpers/faux-model-backend.js"
 import { registerFauxProvider } from "./helpers/pi-ai.js"
 
 const TURNS_BEFORE_COMPACT = 6
@@ -41,11 +42,12 @@ describe("output-file streaming across a real compaction (#145)", () => {
 
   it("keeps writing post-compaction messages to the output file", async () => {
     const cwd = tmp
-    const faux = await registerFauxProvider({
+    const faux = registerFauxProvider({
       provider: "faux",
       models: [{ id: "faux-1", contextWindow: 200_000 }],
     })
     const model = faux.getModel()
+    const backend = fauxModelBackend(model)
     // Context-branching responder: compaction issues a variable number of
     // model calls (summary, plus a turn-prefix summary when the cut point
     // splits a turn), so a fixed FIFO would desync. Decide from the request.
@@ -96,7 +98,9 @@ describe("output-file streaming across a real compaction (#145)", () => {
       cwd,
       agentDir,
       model,
-      modelRuntime: faux.modelRuntime,
+      // Registry for pre-0.80.8 Pi, runtime for post — each ignores the other.
+      modelRegistry: backend.modelRegistry as never,
+      modelRuntime: backend.modelRuntime as never,
       resourceLoader: loader,
       sessionManager: SessionManager.inMemory(cwd),
       settingsManager: SettingsManager.inMemory({
@@ -105,7 +109,7 @@ describe("output-file streaming across a real compaction (#145)", () => {
         compaction: { enabled: false, keepRecentTokens: 500 },
         retry: { enabled: false },
       }),
-    })
+    } as any)
 
     const outPath = join(tmp, "agent.output")
     writeInitialEntry(outPath, "agent-145", "repro", cwd)
@@ -120,15 +124,7 @@ describe("output-file streaming across a real compaction (#145)", () => {
       readFileSync(outPath, "utf-8")
         .trim()
         .split("\n")
-        .map((line) => {
-          try {
-            return JSON.parse(line) as Record<string, unknown>
-          } catch (error) {
-            throw new Error("Invalid JSONL entry written by output streamer", {
-              cause: error,
-            })
-          }
-        })
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
 
     // Build up history, streaming as we go (turn_end fires per prompt).
     for (let i = 0; i < TURNS_BEFORE_COMPACT; i++) {

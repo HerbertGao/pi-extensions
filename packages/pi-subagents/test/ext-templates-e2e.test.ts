@@ -33,10 +33,7 @@ import { runAgent } from "../src/agent-runner.js"
 import { getAgentConfig, registerAgents } from "../src/agent-types.js"
 import { loadCustomAgents } from "../src/custom-agents.js"
 import { resolveAgentInvocationConfig } from "../src/invocation-config.js"
-import {
-  type FauxProviderRegistration,
-  registerFauxProvider,
-} from "./helpers/pi-ai.js"
+import { registerFauxProvider } from "./helpers/pi-ai.js"
 
 // Real pi-mono (loader + dynamic extension import + session construction) — a
 // cold run under full-suite contention can exceed vitest's 5s default.
@@ -79,9 +76,9 @@ describe("ext: / tools: scoping — template-driven e2e (real pi-mono, headless)
   let prevAgentDir: string | undefined
   let prevHome: string | undefined
   let hermeticDir: string
-  let faux: FauxProviderRegistration
+  let faux: ReturnType<typeof registerFauxProvider>
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Isolate global discovery (getAgentDir / ~/.pi) so the dev's real agents
     // and extensions can't bleed into the run.
     hermeticDir = mkdtempSync(join(tmpdir(), "subagents-tmpl-"))
@@ -90,7 +87,7 @@ describe("ext: / tools: scoping — template-driven e2e (real pi-mono, headless)
     process.env.PI_CODING_AGENT_DIR = hermeticDir
     process.env.HOME = hermeticDir
 
-    faux = await registerFauxProvider({
+    faux = registerFauxProvider({
       provider: "faux",
       models: [{ id: "faux-1", contextWindow: 200_000 }],
     })
@@ -114,6 +111,16 @@ describe("ext: / tools: scoping — template-driven e2e (real pi-mono, headless)
     agentName: string,
   ): Promise<{ active: string[]; prompt: string }> {
     const model = faux.getModel()
+    const modelRegistry: any = {
+      find: () => model,
+      getAll: () => [model],
+      getAvailable: () => [model],
+      hasConfiguredAuth: () => true,
+      isUsingOAuth: () => false,
+      getApiKeyAndHeaders: async () => ({ apiKey: "faux", headers: {} }),
+      registerProvider: () => {},
+      unregisterProvider: () => {},
+    }
     // cwd = fixtures dir so the templates' relative extensions: paths resolve.
     // getSystemPrompt returns a distinctive marker so prompt_mode: append can be
     // proven to inherit the parent prompt.
@@ -121,7 +128,7 @@ describe("ext: / tools: scoping — template-driven e2e (real pi-mono, headless)
       cwd: FIXTURES_DIR,
       getSystemPrompt: () => PARENT_PROMPT,
       model,
-      modelRegistry: faux.modelRegistry,
+      modelRegistry,
     }
     const pi: any = { exec: async () => ({ code: 1, stdout: "", stderr: "" }) }
 

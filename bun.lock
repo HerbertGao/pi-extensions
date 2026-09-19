@@ -137,14 +137,15 @@
         "@sinclair/typebox": "^0.34.49",
         "croner": "^10.0.1",
         "nanoid": "^5.1.16",
+        "typebox": "^1.3.7",
       },
       "devDependencies": {
         "@vitest/coverage-istanbul": "^4.1.10",
       },
       "peerDependencies": {
-        "@earendil-works/pi-ai": ">=0.81.0",
-        "@earendil-works/pi-coding-agent": ">=0.81.0",
-        "@earendil-works/pi-tui": ">=0.81.0",
+        "@earendil-works/pi-ai": ">=0.84.0",
+        "@earendil-works/pi-coding-agent": ">=0.84.0",
+        "@earendil-works/pi-tui": ">=0.84.0",
       },
     },
     "packages/resume-from": {
@@ -1825,6 +1826,8 @@
     "@herbertgao/pi-cc-extensions/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "@herbertgao/pi-extensions/typebox": ["typebox@1.3.34", "", {}, "sha512-wbnzrXXDW8xEFHDZZs2jo1MkhaYlKAY4FRhpBc1+2LF1fZVBGCXGdLEhA/Z/NBbgzJMFfeM8m7elKPa/+KxaUQ=="],
+
+    "@herbertgao/pi-subagents/typebox": ["typebox@1.3.34", "", {}, "sha512-wbnzrXXDW8xEFHDZZs2jo1MkhaYlKAY4FRhpBc1+2LF1fZVBGCXGdLEhA/Z/NBbgzJMFfeM8m7elKPa/+KxaUQ=="],
 
     "@juicesharp/rpiv-ask-user-question/typebox": ["typebox@1.3.34", "", {}, "sha512-wbnzrXXDW8xEFHDZZs2jo1MkhaYlKAY4FRhpBc1+2LF1fZVBGCXGdLEhA/Z/NBbgzJMFfeM8m7elKPa/+KxaUQ=="],
 

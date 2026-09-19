@@ -8,12 +8,12 @@
 
 ## Source baselines
 
-| Local package set  | Upstream                   | Imported baseline    | Notes                                                                                                                                                                            |
-| ------------------ | -------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pi-subagents`     | `tintinweb/pi-subagents`   | `ad81024` (`0.18.2`) | Upstream 0.19.0 is reviewed; the only required missing fix is unsigned worktree preservation. Local naming, color, identity, and other UI deltas are not Fork-retention reasons. |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `e43e004` (`0.8.71`) | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                    |
-| `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)  | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                      |
-| `sol-pi`           | `NVlabs/SoL-Pi`            | `22277b7` (`0.1.0`)  | Source import and aggregate entry are covered by smoke; write ownership and subagent compaction guards are maintained locally. Docs-only commits through `d7ecfc0` are reviewed. |
+| Local package set  | Upstream                   | Imported baseline              | Notes                                                                                                                                                                                                        |
+| ------------------ | -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pi-subagents`     | `tintinweb/pi-subagents`   | `95d1086` (`0.19.0` + PR #268) | Imported upstream v0.19.0 and PR #268. The local package keeps its `@herbertgao/*` identity, release metadata, and UI branding while retaining the upstream workflow, mention, and worktree-safety behavior. |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `e43e004` (`0.8.71`)           | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                                                |
+| `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)            | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                                                  |
+| `sol-pi`           | `NVlabs/SoL-Pi`            | `22277b7` (`0.1.0`)            | Source import and aggregate entry are covered by smoke; write ownership and subagent compaction guards are maintained locally. Docs-only commits through `d7ecfc0` are reviewed.                             |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
@@ -21,7 +21,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
 | `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.8.71`         | `e43e004`       |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
-| `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.18.2`         | `0.19.0`         | `ad81024`       |
+| `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
@@ -159,49 +159,30 @@ The released range `6b7447e..4709081` was reviewed commit by commit:
 
 The fork keeps its renderer-first compact-thinking lifecycle bridge, message-display hardening, live mouse TUI slot, terminal-width handling, Markdown fence/inline protection, compact-thinking coexistence, rich diff ANSI/CRLF/write metadata, and dedicated Agent renderer. Package provenance and the repository review cursor advance to released `v0.8.64` at `4709081`.
 
-### pi-subagents 0.19.0 release review
+### pi-subagents v0.19.0 and PR #268 import
 
-The range `bd446fc..4f572ea` completes the previously reviewed workflow release:
+The local package now imports upstream v0.19.0 at tag `4f572ea` plus the cleanup-safety changes from PR #268 at `95d1086`. The replacement includes the upstream workflow engine, `@handle` mentions, structured output, XML helpers, journal/resume support, saved scripts, workflow UI/CLI, examples, and their regression suites.
 
-- `3d91023` is **selectively ported**: the local conversation viewer keeps its bounded prefix and failed-Markdown cache, and now reports omitted UTF-16 characters with a readable exact/k/M magnitude plus focused astral and narrow-width regressions.
-- `5df1882` is changelog-only; `4f572ea` is a workflow-test lint annotation.
-- The workflow engine, agent mentions, and remembered-agent defaults remain deliberately unimported product surface rather than missing compatibility fixes.
+PR #268 preserves a worktree when cleanup fails, returns the failed path and error, and propagates cleanup failure through the agent record without hiding the original provider/agent error. The local import also keeps unsigned preservation commits and the signer-failure regressions needed for this package's noninteractive worktrees.
 
-The imported baseline remains `0.18.2` at `ad81024`. `x-upstream.reviewedVersion` records audited `0.19.0`, and the repository review cursor advances to the release `gitHead` at `4f572ea`, preventing repeat alerts without claiming that the workflow engine was imported.
+The package remains `@herbertgao/pi-subagents` with the local homepage, repository metadata, media URLs, MIT attribution, direct TypeScript loading, and aggregate integration. Its peer floor is `Pi >=0.84.0`; `typebox@^1.3.7` is a runtime dependency required by workflow schemas. The upstream review cursor remains `e955e29c51b7a6cce37e1108cd2d6c57a77e151c`; that cursor includes later workflow-collision review and is intentionally distinct from the imported PR head recorded in `x-upstream`.
 
-The core comparison also confirms that malformed-agent recovery, tolerant model resolution, parent/nested ownership, foreground pooling, and RPC scope/session/consume behavior now have upstream equivalents. Naming, color, package identity, badge, FleetView, and viewer presentation are disposable local deltas. The only required behavior still missing upstream is `--no-gpg-sign` on worktree preservation commits; without it, mandatory signing failure can enter cleanup and lose the worktree while reporting no changes.
+Earlier 0.18.x notes below describe the pre-import compatibility decisions. Their workflow and mention deferrals are superseded by this import; the package provenance baseline is now v0.19.0 plus PR #268.
 
-### pi-subagents 0.18.1, 0.18.2, and 0.19 workflow review
+### Historical pi-subagents 0.18.1, 0.18.2, and 0.19 review
 
-The released range `a9db27b..ad81024` was reviewed commit by commit:
+The range `a9db27b..ad81024` was reviewed commit by commit before the v0.19.0 replacement:
 
-- `92422a4` is **selectively ported**: agent records and UI expose requested and effective model/thinking settings while retaining this fork's tolerant model resolution.
-- `917853c` is **ported**: the conversation viewer gains Markdown modes with bounded fallback rendering, and agent files safely accept a UTF-8 BOM while preserving malformed-agent recovery.
-- `e56085d` is **selectively ported**: foreground tasks use an independent concurrency pool and per-invocation spawn callbacks; nested, RPC, detached, and resumed tasks retain their ownership exemptions to avoid deadlock.
-- `084d177` is **selectively ported**: cross-extension RPC applies model-scope policy after resolving string model requests through the local resolver.
-- Benchmark, host documentation, upstream namespace, lockfile, and release-only changes are reviewed but not copied.
+- `92422a4` exposed requested and effective model/thinking settings while retaining tolerant model resolution.
+- `917853c` added bounded Markdown viewer modes and UTF-8 BOM-safe agent files.
+- `e56085d` added an independent foreground concurrency pool and per-invocation spawn callbacks.
+- `084d177` applied model-scope policy after resolving string model requests through the local resolver.
 
-Package provenance advances to released `v0.18.2` at `ad81024`. The later workflow engine through `v0.19.0` at `bd446fc` is **deferred** as a separate product surface: it adds workers, workflow ownership, structured output, worktree gates, and substantial prompt/runtime cost beyond the maintained subagent contract. The repository review cursor advances through `bd446fc` so those commits are not repeatedly reported.
+Those selective ports remain present in the imported source or are superseded by their upstream equivalents. Benchmark, host documentation, upstream namespace, lockfile, and release-only changes remain local packaging concerns.
 
-### pi-subagents post-0.18.0 review
+### Historical pi-subagents post-0.18.0 and 0.18.0 review
 
-The unreleased range `3f9d35c..a9db27b` was reviewed commit by commit:
-
-- `c73e968` and its `7e695f3` changelog follow-up are **ported**: Ctrl+C now closes the conversation viewer when no steering composer owns input.
-- `a9db27b` is **selectively ported**: `subagents:rpc:consume` marks only settled top-level results consumed and cancels their pending nudge, while preserving this fork's model resolution, top-level spawn filtering, parent ownership, and lifecycle gates.
-
-The repository review cursor advances to `a9db27b`. Package provenance remains the published `0.18.0` tag at `3f9d35c`; unreleased commits are not represented as a package version baseline.
-
-### pi-subagents 0.18.0 review
-
-The released range `bb47763..3f9d35c` was reviewed commit by commit:
-
-- `5f8deda` and its `b4de91e` / `49ffd5c` / `42460ca` follow-ups (`@handle` mentions) remain **deferred**. The feature still conflicts with this fork's parent-session links, nested ownership, fallback/runtime compatibility, malformed-agent recovery, and composed `@` provider; no mention lifecycle code or settings are shipped.
-- `285b692` (selected FleetView row) remains **ported**, preserving the configured badge and stable columns.
-- `1b82530` worktree controls are **ported**, including `isolation: off` and the project-wide worktree switch while retaining unsigned preservation commits.
-- The 0.18.0 background default, usage/cost reporting, RPC activity, child-session shutdown, nanoid security update, and nested print-mode coverage are **ported**. Nested delegation continues to default to foreground so a parent cannot finish before collecting its child.
-
-Both package provenance and the repository review cursor advance to the released `0.18.0` tag at `3f9d35c`.
+The earlier review also accepted the viewer Ctrl+C behavior, settled RPC consumption, FleetView selection, worktree isolation controls, background defaults, usage/cost reporting, child-session shutdown, and nested print-mode coverage. The former decision to defer mentions and workflow orchestration is superseded by the v0.19.0 import above.
 
 ### resume-from 0.2.0 import
 
@@ -215,19 +196,19 @@ The Action Fusion file-URL resolution fix is synced at `22277b7`; the only later
 
 ## Fork retirement review after PR #125
 
-| Package            | Direct upstream reference | Remaining requirement                                                                                                                                                                           |
-| ------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pi-stash`         | Removed in issue #131     | None. `/btw` preserves the main draft for side questions; the same-thread interruption workflow did not justify a dedicated Fork.                                                               |
-| `resume-from`      | Not yet                   | Upstream must release the earliest-main-session repository ownership fix from issue #5 / PR #6.                                                                                                 |
-| `pi-subagents`     | Close                     | Add `--no-gpg-sign` to asynchronous worktree preservation commits and retain its signer-failure regression. Then decide whether to accept or disable upstream workflow/mention/memory defaults. |
-| `pi-cc-extensions` | Not yet                   | Upstream still lacks local terminal-width, Markdown safety, renderer teardown, malformed-agent, mouse/Working lifecycle, and rich-diff/write-state fixes.                                       |
+| Package            | Direct upstream reference | Remaining requirement                                                                                                                                                          |
+| ------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pi-stash`         | Removed in issue #131     | None. `/btw` preserves the main draft for side questions; the same-thread interruption workflow did not justify a dedicated Fork.                                              |
+| `resume-from`      | Not yet                   | Upstream must release the earliest-main-session repository ownership fix from issue #5 / PR #6.                                                                                |
+| `pi-subagents`     | Migrated in this sync     | v0.19.0 plus PR #268 is imported; cleanup failures preserve the worktree and expose a recovery path, while the local package identity and compatibility floor remain explicit. |
+| `pi-cc-extensions` | Not yet                   | Upstream still lacks local terminal-width, Markdown safety, renderer teardown, malformed-agent, mouse/Working lifecycle, and rich-diff/write-state fixes.                      |
 
-For Subagents, local package identity, display names, colors, badges, FleetView, and viewer styling can be deleted; they are not reasons to retain a Fork. Once the unsigned preservation fix is released, direct migration should compare only observable core behavior and explicit product defaults.
+For Subagents, the direct migration is complete. The package retains only repository-level branding and packaging metadata locally; runtime workflow, mention, structured-output, and worktree behavior follow the reviewed upstream source. Future syncs should compare observable core behavior and explicit product defaults against the imported PR head.
 
 ## Upstream contribution follow-ups
 
 - The stable Claude Code repository-ownership fix is tracked by upstream [issue #5](https://github.com/alexei-led/resume-from/issues/5) and [PR #6](https://github.com/alexei-led/resume-from/pull/6); both remain open as of the issue #131 review. Drop the local patch after an equivalent release is reviewed.
-- Contribute one focused `pi-subagents` patch: restore `--no-gpg-sign` in `src/worktree.ts`'s preservation commit and port the failing-signer regression from local `test/worktree.test.ts`. No name, color, identity, or optional UI changes belong in that PR.
+- `pi-subagents` PR #268 is integrated at `95d1086`; its worktree-preservation and cleanup-error regressions are now part of the local baseline. Future upstream syncs should not reintroduce destructive cleanup or misleading success status.
 - Propose the `pi-cc-extensions` fence/inline-code-safe circled-number normalization and its focused Markdown regression tests to `minuque/pi-cc-extensions`; keep the local implementation until upstream accepts an equivalent change.
 - Propose the `pi-cc-extensions` renderer-first compact-thinking lifecycle bridge and package-entry teardown regression test to `minuque/pi-cc-extensions`; without the bridge, shutdown can leave a stale compact-thinking prototype wrapper beneath compact mode.
 - Split the post-`0.8.54` review fixes into focused upstream PRs: agent discovery resilience, Working footer lifecycle guards, renderer timer/cache/shutdown ownership, live mouse-state reads, Markdown fence protection, and diff ANSI/line-ending/write-metadata correctness. Keep the local regressions until upstream accepts equivalents.

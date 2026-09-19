@@ -113,6 +113,15 @@ export function resolveAgentInvocationConfig(
   runInBackground: boolean
   isolated: boolean
   isolation?: IsolationMode
+  /**
+   * Caller parameters an agent file's frontmatter outranked, so the surfaces can
+   * say "(asked X)" instead of presenting the effective value as the requested
+   * one (#182). Populated only where both sides named something and they
+   * disagree — a caller who asked for what they got was still honored.
+   *
+   * `max_turns` is deliberately absent: no surface renders a requested-vs-
+   * effective turn limit, so recording one would be dead data.
+   */
   overridden?: { thinking?: ThinkingLevel; model?: string }
 } {
   // Precedence first, collapse second — reversing these loses the veto, since
@@ -123,6 +132,7 @@ export function resolveAgentInvocationConfig(
     requested === "worktree" && opts?.worktreeAllowed !== false
       ? "worktree"
       : undefined
+
   const overriddenThinking =
     agentConfig?.thinking != null &&
     params.thinking != null &&
@@ -152,6 +162,9 @@ export function resolveAgentInvocationConfig(
       false,
     isolated: agentConfig?.isolated ?? params.isolated ?? false,
     isolation,
+    // Undefined rather than an empty object when nothing was overridden: callers
+    // spread this into the invocation snapshot, and an always-present key would
+    // put `requestedThinking: undefined` on every record.
     overridden:
       overriddenThinking || overriddenModel
         ? { thinking: overriddenThinking, model: overriddenModel }

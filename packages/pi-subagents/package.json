@@ -1,7 +1,7 @@
 {
   "name": "@herbertgao/pi-subagents",
   "version": "0.17.1",
-  "description": "Claude Code-style autonomous subagents for Pi, with HerbertGao-maintained UI extensions.",
+  "description": "Claude Code-style autonomous subagents and workflow orchestration for Pi, with HerbertGao-maintained UI extensions.",
   "keywords": [
     "agent",
     "autonomous",
@@ -26,7 +26,8 @@
   },
   "files": [
     "src/**/*.ts",
-    "examples/**/*.md",
+    "examples/**/*",
+    "docs/**/*.md",
     "README.md",
     "CHANGELOG.md",
     "SECURITY.md",
@@ -46,15 +47,16 @@
   "dependencies": {
     "@sinclair/typebox": "^0.34.49",
     "croner": "^10.0.1",
-    "nanoid": "^5.1.16"
+    "nanoid": "^5.1.16",
+    "typebox": "^1.3.7"
   },
   "devDependencies": {
     "@vitest/coverage-istanbul": "^4.1.10"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": ">=0.81.0",
-    "@earendil-works/pi-coding-agent": ">=0.81.0",
-    "@earendil-works/pi-tui": ">=0.81.0"
+    "@earendil-works/pi-ai": ">=0.84.0",
+    "@earendil-works/pi-coding-agent": ">=0.84.0",
+    "@earendil-works/pi-tui": ">=0.84.0"
   },
   "engines": {
     "node": ">=22.19.0"
@@ -68,9 +70,9 @@
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.18.2",
+    "version": "0.19.0",
     "reviewedVersion": "0.19.0",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "ad81024825b315577692b785831262874e66be95"
+    "commit": "95d10867f391636e6563e3885e972618083f306b"
   }
 }

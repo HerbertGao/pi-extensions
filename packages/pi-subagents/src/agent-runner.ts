@@ -40,8 +40,14 @@ import {
 } from "./nested-tools.js"
 import { buildAgentPrompt, type PromptExtras } from "./prompts.js"
 import { preloadSkills } from "./skill-loader.js"
+import {
+  createStructuredCapture,
+  createStructuredOutputTool,
+  structuredRetryPrompt,
+} from "./structured-output.js"
 import type { SubagentType, ThinkingLevel } from "./types.js"
 import type { LifetimeUsage } from "./usage.js"
+import type { CompiledSchema } from "./workflow/json-schema.js"
 
 /**
  * Tool names registered by THIS extension. Single source of truth so the
@@ -51,6 +57,7 @@ import type { LifetimeUsage } from "./usage.js"
  */
 export const SUBAGENT_TOOL_NAMES = {
   AGENT: "Agent",
+  WORKFLOW: "SubagentWorkflow",
   GET_RESULT: "get_subagent_result",
   STEER: "steer_subagent",
 } as const
@@ -253,8 +260,15 @@ export function installExtensionToolScope(
     disallowedSet: Set<string> | undefined
     extNames: Set<string>
     narrowing: Map<string, Set<string>>
-    /** Opt-in nested-delegation tool names to keep active despite the EXCLUDED strip. */
-    nestedToolNames: Set<string>
+    /**
+     * Injected `customTools` to keep active regardless of the built-in list.
+     *
+     * Two kinds arrive here and they are blocked for different reasons: opt-in
+     * nested-delegation tools share EXCLUDED_TOOL_NAMES' names, and
+     * StructuredOutput is simply not a built-in, so neither survives a `keep`
+     * seeded from `toolNames`.
+     */
+    readmitToolNames: Set<string>
   },
 ): void {
   const {
@@ -263,7 +277,7 @@ export function installExtensionToolScope(
     disallowedSet,
     extNames,
     narrowing,
-    nestedToolNames,
+    readmitToolNames,
   } = ctx
 
   // The names allowed right now. Mirrors the `ext:` opt-in flip: when any `ext:`
@@ -286,12 +300,11 @@ export function installExtensionToolScope(
       }
     }
     for (const name of EXCLUDED_TOOL_NAMES) keep.delete(name)
-    // Opt-in nested delegation tools share EXCLUDED_TOOL_NAMES' names but are
-    // legitimately active for this agent — re-admit them so the renarrow keeps
-    // them in the active set and beforeToolCall doesn't block them.
-    for (const name of nestedToolNames) {
-      if (!disallowedSet?.has(name)) keep.add(name)
-    }
+    // Injected tools are legitimately active for this agent — re-admit them so
+    // the renarrow keeps them in the active set and beforeToolCall doesn't
+    // block them. Already vetted against `disallowed_tools` by the caller,
+    // which is the only place that knows which kind may be taken back.
+    for (const name of readmitToolNames) keep.add(name)
     return keep
   }
 
@@ -350,6 +363,15 @@ export function setDefaultMaxTurns(n: number | undefined): void {
   defaultMaxTurns = normalizeMaxTurns(n)
 }
 
+/**
+ * The turn limit a run of `type` will actually enforce: an explicit value if the
+ * caller supplied one, else the agent's own `max_turns`, else the project
+ * default. `undefined` = unlimited.
+ *
+ * Exported because the widget's turn counter (`↻3≤20`) has to predict this
+ * before the run starts, and a second copy of the expression would drift from
+ * the one below that enforces it.
+ */
 export function resolveEffectiveMaxTurns(
   type: string,
   explicit?: number,
@@ -357,6 +379,24 @@ export function resolveEffectiveMaxTurns(
   return normalizeMaxTurns(
     explicit ?? getAgentConfig(type)?.maxTurns ?? defaultMaxTurns,
   )
+}
+
+/**
+ * Project default for `persist_session`, from the `rememberAgents` setting.
+ * On by default: a persisted session is what lets `@handle` reopen an agent's
+ * conversation after its record has been evicted, which is the whole point of
+ * addressing an agent by a name that outlives one run. Per-agent frontmatter
+ * still overrides it in both directions.
+ */
+let rememberAgents = true
+
+/** Whether subagent sessions are persisted by default. */
+export function getRememberAgents(): boolean {
+  return rememberAgents
+}
+/** Set whether subagent sessions are persisted by default. */
+export function setRememberAgents(b: boolean): void {
+  rememberAgents = b
 }
 
 /** Additional turns allowed after the soft limit steer message. */
@@ -422,9 +462,38 @@ export interface RunOptions {
   isolated?: boolean
   inheritContext?: boolean
   thinkingLevel?: ThinkingLevel
+  /**
+   * Reopen this pi session file rather than starting an empty conversation.
+   * `createAgentSession` seeds itself from whatever its SessionManager holds,
+   * so pointing it at an existing file rehydrates that agent's history and the
+   * prompt continues it. Everything else — tools, model, system prompt, turn
+   * caps — is still resolved from the agent type, so the continuation runs
+   * under the type's *current* definition, not the one the original run used.
+   */
+  resumeSessionFile?: string
+  /**
+   * True when another agent spawned this one. Only top-level agents get a
+   * handle, so only they can be reopened by name — which is the whole reason
+   * `rememberAgents` persists a session at all. A nested run's transcript would
+   * be unreachable by anything, so it stays in memory unless its own
+   * frontmatter asks otherwise.
+   */
+  nested?: boolean
+  /**
+   * True when a workflow run spawned this agent. Its final text is the value
+   * `agent()` resolves to rather than a report a person reads, and the prompt
+   * says so — but only when `structuredOutput` is unset, since that child
+   * already has a `StructuredOutput` tool to answer through and two competing
+   * "this is how you return your answer" instructions is worse than one.
+   */
+  workflow?: boolean
   /** Override working directory (e.g. for worktree isolation). */
   cwd?: string
-  /** Original checkout path when cwd is an isolated worktree copy. */
+  /**
+   * Directory the worktree copy was created from. Set only when `cwd` points
+   * into a worktree — the prompt then tells the agent to stay in the copy
+   * instead of following the inherited parent prompt back to the main tree.
+   */
   worktreeBase?: string
   /**
    * Where .pi config is discovered (project extensions, skills, pi settings,
@@ -451,6 +520,11 @@ export interface RunOptions {
    * Called once per assistant message_end with that message's usage delta.
    * Lets callers maintain a lifetime accumulator that survives compaction
    * (which replaces session.state.messages and resets stats-derived sums).
+   *
+   * `cost` is pi's own `usage.cost.total` for that message — priced from the
+   * model's rates, so it is 0 (not missing) for a model pi has no pricing for.
+   * We never price anything ourselves; every dollar figure this extension shows
+   * or reports traces back to this field.
    */
   onAssistantUsage?: (usage: LifetimeUsage) => void
   /**
@@ -461,6 +535,14 @@ export interface RunOptions {
     reason: "manual" | "threshold" | "overflow"
     tokensBefore: number
   }) => void
+  /**
+   * Make this child report through a `StructuredOutput` tool built from this
+   * schema, and put the validated payload on {@link RunResult.structuredJson}.
+   *
+   * Already compiled by the caller, so a schema this runtime cannot validate
+   * fails at the call that wrote it rather than inside the child.
+   */
+  structuredOutput?: CompiledSchema
   /** Runtime bridge for opt-in child-safe nested delegation. */
   nestedRuntime?: {
     manager: NestedAgentManager
@@ -487,6 +569,18 @@ export interface RunResult {
    * stop that produced text (a legitimate truncated answer).
    */
   failure?: string
+  /**
+   * The validated `StructuredOutput` payload as canonical JSON, when the caller
+   * asked for a schema and the child produced one.
+   *
+   * Deliberately not folded into {@link responseText}: `record.result` picks up
+   * a worktree branch note on the way out, which would leave the caller with
+   * unparseable JSON, and merging the two would make "produced structured
+   * output" indistinguishable from "happened to answer in JSON".
+   */
+  structuredJson?: string
+  /** Whether the extra structured-output prompt had to be sent. */
+  structuredRetried?: boolean
 }
 
 /**
@@ -610,7 +704,9 @@ export async function runAgent(
   const parentSystemPrompt = ctx.getSystemPrompt()
 
   // Build prompt extras (memory, skill preloading)
-  const extras: PromptExtras = { worktreeBase: options.worktreeBase }
+  const extras: PromptExtras = {}
+  if (options.worktreeBase) extras.worktreeBase = options.worktreeBase
+  if (options.workflow && !options.structuredOutput) extras.workflowChild = true
 
   // Resolve extensions/skills: isolated overrides to false
   const extensions = options.isolated ? false : config.extensions
@@ -884,6 +980,36 @@ export async function runAgent(
       : []
   const nestedToolNames = new Set(nestedTools.map((tool) => tool.name))
 
+  // The `agent({ schema })` contract: this child reports its answer by calling
+  // StructuredOutput, and `structuredJson` below is what the caller reads. The
+  // schema was already compiled by whoever asked for it, so a bad one failed
+  // before any of this ran.
+  const structuredCapture = options.structuredOutput
+    ? createStructuredCapture()
+    : undefined
+  const structuredTools =
+    options.structuredOutput && structuredCapture
+      ? [
+          createStructuredOutputTool(
+            options.structuredOutput,
+            structuredCapture,
+          ),
+        ]
+      : []
+  const structuredToolNames = new Set(structuredTools.map((tool) => tool.name))
+  // Re-admitted together at every gate below. Kept as one set so a new injected
+  // tool cannot be added to some of the three gates and forgotten at the rest.
+  //
+  // `disallowed_tools` is applied HERE rather than at the gates, because the two
+  // kinds answer to it differently: a nested delegation tool is an opt-in the
+  // agent's own frontmatter can take back, while StructuredOutput exists only
+  // because this call asked for a schema — removing it would make the request
+  // unsatisfiable by construction rather than merely restricted.
+  const readmitToolNames = new Set([
+    ...[...nestedToolNames].filter((name) => !disallowedSet?.has(name)),
+    ...structuredToolNames,
+  ])
+
   // ─── Tool scoping ───────────────────────────────────────────────────────
   //
   // Some extensions register their tools ASYNCHRONOUSLY, long after the
@@ -923,6 +1049,11 @@ export async function runAgent(
         (t) => !EXCLUDED_TOOL_NAMES.includes(t) && !disallowedSet?.has(t),
       ),
       ...[...nestedToolNames].filter((t) => !disallowedSet?.has(t)),
+      // Not filtered through `disallowedSet`, unlike the nested tools above:
+      // the caller asked for a schema, and removing the only tool that can
+      // satisfy it would make the request unsatisfiable by construction rather
+      // than merely restricted.
+      ...structuredToolNames,
     ]
   } else {
     // Deny the orchestration tools EXCEPT the nested ones this agent opted into —
@@ -936,7 +1067,10 @@ export async function runAgent(
     }
     if (disallowedSet) {
       // disallowed_tools wins even over an opt-in nested tool of the same name.
-      for (const name of disallowedSet) denyTools.add(name)
+      // Not over StructuredOutput, though — see the allowlist branch above.
+      for (const name of disallowedSet) {
+        if (!structuredToolNames.has(name)) denyTools.add(name)
+      }
     }
     sessionExcludeTools = [...denyTools]
   }
@@ -948,26 +1082,43 @@ export async function runAgent(
   )
   const defaultSessionDir =
     process.env.PI_CODING_AGENT_SESSION_DIR ?? settingsManager.getSessionDir?.()
-  const sessionManager = agentConfig?.persistSession
-    ? SessionManager.create(
-        effectiveCwd,
+  // Frontmatter wins when it says anything; otherwise the project default,
+  // which `rememberAgents` supplies for top-level agents only. Same precedence
+  // as `outputTranscript`.
+  const persistSession =
+    agentConfig?.persistSession ?? (options.nested ? false : rememberAgents)
+  const sessionManager = options.resumeSessionFile
+    ? // Reopening an existing conversation: the file already carries its own
+      // header (cwd, parent) and history, so none of the create-time options
+      // apply. `sessionDir` still matters for a later /new or /branch off it.
+      SessionManager.open(
+        options.resumeSessionFile,
         configuredSessionDir ?? defaultSessionDir,
-        {
-          parentSession: ctx.sessionManager.getSessionFile(),
-        },
       )
-    : SessionManager.inMemory(effectiveCwd)
+    : persistSession
+      ? SessionManager.create(
+          effectiveCwd,
+          configuredSessionDir ?? defaultSessionDir,
+          {
+            // Optional metadata — it only nests the subagent under its spawner in
+            // `/resume`. Until `rememberAgents` this ran solely for the rare
+            // `persist_session: true` agent; now it runs for every spawn, so a
+            // context without a session manager (a bare programmatic ctx) must
+            // still persist rather than take the whole spawn down.
+            parentSession: ctx.sessionManager?.getSessionFile?.(),
+          },
+        )
+      : SessionManager.inMemory(effectiveCwd)
 
   // Pi 0.80.8 replaced createAgentSession's modelRegistry option with
   // modelRuntime, but ExtensionContext still exposes only the registry facade.
   // Pass both so the full supported Pi range retains the parent's providers.
-  type SessionOptions = NonNullable<Parameters<typeof createAgentSession>[0]>
+  // SAFETY: Pi's registry facade exposes its runtime at runtime on versions
+  // that support modelRuntime; the optional shape preserves older Pi support.
   const parentModelRuntime = (
-    ctx.modelRegistry as unknown as {
-      runtime?: unknown
-    }
+    ctx.modelRegistry as unknown as { runtime?: unknown }
   ).runtime
-  const sessionOpts: SessionOptions & {
+  const sessionOpts: Parameters<typeof createAgentSession>[0] & {
     modelRegistry: ExtensionContext["modelRegistry"]
     modelRuntime?: unknown
   } = {
@@ -976,12 +1127,16 @@ export async function runAgent(
     sessionManager,
     settingsManager,
     modelRegistry: ctx.modelRegistry,
-    ...(parentModelRuntime != null && {
+    // `as never` is what keeps this assignable across the supported Pi range:
+    // pre-0.80.8 the field exists only via the `modelRuntime?: unknown` shim
+    // above, while newer Pi types it as `ModelRuntime` — a shape an opaque
+    // `unknown` read off the private facade field can never satisfy.
+    ...(parentModelRuntime !== undefined && {
       modelRuntime: parentModelRuntime as never,
     }),
     model,
     tools: sessionTools,
-    customTools: nestedTools,
+    customTools: [...nestedTools, ...structuredTools],
     resourceLoader: loader,
   }
   if (sessionExcludeTools) {
@@ -1028,7 +1183,7 @@ export async function runAgent(
       disallowedSet,
       extNames,
       narrowing,
-      nestedToolNames,
+      readmitToolNames,
     })
   }
 
@@ -1110,8 +1265,24 @@ export async function runAgent(
   // Boundary for the history fallback: only assistant text produced from here
   // on counts as this run's output (a fresh session, so usually 0).
   const startLen = session.messages.length
+  let structuredRetried = false
   try {
     await session.prompt(effectivePrompt)
+
+    // One more prompt when a schema was asked for and nothing usable came back
+    // — the model answered in prose, or only ever called the tool invalidly.
+    // Inside this `try`, so the turn tracking, the text collector and above all
+    // the abort forwarding are still live: torn down first, a retry would be
+    // unkillable.
+    if (
+      structuredCapture !== undefined &&
+      structuredCapture.json === undefined &&
+      !aborted &&
+      options.signal?.aborted !== true
+    ) {
+      structuredRetried = true
+      await session.prompt(structuredRetryPrompt(structuredCapture))
+    }
   } finally {
     unsubTurns()
     collector.unsubscribe()
@@ -1120,12 +1291,25 @@ export async function runAgent(
 
   const responseText =
     collector.getText().trim() || getLastAssistantText(session, startLen)
+  // A child asked for structured output that never gave any has failed, however
+  // articulate its prose was. Reported through `failure` so it travels the same
+  // path as a provider error rather than arriving as a successful empty answer.
+  const structuredFailure =
+    structuredCapture !== undefined && structuredCapture.json === undefined
+      ? structuredCapture.lastError !== undefined
+        ? `The agent's StructuredOutput call did not match the required schema: ${structuredCapture.lastError}`
+        : "The agent did not report its answer through StructuredOutput."
+      : undefined
   return {
     responseText,
     session,
     aborted,
     steered: softLimitReached,
-    failure: finalTurnError(session, startLen),
+    failure: finalTurnError(session, startLen) ?? structuredFailure,
+    ...(structuredCapture?.json !== undefined
+      ? { structuredJson: structuredCapture.json }
+      : {}),
+    ...(structuredRetried ? { structuredRetried } : {}),
   }
 }
 
@@ -1137,8 +1321,6 @@ export async function resumeAgent(
   prompt: string,
   options: {
     onToolActivity?: (activity: ToolActivity) => void
-    /** Called at the end of each resumed agentic turn with the 1-based count. */
-    onTurnEnd?: (turnCount: number) => void
     onAssistantUsage?: (usage: LifetimeUsage) => void
     onCompaction?: (info: {
       reason: "manual" | "threshold" | "overflow"
@@ -1153,18 +1335,10 @@ export async function resumeAgent(
   const startLen = session.messages.length
   const collector = collectResponseText(session)
   const cleanupAbort = forwardAbortSignal(session, options.signal)
-  let turnCount = 0
 
   const unsubEvents =
-    options.onToolActivity ||
-    options.onTurnEnd ||
-    options.onAssistantUsage ||
-    options.onCompaction
+    options.onToolActivity || options.onAssistantUsage || options.onCompaction
       ? session.subscribe((event: AgentSessionEvent) => {
-          if (event.type === "turn_end") {
-            turnCount++
-            options.onTurnEnd?.(turnCount)
-          }
           if (event.type === "tool_execution_start")
             options.onToolActivity?.({
               type: "start",

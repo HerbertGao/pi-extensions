@@ -7,6 +7,9 @@ function agentTool() {
     registerMessageRenderer: vi.fn(),
     registerTool: vi.fn((tool: any) => tools.set(tool.name, tool)),
     registerCommand: vi.fn(),
+    registerEntryRenderer: vi.fn(),
+    registerFlag: vi.fn(),
+    getFlag: vi.fn(),
     on: vi.fn(),
     events: { emit: vi.fn(), on: vi.fn(() => vi.fn()) },
     appendEntry: vi.fn(),
@@ -34,7 +37,7 @@ function render(tool: any, result: any): string {
 }
 
 describe("Agent tool invocation error rendering", () => {
-  it("shows Pi's tool error instead of a misleading terminal status", () => {
+  it("shows a Pi tool error instead of structured terminal status", () => {
     const output = render(agentTool(), {
       content: [
         {
@@ -46,21 +49,25 @@ describe("Agent tool invocation error rendering", () => {
       details: { status: "aborted" },
     })
 
-    expect(output).toContain('Cannot run with isolation: "worktree"')
+    expect(output).toContain(
+      'Cannot run with isolation: "worktree" — Git probe failed.',
+    )
     expect(output).not.toContain("Aborted (max turns exceeded)")
   })
 
-  it.each([undefined, {}, { status: "unknown" }, { status: "queued" }])(
-    "shows the original result for an unhandled status",
-    (details) => {
-      const output = render(agentTool(), {
-        content: [{ type: "text", text: "Unstructured Agent result." }],
-        isError: false,
-        details,
-      })
+  it.each([
+    ["missing details", undefined],
+    ["empty details", {}],
+    ["unknown status", { status: "unknown" }],
+    ["a status with no rendering of its own", { status: "queued" }],
+  ])("shows the real result text for %s", (_name, details) => {
+    const output = render(agentTool(), {
+      content: [{ type: "text", text: "Unstructured Agent result." }],
+      isError: false,
+      details,
+    })
 
-      expect(output).toContain("Unstructured Agent result.")
-      expect(output).not.toContain("Aborted (max turns exceeded)")
-    },
-  )
+    expect(output).toContain("Unstructured Agent result.")
+    expect(output).not.toContain("Aborted (max turns exceeded)")
+  })
 })

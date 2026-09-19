@@ -736,11 +736,88 @@ enabled: false
     expect(agent.enabled).toBe(false)
   })
 
-  it("parses display_name frontmatter and gives it precedence over Claude Code name", () => {
+  it("takes the agent type from frontmatter name, not the filename", () => {
+    // Claude Code's rule: "the filename doesn't have to match". The same file
+    // dropped into either tool must dispatch under the same type.
+    writeAgent(
+      "blubb",
+      `---
+name: code-review
+description: Reviews code
+---
+
+Agent prompt.`,
+    )
+
+    const result = loadCustomAgents(tmpDir)
+    expect(result.get("code-review")!.name).toBe("code-review")
+    expect(result.get("blubb")).toBeUndefined()
+  })
+
+  it("records the file it was read from, not the one its type would name", () => {
+    // `/agents` edits `sourcePath`: probing for `<type>.md` finds nothing here,
+    // and its no-file branch writes a stub that loses to this file on load.
+    writeAgent(
+      "blubb",
+      `---
+name: code-review
+description: Reviews code
+---
+
+Agent prompt.`,
+    )
+
+    expect(loadCustomAgents(tmpDir).get("code-review")!.sourcePath).toBe(
+      join(tmpDir, ".pi", "agents", "blubb.md"),
+    )
+  })
+
+  it("falls back to the filename for an empty or blank declared name", () => {
+    // A quoted empty `name:` would otherwise register the agent under the empty
+    // type — unspawnable, and it takes the filename-derived one down with it.
+    writeAgent(
+      "myagent",
+      '---\nname: ""\ndescription: My Agent\n---\n\nPrompt.',
+    )
+    writeAgent("other", '---\nname: "   "\ndescription: Other\n---\n\nPrompt.')
+
+    const result = loadCustomAgents(tmpDir)
+    expect(result.get("myagent")!.name).toBe("myagent")
+    expect(result.get("other")!.name).toBe("other")
+    expect(result.has("")).toBe(false)
+  })
+
+  it("trims a declared name so it matches what the user meant to type", () => {
+    writeAgent(
+      "blubb",
+      '---\nname: " code-review "\ndescription: Reviews code\n---\n\nPrompt.',
+    )
+
+    expect(loadCustomAgents(tmpDir).get("code-review")!.name).toBe(
+      "code-review",
+    )
+  })
+
+  it("falls back to the filename when no name is declared", () => {
+    // Claude Code requires `name`; most existing files here predate it and
+    // must keep loading under the identity they already dispatch by.
     writeAgent(
       "myagent",
       `---
-name: Claude Name
+description: My Agent
+---
+
+Agent prompt.`,
+    )
+
+    expect(loadCustomAgents(tmpDir).get("myagent")!.name).toBe("myagent")
+  })
+
+  it("keeps display_name as a label only, independent of the type", () => {
+    writeAgent(
+      "blubb",
+      `---
+name: code-review
 description: My Agent
 display_name: MyAgent
 ---
@@ -748,15 +825,18 @@ display_name: MyAgent
 Agent prompt.`,
     )
 
-    const result = loadCustomAgents(tmpDir)
-    expect(result.get("myagent")!.displayName).toBe("MyAgent")
+    const agent = loadCustomAgents(tmpDir).get("code-review")!
+    expect(agent.name).toBe("code-review")
+    expect(agent.displayName).toBe("MyAgent")
   })
 
-  it("uses Claude Code name as the display-name fallback", () => {
+  it("leaves displayName unset so the badge falls back to the type", () => {
+    // A Claude Code file has no display_name; `getConfig` resolves the label
+    // to the type, so it still badges as "code-reviewer" as it did before.
     writeAgent(
-      "code-reviewer",
+      "whatever",
       `---
-name: Code Reviewer
+name: code-reviewer
 description: Reviews code
 color: "#8B5CF6"
 ---
@@ -764,10 +844,101 @@ color: "#8B5CF6"
 Agent prompt.`,
     )
 
+    const agent = loadCustomAgents(tmpDir).get("code-reviewer")!
+    expect(agent.name).toBe("code-reviewer")
+    expect(agent.displayName).toBeUndefined()
+    expect(agent.color).toBe("#8B5CF6")
+  })
+
+  it("accepts a name Claude Code accepts, however unlike a type it looks", () => {
+    // Its docs describe names as "lowercase letters and hyphens", but the only
+    // load failure they state is the colon — so this must still load.
+    writeAgent(
+      "reviewer",
+      `---
+name: Code Reviewer
+description: Reviews code
+---
+
+Agent prompt.`,
+    )
+
+    expect(loadCustomAgents(tmpDir).get("Code Reviewer")!.name).toBe(
+      "Code Reviewer",
+    )
+  })
+
+  it("refuses a name containing the plugin-scope separator", () => {
+    // Claude Code doesn't load these. Skipping beats loading it under the
+    // filename, which would dispatch an agent whose declared identity nothing
+    // honoured.
+    writeAgent(
+      "scoped",
+      `---
+name: my-plugin:reviewer
+description: Reviews code
+---
+
+Agent prompt.`,
+    )
+
     const result = loadCustomAgents(tmpDir)
-    expect(result.get("code-reviewer")!.name).toBe("code-reviewer")
-    expect(result.get("code-reviewer")!.displayName).toBe("Code Reviewer")
-    expect(result.get("code-reviewer")!.color).toBe("#8B5CF6")
+    expect(result.get("my-plugin:reviewer")).toBeUndefined()
+    expect(result.get("scoped")).toBeUndefined()
+  })
+
+  it("does not claim the rejected file was overriding its filename's agent", () => {
+    // It would have registered under its *declared* name, which a colon keeps
+    // out of the registry entirely — so it shadowed nothing. Reporting a
+    // substitution of the same-named file from another directory describes a
+    // swap that never happened, and points at an agent that is unchanged.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      writeWorkspaceAgent(
+        "scoped",
+        "---\ndescription: An unrelated agent\n---\n\nBody.",
+      )
+      writeAgent(
+        "scoped",
+        "---\nname: my-plugin:reviewer\ndescription: Reviews code\n---\n\nBody.",
+      )
+
+      const result = loadCustomAgents(tmpDir)
+
+      expect(result.get("scoped")?.description).toBe("An unrelated agent")
+      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
+      expect(message).toContain("reserved for plugin-scoped identifiers")
+      expect(message).not.toContain("now loads from")
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("lets a later file win a declared-name clash, as a filename clash always did", () => {
+    // Filenames were unique per directory by construction; declared names are
+    // not, so two files in one directory can now claim the same type.
+    writeAgent(
+      "a-first",
+      `---
+name: shared
+description: first
+---
+
+First.`,
+    )
+    writeAgent(
+      "b-second",
+      `---
+name: shared
+description: second
+---
+
+Second.`,
+    )
+
+    const result = loadCustomAgents(tmpDir)
+    expect(result.get("shared")!.description).toBe("second")
+    expect([...result.keys()].filter((k) => k === "shared")).toHaveLength(1)
   })
 
   it("parses disallowed_tools as csv list", () => {
@@ -900,24 +1071,74 @@ Bad isolation.`,
     expect(result.get("bad-isolation")!.isolation).toBeUndefined()
   })
 
-  it("skips malformed frontmatter and still loads healthy agents", () => {
+  // `isolation: off` is a veto, not a synonym for omitting the field: agent
+  // config outranks tool-call params, so it turns a caller's "worktree" back
+  // off. That is why it must survive parsing as "off" rather than undefined.
+  it("parses isolation: off", () => {
     writeAgent(
-      "broken",
-      "---\nname: broken\ndescription: Use this: that\n---\n\nBroken body.",
-    )
-    writeAgent("healthy", "---\ndescription: Still loads\n---\n\nGood body.")
+      "no-wt",
+      `---
+description: Never worktree
+isolation: off
+---
 
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    try {
-      const result = loadCustomAgents(tmpDir)
-      expect(result.has("broken")).toBe(false)
-      expect(result.get("healthy")?.description).toBe("Still loads")
-    } finally {
-      warn.mockRestore()
-    }
+No worktree.`,
+    )
+
+    const result = loadCustomAgents(tmpDir)
+    expect(result.get("no-wt")!.isolation).toBe("off")
   })
 
-  it("names the offending file and parse error when skipping it", () => {
+  // pi's frontmatter parser is not YAML 1.1, so bare `off`/`no` stay strings
+  // and only `false` becomes a boolean — accept the spellings an author is
+  // likely to reach for rather than silently dropping them.
+  it.each([
+    ["false", "isolation: false"],
+    ["none", "isolation: none"],
+    ["no", "isolation: no"],
+  ])("accepts %s as a spelling of off", (name, line) => {
+    writeAgent(
+      `off-${name}`,
+      `---
+${line}
+---
+
+Off.`,
+    )
+
+    const result = loadCustomAgents(tmpDir)
+    expect(result.get(`off-${name}`)!.isolation).toBe("off")
+  })
+
+  // A YAML error in one file used to escape loadFromDir and abort the whole
+  // extension load — pi exited 1 before the TUI. Regression for #212.
+  it("skips a file with malformed frontmatter and still loads the others", () => {
+    // Unquoted `description` containing ": " — the shape Claude Code tolerates.
+    writeAgent(
+      "broken",
+      `---
+name: broken
+description: Use this: that
+---
+
+Broken body.`,
+    )
+    writeAgent(
+      "good",
+      `---
+description: Still loads
+---
+
+Good body.`,
+    )
+
+    const result = loadCustomAgents(tmpDir)
+
+    expect(result.has("broken")).toBe(false)
+    expect(result.get("good")?.description).toBe("Still loads")
+  })
+
+  it("names the offending file and the reason when skipping it", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
       writeAgent(
@@ -935,7 +1156,10 @@ Bad isolation.`,
     }
   })
 
-  it("warns when a skipped override exposes an earlier definition", () => {
+  // Skipping an override is not the same as skipping an agent: the name still
+  // resolves, to a different prompt, model and tool policy. Nothing downstream
+  // can flag that, because the Agent call succeeds.
+  it("warns when a skipped file was overriding an agent that stays resolvable", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
       writeWorkspaceAgent(
@@ -950,9 +1174,8 @@ Bad isolation.`,
       const result = loadCustomAgents(tmpDir)
 
       expect(result.get("dup")?.description).toBe("Earlier definition")
-      expect(
-        warn.mock.calls.map((args) => String(args[0])).join("\n"),
-      ).toContain(
+      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
+      expect(message).toContain(
         `Agent "dup" now loads from ${join(tmpDir, ".agents", "agents", "dup.md")} instead`,
       )
     } finally {
@@ -960,36 +1183,9 @@ Bad isolation.`,
     }
   })
 
-  it("does not report a stale fallback when a later definition loads", () => {
-    const globalAgentDir = join(tmpDir, "global-agent-dir")
-    process.env.PI_CODING_AGENT_DIR = globalAgentDir
-    mkdirSync(join(globalAgentDir, "agents"), { recursive: true })
-    writeFileSync(
-      join(globalAgentDir, "agents", "dup.md"),
-      "---\ndescription: Global definition\n---\n\nGlobal body.",
-    )
-    writeWorkspaceAgent(
-      "dup",
-      "---\nname: dup\ndescription: Use this: that\n---\n\nBroken body.",
-    )
-    writeAgent(
-      "dup",
-      "---\ndescription: Final project definition\n---\n\nProject body.",
-    )
-
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    try {
-      const result = loadCustomAgents(tmpDir)
-      expect(result.get("dup")?.description).toBe("Final project definition")
-      const message = warn.mock.calls.map((args) => String(args[0])).join("\n")
-      expect(message).toContain("Skipping agent file")
-      expect(message).not.toContain("now loads from")
-    } finally {
-      warn.mockRestore()
-    }
-  })
-
-  it("does not claim a fallback when the earlier definition is disabled", () => {
+  // A disabled agent does not dispatch (resolveEnabledTypeIn), so claiming the
+  // name "still resolves" to it would send the user chasing the wrong file.
+  it("does not claim a fallback when the shadowed definition is disabled", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
       writeWorkspaceAgent(
@@ -1029,39 +1225,36 @@ Bad isolation.`,
     }
   })
 
-  it("skips unreadable agent paths by default and throws in strict mode", () => {
-    const unreadablePath = join(tmpDir, ".pi", "agents", "unreadable.md")
-    mkdirSync(unreadablePath, { recursive: true })
-
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    try {
-      expect(loadCustomAgents(tmpDir).has("unreadable")).toBe(false)
-      expect(
-        warn.mock.calls.map((args) => String(args[0])).join("\n"),
-      ).toContain(unreadablePath)
-    } finally {
-      warn.mockRestore()
-    }
-
-    expect(() => loadCustomAgents(tmpDir, true)).toThrow(unreadablePath)
-  })
-
-  it("throws with the offending file in strict mode", () => {
+  // strictAgentFiles: opt in to failing closed rather than running a substitute.
+  it("throws naming the file when strict, and skips it when not", () => {
     writeAgent(
       "broken",
       "---\nname: broken\ndescription: Use this: that\n---\n\nBroken.",
     )
+    writeAgent("healthy", "---\ndescription: Fine\n---\n\nFine.")
     const brokenPath = join(tmpDir, ".pi", "agents", "broken.md")
 
     expect(() => loadCustomAgents(tmpDir, true)).toThrow(brokenPath)
     expect(() => loadCustomAgents(tmpDir, true)).toThrow(
       "Nested mappings are not allowed",
     )
-  })
 
-  it("warns when a file breaks again after being fixed", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
+      const result = loadCustomAgents(tmpDir)
+      expect(result.has("broken")).toBe(false)
+      expect(result.has("healthy")).toBe(true)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  // The rule is "warn when it breaks, stay quiet while it stays broken".
+  // Suppressing an unchanged problem must not suppress it forever.
+  it("warns when a file breaks, not while it stays broken", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      // Two loads while broken: the second must be suppressed as unchanged.
       writeAgent(
         "flip",
         "---\nname: flip\ndescription: Use this: that\n---\n\nBroken.",
@@ -1073,18 +1266,21 @@ Bad isolation.`,
       writeAgent("flip", "---\ndescription: Fixed\n---\n\nFixed.")
       expect(loadCustomAgents(tmpDir).get("flip")?.description).toBe("Fixed")
 
+      // Same breakage again — a new problem, not the one already reported.
       writeAgent(
         "flip",
         "---\nname: flip\ndescription: Use this: that\n---\n\nBroken.",
       )
       loadCustomAgents(tmpDir)
+
       expect(warn).toHaveBeenCalledTimes(2)
     } finally {
       warn.mockRestore()
     }
   })
 
-  it("warns once while the same problem remains unchanged", () => {
+  // Agents reload on every Agent call, so repeating would scribble a live TUI.
+  it("warns once per message, not on every reload", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
       writeAgent(
@@ -1192,6 +1388,20 @@ Bad isolation.`,
       expect(loaded.isolated).toBe(true)
       expect(loaded.memory).toBe("project")
       expect(loaded.isolation).toBe("worktree")
+    })
+
+    // The writer used to emit `run_in_background` only when truthy, so an
+    // explicit `false` was dropped. Harmless while foreground was the default
+    // and omission meant the same thing — but with `backgroundByDefault` on,
+    // dropping it flips the ejected agent to background.
+    it("preserves an explicit run_in_background: false instead of dropping it", () => {
+      expect(roundTrip({ runInBackground: false }).runInBackground).toBe(false)
+    })
+
+    it("leaves run_in_background unset when the config doesn't pin it", () => {
+      // Absent must stay absent — writing a value would freeze the agent
+      // against the setting rather than letting it follow the default.
+      expect(roundTrip({}).runInBackground).toBeUndefined()
     })
 
     it("preserves the extension and skill list fields", () => {
