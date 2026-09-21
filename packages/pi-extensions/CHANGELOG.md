@@ -1,5 +1,20 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.11
+
+### Patch Changes
+
+- [#219](https://github.com/HerbertGao/pi-extensions/pull/219) [`6525a59`](https://github.com/HerbertGao/pi-extensions/commit/6525a5995b8bb815517e326f1eef78d25c0a3c5e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `pi-multi-account@1.22.0` for automatic multi-account failover and rotation across supported Pi providers. Update the aggregate host to Pi 0.85.1 and widen the maintained child package compatibility ranges.
+
+- [#217](https://github.com/HerbertGao/pi-extensions/pull/217) [`d182ad7`](https://github.com/HerbertGao/pi-extensions/commit/d182ad780338364a9355e41fcd1c13f75338e52e) Thanks [@github-actions](https://github.com/apps/github-actions)! - sync reviewed upstream updates for @narumitw/pi-btw, @narumitw/pi-caffeinate, pi-typesafe, and pi-web-access.
+
+- Updated dependencies [[`6525a59`](https://github.com/HerbertGao/pi-extensions/commit/6525a5995b8bb815517e326f1eef78d25c0a3c5e)]:
+  - @herbertgao/pi-bark@0.1.2
+  - @herbertgao/pi-cc-extensions@0.9.4
+  - @herbertgao/pi-subagents@0.18.1
+  - @herbertgao/resume-from@0.2.2
+  - @herbertgao/sol-pi@0.3.1
+
 ## 2026.9.10
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @herbertgao/pi-bark
 
+## 0.1.2
+
+### Patch Changes
+
+- [#219](https://github.com/HerbertGao/pi-extensions/pull/219) [`6525a59`](https://github.com/HerbertGao/pi-extensions/commit/6525a5995b8bb815517e326f1eef78d25c0a3c5e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `pi-multi-account@1.22.0` for automatic multi-account failover and rotation across supported Pi providers. Update the aggregate host to Pi 0.85.1 and widen the maintained child package compatibility ranges.
+
 ## 0.1.1
 
 ### Patch Changes
