@@ -59,7 +59,7 @@
     "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=22.19.0"
+    "node": ">=24"
   },
   "pi": {
     "extensions": [

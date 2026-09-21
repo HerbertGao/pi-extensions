@@ -233,11 +233,14 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
 | `pi-mcp-adapter`                     | `2.34.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-typesafe`                        | `0.5.0`  | `DevMortimer/pi-typesafe`   |
+| `pi-multi-account`                   | `1.22.0` | `Sarrius/pi-multi-account`  |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-jev-auto-mode`                   | `0.4.1`  | `jomatsu/pi-jev-auto-mode`  |
 | `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.27.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
+
+`pi-multi-account@1.22.0` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
 
 The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
 
@@ -272,7 +275,7 @@ The issue #134 companion review accepted six independent releases:
 - `pi-mcp-adapter@2.31.0` adds full-URL manual completion for pre-registered HTTPS OAuth redirects and advertises MCP Apps UI support. Aggregate smoke verifies callback state validation, manual completion, and the UI capability declaration; runtime dependencies and MIT terms are unchanged.
 - `pi-web-access@0.27.0` adds configurable fetch deadlines and default answer models, suppresses Defuddle's relative-canonical noise, and isolates GitHub clone work beneath per-process runtime directories. The real Pi smoke covers config/override precedence, canonical handling, and clone cleanup.
 
-The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline is Pi 0.85.1 for the TypeSafe companions. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
+The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline is Pi 0.85.1 for the TypeSafe and multi-account companions. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
 
 The issue #131 companion review accepted four released updates:
 
@@ -363,7 +366,7 @@ Recommended configuration files may be shipped under `packages/pi-extensions/exa
 
 ## npm and Trusted Publishing bootstrap
 
-The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 22.22.2 or newer plus npm 12 or newer for the `npm trust` command:
+The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 24 or newer plus npm 12 or newer for the `npm trust` command:
 
 ```bash
 npm install --global npm@12.0.2

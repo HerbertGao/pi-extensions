@@ -33,8 +33,8 @@ describe("agent installation instructions", () => {
 	it("defines a reproducible and all-enabled installation", () => {
 		const guide = rootFile("agents-install.md");
 		const requiredText = [
-			"Node.js 22.19",
-			"@earendil-works/pi-coding-agent@0.84.2",
+			"Node.js 24",
+			"@earendil-works/pi-coding-agent@0.85.1",
 			"npm ci --ignore-scripts",
 			"npm run check",
 			"npm audit",
