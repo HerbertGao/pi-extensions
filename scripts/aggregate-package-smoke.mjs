@@ -1150,7 +1150,7 @@ try {
       "Bundled pi-web-access LICENSE is not the expected MIT text",
     )
   }
-  const webAccessEntryRelative = "./index.ts"
+  const webAccessEntryRelative = "./dist"
   if (!webAccessManifest.pi?.extensions?.includes(webAccessEntryRelative)) {
     throw new Error(
       "Bundled pi-web-access no longer declares its expected Pi entry",
@@ -1172,7 +1172,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.60.0"
+  const expectedBtwVersion = "0.60.3"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion

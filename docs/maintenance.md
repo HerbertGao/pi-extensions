@@ -19,7 +19,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.8.71`         | `e43e004`       |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.1`          | `e43e0041b59f`  |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
