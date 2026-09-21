@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-subagents",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "Claude Code-style autonomous subagents and workflow orchestration for Pi, with HerbertGao-maintained UI extensions.",
   "keywords": [
     "agent",
