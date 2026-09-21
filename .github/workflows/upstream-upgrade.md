@@ -144,7 +144,7 @@ steps:
     run: bun install --frozen-lockfile
   - name: Prewarm npm cache for aggregate packaging
     run: bun run test:aggregate
-max-ai-credits: 200
+max-ai-credits: 400
 timeout-minutes: 90
 max-turns: 100
 ---
