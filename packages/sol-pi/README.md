@@ -56,16 +56,16 @@ Read the [SoL-Pi blog](https://nvlabs.github.io/SoL-Pi/) for a deeper look at th
 
 ### Requirements
 
-- Node.js 22.19 or newer
+- Node.js 24 or newer
 - npm
-- `@earendil-works/pi-coding-agent` 0.84.2
+- `@earendil-works/pi-coding-agent` 0.85.1
 
 ### Install
 
 Install the tested Pi release:
 
 ```bash
-npm install --global @earendil-works/pi-coding-agent@0.84.2
+npm install --global @earendil-works/pi-coding-agent@0.85.1
 ```
 
 Then install SoL-Pi directly from [NVlabs/SoL-Pi](https://github.com/NVlabs/SoL-Pi):

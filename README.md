@@ -44,6 +44,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.4.1`        | Fail-closed Jev safety gates for tool calls.  |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.31.0`       | MCP tools and skills.                         |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.5.0`        | Structured TypeSafe/Jev decisions.            |
+| [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.22.0`       | Multi-account failover and rotation.          |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.2.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.27.0`       | Web search and content access.                |

@@ -37,8 +37,10 @@ const ui = {
 	requestRender() {},
 } as any;
 
+const bashToolDefinition = createBashToolDefinition(process.cwd());
+
 function tool(name: string, id: string, args: any = {}) {
-	const definition = name === "bash" ? createBashToolDefinition(process.cwd()) : undefined;
+	const definition = name === "bash" ? bashToolDefinition : undefined;
 	return new ToolExecutionComponent(name, id, args, {}, definition, ui, process.cwd()) as any;
 }
 

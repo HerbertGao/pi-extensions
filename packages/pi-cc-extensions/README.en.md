@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://pi.dev/packages?name=%40herbertgao%2Fpi-cc-extensions"><img alt="Pi package catalog" src="https://img.shields.io/badge/Pi-package-58B7FF?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@herbertgao/pi-cc-extensions"><img alt="npm version" src="https://img.shields.io/npm/v/%40herbertgao%2Fpi-cc-extensions?style=flat-square&color=66E3C4"></a>
-  <a href="#compatibility"><img alt="Node.js 22.19 or newer" src="https://img.shields.io/badge/Node.js-%E2%89%A522.19-66E3C4?style=flat-square"></a>
+  <a href="#compatibility"><img alt="Node.js 24 or newer" src="https://img.shields.io/badge/Node.js-%E2%89%A524-66E3C4?style=flat-square"></a>
   <a href="./extensions"><img alt="TypeScript extensions" src="https://img.shields.io/badge/TypeScript-extensions-3178C6?style=flat-square"></a>
 </p>
 
@@ -85,7 +85,7 @@ bun run typecheck
 
 ## Compatibility
 
-- Node.js `>=22.19.0`, Pi `^0.84.0 || ^0.85.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
+- Node.js `>=24`, Pi `^0.84.0 || ^0.85.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
 
 ## Recommended companions
 

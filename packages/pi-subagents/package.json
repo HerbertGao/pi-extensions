@@ -59,7 +59,7 @@
     "@earendil-works/pi-tui": ">=0.84.0"
   },
   "engines": {
-    "node": ">=22.19.0"
+    "node": ">=24"
   },
   "pi": {
     "extensions": [

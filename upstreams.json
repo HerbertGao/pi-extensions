@@ -90,6 +90,10 @@
       "repository": "https://github.com/DevMortimer/pi-typesafe"
     },
     {
+      "package": "pi-multi-account",
+      "repository": "https://github.com/Sarrius/pi-multi-account"
+    },
+    {
       "package": "pi-footer",
       "repository": "https://github.com/wobondar/pi-footer"
     },
