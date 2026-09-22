@@ -910,7 +910,7 @@ try {
       "Bundled pi-mcp-adapter no longer declares its expected Pi entry",
     )
   }
-  if (!mcpManifest.pi?.skills?.includes(mcpSkillsRelative)) {
+  if (!mcpManifest.files?.includes("skills")) {
     throw new Error(
       "Bundled pi-mcp-adapter no longer declares its expected skills",
     )
