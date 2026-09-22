@@ -19,7 +19,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.1`          | `e43e0041b59f`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.2`          | `e43e0041b59f`  |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
@@ -220,7 +220,7 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                    |
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.10.1` | `juicesharp/rpiv-mono`      |
+| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`      |
 | `@narumitw/pi-btw`                   | `0.60.0` | `narumiruna/pi-extensions`  |
 | `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`          |
@@ -231,7 +231,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
-| `pi-mcp-adapter`                     | `2.34.0` | `nicobailon/pi-mcp-adapter` |
+| `pi-mcp-adapter`                     | `2.36.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-typesafe`                        | `0.5.0`  | `DevMortimer/pi-typesafe`   |
 | `pi-multi-account`                   | `1.22.0` | `Sarrius/pi-multi-account`  |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
@@ -243,6 +243,12 @@ The aggregate package also pins the following npm packages under their original 
 `pi-multi-account@1.22.0` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
 
 The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #221 upstream review accepted two companion updates and classified one release update as reviewed-without-import:
+
+- `@juicesharp/rpiv-ask-user-question@2.11.0` pins the companion release, bringing option list and tab bar view refinements.
+- `pi-mcp-adapter@2.36.0` pins the companion release, adding lazy adapter loading, OAuth redirect capabilities, and improved multi-client routing.
+- `@herbertgao/pi-cc-extensions` is advanced to reviewed version `0.9.2` and its repository cursor is advanced to `1f6f92103c66`. Upstream v0.9.2's custom status bar/footer feature is deliberately not imported because this monorepo uses the standalone `pi-footer` companion package rather than the upstream footer feature.
 
 The issue #208 companion review accepted two released updates:
 
