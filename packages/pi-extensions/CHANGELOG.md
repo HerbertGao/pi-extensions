@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.12
+
+### Patch Changes
+
+- [#222](https://github.com/HerbertGao/pi-extensions/pull/222) [`1ddb845`](https://github.com/HerbertGao/pi-extensions/commit/1ddb8451161640d3274d929e87231edf03562766) Thanks [@github-actions](https://github.com/apps/github-actions)! - Sync reviewed upstream updates and companions: pin @juicesharp/rpiv-ask-user-question to 2.11.0, pin pi-mcp-adapter to 2.36.0, and advance @herbertgao/pi-cc-extensions reviewed version cursor to 0.9.2.
+
 ## 2026.9.11
 
 ### Patch Changes
