@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.13
+
+### Patch Changes
+
+- [#225](https://github.com/HerbertGao/pi-extensions/pull/225) [`4a538e4`](https://github.com/HerbertGao/pi-extensions/commit/4a538e4e494fbc1795d9e025aaf8c385cbfb8615) Thanks [@github-actions](https://github.com/apps/github-actions)! - Advance companion pins: `@narumitw/pi-btw` to `0.61.0` and `pi-typesafe` to `0.7.1`.
+
+- [#228](https://github.com/HerbertGao/pi-extensions/pull/228) [`2e0fb1e`](https://github.com/HerbertGao/pi-extensions/commit/2e0fb1eedf4cf857eab9f438e31eace4ede084d8) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update bundled `pi-multi-account` to 1.23.0.
+
+- Updated dependencies [[`d052f3f`](https://github.com/HerbertGao/pi-extensions/commit/d052f3f3c81e9b6a74d344e9de0f83b8d28341d3)]:
+  - @herbertgao/pi-subagents@0.18.2
+
 ## 2026.9.12
 
 ### Patch Changes
