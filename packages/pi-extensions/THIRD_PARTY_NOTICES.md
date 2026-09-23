@@ -163,7 +163,7 @@ THE SOFTWARE.
 
 ## `pi-multi-account`
 
-The aggregate bundles the MIT-licensed [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account) package version 1.22.0 under its original attribution:
+The aggregate bundles the MIT-licensed [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account) package version 1.23.0 under its original attribution:
 
 MIT License
 
