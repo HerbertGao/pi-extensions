@@ -31,6 +31,19 @@ vi.mock("@earendil-works/pi-coding-agent", async () => {
     ...actual,
     buildSessionContext,
     createAgentSession,
+    DefaultResourceLoader: class {
+      beforeStart?: () => any
+      constructor(opts: any) {
+        for (const factory of opts.extensionFactories) {
+          factory({
+            on: (_event: string, handler: () => any) => {
+              this.beforeStart = handler
+            },
+          })
+        }
+      }
+      async reload() {}
+    },
     SessionManager: { ...actual.SessionManager, inMemory },
   }
 })
@@ -47,7 +60,14 @@ const CONVERSATION = [
 beforeEach(() => {
   createAgentSession.mockReset()
   inMemory.mockReset()
-  inMemory.mockReturnValue({ kind: "in-memory-session-manager" } as any)
+  const messages: any[] = []
+  inMemory.mockReturnValue({
+    kind: "in-memory-session-manager",
+    messages,
+    appendMessage: (message: any) => {
+      messages.push(message)
+    },
+  } as any)
   buildSessionContext.mockReset()
   buildSessionContext.mockReturnValue({
     messages: CONVERSATION,
@@ -117,7 +137,10 @@ function cloneSession(turn?: (tool: any) => Promise<void> | void) {
   } as any
   createAgentSession.mockImplementation(async (opts: any) => {
     const tools = visibleTools(opts)
+    session.agent.state.messages = opts.sessionManager.messages
     session.prompt.mockImplementation(async () => {
+      session.agent.state.systemPrompt =
+        opts.resourceLoader.beforeStart?.()?.systemPrompt
       // No tool, no tool call: the model can only answer in prose.
       if (tools.length === 0) return
       await turn?.(tools[0])
@@ -177,7 +200,7 @@ describe("cloning the conversation", () => {
       [{ type: "message" }],
       "leaf-1",
     )
-    expect(createAgentSession.mock.calls[0][0].sessionManager).toEqual({
+    expect(createAgentSession.mock.calls[0][0].sessionManager).toMatchObject({
       kind: "in-memory-session-manager",
     })
   })
