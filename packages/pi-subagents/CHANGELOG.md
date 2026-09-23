@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.18.2
+
+### Patch Changes
+
+- [#227](https://github.com/HerbertGao/pi-extensions/pull/227) [`d052f3f`](https://github.com/HerbertGao/pi-extensions/commit/d052f3f3c81e9b6a74d344e9de0f83b8d28341d3) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Retain completed subagent results until they are consumed, including when cleanup runs after ten minutes.
+
+  Fix a separate Pi 0.87 compatibility issue in mention clones: restore history through SessionManager and provide the live prompt through the before_agent_start hook instead of writing getter-only agent state.
+
 ## 0.18.1
 
 ### Patch Changes
