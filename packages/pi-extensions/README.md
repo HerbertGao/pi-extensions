@@ -28,7 +28,7 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `@tifan/pi-rename@0.6.0`
 - `pi-mcp-adapter@2.31.0`
 - `pi-typesafe@0.7.1`
-- `pi-multi-account@1.22.0`
+- `pi-multi-account@1.23.0`
 - `pi-footer@0.5.1`
 - `pi-jev-auto-mode@0.4.1`
 - `pi-lens@4.2.1`
