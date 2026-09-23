@@ -221,7 +221,7 @@ The aggregate package also pins the following npm packages under their original 
 | ------------------------------------ | -------- | --------------------------- |
 | `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`   |
 | `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`      |
-| `@narumitw/pi-btw`                   | `0.60.0` | `narumiruna/pi-extensions`  |
+| `@narumitw/pi-btw`                   | `0.61.0` | `narumiruna/pi-extensions`  |
 | `@narumitw/pi-caffeinate`            | `0.49.7` | `narumiruna/pi-extensions`  |
 | `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`          |
 | `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`  |
@@ -232,7 +232,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`  |
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
 | `pi-mcp-adapter`                     | `2.36.0` | `nicobailon/pi-mcp-adapter` |
-| `pi-typesafe`                        | `0.5.0`  | `DevMortimer/pi-typesafe`   |
+| `pi-typesafe`                        | `0.7.1`  | `DevMortimer/pi-typesafe`   |
 | `pi-multi-account`                   | `1.22.0` | `Sarrius/pi-multi-account`  |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
 | `pi-jev-auto-mode`                   | `0.4.1`  | `jomatsu/pi-jev-auto-mode`  |
@@ -243,6 +243,12 @@ The aggregate package also pins the following npm packages under their original 
 `pi-multi-account@1.22.0` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
 
 The `@narumitw/pi-caffeinate@0.49.7` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #224 upstream review accepted two companion updates:
+
+- `@narumitw/pi-btw@0.61.0` pins the companion release.
+- `pi-typesafe@0.7.1` pins the companion release.
+- `NVlabs SoL-Pi` unreleased repository commits are deferred as there is no new published package release.
 
 The issue #221 upstream review accepted two companion updates and classified one release update as reviewed-without-import:
 
