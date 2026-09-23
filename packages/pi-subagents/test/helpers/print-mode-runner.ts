@@ -66,7 +66,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent"
 import { fauxModelBackend } from "./faux-model-backend.js"
-import { getModel, registerFauxProvider } from "./pi-ai.js"
+import { getModel, modelContext, registerFauxProvider } from "./pi-ai.js"
 
 /** Path to the pi-subagents extension entrypoint (repo `src/index.ts`). */
 const EXTENSION_PATH = fileURLToPath(
@@ -364,7 +364,7 @@ export async function runPrintMode(
       }
       const max = options.maxModelCalls ?? 16
       const factory: FauxResponseStep = async (context, _opts, state) =>
-        toAssistantMessage(await respond(context, state))
+        toAssistantMessage(await respond(modelContext(context), state))
       faux.setResponses(Array.from({ length: max }, () => factory))
     }
   }
