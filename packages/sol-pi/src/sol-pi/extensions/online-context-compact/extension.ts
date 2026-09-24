@@ -450,6 +450,8 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 						continuation.resolve();
 						throw error;
 					}
+					// triggerTurn starts on the next event-loop turn; checking immediately is racy.
+					await new Promise<void>((resolve) => setTimeout(resolve, 0));
 					if (context.isIdle() && nextContinuation === continuation) {
 						nextContinuation = undefined;
 						continuation.resolve();
