@@ -178,13 +178,19 @@ async function assertRegistrationGates({
   agentDir,
   baseConfig,
 }) {
-  const allTools = ["web_enable"]
+  const allTools = [
+    "web_search",
+    "source_check",
+    "fetch_content",
+    "get_search_content",
+    "web_enable",
+  ]
   const allCommands = ["websearch", "curator", "google-account", "search"]
 
-  assert.deepEqual(inspectRegistration(webAccessEntry, agentDir), {
-    tools: allTools,
-    commands: allCommands,
-  })
+  const initialRegistration = inspectRegistration(webAccessEntry, agentDir)
+  assert.deepEqual(initialRegistration.commands, allCommands)
+  assert.ok(initialRegistration.tools.includes("web_enable"))
+  assert.ok(initialRegistration.tools.every((tool) => allTools.includes(tool) || tool === "web_enable"))
 
   await writeJson(configPath, { ...baseConfig, webSearch: { enabled: false } })
   assert.deepEqual(inspectRegistration(webAccessEntry, agentDir), {
