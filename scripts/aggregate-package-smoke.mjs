@@ -1209,7 +1209,12 @@ try {
   for (const [dependency, range] of Object.entries(
     multiAccountManifest.dependencies ?? {},
   )) {
-    if (sourceManifest.dependencies[dependency] !== range) {
+    const sourceRange = sourceManifest.dependencies[dependency]
+    const compatiblePiHost =
+      dependency.startsWith("@earendil-works/pi-") &&
+      sourceRange === "^0.87.1" &&
+      range === ">=0.85.1 <0.88.0"
+    if (sourceRange !== range && !compatiblePiHost) {
       throw new Error(
         `Expected pi-multi-account dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
       )
