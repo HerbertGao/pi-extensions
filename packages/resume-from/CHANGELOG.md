@@ -1,5 +1,11 @@
 # @herbertgao/resume-from
 
+## 0.2.3
+
+### Patch Changes
+
+- [#232](https://github.com/HerbertGao/pi-extensions/pull/232) [`9c3c40f`](https://github.com/HerbertGao/pi-extensions/commit/9c3c40f113c62437f76d300042fc59fbf15954c0) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Require the unified Pi 0.87.1 dependency line across published packages.
+
 ## 0.2.2
 
 ### Patch Changes

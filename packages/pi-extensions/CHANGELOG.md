@@ -1,5 +1,20 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.14
+
+### Patch Changes
+
+- [#230](https://github.com/HerbertGao/pi-extensions/pull/230) [`03037d3`](https://github.com/HerbertGao/pi-extensions/commit/03037d3009369791ef2e007ba84b8309321223bf) Thanks [@github-actions](https://github.com/apps/github-actions)! - Sync reviewed upstream companion package updates for `pi-mcp-adapter`, `pi-multi-account`, `pi-typesafe`, and `pi-web-access`.
+
+- [#232](https://github.com/HerbertGao/pi-extensions/pull/232) [`9c3c40f`](https://github.com/HerbertGao/pi-extensions/commit/9c3c40f113c62437f76d300042fc59fbf15954c0) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Require the unified Pi 0.87.1 dependency line across published packages.
+
+- Updated dependencies [[`9c3c40f`](https://github.com/HerbertGao/pi-extensions/commit/9c3c40f113c62437f76d300042fc59fbf15954c0)]:
+  - @herbertgao/pi-bark@0.1.3
+  - @herbertgao/pi-cc-extensions@0.9.5
+  - @herbertgao/pi-subagents@0.18.3
+  - @herbertgao/resume-from@0.2.3
+  - @herbertgao/sol-pi@0.3.2
+
 ## 2026.9.13
 
 ### Patch Changes
