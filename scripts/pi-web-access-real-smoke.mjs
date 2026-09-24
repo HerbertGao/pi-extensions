@@ -178,12 +178,7 @@ async function assertRegistrationGates({
   agentDir,
   baseConfig,
 }) {
-  const allTools = [
-    "web_search",
-    "source_check",
-    "fetch_content",
-    "get_search_content",
-  ]
+  const allTools = ["web_enable"]
   const allCommands = ["websearch", "curator", "google-account", "search"]
 
   assert.deepEqual(inspectRegistration(webAccessEntry, agentDir), {
