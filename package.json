@@ -22,8 +22,9 @@
     "test": "node --test scripts/*.test.mjs && bun run --cwd packages/pi-bark test && bun run --cwd packages/pi-subagents test && bun run --cwd packages/pi-cc-extensions test && bun run --cwd packages/resume-from test && bun run --cwd packages/sol-pi test",
     "test:aggregate": "node scripts/aggregate-package-smoke.mjs",
     "test:pty:pi-cc": "node scripts/pi-cc-real-pty-smoke.mjs",
+    "check:pi-deps": "node scripts/check-pi-dependencies.mjs",
     "check:upstreams": "node scripts/check-upstreams.mjs --validate",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:aggregate && bun run check:upstreams",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:aggregate && bun run check:pi-deps && bun run check:upstreams",
     "changeset": "changeset",
     "version": "node scripts/version-packages.mjs",
     "release": "changeset publish"
