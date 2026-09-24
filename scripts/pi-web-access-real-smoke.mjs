@@ -198,7 +198,7 @@ async function assertRegistrationGates({
 
   await writeJson(configPath, { ...baseConfig, webSearch: { enabled: false } })
   assert.deepEqual(inspectRegistration(webAccessEntry, agentDir), {
-    tools: ["fetch_content", "get_search_content"],
+    tools: ["fetch_content", "get_search_content", "web_enable"],
     commands: allCommands,
   })
 
