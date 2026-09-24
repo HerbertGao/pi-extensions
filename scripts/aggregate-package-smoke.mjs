@@ -314,7 +314,7 @@ try {
     )
   }
   if (
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.85.1" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.87.1" ||
     sourceManifest.dependencies.typebox !== "^1.1.38"
   ) {
     throw new Error("Aggregate pi-lens host ranges are no longer compatible")
@@ -1209,7 +1209,12 @@ try {
   for (const [dependency, range] of Object.entries(
     multiAccountManifest.dependencies ?? {},
   )) {
-    if (sourceManifest.dependencies[dependency] !== range) {
+    const sourceRange = sourceManifest.dependencies[dependency]
+    const compatiblePiHost =
+      dependency.startsWith("@earendil-works/pi-") &&
+      sourceRange === "^0.87.1" &&
+      range === ">=0.85.1 <0.88.0"
+    if (sourceRange !== range && !compatiblePiHost) {
       throw new Error(
         `Expected pi-multi-account dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
       )
@@ -1717,11 +1722,11 @@ try {
   }
   if (
     sourceManifest.dependencies["@earendil-works/pi-coding-agent"] !==
-      "^0.85.1" ||
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.85.1"
+      "^0.87.1" ||
+    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.87.1"
   ) {
     throw new Error(
-      'Aggregate Pi host ranges must be exactly "^0.85.1"; update this check when the host is bumped',
+      'Aggregate Pi host ranges must be exactly "^0.87.1"; update this check when the host is bumped',
     )
   }
   const installedHosts = await Promise.all(
@@ -1740,12 +1745,12 @@ try {
     }),
   )
   for (const { hostDependency, version } of installedHosts) {
-    // Keep the 0.85 line pinned while accepting compatible later patches;
+    // Keep the 0.87 line pinned while accepting compatible later patches;
     // bump the source range and this guard together when Pi moves again.
-    const patch = /^0\.85\.(\d+)$/.exec(version)?.[1]
+    const patch = /^0\.87\.(\d+)$/.exec(version)?.[1]
     if (patch === undefined || Number(patch) < 1) {
       throw new Error(
-        `Expected remote-pi ${hostDependency} host compatible with ^0.85.1, got ${version}`,
+        `Expected remote-pi ${hostDependency} host compatible with ^0.87.1, got ${version}`,
       )
     }
   }

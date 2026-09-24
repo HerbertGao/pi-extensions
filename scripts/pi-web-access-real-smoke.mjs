@@ -183,17 +183,19 @@ async function assertRegistrationGates({
     "source_check",
     "fetch_content",
     "get_search_content",
+    "web_enable",
   ]
   const allCommands = ["websearch", "curator", "google-account", "search"]
 
-  assert.deepEqual(inspectRegistration(webAccessEntry, agentDir), {
+  const initialRegistration = inspectRegistration(webAccessEntry, agentDir)
+  assert.deepEqual(initialRegistration, {
     tools: allTools,
     commands: allCommands,
   })
 
   await writeJson(configPath, { ...baseConfig, webSearch: { enabled: false } })
   assert.deepEqual(inspectRegistration(webAccessEntry, agentDir), {
-    tools: ["fetch_content", "get_search_content"],
+    tools: ["fetch_content", "get_search_content", "web_enable"],
     commands: allCommands,
   })
 
@@ -594,7 +596,11 @@ async function startMockServer() {
 
         let name
         let args
-        if (prompt.startsWith("RUN_WEB_SMOKE") && toolResults === 0) {
+        const step = toolResults - (prompt.startsWith("RUN_") ? 1 : 0)
+        if (prompt.startsWith("RUN_") && toolResults === 0) {
+          name = "web_enable"
+          args = {}
+        } else if (prompt.startsWith("RUN_WEB_SMOKE") && step === 0) {
           name = "web_search"
           args = {
             query:
@@ -602,14 +608,14 @@ async function startMockServer() {
             provider: "openai",
             workflow: "none",
           }
-        } else if (prompt.startsWith("RUN_WEB_SMOKE") && toolResults === 1) {
+        } else if (prompt.startsWith("RUN_WEB_SMOKE") && step === 1) {
           name = "web_search"
           args = {
             query: "DuckDuckGo aggregate smoke",
             provider: "duckduckgo",
             workflow: "none",
           }
-        } else if (prompt.startsWith("RUN_WEB_SMOKE") && toolResults === 2) {
+        } else if (prompt.startsWith("RUN_WEB_SMOKE") && step === 2) {
           name = "web_search"
           args = {
             query: "Jina aggregate smoke",
@@ -617,24 +623,18 @@ async function startMockServer() {
             includeContent: true,
             workflow: "none",
           }
-        } else if (prompt.startsWith("RUN_WEB_SMOKE") && toolResults === 3) {
+        } else if (prompt.startsWith("RUN_WEB_SMOKE") && step === 3) {
           name = "fetch_content"
           args = { urls }
-        } else if (prompt.startsWith("RUN_MEDIA_GATES") && toolResults === 0) {
+        } else if (prompt.startsWith("RUN_MEDIA_GATES") && step === 0) {
           name = "fetch_content"
           args = { urls: urls.slice(-2) }
-        } else if (
-          prompt.startsWith("RUN_DATA_URI_SMOKE") &&
-          toolResults === 0
-        ) {
+        } else if (prompt.startsWith("RUN_DATA_URI_SMOKE") && step === 0) {
           name = "fetch_content"
           args = {
             url: `http://127.0.0.1:${address.port}${dataUriPath}`,
           }
-        } else if (
-          prompt.startsWith("RUN_GITHUB_CLONE_SMOKE") &&
-          toolResults === 0
-        ) {
+        } else if (prompt.startsWith("RUN_GITHUB_CLONE_SMOKE") && step === 0) {
           name = "fetch_content"
           args = { url: githubTraversalUrl, forceClone: true }
         } else if (
