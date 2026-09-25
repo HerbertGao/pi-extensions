@@ -137,7 +137,7 @@ THE SOFTWARE.
 
 ## `pi-jev-auto-mode`
 
-The aggregate bundles [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode) version 0.4.1 under its original MIT license:
+The aggregate bundles [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode) version 0.5.0 under its original MIT license:
 
 MIT License
 
@@ -163,7 +163,7 @@ THE SOFTWARE.
 
 ## `pi-multi-account`
 
-The aggregate bundles the MIT-licensed [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account) package version 1.23.0 under its original attribution:
+The aggregate bundles the MIT-licensed [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account) package version 1.23.2 under its original attribution:
 
 MIT License
 

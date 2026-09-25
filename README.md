@@ -41,10 +41,10 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.1`        | Persist thinking levels per model.            |
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.6`        | Generate one-line session recaps.             |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
-| [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.4.1`        | Fail-closed Jev safety gates for tool calls.  |
+| [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.5.0`        | Fail-closed Jev safety gates for tool calls.  |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter)                | `2.31.0`       | MCP tools and skills.                         |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.7.1`        | Structured TypeSafe/Jev decisions.            |
-| [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.23.0`       | Multi-account failover and rotation.          |
+| [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.23.2`       | Multi-account failover and rotation.          |
 | [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.2.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.27.0`       | Web search and content access.                |
