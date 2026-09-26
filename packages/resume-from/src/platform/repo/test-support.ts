@@ -48,7 +48,11 @@ export async function tempDir(prefix = "resume-from-repo-"): Promise<string> {
 /** Removes every directory this helper created. Call from `afterAll`. */
 export async function cleanupTempDirs(): Promise<void> {
   const dirs = createdDirs.splice(0, createdDirs.length);
-  await Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true })));
+  // maxRetries: fs.rm hits ENOTEMPTY on Linux when concurrently tearing down .git/objects
+  // (many small files, readdir/unlink/rmdir race). Node's own remedy for this exact case.
+  await Promise.all(
+    dirs.map((dir) => rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })),
+  );
 }
 
 export async function git(dir: string, args: readonly string[]): Promise<string> {

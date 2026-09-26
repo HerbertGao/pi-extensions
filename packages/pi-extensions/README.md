@@ -28,9 +28,9 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `@tifan/pi-rename@0.6.0`
 - `pi-mcp-adapter@2.31.0`
 - `pi-typesafe@0.7.1`
-- `pi-multi-account@1.23.0`
+- `pi-multi-account@1.23.2`
 - `pi-footer@0.5.1`
-- `pi-jev-auto-mode@0.4.1`
+- `pi-jev-auto-mode@0.5.0`
 - `pi-lens@4.2.1`
 - `pi-web-access@0.27.0`
 - `remote-pi@0.7.0`
@@ -43,7 +43,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `@narumitw/pi-caffeinate@0.49.7` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends.
 
-`pi-jev-auto-mode@0.4.1` adds fail-closed Jev safety gates for shell commands and file changes. `pi-typesafe@0.7.1` adds the `/typesafe` command and `typesafe_evaluate` tool for explicit structured decisions; both use the TypeSafe API after login.
+`pi-jev-auto-mode@0.5.0` adds fail-closed Jev safety gates for shell commands and file changes. `pi-typesafe@0.7.1` adds the `/typesafe` command and `typesafe_evaluate` tool for explicit structured decisions; both use the TypeSafe API after login.
 
 `@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.2.1` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 

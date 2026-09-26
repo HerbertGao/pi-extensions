@@ -233,16 +233,23 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
 | `pi-mcp-adapter`                     | `2.37.0` | `nicobailon/pi-mcp-adapter` |
 | `pi-typesafe`                        | `0.7.4`  | `DevMortimer/pi-typesafe`   |
-| `pi-multi-account`                   | `1.23.1` | `Sarrius/pi-multi-account`  |
+| `pi-multi-account`                   | `1.23.2` | `Sarrius/pi-multi-account`  |
 | `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-jev-auto-mode`                   | `0.4.1`  | `jomatsu/pi-jev-auto-mode`  |
+| `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode`  |
 | `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`          |
 | `pi-web-access`                      | `0.31.0` | `nicobailon/pi-web-access`  |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
 
-`pi-multi-account@1.23.1` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
+`pi-multi-account@1.23.2` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
 
 The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #235 upstream review accepted two companion updates and deferred unreleased repository commits:
+
+- `pi-jev-auto-mode@0.5.0` pins the companion release.
+- `pi-multi-account@1.23.2` pins the companion release.
+- `@herbertgao/pi-cc-extensions` upstream updates `0.9.3` - `0.9.5` and unreleased repository commits are deferred as there is no offline review text or diff available, and the sandbox has no outbound internet access to review them.
+- `NVlabs SoL-Pi` unreleased repository commits are deferred as there is no new published package release.
 
 The issue #229 upstream review accepted four companion updates and deferred unreleased repository commits:
 
