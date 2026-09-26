@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.15
+
+### Patch Changes
+
+- [#236](https://github.com/HerbertGao/pi-extensions/pull/236) [`712337c`](https://github.com/HerbertGao/pi-extensions/commit/712337c9b7eee89a0516ace071a212f94ce9ee8e) Thanks [@github-actions](https://github.com/apps/github-actions)! - Sync reviewed upstream updates and companion pins: update `pi-jev-auto-mode` to `0.5.0` and `pi-multi-account` to `1.23.2`.
+
 ## 2026.9.14
 
 ### Patch Changes
