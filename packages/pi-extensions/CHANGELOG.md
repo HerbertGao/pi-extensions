@@ -1,5 +1,15 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.16
+
+### Minor Changes
+
+- [#240](https://github.com/HerbertGao/pi-extensions/pull/240) [`3c4f3a3`](https://github.com/HerbertGao/pi-extensions/commit/3c4f3a31d24e6c4b7aa166a9a09761f85b788ffd) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `pi-next-cue@1.0.7` to predict the next prompt after agent turns, with `Tab` to fill and `Enter` to send it from the TUI editor.
+
+### Patch Changes
+
+- [#243](https://github.com/HerbertGao/pi-extensions/pull/243) [`5d8cf4f`](https://github.com/HerbertGao/pi-extensions/commit/5d8cf4f2b8d85e2d3c43a65227644bea336b9b1b) Thanks [@github-actions](https://github.com/apps/github-actions)! - Sync reviewed upstream companion package updates: update `@narumitw/pi-btw` to `0.61.1`, `pi-lens` to `4.3.0`, and `pi-mcp-adapter` to `2.38.0`.
+
 ## 2026.9.15
 
 ### Patch Changes
