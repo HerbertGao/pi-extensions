@@ -92,6 +92,7 @@
     "pi-lens": "4.2.1",
     "pi-mcp-adapter": "2.37.0",
     "pi-multi-account": "1.23.2",
+    "pi-next-cue": "1.0.7",
     "pi-typesafe": "0.7.4",
     "pi-web-access": "0.31.0",
     "pidusage": "^4.0.1",
@@ -139,6 +140,7 @@
     "pi-lens",
     "pi-mcp-adapter",
     "pi-multi-account",
+    "pi-next-cue",
     "pi-typesafe",
     "pi-web-access",
     "remote-pi"
@@ -169,6 +171,7 @@
       "./node_modules/pi-mcp-adapter/index.ts",
       "./node_modules/pi-jev-auto-mode/index.ts",
       "./node_modules/pi-multi-account/index.ts",
+      "./node_modules/pi-next-cue/index.ts",
       "./node_modules/pi-lens/dist/index.js",
       "./node_modules/pi-web-access/dist",
       "./node_modules/pi-antigravity/src/index.ts",

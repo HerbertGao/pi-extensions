@@ -29,6 +29,7 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `pi-mcp-adapter@2.31.0`
 - `pi-typesafe@0.7.1`
 - `pi-multi-account@1.23.2`
+- `pi-next-cue@1.0.7`
 - `pi-footer@0.5.1`
 - `pi-jev-auto-mode@0.5.0`
 - `pi-lens@4.2.1`
@@ -48,6 +49,10 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 `@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.2.1` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.27.0` adds configurable fetch deadlines and answer models plus isolated GitHub clone runtimes. Preferred Thinking 1.0.1 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
+
+### Next-cue suggestions
+
+`pi-next-cue@1.0.7` predicts a short next prompt after each completed agent turn. In the empty editor, `Tab` fills the suggestion and `Enter` sends it. Each settled turn can make one extra model request using recent conversation text, recent tool names/results, and the configured active or explicitly selected model. It is TUI-only and wraps the prompt editor, so do not enable another custom-editor extension that also owns the editor slot.
 
 If `pi-footer` was installed separately before upgrading to an aggregate release that includes it, remove the standalone source shown by `pi list` so only the bundled copy loads. For the pinned standalone install used while preparing this integration:
 
