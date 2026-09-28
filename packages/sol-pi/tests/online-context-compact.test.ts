@@ -213,7 +213,8 @@ describe("Online Context Compact extension", () => {
 		expect(pi.thinkingLevelChanges).toEqual(["medium", "max"]);
 		expect(pi.thinkingLevel).toBe("max");
 		expect(compactCalls[0]?.customInstructions).toBe(BOUNDARY_COMPACTION_INSTRUCTIONS);
-		expect(firstSettlementFinished).toBe(false);
+		await firstSettlement;
+		expect(firstSettlementFinished).toBe(true);
 		expect(pi.sentMessages).toEqual([
 			{
 				message: {
@@ -227,8 +228,6 @@ describe("Online Context Compact extension", () => {
 
 		idle = true;
 		await pi.emit("agent_settled", { type: "agent_settled" }, context);
-		await firstSettlement;
-		expect(firstSettlementFinished).toBe(true);
 		expect(await pi.emit("session_before_tree", { type: "session_before_tree" }, context)).toBeUndefined();
 		expect(restoreOnlineState(manager.entries)).toMatchObject({ nativeCompactionCount: 1, pendingProgress: [] });
 	});

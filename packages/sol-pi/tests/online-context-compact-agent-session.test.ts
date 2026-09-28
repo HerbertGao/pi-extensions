@@ -143,6 +143,8 @@ async function runCompactionScenario(requestedCompactions: 1 | 2, nativeCompacti
 			settingsManager,
 		});
 		session = created.session;
+		const extensionErrors: string[] = [];
+		session.extensionRunner.onError((error) => extensionErrors.push(error.error));
 		let settledCount = 0;
 		session.subscribe((event) => {
 			if (event.type === "agent_settled") settledCount++;
@@ -177,6 +179,7 @@ async function runCompactionScenario(requestedCompactions: 1 | 2, nativeCompacti
 			expect(nativeReasoningLevels).toEqual(Array(requestedCompactions).fill("medium"));
 			expect(continuationReasoningLevels).toEqual(["high"]);
 		}
+		expect(extensionErrors).toEqual([]);
 		expect(session.getLastAssistantText()).toBe(finalReply);
 		expect(settledCount).toBe(requestedCompactions + 1);
 		expect(session.isStreaming).toBe(false);

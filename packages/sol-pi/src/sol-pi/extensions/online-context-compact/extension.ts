@@ -49,7 +49,6 @@ export type OnlineContextCompactOptions = {
 type PendingBoundary = { readonly toolCallId: string };
 type SelectedCompaction = { readonly decision: CompactionDecision };
 type CacheDebt = { readonly debtTokens: number; readonly repaymentTokens: number };
-type PendingContinuation = { readonly promise: Promise<void>; readonly resolve: () => void };
 
 const SUBAGENTS_MANAGER_KEY = Symbol.for("pi-subagents:manager");
 
@@ -197,10 +196,6 @@ function restoreCompactionThinking(pi: ExtensionAPI, override: CompactionThinkin
 	}
 }
 
-function releaseParentContinuation(continuation: PendingContinuation | undefined): void {
-	if (continuation) setTimeout(continuation.resolve, 0);
-}
-
 export function createOnlineContextCompactExtension(options: OnlineContextCompactOptions = {}): ExtensionFactory {
 	const keepRecentTokens = resolveKeepRecentTokens(options.keepRecentTokens);
 	const cacheWriteReadRatio = resolveCacheWriteReadRatio(options.cacheWriteReadRatio);
@@ -212,17 +207,10 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 		let pendingBoundary: PendingBoundary | undefined;
 		let selected: SelectedCompaction | undefined;
 		let activeDebt: CacheDebt | undefined;
-		let nextContinuation: PendingContinuation | undefined;
 		let compactionInFlight = false;
 		let compactionThinkingOverride: CompactionThinkingOverride | undefined;
 
-		const releaseContinuation = (): void => {
-			const continuation = nextContinuation;
-			nextContinuation = undefined;
-			continuation?.resolve();
-		};
 		const restore = (context: ExtensionContext): void => {
-			releaseContinuation();
 			state = restoreOnlineState(context.sessionManager.getBranch());
 			restored = true;
 			observedMessages = buildSessionContext(
@@ -358,21 +346,13 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 		});
 
 		pi.on("agent_settled", async (_event, context) => {
-			// sendMessage() starts a turn without returning its promise. Capture the
-			// child settlement so print/JSON mode cannot dispose while it is running.
-			const parentContinuation = nextContinuation;
-			nextContinuation = undefined;
 			const pending = selected;
 			selected = undefined;
 			if (!context.isIdle()) {
 				selected = pending;
-				nextContinuation = parentContinuation;
 				return;
 			}
-			if (!pending || hasRunningSubagents()) {
-				releaseParentContinuation(parentContinuation);
-				return;
-			}
+			if (!pending || hasRunningSubagents()) return;
 
 			activeDebt = {
 				debtTokens: pending.decision.writeTokens * (pending.decision.incrementalCacheCostRatio ?? 0),
@@ -428,43 +408,22 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 				}
 
 				if (compacted) {
-					let resolveContinuation!: () => void;
-					const continuation: PendingContinuation = {
-						promise: new Promise<void>((resolve) => {
-							resolveContinuation = resolve;
-						}),
-						resolve: () => resolveContinuation(),
-					};
-					nextContinuation = continuation;
-					try {
-						pi.sendMessage(
-							{
-								customType: "sol-pi-online-context-compact",
-								content: POST_COMPACTION_PLAN_REMINDER,
-								display: false,
-							},
-							{ triggerTurn: true },
-						);
-					} catch (error) {
-						if (nextContinuation === continuation) nextContinuation = undefined;
-						continuation.resolve();
-						throw error;
-					}
-					// triggerTurn starts on the next event-loop turn; checking immediately is racy.
-					await new Promise<void>((resolve) => setTimeout(resolve, 0));
-					if (context.isIdle() && nextContinuation === continuation) {
-						nextContinuation = undefined;
-						continuation.resolve();
-						throw new Error("Online context compact continuation did not start");
-					}
-					await continuation.promise;
+					// Pi >=0.87 defers this turn until agent_settled handlers finish and
+					// awaits it before prompt() resolves, so print/JSON mode stays alive.
+					pi.sendMessage(
+						{
+							customType: "sol-pi-online-context-compact",
+							content: POST_COMPACTION_PLAN_REMINDER,
+							display: false,
+						},
+						{ triggerTurn: true },
+					);
 				}
 			} finally {
 				restoreCompactionThinking(pi, compactionThinkingOverride);
 				compactionThinkingOverride = undefined;
 				compactionInFlight = false;
 				activeDebt = undefined;
-				releaseParentContinuation(parentContinuation);
 			}
 		});
 
@@ -487,7 +446,6 @@ export function createOnlineContextCompactExtension(options: OnlineContextCompac
 		pi.on("session_shutdown", () => {
 			restoreCompactionThinking(pi, compactionThinkingOverride);
 			compactionThinkingOverride = undefined;
-			releaseContinuation();
 			pendingBoundary = undefined;
 			selected = undefined;
 			activeDebt = undefined;
