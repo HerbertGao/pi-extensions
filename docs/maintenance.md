@@ -13,13 +13,13 @@
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `95d1086` (`0.19.0` + PR #268) | Imported upstream v0.19.0 and PR #268. The local package keeps its `@herbertgao/*` identity, release metadata, and UI branding while retaining the upstream workflow, mention, and worktree-safety behavior.                                                                                     |
 | `pi-cc-extensions` | `minuque/pi-cc-extensions` | `e43e004` (`0.8.71`)           | Selectively tracks the release while preserving local terminal-width, Markdown fence, mouse-slot, renderer-lifecycle, message hardening, and rich-diff fixes.                                                                                                                                    |
 | `resume-from`      | `alexei-led/resume-from`   | `e1dad0d` (`0.2.0`)            | Preserves the original session repository when Claude Code's active transcript later moves into a nested working directory.                                                                                                                                                                      |
-| `sol-pi`           | `NVlabs/SoL-Pi`            | `22277b7` (`0.1.0`)            | Source import and aggregate entry are covered by smoke; write ownership and subagent compaction guards are maintained locally. The reviewed cursor is `bd00588`; later upstream commits add compatibility metadata, package integration coverage, and docs only, with no runtime source changes. |
+| `sol-pi`           | `NVlabs/SoL-Pi`            | `22277b7` (`0.1.0`)            | Source import and aggregate entry are covered by smoke; write ownership and subagent compaction guards are maintained locally. The reviewed cursor is `1559b5c`; later upstream commits add compatibility metadata, package integration coverage, and docs only, with no runtime source changes. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.2`          | `e43e0041b59f`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.5`          | `e43e0041b59f`  |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
@@ -243,6 +243,14 @@ The aggregate package also pins the following npm packages under their original 
 `pi-multi-account@1.23.2` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
 
 The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #238 upstream review accepted three companion updates, advanced the reviewed cursors for two derived repositories, and classified their changes as reviewed-without-import:
+
+- `@narumitw/pi-btw@0.61.1` pins the companion release.
+- `pi-lens@4.3.0` pins the companion release.
+- `pi-mcp-adapter@2.38.0` pins the companion release.
+- `@herbertgao/pi-cc-extensions` is advanced to reviewed version `0.9.5` and its repository cursor is advanced to `47bfce7aebfb`. The upstream v0.9.3 - v0.9.5 updates (including renderer animations, click-to-collapse, and expanded diffs) were reviewed and classified as reviewed-without-import because our local customized `pi-cc-extensions` version `0.9.5` is working correctly and preserves our local terminal-width, mouse-slot, and rich-diff customizations.
+- `NVlabs SoL-Pi` repository cursor is advanced to `1559b5cb12c7` and classified as reviewed-without-import as the upstream changes address Windows-specific shell paths and Unicode-space normalizations that are not required for our platform baseline, keeping our POSIX-specific implementation stable.
 
 The issue #235 upstream review accepted two companion updates and deferred unreleased repository commits:
 

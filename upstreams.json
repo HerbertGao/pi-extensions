@@ -14,7 +14,7 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "1f6f92103c66930873e2805cee8a294ff1f4251d"
+      "reviewedCommit": "47bfce7aebfb27cb79253dbeace38e97f325ecfe"
     },
     {
       "name": "resume-from",
@@ -24,7 +24,7 @@
     {
       "name": "NVlabs SoL-Pi",
       "repository": "https://github.com/NVlabs/SoL-Pi",
-      "reviewedCommit": "bd005888b9b8a3fcdb511feb91fc27d3dfa8f2b1"
+      "reviewedCommit": "1559b5cb12c72da4a485bc50fe326586b216fb19"
     },
     {
       "name": "pi-antigravity",
