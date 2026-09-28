@@ -1,5 +1,11 @@
 # @herbertgao/sol-pi
 
+## 0.3.3
+
+### Patch Changes
+
+- [#244](https://github.com/HerbertGao/pi-extensions/pull/244) [`50c30b8`](https://github.com/HerbertGao/pi-extensions/commit/50c30b8bf73246d1d87e77d83232781ea62c4ba2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Stop reporting "Online context compact continuation did not start" after every online compaction on Pi 0.87, which defers `agent_settled` follow-up turns and awaits them itself.
+
 ## 0.3.2
 
 ### Patch Changes

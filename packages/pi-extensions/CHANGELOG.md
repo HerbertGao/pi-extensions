@@ -1,5 +1,12 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.17
+
+### Patch Changes
+
+- Updated dependencies [[`50c30b8`](https://github.com/HerbertGao/pi-extensions/commit/50c30b8bf73246d1d87e77d83232781ea62c4ba2)]:
+  - @herbertgao/sol-pi@0.3.3
+
 ## 2026.9.16
 
 ### Minor Changes
