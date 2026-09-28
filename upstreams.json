@@ -94,6 +94,10 @@
       "repository": "https://github.com/Sarrius/pi-multi-account"
     },
     {
+      "package": "pi-next-cue",
+      "repository": "https://github.com/ouzhenkun/pi-next-cue"
+    },
+    {
       "package": "pi-footer",
       "repository": "https://github.com/wobondar/pi-footer"
     },
