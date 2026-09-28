@@ -1227,7 +1227,7 @@ try {
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.61.0"
+  const expectedBtwVersion = "0.61.1"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1692,6 +1692,7 @@ try {
   )) {
     if (
       dependency !== "zod" &&
+      dependency !== "@napi-rs/keyring" &&
       sourceManifest.dependencies[dependency] !== range
     ) {
       throw new Error(
