@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.9.7
+
+### Patch Changes
+
+- [#250](https://github.com/HerbertGao/pi-extensions/pull/250) [`e7ae14c`](https://github.com/HerbertGao/pi-extensions/commit/e7ae14c849a03453b5ebd162a25f552f781c4a28) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Port reviewed upstream 0.9.6–0.9.9 fixes: stop the working-message refresh timer on a stale ctx instead of crashing Pi, preserve POSIX path separators, and yield the rich write diff with a one-time notice when another extension owns `write`.
+
 ## 0.9.6
 
 ### Patch Changes
