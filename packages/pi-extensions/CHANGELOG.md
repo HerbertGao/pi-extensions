@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.19
+
+### Patch Changes
+
+- [#250](https://github.com/HerbertGao/pi-extensions/pull/250) [`e7ae14c`](https://github.com/HerbertGao/pi-extensions/commit/e7ae14c849a03453b5ebd162a25f552f781c4a28) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync reviewed upstream companion updates: update `pi-antigravity` to `0.8.1` (fixes Antigravity requests on Pi 0.86+ being sent without Pi's system prompt and tools, which made Gemini models refuse to run shell commands), `pi-typesafe` to `0.8.1`, and `pi-web-access` to `0.34.0`.
+
+- Updated dependencies [[`e7ae14c`](https://github.com/HerbertGao/pi-extensions/commit/e7ae14c849a03453b5ebd162a25f552f781c4a28)]:
+  - @herbertgao/pi-cc-extensions@0.9.7
+
 ## 2026.9.18
 
 ### Patch Changes
