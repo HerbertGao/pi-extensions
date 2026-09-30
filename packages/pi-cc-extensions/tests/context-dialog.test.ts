@@ -5,97 +5,124 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { formatSkillsForPrompt, initTheme } from "@earendil-works/pi-coding-agent";
 import {
-	escCloseHitbox,
-	hasActiveTextPreview,
-	showTextPreview,
 	capParts,
 	collectContextBreakdown,
+	escCloseHitbox,
+	hasActiveTextPreview,
 	resolveUsedTokens,
+	showTextPreview,
 } from "../extensions/feature/context.ts";
 
 initTheme("dark");
 
-test("escCloseHitbox places the [esc] hitbox at the right end of the title row", () => {
-	assert.deepEqual(escCloseHitbox({ left: 8, top: 1, width: 64 }), {
-		row: 3,
-		startCol: 67,
-		endCol: 71,
-	});
-});
-
-test("escCloseHitbox keeps the hitbox inside a narrow box", () => {
-	assert.deepEqual(escCloseHitbox({ left: 1, top: 1, width: 38 }), {
-		row: 3,
-		startCol: 34,
-		endCol: 38,
-	});
-});
-
-test("escCloseHitbox follows a non-top dialog row", () => {
-	assert.deepEqual(escCloseHitbox({ left: 20, top: 6, width: 50 }), {
-		row: 8,
-		startCol: 65,
-		endCol: 69,
-	});
-});
-
-test("escCloseHitbox hitbox is 5 columns wide and flush to the right content edge", () => {
-	const cases: { left: number; top: number; width: number }[] = [
-		{ left: 8, top: 1, width: 64 },
-		{ left: 1, top: 1, width: 38 },
-		{ left: 20, top: 6, width: 50 },
-	];
-	for (const bounds of cases) {
-		const hitbox = escCloseHitbox(bounds);
-		assert.equal(hitbox.endCol - hitbox.startCol + 1, 5, "hitbox is exactly 5 columns wide");
-		assert.ok(hitbox.startCol > bounds.left, "hitbox starts inside the box");
-		assert.ok(hitbox.endCol < bounds.left + bounds.width, "hitbox ends inside the box");
-	}
-});
-
-test("context usage reconciles provider tokens and caps variable parts", () => {
-	assert.equal(resolveUsedTokens({ tokens: 500, percent: 50 }, 600, 1000), 500);
-	assert.equal(resolveUsedTokens({ tokens: 10, percent: 50 }, 600, 1000), 500);
-	assert.deepEqual(
-		capParts(
-			[
-				{ label: "System prompt", tokens: 50, color: "accent" },
-				{ label: "Tools", tokens: 100, color: "success" },
-				{ label: "Context", tokens: 100, color: "warning" },
-			],
-			100,
-			1,
-		).map((part) => part.tokens),
-		[50, 25, 25],
-	);
-});
-
-test("context breakdown exposes tool results for preview", () => {
-	const breakdown = collectContextBreakdown({
-		getSystemPrompt: () => "system",
+test("context breakdown separates tools, results, and conversation without inflating estimates", () => {
+	const ctx = {
 		getSystemPromptOptions: () => ({
-			selectedTools: [],
-			contextFiles: [{ path: "AGENTS.md", content: "MEMORY_PREVIEW" }],
+			cwd: "/repo",
+			selectedTools: ["read"],
+			toolSnippets: { read: "Read files" },
+			contextFiles: [{ path: "AGENTS.md", content: "cccc" }],
+			skills: [
+				{ name: "ok", description: "desc", filePath: "/v" },
+				{
+					name: "hidden",
+					description: "x".repeat(100),
+					filePath: "/hidden",
+					disableModelInvocation: true,
+				},
+			],
 		}),
+		getSystemPrompt: () => "s".repeat(200),
 		sessionManager: {
 			buildContextEntries: () => [
+				{ type: "message", message: { role: "user", content: "uuuuuuuu", timestamp: 0 } },
+				{
+					type: "message",
+					message: {
+						role: "assistant",
+						content: [
+							{ type: "text", text: "aaaa" },
+							{ type: "toolCall", id: "1", name: "read", arguments: { path: "a" } },
+						],
+					},
+				},
 				{
 					type: "message",
 					message: {
 						role: "toolResult",
-						toolCallId: "tool-1",
+						toolCallId: "1",
 						toolName: "read",
-						content: [{ type: "text", text: "TOOL_RESULT_PREVIEW" }],
-						isError: false,
-						timestamp: Date.now(),
+						content: "rrrrrrrr",
+						timestamp: 0,
 					},
 				},
+				{ type: "compaction", summary: "ssss" },
 			],
 		},
-	} as never);
-	assert.match(breakdown.toolResults, /TOOL_RESULT_PREVIEW/);
-	assert.equal(breakdown.parts.find((part) => part.label === "Memory")?.tokens ?? 0, 0);
-	assert.ok(breakdown.parts.some((part) => part.label === "Tool results" && part.tokens > 0));
+	} as any;
+	const tools = [
+		{
+			name: "read",
+			description: "Read a file",
+			parameters: { type: "object" },
+			promptGuidelines: [],
+			sourceInfo: {},
+		},
+	] as any;
+
+	const breakdown = collectContextBreakdown(ctx, tools);
+	const parts = breakdown.parts;
+	assert.deepEqual(
+		parts.map(({ label, color }) => [label, color]),
+		[
+			["System prompt", "accent"],
+			["Memory", "error"],
+			["Skills", "warning"],
+			["Tools definition", "success"],
+			["Tool results", "customMessageLabel"],
+			["Context", "warning"],
+		],
+	);
+	assert.equal(parts.find((part) => part.label === "System prompt")?.tokens, 50);
+	assert.equal(parts.find((part) => part.label === "Memory")?.tokens, 0);
+	assert.equal(parts.find((part) => part.label === "Skills")?.tokens, 0);
+	assert.match(breakdown.previews.memoryFiles, /## AGENTS\.md/);
+	assert.match(breakdown.previews.memoryFiles, /cccc/);
+	assert.match(breakdown.previews.skills, /<name>ok<\/name>/);
+	assert.doesNotMatch(breakdown.previews.skills, /hidden/);
+	assert.equal(parts.find((part) => part.label === "Tool results")?.tokens, 2);
+	assert.equal(parts.find((part) => part.label === "Context")?.tokens, 8);
+	assert.equal(breakdown.previews.systemPrompt, "s".repeat(200));
+	assert.match(breakdown.previews.tools, /Definition: read/);
+	assert.match(breakdown.previews.tools, /"parameters"/);
+	assert.doesNotMatch(breakdown.previews.tools, /Call: read/);
+	assert.match(breakdown.previews.toolResults, /Result: read/);
+	assert.match(breakdown.previews.toolResults, /rrrrrrrr/);
+	assert.match(breakdown.previews.contextFiles, /uuuuuuuu/);
+	assert.match(breakdown.previews.contextFiles, /aaaa/);
+	assert.match(breakdown.previews.contextFiles, /Assistant tool call: read/);
+	assert.match(breakdown.previews.contextFiles, /"path": "a"/);
+	assert.match(breakdown.previews.contextFiles, /Compaction/);
+
+	const fitted = capParts(parts, parts.reduce((sum, part) => sum + part.tokens, 0) + 10);
+	assert.deepEqual(fitted, parts, "estimates are not inflated to fill provider usage");
+	const fixedTokens = parts.slice(0, 4).reduce((sum, part) => sum + part.tokens, 0);
+	const capped = capParts(parts, fixedTokens + 5, 4);
+	assert.deepEqual(
+		capped.slice(0, 4),
+		parts.slice(0, 4),
+		"system prompt, memory, skills and tools definition stay stable",
+	);
+	assert.equal(
+		capped.reduce((sum, part) => sum + part.tokens, 0),
+		fixedTokens + 5,
+	);
+	const finalParts = [
+		...fitted,
+		{ label: "Other", tokens: 10, color: "muted" },
+		{ label: "Free space", tokens: 100, color: "dim" },
+	];
+	assert.equal(new Set(finalParts.map((part) => part.color)).size, 7);
 });
 
 test("context breakdown attributes embedded memory and skills once", () => {
@@ -103,24 +130,67 @@ test("context breakdown attributes embedded memory and skills once", () => {
 	const skills = [{ name: "ok", description: "desc", filePath: "/v" }];
 	const skillsText = formatSkillsForPrompt(skills as any).trim();
 	const systemPrompt = `base\n<project_instructions>\n${memory}\n</project_instructions>\n${skillsText}`;
-	const breakdown = collectContextBreakdown({
-		getSystemPrompt: () => systemPrompt,
+	const ctx = {
 		getSystemPromptOptions: () => ({
+			cwd: "/repo",
 			selectedTools: [],
 			contextFiles: [{ path: "AGENTS.md", content: memory }],
 			skills,
 		}),
+		getSystemPrompt: () => systemPrompt,
 		sessionManager: { buildContextEntries: () => [] },
-	} as never);
+	} as any;
 
+	const breakdown = collectContextBreakdown(ctx, []);
 	const systemTokens = breakdown.parts.find((part) => part.label === "System prompt")?.tokens ?? -1;
 	const memoryTokens = breakdown.parts.find((part) => part.label === "Memory")?.tokens ?? -1;
-	const skillTokens = breakdown.parts.find((part) => part.label === "Skills")?.tokens ?? -1;
+	const skillsTokens = breakdown.parts.find((part) => part.label === "Skills")?.tokens ?? -1;
 	assert.equal(memoryTokens, Math.ceil(memory.length / 4));
-	assert.equal(skillTokens, Math.ceil(skillsText.length / 4));
-	assert.equal(systemTokens + memoryTokens + skillTokens, Math.ceil(systemPrompt.length / 4));
+	assert.equal(skillsTokens, Math.ceil(skillsText.length / 4));
+	assert.equal(systemTokens + memoryTokens + skillsTokens, Math.ceil(systemPrompt.length / 4));
+	assert.ok(systemTokens < Math.ceil(systemPrompt.length / 4));
 });
 
+test("resolveUsedTokens rejects inconsistent or implausibly small provider usage", () => {
+	assert.equal(resolveUsedTokens({ tokens: 1, percent: 7 }, 20_000, 272_000), 19_040);
+	assert.equal(resolveUsedTokens({ tokens: 19_000, percent: 7 }, 20_000, 272_000), 19_000);
+	assert.equal(resolveUsedTokens({ tokens: 1, percent: 1 / 2_720 }, 20_000, 272_000), 20_000);
+	assert.equal(resolveUsedTokens({ tokens: null, percent: null }, 20_000, 272_000), 20_000);
+});
+
+test("capParts never produces negative tokens when estimates exceed usage", () => {
+	const parts = Array.from({ length: 8 }, (_, index) => ({
+		label: String(index),
+		tokens: 1,
+		color: "dim" as const,
+	}));
+	const fitted = capParts(parts, 5);
+	assert.equal(
+		fitted.reduce((sum, part) => sum + part.tokens, 0),
+		5,
+	);
+	assert.ok(fitted.every((part) => part.tokens >= 0));
+});
+
+test("escCloseHitbox sits 5 columns wide at the title row's right edge", () => {
+	assert.deepEqual(escCloseHitbox({ left: 8, top: 1, width: 64 }), {
+		row: 3,
+		startCol: 67,
+		endCol: 71,
+	});
+	assert.deepEqual(escCloseHitbox({ left: 1, top: 1, width: 38 }), {
+		row: 3,
+		startCol: 34,
+		endCol: 38,
+	});
+	assert.deepEqual(escCloseHitbox({ left: 20, top: 6, width: 50 }), {
+		row: 8,
+		startCol: 65,
+		endCol: 69,
+	});
+});
+
+/** showTextPreview 自定义 UI 的最小 harness：捕获 component，theme 可注入，可选挂载回调。 */
 /** showTextPreview 自定义 UI 的最小 harness：捕获 component（挂载后实时可读），theme 可注入，可选挂载回调。 */
 function textPreviewHarness(
 	theme: any = { fg: (_color: string, text: string) => text, bold: (text: string) => text },

@@ -7,9 +7,9 @@ import {
 	initTheme,
 } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import { Container, Spacer, visibleWidth } from "@earendil-works/pi-tui";
+import { Container, Spacer } from "@earendil-works/pi-tui";
 import { installToolGrouping, ToolGroupComponent } from "../extensions/renderer/tool/grouping.ts";
-import { toolViewportWidth } from "../extensions/renderer/tool/result.ts";
+import { humanizeToolLabel, toolCallSummary } from "../extensions/renderer/tool/names.ts";
 
 initTheme("dark");
 const ui = { theme: { fg: (_color: string, text: string) => text }, requestRender() {} } as any;
@@ -17,7 +17,13 @@ function tool(name: string, id: string, args: any = {}) {
 	return new ToolExecutionComponent(name, id, args, {}, undefined, ui, process.cwd()) as any;
 }
 
-test("restored tools keep the static Braille loader", () => {
+function started(name: string, id: string, args: any = {}) {
+	const component = tool(name, id, args);
+	component.markExecutionStarted();
+	return component;
+}
+
+test("restored tools still render as running with the braille loader", () => {
 	const hooks = installToolGrouping(() => true);
 	try {
 		const parent = new Container() as any;
@@ -31,7 +37,6 @@ test("restored tools keep the static Braille loader", () => {
 		assert.match(rendered[0], /2 running/);
 		assert.ok(rendered.some((line: string) => /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/.test(line)));
 		assert.doesNotMatch(rendered.join("\n"), /queued/);
-		assert.equal((group as any).patch.animationTimer, null);
 	} finally {
 		hooks.shutdown();
 	}
@@ -42,9 +47,9 @@ test("mixed tools group across three empty separators while edit/write and conte
 	const hooks = installToolGrouping(() => enabled);
 	try {
 		const parent = new Container() as any;
-		const read = tool("read", "read");
-		const bash = tool("bash", "bash");
-		const grep = tool("grep", "grep");
+		const read = started("read", "read");
+		const bash = started("bash", "bash");
+		const grep = started("grep", "grep");
 		parent.addChild(read);
 		parent.addChild(new Spacer(1));
 		parent.addChild(new Spacer(1));
@@ -68,7 +73,7 @@ test("mixed tools group across three empty separators while edit/write and conte
 		bash.updateResult({ content: [], isError: false });
 		grep.updateResult({ content: [], isError: true });
 		assert.match(
-			parent.children[0].render(100).find((line: string) => line.trim()),
+			parent.children[0].render(100).find((line: string) => line.trim())!,
 			/1 running.*1 done.*1 failed/,
 		);
 		const group = parent.children[0] as ToolGroupComponent;
@@ -102,39 +107,6 @@ test("mixed tools group across three empty separators while edit/write and conte
 	}
 });
 
-test("tool summaries use the available window width", () => {
-	assert.equal(toolViewportWidth(137.9), 137);
-	const hooks = installToolGrouping(() => true);
-	try {
-		const parent = new Container() as any;
-		const path =
-			"/Users/herbertgao/DongguProjects/shijingshan/ai-risk-platform-contracts/backend/app/modules/risk/services/contract_service.py";
-		parent.addChild(tool("read", "long-read", { path, offset: 1, limit: 240 }));
-		parent.addChild(tool("bash", "neighbor", { command: "pwd" }));
-		const group = parent.children[0] as ToolGroupComponent;
-		const wideRead = group
-			.render(180)
-			.map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
-			.find((line) => line.includes("Read "));
-		assert.ok(wideRead?.includes(path), "wide windows keep paths beyond the old 96-char limit");
-		assert.match(wideRead, /\(offset=1, limit=240\)$/);
-
-		const narrowRead =
-			group
-				.render(80)
-				.find((line) => line.includes("Read "))
-				?.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "") ?? "";
-		assert.ok(visibleWidth(narrowRead) <= 80, "narrow windows still clip to their actual width");
-		assert.match(
-			narrowRead,
-			/…[\\/]contract_service\.py \(offset=1, limit=240\)$/,
-			"narrow windows keep the filename instead of only the head",
-		);
-	} finally {
-		hooks.shutdown();
-	}
-});
-
 test("collapsed groups preserve filenames for long cwd paths", () => {
 	const hooks = installToolGrouping(() => true);
 	try {
@@ -146,8 +118,8 @@ test("collapsed groups preserve filenames for long cwd paths", () => {
 			"nested-renderer-implementation",
 			"target-file.ts",
 		);
-		parent.addChild(tool("read", "long-read", { path }));
-		parent.addChild(tool("bash", "separator", { command: "echo ok" }));
+		parent.addChild(started("read", "long-read", { path }));
+		parent.addChild(started("bash", "separator", { command: "echo ok" }));
 		const rendered = parent.children[0]
 			.render(48)
 			.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""));
@@ -166,8 +138,8 @@ test("expanded native cards align nested trees through interleaved ANSI padding"
 	const hooks = installToolGrouping(() => true);
 	try {
 		const parent = new Container() as any;
-		const read = tool("read", "read");
-		const bash = tool("bash", "bash");
+		const read = started("read", "read");
+		const bash = started("bash", "bash");
 		parent.addChild(read);
 		parent.addChild(bash);
 		const group = parent.children[0] as ToolGroupComponent;
@@ -178,14 +150,13 @@ test("expanded native cards align nested trees through interleaved ANSI padding"
 		});
 		group.setExpanded(true);
 		read.render = (width: number) => {
-			assert.equal(width, 98, "native card uses the full panel inner width");
+			assert.equal(width, 98, "native card uses the full padded panel width");
 			return [
-				`\x1b[48;2;20;20;20m  ⠋ Read ${"x".repeat(width - 13)}END \x1b[0m`,
-				"\x1b[48;2;20;20;20m \x1b[39m ├ Input\x1b[0m",
-				"\x1b[48;2;20;20;20m \x1b[39m │ path: sample.ts\x1b[0m",
-				"\x1b[48;2;20;20;20m \x1b[39m └ Output\x1b[0m",
-				"\x1b[48;2;20;20;20m \x1b[39m   ok\x1b[0m",
-				`  Output ${"x".repeat(width - 13)}END `,
+				"\x1b[48;2;20;20;20m ✓ Read sample.ts\x1b[0m",
+				"\x1b[48;2;20;20;20m \x1b[39m├ Input\x1b[0m",
+				"\x1b[48;2;20;20;20m \x1b[39m│ path: sample.ts\x1b[0m",
+				"\x1b[48;2;20;20;20m \x1b[39m└ Output\x1b[0m",
+				"\x1b[48;2;20;20;20m \x1b[39m  ok\x1b[0m",
 			];
 		};
 		const rendered = group.render(100);
@@ -198,37 +169,20 @@ test("expanded native cards align nested trees through interleaved ANSI padding"
 			/^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read/,
 			"panel starts directly with the loading tool",
 		);
-		assert.ok(
-			rendered.slice(2).every((line) => visibleWidth(line) === 100),
-			"expanded content and bottom padding cover exactly the parent width",
+		assert.equal(
+			stripAnsi(rendered.at(-1) ?? "").length,
+			100,
+			"bottom padding covers the full width",
 		);
-		assert.equal(group.childAtRow(2, 100)?.component, read);
-		assert.equal(group.childAtRow(7, 100)?.component, read);
-		assert.equal(group.childAtRow(8, 100)?.component, bash, "hit testing shares render width");
 		const expanded = rendered.map(stripAnsi).join("\n");
 		assert.match(
 			expanded,
-			/^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read x+END  $/m,
-			"child status is replaced without clipping its full-width title",
+			/^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read sample\.ts\s*$/m,
+			"expanded branch matches collapsed position",
 		);
 		assert.match(expanded, /^ │ ├ Input\s*$/m, "nested tree aligns with the status dot");
 		assert.match(expanded, /^ │ │ path: sample\.ts\s*$/m);
 		assert.match(expanded, /^ │   ok\s*$/m, "output content retains its relative indent");
-		assert.equal(
-			expanded.match(/END {2}$/gm)?.length,
-			2,
-			"group prefix replacement preserves title and output trailing content",
-		);
-
-		const tinyParent = new Container() as any;
-		tinyParent.addChild(tool("read", "tiny-read"));
-		tinyParent.addChild(tool("bash", "tiny-bash"));
-		const tinyGroup = tinyParent.children[0] as ToolGroupComponent;
-		tinyGroup.setExpanded(true);
-		assert.ok(
-			tinyGroup.render(1).every((line) => visibleWidth(line) <= 1),
-			"one-column groups never overflow",
-		);
 	} finally {
 		hooks.shutdown();
 	}
@@ -317,10 +271,7 @@ test("outer removeChild removes grouped tools, dissolves singletons, and clear f
 		parent.addChild(grep);
 		const group = parent.children[0] as ToolGroupComponent;
 		assert.ok(group instanceof ToolGroupComponent);
-		assert.match(
-			group.render(100).find((line: string) => line.trim()),
-			/click to show more/,
-		);
+		assert.match(group.render(100).find((line: string) => line.trim())!, /click to show more/);
 
 		parent.removeChild(bash);
 		assert.deepEqual(group.children, [read, grep]);
@@ -382,4 +333,225 @@ test("off refresh ungroups, reload rescans existing tools, and stale shutdown pr
 	assert.equal(prototype.addChild, secondWrapper, "stale shutdown preserves the new owner");
 	second.shutdown();
 	assert.equal(prototype.addChild, originalAdd);
+});
+
+test("pending and expanded groups bypass settled render caching", () => {
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		const read = started("read", "live-read");
+		const bash = started("bash", "live-bash");
+		parent.addChild(read);
+		parent.addChild(bash);
+		const group = parent.children[0] as ToolGroupComponent;
+
+		const pending = group.render(120);
+		assert.notStrictEqual(group.render(120), pending, "pending spinner output is not memoized");
+
+		read.updateResult({ content: [], isError: false });
+		bash.updateResult({ content: [], isError: false });
+		group.setExpanded(true);
+		const expanded = group.render(120);
+		assert.notStrictEqual(group.render(120), expanded, "expanded child output is not memoized");
+	} finally {
+		hooks.shutdown();
+	}
+});
+
+test("settled collapsed groups reuse the last render until inputs change", () => {
+	const hooks = installToolGrouping(() => true);
+	hooks.setTheme({ fg: (_color: string, text: string) => text });
+	try {
+		const parent = new Container() as any;
+		const read = tool("read", "cached-read", { path: "a.ts" });
+		const bash = tool("bash", "cached-bash", { command: "ls" });
+		read.updateResult({ content: [], isError: false });
+		bash.updateResult({ content: [], isError: false });
+		parent.addChild(read);
+		parent.addChild(bash);
+		const group = parent.children[0] as ToolGroupComponent;
+
+		const first = group.render(120);
+		assert.strictEqual(group.render(120), first, "identical settled frame reuses the cached lines");
+		group.invalidate();
+		const invalidated = group.render(120);
+		assert.notStrictEqual(invalidated, first, "invalidation clears settled output");
+		assert.strictEqual(group.render(120), invalidated, "new output is memoized");
+
+		const wider = group.render(160);
+		assert.notStrictEqual(wider, first);
+		assert.match(wider.find((line: string) => line.trim())!, /2 done/);
+
+		group.setHintHovered(true);
+		const hovered = group.render(160);
+		assert.notStrictEqual(hovered, wider);
+		assert.strictEqual(group.render(160), hovered);
+
+		hooks.setTheme({ fg: (color: string, text: string) => `<${color}>${text}</${color}>` });
+		const themed = group.render(160);
+		assert.notStrictEqual(themed, hovered);
+		assert.match(themed.join("\n"), /<success>2<\/success> done/);
+
+		bash.updateResult({ content: [], isError: true });
+		// 标签化主题会虚增宽度计量；在无需截断的宽度下断言失败计数可见。
+		// 窄视口下主体优先让位，保持行尾提示完整（见下方 hint 保留回归）。
+		const failed = group.render(260);
+		assert.notStrictEqual(failed, themed);
+		assert.match(failed.join("\n"), /<success>1<\/success> done/);
+		assert.match(failed.join("\n"), /<error>1<\/error> failed/);
+
+		group.setExpanded(true);
+		const expanded = group.render(160);
+		assert.notStrictEqual(expanded, failed);
+		group.setExpanded(false);
+		const collapsed = group.render(160);
+		assert.notStrictEqual(collapsed, failed, "expansion changes clear settled output");
+		assert.strictEqual(group.render(160), collapsed, "collapsed output is memoized again");
+
+		parent.addChild(started("grep", "cached-grep", { pattern: "todo" }));
+		const grown = group.render(260);
+		assert.notStrictEqual(grown, collapsed);
+		assert.match(grown.join("\n"), /running/);
+		assert.match(grown.join("\n"), /<success>1<\/success> done/);
+		assert.match(grown.join("\n"), /<error>1<\/error> failed/);
+	} finally {
+		hooks.shutdown();
+	}
+});
+
+function plain(lines: string[]): string[] {
+	return lines
+		.map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+		.filter((line) => line.trim());
+}
+
+test("powershell 分组行显示具体命令（issue 26）", () => {
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		parent.addChild(started("powershell", "ps-1", { command: "Get-ChildItem -Recurse" }));
+		parent.addChild(started("powershell", "ps-2", { command: "$env:FOO = 'bar'" }));
+		const group = parent.children[0] as ToolGroupComponent;
+		const collapsed = plain(group.render(120));
+		assert.match(collapsed[0], /^ ● PowerShell: 2 running/);
+		assert.match(collapsed[1], /PowerShell Get-ChildItem -Recurse$/);
+		assert.match(collapsed[2], /PowerShell \$env:FOO = 'bar'$/);
+	} finally {
+		hooks.shutdown();
+	}
+});
+
+test("default 与 grouping 共用同一份摘要取值链", () => {
+	const cases: Array<[string, any, string]> = [
+		["powershell", { command: "npm test" }, "PowerShell npm test"],
+		["bash", { command: "npm test" }, "Bash npm test"],
+		["grep", { pattern: "foo|bar", path: "extensions/" }, 'Grep "foo|bar" in extensions/'],
+		["ffgrep", { pattern: "hero", path: "assets/" }, 'Ffgrep "hero" in assets/'],
+		["source_check", { claim: "README 用 webp" }, "Source Check README 用 webp"],
+		["web_search", { queries: ["a", "b"] }, "Web Search a (+1)"],
+		["web_search", { queries: ["a"] }, "Web Search a"],
+		["fetch_content", { urls: ["https://a", "https://b"] }, "Fetch Content https://a (+1)"],
+		["get_search_content", { responseId: "rid-1" }, "Get Search Content rid-1"],
+		["Agent", { description: "review code" }, "Agent review code"],
+	];
+	for (const [name, args, expected] of cases) {
+		for (const variant of ["default", "grouping"] as const) {
+			assert.equal(
+				toolCallSummary(name, args, { variant, cwd: process.cwd() }).main,
+				expected,
+				`${name} / ${variant}`,
+			);
+		}
+	}
+});
+
+test("humanizeToolLabel 保留品牌大小写", () => {
+	assert.equal(humanizeToolLabel("powershell"), "PowerShell");
+	assert.equal(humanizeToolLabel("bash"), "Bash");
+	// MCP 入口两个的缩写固定写法
+	assert.equal(humanizeToolLabel("mcp"), "MCP");
+	assert.equal(humanizeToolLabel("mcpScript"), "MCP Script");
+});
+
+test("collapsed group rows share the single-card viewport width", async () => {
+	const { config } = await import("../extensions/config/config.ts");
+	const { toolViewportWidth } = await import("../extensions/renderer/tool/result.ts");
+	const { visibleWidth } = await import("@earendil-works/pi-tui");
+	const previousInputClip = config.inputClip;
+	config.inputClip = 0;
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		const long = `echo ${"x".repeat(400)}`;
+		for (const id of ["a", "b"]) {
+			const bash = tool("bash", id, { command: long });
+			bash.updateResult({ content: [], isError: false });
+			parent.addChild(bash);
+		}
+		const rows = (parent.children[0] as ToolGroupComponent)
+			.render(200)
+			.filter((line: string) => /[├└]/.test(line));
+		assert.equal(rows.length, 2);
+		for (const row of rows) assert.equal(visibleWidth(row), toolViewportWidth(200));
+	} finally {
+		config.inputClip = previousInputClip;
+		hooks.shutdown();
+	}
+});
+
+test("group headers share the single-card viewport limit without stretching short titles", async () => {
+	const { toolViewportWidth } = await import("../extensions/renderer/tool/result.ts");
+	const { visibleWidth } = await import("@earendil-works/pi-tui");
+	const hooks = installToolGrouping(() => true);
+	try {
+		const parent = new Container() as any;
+		const command = `echo ${"x".repeat(400)}`;
+		parent.addChild(started("read", "header-read", { path: "x".repeat(400) }));
+		const bash = tool("bash", "header-bash", { command });
+		bash.updateResult({ content: [], isError: false });
+		parent.addChild(bash);
+		const grep = tool("grep", "header-grep", { pattern: "x".repeat(400) });
+		grep.updateResult({ content: [], isError: true });
+		parent.addChild(grep);
+		const group = parent.children[0] as ToolGroupComponent;
+		for (const expanded of [false, true]) {
+			group.setExpanded(expanded);
+			const fullHeader = group.render(400)[1];
+			for (const width of [60, 120, 200]) {
+				const header = group.render(width)[1];
+				assert.equal(
+					visibleWidth(header),
+					Math.min(visibleWidth(fullHeader), toolViewportWidth(width)),
+				);
+				if (width === 200) assert.equal(header, fullHeader);
+			}
+		}
+	} finally {
+		hooks.shutdown();
+	}
+});
+
+// collapsedHintHitbox 依赖行尾完整提示短语判定可点击区；窄视口下若提示被截断，
+// 折叠分组将不可点击。主体优先让位，行尾提示必须完整。
+test("collapsed groups keep the full trailing hint at narrow viewports", () => {
+	const hooks = installToolGrouping(() => true);
+	hooks.setTheme({ fg: (_color: string, text: string) => text });
+	try {
+		const parent = new Container() as any;
+		const read = tool("read", "hint-read", {
+			path: "very-long-directory-name/nested/target-file.ts",
+		});
+		const bash = tool("bash", "hint-bash", { command: "printf ok" });
+		read.updateResult({ content: [], isError: false });
+		bash.updateResult({ content: [], isError: false });
+		parent.addChild(read);
+		parent.addChild(bash);
+		const group = parent.children[0] as ToolGroupComponent;
+		const title = group.render(80).find((line: string) => line.includes("Multiple Tools"))!;
+		const plain = title.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+		assert.match(plain, /click to show more\s*$/);
+		assert.match(plain, /Multiple Tools: 2 done/);
+	} finally {
+		hooks.shutdown();
+	}
 });

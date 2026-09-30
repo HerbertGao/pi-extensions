@@ -33,24 +33,23 @@ These packages retain their original names and upstream maintainers. The aggrega
 
 | Package                                                                         | Pinned version | Purpose                                       |
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
-| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.9.0`        | Minimal coding mode and maintenance skills.   |
-| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.8.0`        | Structured user questionnaires.               |
-| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.61.0`       | Parallel side questions outside main history. |
-| [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.7`       | Keep the computer awake during Pi agent runs. |
-| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.10`       | Priority service tier for selected models.    |
-| [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.6`        | Pick and copy an assistant response.          |
+| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.10.0`       | Minimal coding mode and maintenance skills.   |
+| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.11.0`       | Structured user questionnaires.               |
+| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.61.1`       | Parallel side questions outside main history. |
+| [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.8`       | Keep the computer awake during Pi agent runs. |
+| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.12`       | Priority service tier for selected models.    |
+| [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.          |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                 |
-| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.5`        | Inline `/skill` autocomplete.                 |
-| [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.0`        | Extract and open Mermaid diagrams.            |
-| [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.1`        | Persist thinking levels per model.            |
-| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.6`        | Generate one-line session recaps.             |
+| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.6`        | Inline `/skill` autocomplete.                 |
+| [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.1`        | Extract and open Mermaid diagrams.            |
+| [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.            |
+| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.7`        | Generate one-line session recaps.             |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
 | [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.5.0`        | Fail-closed Jev safety gates for tool calls.  |
-| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.8.0`        | Structured TypeSafe/Jev decisions.            |
+| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.8.1`        | Structured TypeSafe/Jev decisions.            |
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.23.2`       | Multi-account failover and rotation.          |
-| [`pi-footer`](https://github.com/wobondar/pi-footer)                            | `0.5.1`        | Configurable multi-line footer/statusline.    |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.2.1`        | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.27.0`       | Web search and content access.                |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.3.0`        | Code diagnostics and skills.                  |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.34.0`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
 
 ### Remote Pi trust boundary
@@ -61,7 +60,7 @@ Accepted 0.7.0 limitations are documented in the aggregate package README: short
 
 ## Footer
 
-The aggregate enables `pi-footer`, which keeps Pi's path, Git, token/context, model, and thinking information. Configure it at `~/.pi/agent/extensions/pi-footer.json`.
+The configurable status bar is provided by `@herbertgao/pi-cc-extensions` (enabled by default, `/ccstyle` → Footer page). `pi-footer` is no longer bundled; if it was installed separately, remove it so only one footer extension owns the status bar.
 
 ## Native fullscreen
 

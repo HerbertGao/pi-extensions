@@ -7,18 +7,26 @@ import {
 	type Component,
 } from "@earendil-works/pi-tui";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
-import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
+import { getToolMouseTui } from "../mouse/scroll.ts";
+import { mcpToolTitle } from "./mcp-title.ts";
+import { collapseHintText, isToolTuiFullscreen, showMoreHintText } from "./show-more-hint.ts";
+import { stripAnsi, stripBackgroundAnsi, stripLeadingStatusIcon } from "../../utils/ansi-text.ts";
+import { walkComponentTree } from "../../utils/component-tree.ts";
 import {
 	fitToolCallSummary,
-	pathSummary,
-	toolViewportWidth,
+	humanizeToolLabel,
+	renderToolSummary,
+	toolCallSummary,
 	type ToolCallSummary,
-} from "./result.ts";
-import { isToolTuiFullscreen, showMoreHintText } from "../show-more-hint.ts";
+} from "./names.ts";
+import { toolViewportWidth } from "./result.ts";
+import {
+	patchRegistry,
+	TOOL_GROUPING_GENERATION_KEY as GENERATION_KEY,
+	TOOL_GROUPING_PARENT_KEY as PARENT_KEY,
+	TOOL_GROUPING_PATCH_KEY as PATCH_KEY,
+} from "../../utils/patch-keys.ts";
 
-const PATCH_KEY = Symbol.for("pi.ccstyle.tool-grouping-patch");
-const PARENT_KEY = Symbol.for("pi.ccstyle.tool-grouping-parent");
-const GENERATION_KEY = Symbol.for("pi.ccstyle.tool-grouping-generation");
 const NON_GROUPABLE = new Set(["edit", "write", "apply_patch"]);
 
 type Patch = {
@@ -39,7 +47,20 @@ function toolName(tool: any): string {
 	return String(tool?.toolName ?? tool?.toolDefinition?.name ?? "tool");
 }
 
-function isGroupable(value: unknown): value is any {
+/**
+ * 标题：MCP 工具用 adapter 暴露的真实工具名，其余回退工具名人性化。
+ */
+function toolTitle(tool: any): string {
+	const name = toolName(tool);
+	return (
+		mcpToolTitle({
+			toolName: name,
+			definition: tool?.toolDefinition ?? tool?.builtInToolDefinition,
+		}) ?? humanizeToolLabel(name)
+	);
+}
+
+function isGroupable(value: unknown): boolean {
 	return value instanceof ToolExecutionComponent && !NON_GROUPABLE.has(toolName(value));
 }
 
@@ -85,35 +106,40 @@ function scheduleGroupAnimation(patch: Patch): void {
 	patch.animationTimer = setTimeout(() => {
 		patch.animationTimer = null;
 		if (!patch.active) return;
+		let needsRender = false;
 		for (const group of patch.groups) {
 			if (
 				(group.children as any[]).some(
 					(tool) => tool?.executionStarted && status(tool) === "pending",
 				)
-			)
+			) {
 				group.invalidate();
+				// 分组卡不是 ToolExecutionComponent：它的 invalidate() 不会请求渲染，
+				// 不补这一步 spinner 只在别人渲染时才跳帧（并行工具下表现为卡顿/冻结）。
+				needsRender = true;
+			}
 		}
+		if (needsRender) requestAnimationRender(patch);
 	}, TOOL_LOADING_INTERVAL_MS);
 	patch.animationTimer.unref?.();
 }
 
-function stripAnsi(line: string): string {
-	return line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+/** 借用子工具卡的 ui 请求一帧；子卡缺失时回退到扩展持有的 TUI 槽。 */
+function requestAnimationRender(patch: Patch): void {
+	for (const group of patch.groups) {
+		const ui = (group.children as any[]).find(
+			(tool) => typeof tool?.ui?.requestRender === "function",
+		)?.ui;
+		if (ui) {
+			ui.requestRender();
+			return;
+		}
+	}
+	getToolMouseTui()?.requestRender?.();
 }
 
 function visibleLines(lines: string[]): string[] {
 	return lines.filter((line) => stripAnsi(line).trim());
-}
-
-function stripLeadingStatusIcon(line: string): string {
-	return line.replace(
-		/^((?:\x1b\[[0-9;]*m|[ \t]|[├└│─])*)(?:\x1b\[[0-9;]*m)*(?:[✓✗●○■⬤•·⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏])(?:\x1b\[[0-9;]*m)*\s+/,
-		"$1",
-	);
-}
-
-export function stripBackgroundAnsi(line: string): string {
-	return line.replace(/\x1b\[(?:4[0-9]|10[0-7]|48(?:(?:;|:)[0-9]+)+|49)m/g, "");
 }
 
 function stripLeadingSpaces(line: string, count: number): string {
@@ -138,10 +164,6 @@ function stripLeadingSpaces(line: string, count: number): string {
 }
 
 /** 生成一行铺满 width 的 slot 背景行；bgAnsiOverride 可替换背景 ANSI（用于提亮等）。 */
-function panelInnerWidth(width: number): number {
-	return Math.max(0, Math.floor(width) - 2);
-}
-
 export function paddedBackgroundRow(
 	theme: any,
 	slot: string,
@@ -149,12 +171,9 @@ export function paddedBackgroundRow(
 	width: number,
 	bgAnsiOverride?: string,
 ): string {
-	const safeWidth = Math.max(0, Math.floor(width));
-	const leftPadding = safeWidth > 0 ? " " : "";
-	const rightPadding = safeWidth > 1 ? " " : "";
-	const innerWidth = panelInnerWidth(width);
+	const innerWidth = Math.max(0, width - 2);
 	const clipped = truncateToWidth(stripBackgroundAnsi(content), innerWidth, "");
-	const row = `${leftPadding}${clipped}${" ".repeat(Math.max(0, innerWidth - visibleWidth(clipped)))}${rightPadding}`;
+	const row = ` ${clipped}${" ".repeat(Math.max(0, innerWidth - visibleWidth(clipped)))} `;
 	const bgAnsi =
 		bgAnsiOverride ||
 		(typeof theme?.bg === "function"
@@ -165,113 +184,12 @@ export function paddedBackgroundRow(
 	return `${bgAnsi}${stable}\x1b[49m`;
 }
 
-function oneLine(value: unknown): string {
-	return sanitizeToolResultText(String(value ?? ""), 4096)
-		.replace(/\s+/g, " ")
-		.trim();
-}
-
-function humanizeToolName(name: string): string {
-	return name
-		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-		.replace(/[_-]+/g, " ")
-		.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
 function toolSummary(tool: any): ToolCallSummary {
-	const name = toolName(tool);
-	const lowerName = name.toLowerCase();
-	const args = tool?.args ?? {};
-	const titled = humanizeToolName(name);
-	const value = (fallback: string, ...keys: string[]) => {
-		const found = keys.map((key) => args[key]).find((item) => typeof item === "string" && item);
-		return `${titled} ${oneLine(found || fallback)}`;
-	};
-	if (lowerName === "agent" || lowerName === "agents") {
-		const displayName = args.subagent_type ?? args.agent_type ?? args.agent;
-		if (typeof displayName === "string" && displayName) {
-			return { main: `${titled} ${displayName}`, detail: "" };
-		}
-		return {
-			main: value(
-				lowerName === "agent" ? "launch agent" : "launch agents",
-				"description",
-				"prompt",
-			),
-			detail: "",
-		};
-	}
-	if (lowerName === "get_subagent_result" || lowerName === "steer_subagent") {
-		return {
-			main: value(lowerName === "get_subagent_result" ? "agent result" : "steer agent", "agent_id"),
-			detail: "",
-		};
-	}
-	if (lowerName === "skill") return { main: value("run skill", "name"), detail: "" };
-	if (lowerName === "enterplanmode" || lowerName === "enter_plan_mode") {
-		return { main: `${titled} enable read-only planning`, detail: "" };
-	}
-	if (lowerName === "exitplanmode" || lowerName === "exit_plan_mode") {
-		return { main: `${titled} present plan`, detail: "" };
-	}
-	if (lowerName === "taskcreate") return { main: value("create task", "subject"), detail: "" };
-	if (lowerName === "tasklist") return { main: `${titled} task list`, detail: "" };
-	if (lowerName === "taskget" || lowerName === "taskupdate") {
-		return { main: value("task", "taskId", "task_id"), detail: "" };
-	}
-	if (lowerName === "taskoutput" || lowerName === "taskstop") {
-		return { main: value("background task", "task_id", "taskId"), detail: "" };
-	}
-	if (lowerName === "taskexecute") {
-		const ids = Array.isArray(args.task_ids)
-			? args.task_ids
-			: Array.isArray(args.taskIds)
-				? args.taskIds
-				: [];
-		return {
-			main: `${titled} ${ids.length ? `${ids[0]}${ids.length > 1 ? ` (+${ids.length - 1} tasks)` : ""}` : "start tasks"}`,
-			detail: "",
-		};
-	}
-	if (name === "read") {
-		const details = [
-			args.offset !== undefined ? `offset=${args.offset}` : "",
-			args.limit !== undefined ? `limit=${args.limit}` : "",
-		].filter(Boolean);
-		const detail = details.length ? ` (${details.join(", ")})` : "";
-		if (typeof args.path === "string" && args.path) {
-			return pathSummary("Read", args.path, tool?.cwd, detail);
-		}
-		return { main: "Read ...", detail };
-	}
-	if (name === "bash") return { main: `Bash ${oneLine(args.command || "...")}`, detail: "" };
-	if (name === "grep") {
-		const pattern = oneLine(args.pattern || "...");
-		return {
-			main: `Grep ${JSON.stringify(pattern)}${args.path ? ` in ${oneLine(args.path)}` : ""}`,
-			detail: "",
-		};
-	}
-	if (name === "find") {
-		const pattern = oneLine(args.pattern || "...");
-		return {
-			main: `Find ${JSON.stringify(pattern)}${args.path ? ` in ${oneLine(args.path)}` : ""}`,
-			detail: "",
-		};
-	}
-	const preferred =
-		args.agent_id ??
-		args.path ??
-		args.file_path ??
-		args.url ??
-		args.description ??
-		args.query ??
-		args.name ??
-		args.prompt;
-	return {
-		main: `${humanizeToolName(name)}${preferred === undefined ? "" : ` ${oneLine(preferred)}`}`,
-		detail: "",
-	};
+	return toolCallSummary(toolName(tool), tool?.args ?? {}, {
+		title: toolTitle(tool),
+		variant: "grouping",
+		cwd: tool?.cwd,
+	});
 }
 
 function toolNameList(tools: any[]): string {
@@ -282,10 +200,6 @@ function toolNameList(tools: any[]): string {
 
 let nextGroupId = 1;
 
-function groupChildWidth(width: number): number {
-	return Math.max(1, panelInnerWidth(width));
-}
-
 type SettledGroupCache = {
 	width: number;
 	hover: boolean;
@@ -294,6 +208,15 @@ type SettledGroupCache = {
 	children: readonly unknown[];
 	args: unknown[];
 	results: unknown[];
+	lines: string[];
+};
+
+type ExpandedGroupCache = {
+	width: number;
+	hover: boolean;
+	theme: unknown;
+	fullscreen: boolean;
+	paints: readonly unknown[];
 	lines: string[];
 };
 
@@ -307,8 +230,10 @@ export class ToolGroupComponent extends Container {
 	}
 	private hintHovered = false;
 	private readonly patch: Patch;
-	/** 仅缓存已完成且折叠的分组；pending / expanded 每帧现算。 */
+	/** 仅缓存已完成且折叠的分组；pending 每帧现算。 */
 	private settledCache: SettledGroupCache | undefined;
+	/** 展开分组：子工具 paint 引用未变则复用整卡行。 */
+	private expandedPaintCache: ExpandedGroupCache | undefined;
 
 	constructor(patch: Patch) {
 		super();
@@ -316,14 +241,19 @@ export class ToolGroupComponent extends Container {
 		patch.groups.add(this);
 	}
 
-	addTool(tool: any): void {
+	private clearPaintCache(): void {
 		this.settledCache = undefined;
+		this.expandedPaintCache = undefined;
+	}
+
+	addTool(tool: any): void {
+		this.clearPaintCache();
 		this.children.push(tool);
 		tool[PARENT_KEY] = this;
 	}
 
 	releaseTools(): any[] {
-		this.settledCache = undefined;
+		this.clearPaintCache();
 		const tools = [...this.children];
 		this.children.length = 0;
 		this.patch.groups.delete(this);
@@ -331,27 +261,27 @@ export class ToolGroupComponent extends Container {
 	}
 
 	removeTool(tool: any): void {
-		this.settledCache = undefined;
+		this.clearPaintCache();
 		const index = this.children.indexOf(tool);
 		if (index >= 0) this.children.splice(index, 1);
 		if (tool?.[PARENT_KEY] === this) delete tool[PARENT_KEY];
 	}
 
 	setExpanded(expanded: boolean): void {
-		if (this._expanded !== expanded) this.settledCache = undefined;
+		if (this._expanded !== expanded) this.clearPaintCache();
 		this._expanded = expanded;
 		for (const tool of this.children)
 			(tool as Component & { setExpanded?: (expanded: boolean) => void }).setExpanded?.(expanded);
 	}
 
 	setHintHovered(hovered: boolean): void {
-		if (this.hintHovered !== hovered) this.settledCache = undefined;
+		if (this.hintHovered !== hovered) this.clearPaintCache();
 		this.hintHovered = hovered;
 	}
 
 	/**
 	 * 展开时按局部行定位内部组件（null = 行属于 group 自身：空行/头行/尾行）。
-	 * 行数计算与 render 保持一致：预留背景 padding、分支和状态前缀后再过滤空行。
+	 * 行数计算与 render 保持一致：宽度 width-2 + 空行过滤。
 	 */
 	childAtRow(localRow: number, width: number): { component: any; row: number } | null {
 		if (!this._expanded || localRow < 2) return null;
@@ -359,7 +289,7 @@ export class ToolGroupComponent extends Container {
 		for (const tool of this.children) {
 			let lines: string[] = [];
 			try {
-				const rendered = tool.render?.(groupChildWidth(width));
+				const rendered = tool.render?.(Math.max(1, width - 2));
 				if (Array.isArray(rendered)) lines = visibleLines(rendered.map((line) => String(line)));
 			} catch {
 				lines = [];
@@ -374,7 +304,7 @@ export class ToolGroupComponent extends Container {
 	}
 
 	invalidate(): void {
-		this.settledCache = undefined;
+		this.clearPaintCache();
 		for (const tool of this.children) tool.invalidate?.();
 	}
 
@@ -434,8 +364,7 @@ export class ToolGroupComponent extends Container {
 			})
 			.join(` ${fg("dim", "•")} `);
 		const names = new Set(this.children.map(toolName));
-		const label =
-			names.size === 1 ? humanizeToolName(toolName(this.children[0])) : "Multiple Tools";
+		const label = names.size === 1 ? toolTitle(this.children[0]) : "Multiple Tools";
 		const overall: ToolStatus = counts.error ? "error" : counts.pending ? "pending" : "success";
 		if (
 			(this.children as any[]).some((tool) => tool?.executionStarted && status(tool) === "pending")
@@ -444,16 +373,42 @@ export class ToolGroupComponent extends Container {
 		const overallColor = overall === "pending" ? "accent" : overall;
 		const nameList = names.size > 1 ? ` ${fg("dim", `• ${toolNameList(this.children)}`)}` : "";
 		// 圆点保持 dim；hover 只高亮可点击文字。
-		const hint = `${fg("dim", "•")} ${fg(this.hintHovered ? "text" : "dim", showMoreHintText())}`;
-		const lines = [
-			"",
-			truncateToWidth(
-				` ${fg(overallColor, "●")} ${label}: ${countText}${nameList} ${hint}`,
-				toolViewportWidth(width),
-				"…",
-			),
-		];
+		const hintText = this._expanded ? collapseHintText() : showMoreHintText();
+		const hint = `${fg("dim", "•")} ${fg(this.hintHovered ? "text" : "dim", hintText)}`;
+		// 行尾提示承载折叠分组的可点击区（collapsedHintHitbox 依赖行尾短语）。
+		// 空间不足时先省略工具名列表，再截断计数尾部，提示最后让位；
+		// 极窄视口连“圆点+标题+计数”都放不下时才回退整行截断。
+		const viewport = toolViewportWidth(width);
+		const head = ` ${fg(overallColor, "●")} ${label}: ${countText}`;
+		const hintWidth = visibleWidth(` ${hint}`);
+		const nameBudget = viewport - visibleWidth(head) - hintWidth;
+		const elidedName =
+			nameList && nameBudget < visibleWidth(nameList)
+				? nameBudget >= 4
+					? ` ${fg("dim", "…")}`
+					: ""
+				: nameList;
+		const headBudget = viewport - hintWidth - visibleWidth(elidedName);
+		const titleLine = `${visibleWidth(head) <= headBudget ? head : truncateToWidth(head, headBudget, "…")}${elidedName} ${hint}`;
+		const lines = ["", truncateToWidth(titleLine, viewport, "…")];
 		const total = this.children.length;
+		const childPaints = this._expanded
+			? (this.children as any[]).map((tool) => tool.render?.(Math.max(1, width - 2)))
+			: undefined;
+		if (this._expanded && childPaints) {
+			const expandedHit = this.expandedPaintCache;
+			if (
+				expandedHit &&
+				expandedHit.width === width &&
+				expandedHit.hover === this.hintHovered &&
+				expandedHit.theme === this.patch.theme &&
+				expandedHit.fullscreen === isToolTuiFullscreen() &&
+				expandedHit.paints.length === childPaints.length &&
+				expandedHit.paints.every((paint, index) => paint === childPaints[index])
+			) {
+				return expandedHit.lines;
+			}
+		}
 		const expandedLines: string[] = [];
 		for (let index = 0; index < total; index++) {
 			const tool = this.children[index];
@@ -465,17 +420,19 @@ export class ToolGroupComponent extends Container {
 				const summary = toolSummary(tool);
 				const prefix = ` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `;
 				const detail = fg("dim", summary.detail);
-				const mainWidth = Math.max(0, width - visibleWidth(prefix) - visibleWidth(detail));
+				// 与单工具卡标题同宽，宽屏右侧留白一致
+				const rowWidth = toolViewportWidth(width);
+				const mainWidth = Math.max(0, rowWidth - visibleWidth(prefix) - visibleWidth(detail));
 				lines.push(
 					truncateToWidth(
-						`${prefix}${fg("toolTitle", fitToolCallSummary(summary, mainWidth))}${detail}`,
-						width,
+						`${prefix}${renderToolSummary(summary, mainWidth, fg)}${detail}`,
+						rowWidth,
 						"",
 					),
 				);
 				continue;
 			}
-			const rendered = visibleLines(tool.render(groupChildWidth(width)));
+			const rendered = visibleLines(Array.isArray(childPaints?.[index]) ? childPaints[index] : []);
 			if (rendered.length) {
 				rendered[0] = stripLeadingStatusIcon(rendered[0])
 					.replace(/^ +/, "")
@@ -484,7 +441,8 @@ export class ToolGroupComponent extends Container {
 			const childLines = rendered.length ? rendered : [toolSummary(tool).main];
 			for (let lineIndex = 0; lineIndex < childLines.length; lineIndex++) {
 				const content =
-					lineIndex === 0 ? childLines[lineIndex] : stripLeadingSpaces(childLines[lineIndex], 2);
+					// 续行只剥外层 Box 的 1 格 left pad，保留 Input/Output 相对缩进
+					lineIndex === 0 ? childLines[lineIndex] : stripLeadingSpaces(childLines[lineIndex], 1);
 				const prefix =
 					lineIndex === 0
 						? `${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `
@@ -499,6 +457,14 @@ export class ToolGroupComponent extends Container {
 				lines.push(paddedBackgroundRow(theme, backgroundSlot, line, width));
 			}
 			lines.push(paddedBackgroundRow(theme, backgroundSlot, "", width));
+			this.expandedPaintCache = {
+				width,
+				hover: this.hintHovered,
+				theme: this.patch.theme,
+				fullscreen: isToolTuiFullscreen(),
+				paints: childPaints ?? [],
+				lines,
+			};
 		} else if (counts.pending === 0) {
 			this.storeSettledCache(width, lines);
 		}
@@ -525,7 +491,7 @@ function ungroup(patch: Patch): void {
 	}
 }
 
-function normalizeGroup(group: ToolGroupComponent): void {
+function normalizeGroup(patch: Patch, group: ToolGroupComponent): void {
 	if (group.children.length > 1) return;
 	const parent = (group as any)[PARENT_KEY];
 	const index = parent?.children?.indexOf(group) ?? -1;
@@ -574,32 +540,17 @@ function maybeGroup(patch: Patch, parent: any, component: any): void {
 /** /reload 不会重新 addChild；扫描当前 mounted roots，把已有工具重新送入同一分组规则。 */
 function regroup(patch: Patch, root: any): void {
 	if (!patch.active || !patch.enabled() || !root) return;
-	const seen = new Set<any>();
-	const visit = (value: any): void => {
-		if (!value || typeof value !== "object" || seen.has(value)) return;
-		seen.add(value);
-		if (Array.isArray(value)) {
-			for (const child of value) visit(child);
-			return;
-		}
+	walkComponentTree(root, (value: any) => {
+		// 分组卡与可分组工具是分组边界：不继续下钻（与原有遍历过滤一致）。
+		if (value instanceof ToolGroupComponent || isGroupable(value)) return false;
 		const children = value.children;
 		if (Array.isArray(children)) {
 			for (const child of [...children]) {
 				if (child && typeof child === "object") child[PARENT_KEY] = value;
 				maybeGroup(patch, value, child);
 			}
-			for (const child of [...children]) {
-				if (!(child instanceof ToolGroupComponent) && !isGroupable(child)) visit(child);
-			}
 		}
-		try {
-			const mounted = value.getMountedRoots?.();
-			if (Array.isArray(mounted)) visit(mounted);
-		} catch {
-			// renderer 切换中的惰性 Proxy 可能暂时没有 mounted roots。
-		}
-	};
-	visit(root);
+	});
 }
 
 export type ToolGroupingHooks = {
@@ -610,8 +561,7 @@ export type ToolGroupingHooks = {
 
 export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHooks {
 	const prototype = Container.prototype as any;
-	const host = globalThis as any;
-	const previous = host[PATCH_KEY] as Patch | undefined;
+	const previous = patchRegistry.get<Patch>(PATCH_KEY);
 	if (previous) {
 		previous.active = false;
 		previous.enabled = () => false;
@@ -656,12 +606,12 @@ export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHook
 			const group = component?.[PARENT_KEY];
 			if (group instanceof ToolGroupComponent && (group as any)[PARENT_KEY] === this) {
 				group.removeTool(component);
-				normalizeGroup(group);
+				normalizeGroup(patch, group);
 				return;
 			}
 			const result = patch.original.removeChild.call(this, component);
 			if (component?.[PARENT_KEY] === this) delete component[PARENT_KEY];
-			if (this instanceof ToolGroupComponent) normalizeGroup(this);
+			if (this instanceof ToolGroupComponent) normalizeGroup(patch, this);
 			if (component instanceof ToolGroupComponent) {
 				for (const tool of component.releaseTools()) delete tool[PARENT_KEY];
 			}
@@ -681,7 +631,7 @@ export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHook
 	prototype.addChild = patch.installed.addChild;
 	prototype.removeChild = patch.installed.removeChild;
 	prototype.clear = patch.installed.clear;
-	host[PATCH_KEY] = patch;
+	patchRegistry.install(PATCH_KEY, patch);
 	return {
 		setTheme(theme: any) {
 			patch.theme = theme;

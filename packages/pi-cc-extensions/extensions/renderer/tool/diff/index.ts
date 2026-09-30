@@ -5,7 +5,8 @@ import {
 	renderWriteDiffResult,
 	type DisplayConfigInput,
 } from "./diff-renderer.ts";
-import { DEFAULT_TOOL_DISPLAY_CONFIG } from "./types.ts";
+import { DEFAULT_TOOL_DISPLAY_CONFIG } from "../../../config/config.ts";
+import { patchRegistry, WRITE_OWNERSHIP_SLOT } from "../../../utils/patch-keys.ts";
 import { executeWriteWithMetadata, WriteExecutionMetadataStore } from "./write-execution.ts";
 
 function resultText(result: any): string {
@@ -59,7 +60,7 @@ export function renderRichToolResult(
 		);
 	}
 	if (toolName !== "write") return undefined;
-	// Yield point: when another extension owns write there is no execution metadata; fall back to the plain result row.
+	// 让位点：write 归其他扩展时不提供富 diff，交回普通结果行。
 	if (!ownsWriteTool()) return undefined;
 
 	const metadata = writeMetadata.get(context?.toolCallId);
@@ -85,24 +86,27 @@ export function renderRichToolResult(
 	);
 }
 
-/** Extension currently owning write, reported in the conflict notice. */
+/** write 被其他扩展占用时的来源，用于提示冲突。 */
 export type ExternalWriteOwner = { source: string; path: string };
 
-const WRITE_OWNERSHIP_SLOT = Symbol.for("pi.ccstyle.write-ownership");
-/** Parameters object of the write override registered by this module; identifies our own tool in getAllTools(). */
-let ownWriteParameters: unknown;
+type WriteOwnershipState = {
+	/** write 是否由本插件执行；undefined 表示尚未确认，按拥有处理以保持既有行为。 */
+	owned?: boolean;
+};
 
-function writeOwnership(): { owned?: boolean } {
-	const slots = globalThis as any;
-	slots[WRITE_OWNERSHIP_SLOT] ??= {};
-	return slots[WRITE_OWNERSHIP_SLOT];
+function writeOwnership(): WriteOwnershipState {
+	return patchRegistry.ensure<WriteOwnershipState>(WRITE_OWNERSHIP_SLOT, () => ({}));
 }
 
-/** Whether this package executes write; unknown ownership keeps the existing rich-diff behavior. */
+/**
+ * write 是否由本插件执行。只有注册过 write override 才有执行元数据，
+ * 否则渲染层要放行给普通结果行，避免每张卡降级成 "diff unavailable"。
+ */
 export function ownsWriteTool(): boolean {
 	return writeOwnership().owned !== false;
 }
 
+/** 当前占用 write 的其他扩展；builtin 或未注册时返回 undefined。 */
 function findExternalWriteOwner(pi: ExtensionAPI): ExternalWriteOwner | undefined {
 	try {
 		const tools = pi.getAllTools() as any[];
@@ -110,12 +114,9 @@ function findExternalWriteOwner(pi: ExtensionAPI): ExternalWriteOwner | undefine
 		const sourceInfo = write?.sourceInfo;
 		const source = sourceInfo?.source;
 		if (!write || typeof source !== "string" || source === "builtin") return undefined;
-		// Our own override from an earlier session_start in this runtime.
-		if (ownWriteParameters !== undefined && write.parameters === ownWriteParameters)
-			return undefined;
 		return { source, path: typeof sourceInfo?.path === "string" ? sourceInfo.path : "" };
 	} catch {
-		// getAllTools is unavailable before the extension runtime is bound.
+		// getAllTools 在扩展运行时绑定前不可用。
 		return undefined;
 	}
 }
@@ -123,20 +124,20 @@ function findExternalWriteOwner(pi: ExtensionAPI): ExternalWriteOwner | undefine
 export function installWriteOverride(
 	pi: ExtensionAPI,
 	store = new WriteExecutionMetadataStore(),
-	/** Called when another extension already owns write. */
+	/** write 已被其他扩展占用时回调一次，调用方据此提示冲突。 */
 	onExternalOwner?: (owner: ExternalWriteOwner) => void,
 ): WriteExecutionMetadataStore {
 	if (typeof (pi as any).registerTool !== "function") return store;
 	const state = writeOwnership();
 	const external = findExternalWriteOwner(pi);
 	if (external) {
+		// 让位：执行与 diff 都归对方，渲染层据 owned=false 走普通结果行。
 		state.owned = false;
 		onExternalOwner?.(external);
 		return store;
 	}
 	state.owned = true;
 	const nativeWrite = createWriteToolDefinition(process.cwd()) as any;
-	ownWriteParameters = nativeWrite.parameters;
 	pi.registerTool({
 		...nativeWrite,
 		async execute(
@@ -157,6 +158,6 @@ export {
 	type ToolDisplayConfig,
 	type DiffViewMode,
 	type DiffIndicatorMode,
-} from "./types.ts";
+} from "../../../config/config.ts";
 export type { DisplayConfigInput } from "./diff-renderer.ts";
 export { WriteExecutionMetadataStore } from "./write-execution.ts";

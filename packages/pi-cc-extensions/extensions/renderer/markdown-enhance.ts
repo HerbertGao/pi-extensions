@@ -69,7 +69,9 @@ function renderAdmonition(lines: string[], i: number): { output: string[]; next:
 		j++;
 	}
 	while (body.length > 0 && body[body.length - 1].trim() === "") body.pop();
+	// 内容合并为一行，作为引用块正文
 	const content = body.join(" ").trim();
+	// 保留引用块形态（pi 渲染为左侧竖线），标签加粗
 	return {
 		output: [`> **${style.icon} ${style.label}**${content ? ` ${content}` : ""}`, ""],
 		next: j,
@@ -83,10 +85,13 @@ function renderAdmonition(lines: string[], i: number): { output: string[]; next:
 const URL_RE = /(?<!<)(?<!\]\()https?:\/\/[^\s<>'"|，。；：！？、」』】（）【】《》『』「」]+/g;
 const TRIM_URL_RE = /[.,;:!?】」』"'》）}]+$/;
 
-/** 去掉 URL 尾部标点；括号按平衡保留（如 Wikipedia 链接含括号）。 */
+/**
+ * 去掉 URL 尾部标点；括号按平衡保留（如 Wikipedia 链接含括号、
+ * IPv6 地址含 [::1]），尾部不成对的 ] 与 ) 会截掉。
+ */
 function trimUrl(url: string): string {
 	let t = url.replace(TRIM_URL_RE, "");
-	while (true) {
+	for (;;) {
 		if (t.endsWith(")") && (t.match(/\(/g)?.length ?? 0) < (t.match(/\)/g)?.length ?? 0)) {
 			t = t.slice(0, -1);
 		} else if (t.endsWith("]") && (t.match(/\[/g)?.length ?? 0) < (t.match(/\]/g)?.length ?? 0)) {
@@ -296,6 +301,7 @@ export default function (pi: ExtensionAPI): void {
 	// 所以三个转换合并为一次注册，内部按序链式执行。
 	pi.registerMarkdownTransformer((markdown, context) => {
 		const { messageType, isStreaming = false } = context ?? {};
+		// thinking 保持原文；普通回复即使流式中也先关闭跨行链接的空白点击区。
 		if (messageType === "assistant-thinking") return markdown;
 		markdown = normalizeMultilineLinks(markdown);
 		if (isStreaming) return markdown;

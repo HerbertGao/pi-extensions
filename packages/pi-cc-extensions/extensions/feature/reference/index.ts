@@ -14,6 +14,7 @@ import {
 import {
 	SESSION_REFERENCE_CUSTOM_TYPE,
 	SESSION_REFERENCE_PREFIX,
+	assignReferenceTokens,
 	buildReferenceContentFromSections,
 	extractSessionReferenceIds,
 	formatReferenceSession,
@@ -26,8 +27,6 @@ const MAX_SESSION_SUGGESTIONS = 3;
 const MAX_FILE_SUGGESTIONS = 7;
 const MAX_REFERENCED_SESSIONS = 5;
 const MENTION_PATTERN = /(?:^|[\t ])@([^\s@]*)$/;
-const SUBAGENT_MANAGER_KEY = Symbol.for("pi-subagents:manager");
-
 // ── In-process subagent record tracker ──────────────────────────────
 // pi-subagents does not expose a global manager; we track records
 // ourselves by listening to the events it emits.
@@ -51,17 +50,6 @@ type SessionReference = {
 	info: ReferenceSessionInfo;
 	path?: string;
 	messages?: unknown[];
-};
-
-type SubagentRecord = {
-	id: string;
-	description?: string;
-	startedAt?: number;
-	completedAt?: number;
-};
-
-type SubagentManager = {
-	getRecord(id: string): SubagentRecord | undefined;
 };
 
 // Local subagent record tracking (pi-subagents does not expose a global manager).
@@ -109,7 +97,7 @@ function trackSubagentFromEvent(data: unknown): void {
 	// Started event — create new record
 	const agent = typeof event.agent === "string" ? event.agent : "";
 	const cwd = typeof event.cwd === "string" ? event.cwd : "";
-	const startedAt = typeof event.startedAt === "number" ? (event.startedAt as number) : Date.now();
+	const startedAt = typeof event.startedAt === "number" ? event.startedAt : Date.now();
 	liveSubagentRecords.set(runId, {
 		runId,
 		sessionId,
@@ -118,26 +106,6 @@ function trackSubagentFromEvent(data: unknown): void {
 		startedAt,
 	});
 	pruneLiveSubagentRecords();
-}
-
-function getSubagentManager(): SubagentManager | undefined {
-	// Try the global manager first (future-proof), fall back to local records.
-	const manager = (globalThis as any)[SUBAGENT_MANAGER_KEY] as SubagentManager | undefined;
-	if (manager && typeof manager.getRecord === "function") return manager;
-	// If no global manager, use our local tracking.
-	if (liveSubagentRecords.size === 0) return undefined;
-	return {
-		getRecord(id: string): SubagentRecord | undefined {
-			const record = liveSubagentRecords.get(id);
-			if (!record) return undefined;
-			return {
-				id: record.runId,
-				description: record.agent || undefined,
-				startedAt: record.startedAt,
-				completedAt: record.completedAt,
-			};
-		},
-	};
 }
 
 function extractMentionQuery(textBeforeCursor: string): string | undefined {
@@ -156,7 +124,7 @@ function formatDate(date: Date): string {
 const sessionSearchTextCache = new WeakMap<SessionReference, string>();
 const sessionItemCache = new WeakMap<
 	SessionReference,
-	{ cwd: string; named?: AutocompleteItem; stable?: AutocompleteItem }
+	{ cwd: string; token: string; item: AutocompleteItem }
 >();
 
 function sessionSearchText(reference: SessionReference): string {
@@ -171,30 +139,24 @@ function sessionSearchText(reference: SessionReference): string {
 function sessionItem(
 	reference: SessionReference,
 	currentCwd: string,
-	useStableId: boolean,
+	token: string,
 ): AutocompleteItem {
-	let cached = sessionItemCache.get(reference);
-	const variant = useStableId ? "stable" : "named";
-	if (cached?.cwd === currentCwd && cached[variant]) return cached[variant];
+	const cached = sessionItemCache.get(reference);
+	if (cached?.cwd === currentCwd && cached.token === token) return cached.item;
 
 	const session = reference.info;
 	const workspace = samePath(session.cwd, currentCwd)
 		? "current workspace"
 		: session.cwd || "unknown workspace";
-	const label = reference.kind === "subagent" ? "[SubAgent]" : "[Session]";
-	// 唯一名称保持短格式；同名或无名称时使用稳定 ID，避免引用歧义。
-	const sessionName = session.name?.trim();
-	const referenceId = useStableId
-		? reference.referenceIds[0]
-		: (sessionName ?? reference.referenceIds[0]);
+	const kindLabel = reference.kind === "subagent" ? "[SubAgent]" : "[Session]";
+	// 消歧后的 token 会带上日期；回落到 ID 时下拉仍显示可读标题。
+	const title = token === (reference.referenceIds[0] ?? session.id) ? sessionTitle(session) : token;
 	const item: AutocompleteItem = {
-		value: `${SESSION_REFERENCE_PREFIX}[${referenceId}]`,
-		label: `${label} ${sessionTitle(session)}`,
+		value: `${SESSION_REFERENCE_PREFIX}[${token}]`,
+		label: `${kindLabel} ${title}`,
 		description: `${workspace} · ${session.messageCount} messages · ${formatDate(session.modified)}`,
 	};
-	if (cached?.cwd !== currentCwd) cached = { cwd: currentCwd };
-	cached[variant] = item;
-	sessionItemCache.set(reference, cached);
+	sessionItemCache.set(reference, { cwd: currentCwd, token, item });
 	return item;
 }
 
@@ -230,11 +192,7 @@ function filterSessions(
 	if (query.startsWith("session:")) return [];
 
 	const ordered = orderSessionReferences(references, currentCwd);
-	const nameCounts = new Map<string, number>();
-	for (const reference of ordered) {
-		const name = reference.info.name?.trim();
-		if (name) nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
-	}
+	const tokens = assignReferenceTokens(ordered);
 	const trimmed = query.trim();
 	// 模糊匹配只接受有 session name 的会话；subagent 按 agent name 匹配。
 	const searchable = ordered.filter(
@@ -244,10 +202,11 @@ function filterSessions(
 	const matches = trimmed
 		? fuzzyFilter(searchable, trimmed, sessionSearchText)
 		: ordered.slice(0, MAX_SESSION_SUGGESTIONS);
-	return matches.slice(0, MAX_SESSION_SUGGESTIONS).map((reference) => {
-		const name = reference.info.name?.trim();
-		return sessionItem(reference, currentCwd, Boolean(name && (nameCounts.get(name) ?? 0) > 1));
-	});
+	return matches
+		.slice(0, MAX_SESSION_SUGGESTIONS)
+		.map((reference) =>
+			sessionItem(reference, currentCwd, tokens.get(reference) ?? reference.info.id),
+		);
 }
 
 function isPathLikeQuery(query: string): boolean {
@@ -279,31 +238,20 @@ function liveSubagentReferences(
 	agentIds: Set<string>,
 	currentSessionId: string,
 ): SessionReference[] {
-	const manager = getSubagentManager();
-	if (!manager) return [];
-
 	const references: SessionReference[] = [];
 	for (const agentId of agentIds) {
-		const record = manager.getRecord(agentId);
-		if (!record) continue;
-
-		// Try the global manager's live session first (future-proof).
-		const liveRecord = liveSubagentRecords.get(agentId);
-		const sessionId = liveRecord?.sessionId ?? record.id;
-		if (!sessionId || sessionId === currentSessionId) continue;
-
-		const name = record.description?.trim() || liveRecord?.agent || undefined;
-		const modifiedAt = record.completedAt ?? record.startedAt ?? Date.now();
+		const record = liveSubagentRecords.get(agentId);
+		if (!record || record.sessionId === currentSessionId) continue;
 		references.push({
 			kind: "subagent",
-			referenceIds: [sessionId, agentId],
+			referenceIds: [record.sessionId, agentId],
 			info: {
-				id: sessionId,
-				name,
-				cwd: liveRecord?.cwd ?? "",
+				id: record.sessionId,
+				name: record.agent || undefined,
+				cwd: record.cwd,
 				firstMessage: "",
 				messageCount: 0,
-				modified: new Date(modifiedAt),
+				modified: new Date(record.completedAt ?? record.startedAt),
 			},
 		});
 	}
@@ -347,14 +295,14 @@ export function createAutocompleteProvider(
 			const currentLine = lines[cursorLine] ?? "";
 			const query = extractMentionQuery(currentLine.slice(0, cursorCol));
 			if (query === undefined) {
-				const suggestions = await current.getSuggestions(lines, cursorLine, cursorCol, options);
-				return options.signal.aborted || !isCurrent() ? null : suggestions;
+				return current.getSuggestions(lines, cursorLine, cursorCol, options);
 			}
 
 			const [baseSuggestions, references] = await Promise.all([
 				current.getSuggestions(lines, cursorLine, cursorCol, options),
 				getReferences(),
 			]);
+			// 会话已被替换时，旧会话的补全结果不能再泄漏到新会话。
 			if (options.signal.aborted || !isCurrent()) return null;
 
 			const sessionItems = filterSessions(references, query, currentCwd);
@@ -415,10 +363,13 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_start", (_event, ctx) => {
 		const generation = ++sessionGeneration;
+		// 会话替换/reload 会让 ctx 的 getter 抛 stale 错误，await 之后不能再读；
+		// 这里在同步阶段一次性取出纯值。
+		const currentCwd = ctx.cwd;
+		const ui = ctx.ui;
 		subagentIds.clear();
 		clearLiveSubagentRecords();
 		let loadErrorShown = false;
-		const currentCwd = ctx.cwd;
 		const currentSessionId = ctx.sessionManager.getSessionId();
 		const currentSessionFile = ctx.sessionManager.getSessionFile();
 		let sessionsPromise: Promise<SessionInfo[]> | undefined;
@@ -435,7 +386,7 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 					if (!loadErrorShown && generation === sessionGeneration) {
 						loadErrorShown = true;
 						const reason = error instanceof Error ? error.message : String(error);
-						ctx.ui.notify(`session-reference: failed to load sessions: ${reason}`, "error");
+						ui.notify(`session-reference: failed to load sessions: ${reason}`, "error");
 					}
 					return [];
 				});
@@ -448,7 +399,7 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 			| undefined;
 		const getReferences = async (): Promise<SessionReference[]> => {
 			const sessions = await getSessions();
-			// Session replacement can invalidate this closure while listAll() is pending.
+			// 会话替换/reload 后丢弃旧 generation 的结果，避免对失效状态继续工作。
 			if (generation !== sessionGeneration) return [];
 			const subagentKey = [...subagentIds].join("\0");
 			if (
@@ -467,14 +418,15 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 		};
 
 		getAvailableReferences = getReferences;
-		const isTui = ctx.mode === "tui";
-		if (isTui) {
-			void getReferences();
+		if (ctx.mode === "tui") {
+			// 预取是 detached 的，必须兜住 rejection，否则 stale 错误会变成
+			// unhandled rejection 直接终止 Pi。
+			void getReferences().catch(() => {});
 			// Register after other session_start handlers. pi-fff claims every @
 			// prefix, so a provider installed before it would never see session mentions.
 			setTimeout(() => {
 				if (generation !== sessionGeneration) return;
-				ctx.ui.addAutocompleteProvider((current) =>
+				ui.addAutocompleteProvider((current) =>
 					createAutocompleteProvider(
 						current,
 						getReferences,
@@ -492,38 +444,33 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 
 		const generation = sessionGeneration;
 		const currentSessionId = ctx.sessionManager.getSessionId();
-		const references = await (getAvailableReferences?.() ??
-			SessionManager.listAll()
-				.then((sessions) =>
+		let references: SessionReference[];
+		try {
+			references = await (getAvailableReferences?.() ??
+				SessionManager.listAll().then((sessions) =>
 					mergeReferences(
 						sessions.filter((session) => session.id !== currentSessionId),
 						liveSubagentReferences(subagentIds, currentSessionId),
 					),
-				)
-				.catch((error: unknown) => {
-					if (generation !== sessionGeneration) return [];
-					const reason = error instanceof Error ? error.message : String(error);
-					ctx.ui.notify(`session-reference: failed to load sessions: ${reason}`, "error");
-					return [];
-				}));
+				));
+		} catch (error) {
+			if (generation !== sessionGeneration) return;
+			throw error;
+		}
+		// await 期间会话被替换/关闭：ctx 已失效，丢弃结果。
 		if (generation !== sessionGeneration) return;
 		const referencesById = new Map<string, SessionReference>();
-		const referencesByName = new Map<string, SessionReference>();
-		const ambiguousNames = new Set<string>();
+		const referencesByToken = new Map<string, SessionReference>();
 		for (const reference of references) {
 			for (const id of reference.referenceIds) referencesById.set(id, reference);
-			const name = reference.info.name?.trim();
-			if (!name || ambiguousNames.has(name)) continue;
-			if (referencesByName.has(name)) {
-				referencesByName.delete(name);
-				ambiguousNames.add(name);
-			} else {
-				referencesByName.set(name, reference);
-			}
+		}
+		// 同位重名的会话用带日期的 token 区分，解析端与补全端用同一套分配。
+		for (const [reference, token] of assignReferenceTokens(references)) {
+			referencesByToken.set(token, reference);
 		}
 		const seenReferences = new Set<SessionReference>();
 		const matchingReferences = referenceIds
-			.map((id) => referencesById.get(id) ?? referencesByName.get(id))
+			.map((id) => referencesById.get(id) ?? referencesByToken.get(id))
 			.filter((reference): reference is SessionReference => {
 				if (!reference || reference.info.id === currentSessionId || seenReferences.has(reference))
 					return false;
@@ -585,7 +532,8 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("session_before_switch", () => {
-		// This event can cancel; preserve current-session state until shutdown.
+		subagentIds.clear();
+		clearLiveSubagentRecords();
 	});
 
 	pi.on("session_shutdown", () => {

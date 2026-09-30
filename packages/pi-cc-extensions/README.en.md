@@ -1,109 +1,126 @@
 <p align="center">
-  <img src="./assets/readme/hero.en.svg" width="100%" alt="pi-cc-extensions: a productivity extension suite for Pi">
-</p>
-
-<p align="center">
-  <a href="https://pi.dev/packages?name=%40herbertgao%2Fpi-cc-extensions"><img alt="Pi package catalog" src="https://img.shields.io/badge/Pi-package-58B7FF?style=flat-square"></a>
-  <a href="https://www.npmjs.com/package/@herbertgao/pi-cc-extensions"><img alt="npm version" src="https://img.shields.io/npm/v/%40herbertgao%2Fpi-cc-extensions?style=flat-square&color=66E3C4"></a>
-  <a href="#compatibility"><img alt="Node.js 24 or newer" src="https://img.shields.io/badge/Node.js-%E2%89%A524-66E3C4?style=flat-square"></a>
-  <a href="./extensions"><img alt="TypeScript extensions" src="https://img.shields.io/badge/TypeScript-extensions-3178C6?style=flat-square"></a>
-</p>
-
-<p align="center">
-  Claude Code-style TUI output with some personal touches and handy utilities.
-</p>
-
-<p align="center">
   <a href="./README.md">简体中文</a> · <strong>English</strong>
 </p>
 
----
+# pi-cc-extensions
+
+> Claude Code-style TUI output with some personal touches and handy utilities.
 
 ## Preview
 
-<table>
-  <img width="100%" alt="demo_new" src="https://github.com/user-attachments/assets/d4f9bb51-a49a-4a34-aa60-006514d37b09" />
-</table>
+<a href="https://github.com/user-attachments/assets/6c858000-fdad-43f9-957f-4d0278648498"><img src="./assets/readme/preview.webp" alt="pi-cc-extensions UI preview" width="100%"></a>
+
+Click the cover to play the demo video
 
 ## Quick start
 
 ```bash
 pi install npm:@herbertgao/pi-cc-extensions
+
+# GitHub (this monorepo)
+pi install git:github.com/HerbertGao/pi-extensions
 ```
 
 Run `/reload` after installation.
 
 ## Features
 
-| Feature                      | Description                                                                                                                                       | Entry point |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| Claude Code Output     | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                         | `/ccstyle`  |
-| Fullscreen mode          | Tool card/group click-to-toggle, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
-| Settings panel               | `Style / Diff / Thinking / UI / Feature` tabs with startup, wheel, and optional feature toggles                                                        | `/ccstyle`  |
-| Context inspection           | Usage breakdown and previews for the system prompt, memory, tools, tool results, skills, and messages                                                   | `/context`  |
-| Session/Subagent references           | Search and inject effective context from previous Sessions or existing SubAgents                                                                  | `@` |
-| Theme                        | Bundled CC Dark and CC Light themes                                                                                                               | `/theme`    |
+| Feature                     | Description                                                                               | Entry point                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Claude Code UI              | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes | `/ccstyle`                                      |
+| Markdown enhancements       | Mermaid diagrams, admonitions, URL linking, and more                                      | Automatic                                       |
+| Fullscreen mode             | Tool card/group expand and collapse on click, previews, hover highlight, and a back-to-bottom button | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
+| Settings panel              | `Style / Features / UI / Diff / Thinking / Footer` tabs                                   | `/ccstyle`                                      |
+| Context inspection          | Usage breakdown and previews for the system prompt, memory, skills, tools definition, and messages | `/context`                                      |
+| Session/Subagent references | Search and inject effective context from previous Sessions or existing SubAgents          | `@`                                             |
+| Status bar                  | Shows model, context, cache, cost, and git; also works with `@narumitw/pi-usage` for live quota. Git/cache Nerd Font icons can be turned off | `/ccstyle`                                      |
+| Theme                       | Bundled CC Dark and CC Light themes                                                       | `/theme`                                        |
+
+Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-examples-default.md) · [compact](./docs/tool-render-examples-compact.md)
 
 ## Configuration
 
-`/ccstyle` behavior is configured through `~/.pi/agent/claude-code-style.json`:
+`/ccstyle` behavior is configured through `~/.pi/agent/pi-cc-extensions.json`:
 
-```js
+```jsonc
 {
-  "mode": "on",                            // on: Claude Code style; compact: one-line summaries; off: Pi native rendering
-  "excludeRenderers": [],                  // exact tool names that keep their native renderer; Agent always keeps its dedicated renderer
-  "diffViewMode": "auto",                  // diff layout: auto / split / unified
-  "diffIndicatorMode": "bars",             // diff change indicators: bars / classic / none
-  "diffSplitMinWidth": 120,                // min terminal width before auto layout uses side-by-side columns
-  "editDiffCollapsedLines": 24,                // diff body lines shown when collapsed; beyond that shows the expand hint (Ctrl+O / click)
-  "diffWordWrap": true,                    // whether long diff lines wrap (otherwise truncated)
-  "expandedPreviewMaxLines": 40,           // max body lines for expanded output/diff
-  "useSummaryTitlesAsThinkingTitle": true, // use the latest provider summary as the active thinking title
-  "previewLines": 3,                       // thinking preview lines; 0 hides the preview body
-  "animationIntervalMs": 90,               // thinking title animation interval in ms
-  "dimThinkingText": false,                // dim thinking body text
-  "showStartupHeader": true,               // custom startup header (logo + tips) toggle
-  "scrollStepLines": 3,                    // fullscreen mouse wheel scroll lines
+  // style
+  "mode": "on",                            // on / compact / off
+  "excludeRenderers": [],                  // tools keeping the native renderer; Agent always keeps its dedicated renderer
+
+  // features
   "enableSessionReference": true,          // @ session references
-  "enableSubagentAutocomplete": true,      // @ subagent autocomplete
-  "enableContextCommand": true,            // /context inspection
+  "enableSubagentAutocomplete": true,      // @subagent:[name] completion and delegation hints
+  "enableContextCommand": true,            // /context usage check
   "enableAgentSummary": true,              // per-turn tool summary
-  "enableWorkingMessage": true,            // Working... token/time details
-  "enableAliases": true                    // /clear and /exit aliases
+  "enableWorkingMessage": true,            // Working... bottom token/elapsed
+  "enableAliases": true,                   // /clear, /exit aliases
+
+  // ui
+  "expandedInputMaxLines": 5,              // expanded tool Input lines; overflow shows a footer hint
+  "expandedOutputMaxLines": 10,            // expanded tool Output lines; overflow shows a footer hint
+  "expandedPreviewMaxLines": 40,           // max lines for expanded TaskList bodies (expanded diffs always show all)
+  "inputClip": 0,                          // tool summary path/command clip length; 0 = fit width
+  "showStartupHeader": true,               // startup header (logo + tips) toggle
+  "scrollStepLines": 3,                    // fullscreen wheel scroll step
+
+  // diff
+  "diffViewMode": "auto",                  // layout: auto / split / unified
+  "diffIndicatorMode": "bars",             // change indicators: bars / classic / none
+  "diffSplitMinWidth": 120,                // min terminal width for side-by-side columns
+  "editDiffCollapsedLines": 24,            // Edit collapse lines; beyond that shows the expand hint
+  "writeDiffCollapsedLines": 0,            // write collapse lines; 0 = creation summary only
+  "diffWordWrap": true,                    // wrap long diff lines
+
+  // thinking
+  "useSummaryTitlesAsThinkingTitle": true, // use latest summary as thinking title
+  "previewLines": 3,                       // preview lines; 0 hides
+  "animationIntervalMs": 90,               // title animation interval (ms)
+  "dimThinkingText": false,                // dim thinking body text
+
+  // footer
+  "enableCustomFooter": true,              // custom status bar
+  "footerNerdIcons": true,                 // Nerd Font glyphs for git/cache; false = plain text
+  "footerHiddenKeys": [],                  // hidden plugin chip keys
+  "footerLine1Keys": ["pi-usage"],         // line1 plugin chip order; pi-usage is shown by default, data from @narumitw/pi-usage
+  "footerLine2Keys": [],                   // line2 plugin chip order (after cwd/git)
+  "footerLine3Keys": []                    // line3 overflow slot; painted only when a chip is visible
 }
 ```
 
-> **Tip**: set Mermaid diagrams to `final` in `/settings` to avoid redrawing streaming content frame by frame.
+> [!TIP]
+> **Fullscreen**: click `click to show more` to expand tool cards, thinking, Skill, and compact summaries. An expanded diff always shows every line; when expanded Input/Output exceeds the line cap, the footer `… +N more lines • click to show more` opens a full preview. Click to collapse (dragging inside the card selects text).
+
+> [!NOTE]
+> **Mermaid rendering**: set `markdown.mermaid` to `final` via `~/.pi/agent/settings.json` or the Mermaid diagrams option in `/settings`. Default `streaming` redraws per frame; `final` renders once at completion.
 
 ## Local development
 
 ```bash
-bun run test
-bun run typecheck
+npm test
+npm run typecheck
 ./test.bat # or pi -e .
 ```
 
 ## Compatibility
 
-- Node.js `>=24`, Pi `^0.84.0 || ^0.85.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
-
-## Built-in capabilities
-
-Pi 0.99+ provides native MCP tools and `/mcp` management; do not install another MCP extension that registers `/mcp`.
+- Node.js `>=22.19.0`, Pi `^0.84.0`
 
 ## Recommended companions
 
 | Extension                                | Purpose                                                      |
-| ------------------------------------------ | -------------------------------------------------------------- |
+| ---------------------------------------- | ------------------------------------------------------------ |
 | `npm:@tintinweb/pi-subagents`            | Parallel SubAgents, background tasks, and worktree isolation |
 | `npm:@tintinweb/pi-tasks`                | Claude Code-style task tracking and coordination             |
+| `npm:pi-mcp-adapter`                     | On-demand MCP tool discovery with lower context usage        |
 | `npm:@ff-labs/pi-fff`                    | FFF-powered fuzzy file and content search (fffind / ffgrep)  |
 | `npm:pi-web-access`                      | Web search, URL fetching, GitHub cloning, PDF/video parsing  |
-| `npm:pi-theme-picker`                    | Theme search and live preview                                |
 | `npm:@narumitw/pi-usage`                 | Current-account usage for Codex / Copilot / OpenRouter       |
-| `git:github.com/DietrichGebert/ponytail` | Lazy-mode coding: forces the simplest working solution       |
 
 ## Credits
 
-- Derived from [`minuque/pi-cc-extensions` v0.8.68](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.68) (`1ca144c`) under the MIT license.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
+
+## License
+
+[MIT](./LICENSE) © 2026 minuque; derivative maintained in [HerbertGao/pi-extensions](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-cc-extensions)

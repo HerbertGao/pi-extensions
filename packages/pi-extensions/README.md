@@ -36,7 +36,6 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `pi-typesafe@0.8.1`
 - `pi-multi-account@1.23.2`
 - `pi-next-cue@1.0.7`
-- `pi-footer@0.5.1`
 - `pi-jev-auto-mode@0.5.0`
 - `pi-lens@4.3.0`
 - `pi-web-access@0.34.0`
@@ -60,15 +59,9 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `pi-next-cue@1.0.7` predicts a short next prompt after each completed agent turn. In the empty editor, `Tab` fills the suggestion and `Enter` sends it. Each settled turn can make one extra model request using recent conversation text, recent tool names/results, and the configured active or explicitly selected model. It is TUI-only and wraps the prompt editor, so do not enable another custom-editor extension that also owns the editor slot.
 
-If `pi-footer` was installed separately before upgrading to an aggregate release that includes it, remove the standalone source shown by `pi list` so only the bundled copy loads. For the pinned standalone install used while preparing this integration:
-
-```bash
-pi remove npm:pi-footer@0.5.1
-```
-
 ### Footer
 
-`pi-footer` is enabled by the aggregate. It preserves the native path, Git branch, session, token/context, model, and thinking information. Configure it in `$PI_CODING_AGENT_DIR/extensions/pi-footer.json`; use `/footer` for interactive changes. Only one footer-replacement extension should be enabled at a time.
+The configurable status bar is provided by `@herbertgao/pi-cc-extensions` and enabled by default (`/ccstyle` → Footer page: chips, lines, ordering, plain-text icons). `pi-footer` is no longer bundled. If `pi-footer` was installed separately, remove it so only one footer extension owns the status bar; a leftover `$PI_CODING_AGENT_DIR/extensions/pi-footer.json` can be deleted.
 
 For the intended compact status text, merge the optional pi-lens widget setting into its existing file rather than replacing the file:
 

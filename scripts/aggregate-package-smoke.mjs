@@ -210,43 +210,6 @@ try {
     throw new Error("Expected an unbash dependency in the aggregate manifest")
   }
 
-  const footerRoot = join(packageRoot, "node_modules", "pi-footer")
-  const footerManifestPath = join(footerRoot, "package.json")
-  const footerManifest = parseJson(
-    await readFile(footerManifestPath, "utf8"),
-    footerManifestPath,
-  )
-  const expectedFooterVersion = sourceManifest.dependencies["pi-footer"]
-  if (footerManifest.version !== expectedFooterVersion) {
-    throw new Error(
-      `Expected bundled pi-footer ${expectedFooterVersion}, got ${footerManifest.version}`,
-    )
-  }
-  if (footerManifest.license !== "MIT") {
-    throw new Error(
-      `Expected pi-footer MIT license, got ${footerManifest.license}`,
-    )
-  }
-  const footerEntryRelative = "./src/index.ts"
-  if (!footerManifest.pi?.extensions?.includes(footerEntryRelative)) {
-    throw new Error(
-      "Bundled pi-footer no longer declares its expected Pi entry",
-    )
-  }
-  const footerLicense = await readFile(join(footerRoot, "LICENSE"), "utf8")
-  if (!footerLicense.startsWith("MIT License\n\nCopyright (c) 2026 wobondar")) {
-    throw new Error("Bundled pi-footer LICENSE is not the expected MIT text")
-  }
-  for (const [dependency, range] of Object.entries(
-    footerManifest.dependencies ?? {},
-  )) {
-    if (sourceManifest.dependencies[dependency] !== range) {
-      throw new Error(
-        `Expected pi-footer dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
-      )
-    }
-  }
-
   const askRoot = join(
     packageRoot,
     "node_modules",
@@ -1968,7 +1931,6 @@ try {
       "node_modules/@narumitw/pi-btw/LICENSE",
       "node_modules/@narumitw/pi-caffeinate/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
-      "node_modules/pi-footer/LICENSE",
       "node_modules/pi-jev-auto-mode/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-typesafe/LICENSE",
@@ -2200,10 +2162,6 @@ try {
     throw new Error("Bundled pi-typesafe LICENSE is not the expected MIT text")
   }
 
-  const footerEntry = resolve(footerRoot, footerEntryRelative)
-  if (!extensionPaths.includes(footerEntry)) {
-    throw new Error("Packed aggregate is missing the pi-footer extension entry")
-  }
   const remotePiEntry = resolve(remotePiRoot, "dist/index.js")
   const multiAccountEntry = resolve(multiAccountRoot, multiAccountEntryRelative)
   if (!extensionPaths.includes(multiAccountEntry)) {

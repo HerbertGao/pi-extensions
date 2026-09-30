@@ -1,32 +1,38 @@
 import { Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { posix, win32 } from "node:path";
 import { inspect } from "node:util";
 import { config } from "../../config/config.ts";
-import { showMoreHintText } from "../show-more-hint.ts";
+import { showMoreHintText } from "./show-more-hint.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
+import { getToolMouseTui } from "../mouse/scroll.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
 
+const TOOL_VIEWPORT_WIDTH_RATIO = 0.8;
+/** 宽屏右侧留白上限：比例留白超过这么多列时改用固定留白。 */
+const TOOL_VIEWPORT_MAX_GUTTER = 24;
+
 export function toolViewportWidth(width: number): number {
-	return Math.max(1, Math.floor(width));
+	return Math.max(
+		1,
+		Math.floor(width * TOOL_VIEWPORT_WIDTH_RATIO),
+		Math.floor(width) - TOOL_VIEWPORT_MAX_GUTTER,
+	);
 }
 
-/** 与默认工具结果相同的一级缩进包装。 */
+/** 与默认工具结果相同的一级缩进包装。子组件只扣始终加上的 1 列；↳ 行多出的 2 列由 truncateToWidth 吃掉。 */
 export function insetComponent(component: any): any {
-	return {
+	const wrapped: Record<string, unknown> = {
 		render: (width: number) =>
 			component.render(Math.max(1, width - 1)).map((line: string) => {
 				const nestedMarker = line.replace(/^((?:\x1b\[[0-?]*[ -/]*[@-~])*)↳/, "$1  ↳");
-				return ` ${nestedMarker}`;
+				return truncateToWidth(` ${nestedMarker}`, Math.max(0, width), "");
 			}),
 		invalidate: () => component.invalidate?.(),
 	};
-}
-
-export function oneLine(value: unknown, max = 4096): string {
-	const text = sanitizeToolResultText(String(value ?? ""))
-		.replace(/\s+/g, " ")
-		.trim();
-	return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+	// 内层 diff 声明的 remainder 行：鼠标层只能看到这个包装组件。
+	if (typeof component.isCollapsedHintLine === "function") {
+		wrapped.isCollapsedHintLine = (line: string) => component.isCollapsedHintLine(line);
+	}
+	return wrapped;
 }
 
 function rawTextFromResult(result: any): string {
@@ -72,14 +78,11 @@ function hasExpandableResult(text: string): boolean {
 	return countLines(text) > 1;
 }
 
-function toolIcon(_name: string): string {
-	return "●";
-}
-
 const activeAnimationContexts = new Set<any>();
 let sharedAnimationTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clearAnimation(context: any) {
+	if (context?.state) context.state.ccstyleAnimationLight = false;
 	if (!context?.state?.ccstyleAnimationScheduled) return;
 	context.state.ccstyleAnimationScheduled = false;
 	activeAnimationContexts.delete(context);
@@ -92,6 +95,7 @@ function clearAnimation(context: any) {
 export function clearAllAnimations() {
 	for (const ctx of activeAnimationContexts) {
 		ctx.state.ccstyleAnimationScheduled = false;
+		ctx.state.ccstyleAnimationLight = false;
 	}
 	activeAnimationContexts.clear();
 	if (sharedAnimationTimer) {
@@ -100,8 +104,15 @@ export function clearAllAnimations() {
 	}
 }
 
-export function scheduleAnimation(context: any, intervalMs = TOOL_LOADING_INTERVAL_MS) {
+export function scheduleAnimation(
+	context: any,
+	options: { light?: boolean; intervalMs?: number } = {},
+) {
 	const state = (context.state ??= {});
+	// light：调用方自己在 render() 内重取 loading 帧，定时器只需请求重绘；
+	// 否则定时器走 context.invalidate()（compact 摘要等靠它重建）。
+	// 每次调用都按本次 options 写入，避免上次 light 残留后非 light 调用仍跳过 invalidate。
+	state.ccstyleAnimationLight = Boolean(options.light);
 	if (state.ccstyleAnimationScheduled) return;
 	state.ccstyleAnimationScheduled = true;
 	activeAnimationContexts.add(context);
@@ -110,11 +121,16 @@ export function scheduleAnimation(context: any, intervalMs = TOOL_LOADING_INTERV
 			sharedAnimationTimer = null;
 			const contexts = Array.from(activeAnimationContexts);
 			activeAnimationContexts.clear();
+			const tui = getToolMouseTui();
+			const canRequestRender = typeof tui?.requestRender === "function";
+			let lightFrames = false;
 			for (const ctx of contexts) {
 				ctx.state.ccstyleAnimationScheduled = false;
-				ctx.invalidate?.();
+				if (ctx.state.ccstyleAnimationLight && canRequestRender) lightFrames = true;
+				else ctx.invalidate?.();
 			}
-		}, intervalMs);
+			if (lightFrames) tui.requestRender();
+		}, options.intervalMs ?? TOOL_LOADING_INTERVAL_MS);
 	}
 }
 
@@ -127,7 +143,8 @@ type ToolVisualState = "pending" | "success" | "error";
 export function settledIcon(name: string, state: ToolVisualState | undefined): string {
 	if (state === "success") return "✓";
 	if (state === "error") return "✗";
-	return toolIcon(name);
+	// toolIcon(name) 曾恒返回 "●"，已内联；name 保留以稳定导出签名。
+	return "●";
 }
 
 export function setToolVisualState(context: any, visualState: ToolVisualState) {
@@ -213,7 +230,7 @@ export class ExpandedToolResultText {
 	}
 }
 
-/** Affordance next to truncated Input/Output headers — click opens full preview. */
+/** 截断体末行 `… +N more lines` 旁的展开提示，点击打开全量预览。 */
 export const SHOW_MORE_LABEL = "• click to show more";
 
 export type ToolIoSection = "input" | "output";
@@ -232,6 +249,8 @@ const EXPANDED_TOOL_IO_VIEW_GENERATION = Symbol("ccstyle-expanded-tool-io-view")
  *   └ Output  click to show more
  *     result line…
  *
+ * flushLeft=true（仅 mode=on 展开卡）：去掉树线前导空格，由外层 Box(1,1) 提供 1 格 padding。
+ *
  * Reused across re-renders via context.lastComponent when possible.
  */
 export class ExpandedToolIoView {
@@ -247,16 +266,20 @@ export class ExpandedToolIoView {
 	private hoveredSection: ToolIoSection | null = null;
 	/** Which sections currently show the show-more affordance (after last render). */
 	private truncated: { input: boolean; output: boolean } = { input: false, output: false };
-	/** 0-based body/footer line indexes that carry show-more after last render. */
+	/** 0-based header line indexes that carry show-more after last render. */
 	private showMoreHeaderRows: { input?: number; output?: number } = {};
+
+	/** flushLeft：贴左渲染（mode=on 展开卡）；默认 false 保留前导空格（compact 等共用路径）。 */
+	private flushLeft: boolean;
 
 	constructor(
 		theme: any,
 		inputBody: string,
 		outputBody: string,
 		isError: boolean,
-		maxOutputLines = config.expandedPreviewMaxLines,
-		maxInputLines = config.expandedPreviewMaxLines,
+		maxOutputLines = config.expandedOutputMaxLines,
+		maxInputLines = config.expandedInputMaxLines,
+		flushLeft = false,
 	) {
 		this.theme = theme;
 		this.inputBody = inputBody;
@@ -264,6 +287,7 @@ export class ExpandedToolIoView {
 		this.isError = isError;
 		this.maxOutputLines = Math.max(1, maxOutputLines);
 		this.maxInputLines = Math.max(1, maxInputLines);
+		this.flushLeft = flushLeft;
 	}
 
 	setContent(
@@ -272,16 +296,19 @@ export class ExpandedToolIoView {
 		isError: boolean,
 		maxOutputLines?: number,
 		maxInputLines?: number,
+		flushLeft?: boolean,
 	): void {
 		const nextOut =
 			maxOutputLines !== undefined ? Math.max(1, maxOutputLines) : this.maxOutputLines;
 		const nextIn = maxInputLines !== undefined ? Math.max(1, maxInputLines) : this.maxInputLines;
+		const nextFlush = flushLeft !== undefined ? flushLeft : this.flushLeft;
 		if (
 			this.inputBody === inputBody &&
 			this.outputBody === outputBody &&
 			this.isError === isError &&
 			this.maxOutputLines === nextOut &&
-			this.maxInputLines === nextIn
+			this.maxInputLines === nextIn &&
+			this.flushLeft === nextFlush
 		) {
 			return;
 		}
@@ -290,6 +317,7 @@ export class ExpandedToolIoView {
 		this.isError = isError;
 		this.maxOutputLines = nextOut;
 		this.maxInputLines = nextIn;
+		this.flushLeft = nextFlush;
 		this.invalidate();
 	}
 
@@ -307,7 +335,11 @@ export class ExpandedToolIoView {
 		this.invalidate();
 	}
 
-	/** True when the plain footer line is a truncated section with show-more. */
+	getHoveredSection(): ToolIoSection | null {
+		return this.hoveredSection;
+	}
+
+	/** True when the plain truncation footer carries show-more. Input 续行带 │，Output 不带。 */
 	matchShowMoreLine(plainLine: string): ToolIoSection | null {
 		const line = plainLine.replace(/\x1b\[[0-9;]*m/g, "");
 		if (!line.includes(` • ${showMoreHintText()}`) || !/\+\d+ more lines/.test(line)) return null;
@@ -347,7 +379,9 @@ export class ExpandedToolIoView {
 
 		const theme = this.theme;
 		const safeWidth = Math.max(1, Math.floor(width));
-		const rail = " │ ";
+		// flushLeft：贴左（外层 Box 负责 1 格 pad）；否则保留 1 格前导空格（compact 共用）
+		const lead = this.flushLeft ? "" : " ";
+		const rail = `${lead}│ `;
 		const railWidth = visibleWidth(rail);
 		const bodyWidth = toolViewportWidth(safeWidth);
 		const contentWidth = Math.max(1, bodyWidth - railWidth);
@@ -357,7 +391,7 @@ export class ExpandedToolIoView {
 		this.showMoreHeaderRows = {};
 
 		const pushHeader = (corner: "├" | "└", label: string) => {
-			const mark = theme.fg("dim", ` ${corner} `);
+			const mark = theme.fg("dim", `${lead}${corner} `);
 			const title = theme.fg(
 				"accent",
 				typeof theme.bold === "function" ? theme.bold(label) : label,
@@ -366,12 +400,13 @@ export class ExpandedToolIoView {
 		};
 
 		const pushRailLine = (styledContent: string, continued = true) => {
-			const prefix = continued ? rail : "   ";
+			// 续行 rail；Output 正文相对 └ 缩进 2 格（+ 可选 lead）
+			const prefix = continued ? rail : `${lead}  `;
 			lines.push(truncateToWidth(theme.fg("dim", prefix) + styledContent, safeWidth, ""));
 		};
 
 		const pushBlankRail = () => {
-			lines.push(truncateToWidth(theme.fg("dim", " │"), safeWidth, ""));
+			lines.push(truncateToWidth(theme.fg("dim", `${lead}│`), safeWidth, ""));
 		};
 
 		/** Style `key: value` input rows — dim keys, readable values. */
@@ -407,6 +442,7 @@ export class ExpandedToolIoView {
 			if (truncated) {
 				const hidden = Math.max(0, wrapped.length - visible.length);
 				if (hidden > 0) {
+					// hover 只高亮文字，圆点保持 dim（与 group hint 一致）。
 					const more =
 						theme.fg("dim", " •") +
 						theme.fg(
@@ -423,6 +459,7 @@ export class ExpandedToolIoView {
 		const hasInput = this.inputBody.trim().length > 0;
 		const outputText = this.getOutputBody();
 
+		// Decide show-more from the same truncation rules as pushBody.
 		const inputWouldTruncate =
 			hasInput &&
 			bodyExceedsLineLimit(this.inputBody, this.maxInputLines, contentWidth, true, theme);
@@ -447,11 +484,19 @@ export class ExpandedToolIoView {
 			pushBlankRail();
 			this.truncated.output = outputWouldTruncate;
 			pushHeader("└", "Output");
-			pushBody(outputText, { limit: this.maxOutputLines, continued: false, section: "output" });
+			pushBody(outputText, {
+				limit: this.maxOutputLines,
+				continued: false,
+				section: "output",
+			});
 		} else {
 			this.truncated.output = outputWouldTruncate;
 			pushHeader("└", "Output");
-			pushBody(outputText, { limit: this.maxOutputLines, continued: false, section: "output" });
+			pushBody(outputText, {
+				limit: this.maxOutputLines,
+				continued: false,
+				section: "output",
+			});
 		}
 
 		this.cachedWidth = width;
@@ -558,103 +603,6 @@ export function middleTruncateToWidth(text: string, width: number): string {
 	return `${left}…${right}`;
 }
 
-export type ToolCallSummary = {
-	main: string;
-	detail: string;
-	/** 路径摘要保留结构，供最终渲染按实际宽度优先保留文件名。 */
-	path?: { prefix: string; value: string };
-};
-
-function pathApi(value: string) {
-	if (posix.isAbsolute(value)) return posix;
-	if (win32.isAbsolute(value)) return win32;
-	return undefined;
-}
-
-/** cwd 内绝对路径转相对路径；cwd 外路径保持不变。 */
-export function displayPath(value: unknown, cwd?: string): string {
-	const text = oneLine(value, 4096);
-	const base = cwd ? oneLine(cwd, 4096) : "";
-	const api = pathApi(text);
-	if (!api || !base || !api.isAbsolute(base)) return text;
-	const relative = api.relative(base, text);
-	if (!relative) return api.basename(text) || ".";
-	if (relative === ".." || relative.startsWith(`..${api.sep}`) || api.isAbsolute(relative)) {
-		return text;
-	}
-	return relative;
-}
-
-function headToWidth(text: string, width: number, ellipsis = ""): string {
-	if (visibleWidth(text) <= width) return text;
-	if (width <= 0) return "";
-	const suffix = visibleWidth(ellipsis) <= width ? ellipsis : "";
-	const contentWidth = width - visibleWidth(suffix);
-	let head = "";
-	for (const char of Array.from(text)) {
-		if (visibleWidth(head + char) > contentWidth) break;
-		head += char;
-	}
-	return head + suffix;
-}
-
-function tailToWidth(text: string, width: number): string {
-	if (width <= 0) return "";
-	let tail = "";
-	for (const char of Array.from(text).reverse()) {
-		if (visibleWidth(char + tail) > width) break;
-		tail = char + tail;
-	}
-	return tail;
-}
-
-/** 中间截断路径：目录保留开头，末尾优先完整保留文件名。 */
-export function truncatePathToWidth(path: string, width: number): string {
-	if (visibleWidth(path) <= width) return path;
-	if (width <= 1) return width === 1 ? "…" : "";
-	const separatorIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-	const filename = separatorIndex >= 0 ? path.slice(separatorIndex + 1) : path;
-	const filenameWidth = visibleWidth(filename);
-	if (separatorIndex >= 0 && filenameWidth + 1 <= width) {
-		const separator = path[separatorIndex]!;
-		const suffix = `${separator}${filename}`;
-		const prefixWidth = width - visibleWidth(suffix) - 1;
-		const prefix = headToWidth(path.slice(0, separatorIndex), Math.max(0, prefixWidth));
-		return `${prefix}…${prefix ? suffix : filename}`;
-	}
-	const leftWidth = Math.max(1, Math.floor((width - 1) * 0.45));
-	const rightWidth = Math.max(0, width - leftWidth - 1);
-	return `${headToWidth(filename, leftWidth)}…${tailToWidth(filename, rightWidth)}`;
-}
-
-/** 路径展示的统一入口：相对化后按当前可用宽度中间截断。 */
-export function formatDisplayPath(value: unknown, cwd: string | undefined, width: number): string {
-	return truncatePathToWidth(displayPath(value, cwd), Math.max(0, Math.floor(width)));
-}
-
-/** 按最终终端宽度渲染摘要；路径摘要不会再被整行头部截断。 */
-export function fitToolCallSummary(summary: ToolCallSummary, width: number): string {
-	if (!summary.path) return headTruncateToWidth(summary.main, width);
-	const prefix = summary.path.prefix;
-	const pathWidth = Math.max(0, width - visibleWidth(prefix) - 1);
-	if (pathWidth <= 0) return headTruncateToWidth(prefix, width);
-	return `${prefix} ${truncatePathToWidth(summary.path.value, pathWidth)}`;
-}
-
-export function pathSummary(
-	prefix: string,
-	value: unknown,
-	cwd: string | undefined,
-	detail = "",
-): ToolCallSummary {
-	const path = displayPath(value, cwd);
-	return {
-		main: `${prefix} ${path}`,
-		detail,
-		path: { prefix, value: path },
-	};
-}
-
 /** Pretty-print tool call args for the expanded Input section. */
 export function formatToolInputArgs(args: unknown, maxChars = 8_000): string {
 	if (args === undefined || args === null) return "";
@@ -746,6 +694,8 @@ export function renderExpandedToolResult(
 	lastComponent?: unknown,
 	args?: unknown,
 	context?: any,
+	/** mode=on 展开卡贴左；compact 等保持默认前导空格 */
+	flushLeft = false,
 ): ExpandedToolIoView | ExpandedToolResultText | Text {
 	const inputBody = formatToolInputArgs(args);
 	const outputBody = body;
@@ -756,7 +706,14 @@ export function renderExpandedToolResult(
 	if (inputBody.trim() || outputBody.trim()) {
 		let view: ExpandedToolIoView;
 		if (isExpandedToolIoView(lastComponent)) {
-			lastComponent.setContent(inputBody, outputBody, isError, maxOutputLines, maxInputLines);
+			lastComponent.setContent(
+				inputBody,
+				outputBody,
+				isError,
+				maxOutputLines,
+				maxInputLines,
+				flushLeft,
+			);
 			view = lastComponent;
 		} else {
 			view = new ExpandedToolIoView(
@@ -766,6 +723,7 @@ export function renderExpandedToolResult(
 				isError,
 				maxOutputLines,
 				maxInputLines,
+				flushLeft,
 			);
 		}
 		if (context) rememberIoView(context, view);
@@ -803,7 +761,7 @@ function frameViewId(view: ExpandedToolIoView): number | null {
 function withIoViewMarkers(view: ExpandedToolIoView, lines: string[]): string[] {
 	const id = frameViewId(view);
 	if (id === null) return lines;
-	// Mark by exact recorded show-more row from render — never scan body text heuristically.
+	// Mark by exact header row from render — never scan body text for Input/Output labels.
 	const marked = lines.slice();
 	for (const { section, line } of view.showMoreHeaderLineIndexes()) {
 		if (line < 0 || line >= marked.length) continue;

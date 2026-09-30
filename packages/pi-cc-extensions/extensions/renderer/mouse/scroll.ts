@@ -8,35 +8,39 @@ import {
 import { config } from "../../config/config.ts";
 import { isLazyProxyTui } from "../../utils/fullscreen-detect.ts";
 import { parseSgrMousePackets } from "./packets.ts";
+import {
+	OFFICIAL_SCROLL_TO_END_KEY,
+	patchRegistry,
+	SCROLL_BUTTON_STATE_SLOT,
+	TOOL_MOUSE_TUI_SLOT,
+} from "../../utils/patch-keys.ts";
 
 const ZENTUI_PAGE_UP_INPUT = /^\x1b\[5;9(?::[12])?~$|^\x1b\[57421;9(?::[12])?u$|^\x1b\[1;6A$/;
 const ZENTUI_PAGE_DOWN_INPUT = /^\x1b\[6;9(?::[12])?~$|^\x1b\[57422;9(?::[12])?u$|^\x1b\[1;6B$/;
 const SCROLL_BOTTOM_SHORTCUT = "ctrl+end";
 
-/**
- * 当前安装的 tui 宿主。宿主放本模块（滚动按钮/调度依赖它），
- * 由 mouse-interaction 经 setToolMouseTui 维护；跨模块一律经绑定/setter 访问。
- *
- * 状态镜像到 globalThis（Symbol 槽）：jiti 转译下经 re-export 链读取的
- * 模块级 let 绑定是初始值快照（死绑定，实测恒 null），函数调用才是活引用。
- * 跨模块读取一律用 getToolMouseTui()，避免拿到加载时的快照。
- */
-const TOOL_MOUSE_TUI_SLOT = Symbol.for("pi.ccstyle.tool-mouse-tui");
-(globalThis as any)[TOOL_MOUSE_TUI_SLOT] ??= null;
+patchRegistry.ensure(TOOL_MOUSE_TUI_SLOT, () => null);
 export function getToolMouseTui(): any {
-	return (globalThis as any)[TOOL_MOUSE_TUI_SLOT];
+	return patchRegistry.get(TOOL_MOUSE_TUI_SLOT);
 }
 export function setToolMouseTui(tui: any): void {
-	(globalThis as any)[TOOL_MOUSE_TUI_SLOT] = tui;
+	patchRegistry.install(TOOL_MOUSE_TUI_SLOT, tui);
 }
 
-// 滚动按钮状态同 toolMouseTui：镜像到 globalThis（Symbol 槽），跨模块读取
-// 一律用 getter（jiti 转译下模块级 let 绑定是初始值快照）。
-const SCROLL_BUTTON_STATE_SLOT = Symbol.for("pi.ccstyle.scroll-button-state");
-type ScrollButtonState = { visible: boolean; hovered: boolean; widget: any };
+type ScrollButtonState = {
+	visible: boolean;
+	hovered: boolean;
+	widget: any;
+	/** 按钮可见期间新落的 transcript 块数（消息 + 工具卡）。 */
+	newCount: number;
+};
 function scrollButtonState(): ScrollButtonState {
-	const host = globalThis as any;
-	return (host[SCROLL_BUTTON_STATE_SLOT] ??= { visible: false, hovered: false, widget: null });
+	return patchRegistry.ensure(SCROLL_BUTTON_STATE_SLOT, () => ({
+		visible: false,
+		hovered: false,
+		widget: null,
+		newCount: 0,
+	}));
 }
 export function getScrollButtonVisible(): boolean {
 	return scrollButtonState().visible;
@@ -47,8 +51,32 @@ export function getScrollButtonHovered(): boolean {
 export function getScrollButtonWidget(): any {
 	return scrollButtonState().widget;
 }
+export function getScrollButtonNewCount(): number {
+	return scrollButtonState().newCount;
+}
 export function setScrollButtonVisible(visible: boolean): void {
-	scrollButtonState().visible = visible;
+	const state = scrollButtonState();
+	state.visible = visible;
+	// 计数只在离开底部期间有效：跟随输出即清零，文案回到 Back to bottom。
+	if (!visible) state.newCount = 0;
+}
+
+/**
+ * 记账一块新落进 transcript 的内容（用户/助手消息、工具卡）。
+ * 仅在按钮可见（已滚动离开底部）时累加，并请求重绘让按钮文案立即更新。
+ */
+export function noteNewTranscriptItem(): void {
+	const state = scrollButtonState();
+	const tui = getToolMouseTui();
+	if (!state.visible || !tui) return;
+	// 提交新消息时官方可能直接跳回底部（不经过滚动输入）：先按实时跟随状态校正，
+	// 否则跟随期间的内容会被当成“离开底部时的新消息”计入。
+	if (isAtTranscriptBottom(tui)) {
+		hideScrollButton(tui);
+		return;
+	}
+	state.newCount += 1;
+	tui.requestRender?.();
 }
 
 /** 返回是否发生变化（调用方据此决定是否需要重渲染）。 */
@@ -67,15 +95,16 @@ export function resetScrollButtonState(): void {
 	scrollButtonState().visible = false;
 	scrollButtonState().hovered = false;
 	scrollButtonState().widget = null;
+	scrollButtonState().newCount = 0;
 	scrollButtonSyncScheduled = false;
 }
 
 let scrollButtonSyncScheduled = false;
 
+// 交互开关只取决于配置模式：原实现按 isLazyProxyTui(toolMouseTui) 分两分支，
+// 两分支恒真（0.84+ 惰性 Proxy 下判定不再影响开关），折叠为单条件。
 export function toolMouseInteractionActive(): boolean {
-	if (config.mode === "off") return false;
-	if (isLazyProxyTui(getToolMouseTui())) return true;
-	return true;
+	return config.mode !== "off";
 }
 
 /** 惰性 Proxy 官方 fullscreen（TuiAltScreen）判定。 */
@@ -83,13 +112,12 @@ export function fullscreenLazyTui(tui: any): boolean {
 	return isLazyProxyTui(tui) && tui.mode === "fullscreen";
 }
 
-const OFFICIAL_SCROLL_TO_END_KEY = Symbol.for("pi.ccstyle.official-scroll-to-end");
-
 /** 关掉 pi 0.85 Jump to latest overlay，避免和本仓库 dock 按钮叠两层。 */
 export function disableOfficialScrollToEnd(tui: any): void {
 	if (!tui) return;
 	const current = tui.scrollToEndIndicator;
 	if (typeof current !== "function") return;
+	// 原函数放 object 里，避免惰性 Proxy 对 function 属性再包一层。
 	if (!tui[OFFICIAL_SCROLL_TO_END_KEY]) {
 		tui[OFFICIAL_SCROLL_TO_END_KEY] = { original: current };
 	}
@@ -210,12 +238,19 @@ export function updateScrollButtonFromInput(tui: any, data: string): void {
 	if (matchesKey(data, "enter") || matchesKey(data, "return")) hideScrollButton(tui);
 }
 
+/** 无新内容时提示原文案；有新内容时换成累计条数。 */
+function scrollButtonText(): string {
+	const count = getScrollButtonNewCount();
+	const shortcut = formatShortcut(SCROLL_BOTTOM_SHORTCUT);
+	if (count <= 0) return `Back to bottom · ${shortcut}`;
+	return `${count} new message${count === 1 ? "" : "s"} · ${shortcut}`;
+}
+
 export function renderScrollButton(width: number, theme: any): string[] {
 	if (!getScrollButtonVisible() || !fullscreenLazyTui(getToolMouseTui())) return [];
-	const shortcut = formatShortcut(SCROLL_BOTTOM_SHORTCUT);
 	const label = theme.fg(
 		getScrollButtonHovered() ? "text" : "accent",
-		`[ ↓ Back to bottom · ${shortcut} ]`,
+		`[ ↓ ${scrollButtonText()} ]`,
 	);
 	const leftPad = Math.max(0, Math.floor((width - visibleWidth(label)) / 2));
 	return [`${" ".repeat(leftPad)}${truncateToWidth(label, width, "…")}`];

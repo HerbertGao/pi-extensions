@@ -1,20 +1,29 @@
 import {
+	type BuildSystemPromptOptions,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
-	type Skill,
+	type ToolInfo,
 	estimateTokens,
 	formatSkillsForPrompt,
 	getMarkdownTheme,
 } from "@earendil-works/pi-coding-agent";
-import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Key, Markdown, matchesKey, visibleWidth } from "@earendil-works/pi-tui";
+import { mouseBaseButton, parseSgrMousePacket } from "../utils/sgr-mouse.ts";
+import { padLine } from "../utils/format.ts";
 
 export type ContextPart = {
 	label: string;
 	tokens: number;
-	color: "accent" | "success" | "warning" | "muted" | "dim" | "error";
+	color: "accent" | "success" | "warning" | "customMessageLabel" | "muted" | "dim" | "error";
 };
 
-type PreviewKey = "systemPrompt" | "tools" | "toolResults" | "contextFiles" | "skills";
+type PreviewKey =
+	| "systemPrompt"
+	| "memoryFiles"
+	| "skills"
+	| "tools"
+	| "toolResults"
+	| "contextFiles";
 
 type ContextPreview = {
 	key: PreviewKey;
@@ -47,12 +56,12 @@ export function escCloseHitbox(bounds: DialogBounds): {
 
 let activeContextOverlays = 0;
 
-/** fullscreen 输入包装用于把鼠标事件继续传给当前 context overlay。 */
+/** fullscreen 输入包装用于把鼠标事件继续传给当前 context 主弹框或文本预览 overlay。 */
 export function hasActiveTextPreview(): boolean {
 	return activeContextOverlays > 0;
 }
 
-/** fullscreen overlays fall back to 1002; restore motion events for hover states. */
+/** 官方 fullscreen 打开 overlay 时会退回 1002；重新启用 1003 才能收到无按键 hover。 */
 function ensureFullscreenMouseMotion(tui: any): void {
 	if (tui.mode === "fullscreen") tui.terminal?.write?.("\x1b[?1003h\x1b[?1006h");
 }
@@ -175,6 +184,7 @@ export async function showTextPreview(
 							else if (button === 65) scrollTo(scrollOffset + 3);
 						}
 					},
+
 					render(width: number) {
 						const inner = Math.max(1, width - 2);
 						const escWidth = visibleWidth("[esc]");
@@ -197,10 +207,6 @@ export async function showTextPreview(
 						escHitbox = escCloseHitbox({ left: overlayLeft, top: overlayTop, width });
 						const visible = wrapped.slice(scrollOffset, scrollOffset + pageSize);
 						const border = (text: string) => theme.fg("border", text);
-						const padLine = (text: string, lineWidth = inner): string => {
-							const truncated = truncateToWidth(text, lineWidth, "…");
-							return truncated + " ".repeat(Math.max(0, lineWidth - visibleWidth(truncated)));
-						};
 						const scrollable = totalLines > pageSize;
 						const thumbSize = scrollable
 							? Math.max(1, Math.floor((pageSize * pageSize) / totalLines))
@@ -239,7 +245,7 @@ export async function showTextPreview(
 							`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
 							...bodyRows,
 							`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
-							`${border("│")}${padLine(theme.fg("dim", ` ${status}`))}${border("│")}`,
+							`${border("│")}${padLine(theme.fg("dim", ` ${status}`), inner)}${border("│")}`,
 							border(`╰${"─".repeat(inner)}╯`),
 						];
 					},
@@ -261,78 +267,16 @@ export async function showTextPreview(
 	}
 }
 
-type SgrMousePacket = {
-	code: number;
-	col: number;
-	row: number;
-	final: "M" | "m";
-};
-
-function parseSgrMousePacket(data: string): SgrMousePacket | null {
-	const match = data.match(/^\x1b\[<(\d+);(\d+);(\d+)([Mm])$/);
-	if (!match) return null;
-	return {
-		code: Number(match[1]),
-		col: Number(match[2]),
-		row: Number(match[3]),
-		final: match[4] as "M" | "m",
-	};
-}
-
-function mouseBaseButton(code: number): number {
-	return code & ~(4 | 8 | 16 | 32);
-}
-
 const tokenEstimate = (value: unknown): number => {
 	if (!value) return 0;
 	const text = typeof value === "string" ? value : JSON.stringify(value);
 	return Math.max(0, Math.ceil(text.length / 4));
 };
 
+/** 只统计确实嵌进 system prompt 的片段，避免源文件预览把占用加两遍。 */
 function embeddedTokens(prompt: string, chunk: string): number {
 	if (!chunk || !prompt.includes(chunk)) return 0;
 	return tokenEstimate(chunk);
-}
-
-type ToolPreviewInfo = {
-	name: string;
-	description?: string;
-	promptGuidelines?: string[];
-};
-
-export function scaleParts(parts: ContextPart[], target: number): ContextPart[] {
-	const estimated = parts.reduce((sum, part) => sum + part.tokens, 0);
-	if (estimated === 0 || target <= 0) return parts;
-	const scaled = parts.map((part) => ({
-		...part,
-		tokens: Math.round((part.tokens / estimated) * target),
-	}));
-	const delta = target - scaled.reduce((sum, part) => sum + part.tokens, 0);
-	const largest = scaled.reduce(
-		(best, part, index) => (part.tokens > scaled[best]!.tokens ? index : best),
-		0,
-	);
-	scaled[largest]!.tokens += delta;
-	return scaled;
-}
-
-export function resolveUsedTokens(
-	usage: { tokens: number | null; percent: number | null } | undefined,
-	estimated: number,
-	contextWindow: number,
-): number {
-	const reported = usage?.tokens;
-	const fromPercent =
-		usage?.percent !== null && usage?.percent !== undefined && contextWindow > 0
-			? Math.round((usage.percent / 100) * contextWindow)
-			: undefined;
-	let resolved = reported ?? fromPercent ?? estimated;
-	if (reported !== null && reported !== undefined && fromPercent !== undefined) {
-		const tolerance = Math.max(32, Math.round(contextWindow * 0.001));
-		if (Math.abs(reported - fromPercent) > tolerance) resolved = fromPercent;
-	}
-	if (estimated > 0 && resolved < estimated * 0.25) return estimated;
-	return resolved;
 }
 
 export function capParts(parts: ContextPart[], target: number, fixedPrefix = 0): ContextPart[] {
@@ -342,7 +286,10 @@ export function capParts(parts: ContextPart[], target: number, fixedPrefix = 0):
 	const variableTarget = Math.max(0, target - fixedTokens);
 	const estimated = variable.reduce((sum, part) => sum + part.tokens, 0);
 	if (estimated <= variableTarget || estimated === 0) return parts;
-	if (variableTarget === 0) return [...fixed, ...variable.map((part) => ({ ...part, tokens: 0 }))];
+	if (variableTarget === 0) {
+		return [...fixed, ...variable.map((part) => ({ ...part, tokens: 0 }))];
+	}
+
 	let previous = 0;
 	let cumulative = 0;
 	const capped = variable.map((part, index) => {
@@ -364,78 +311,137 @@ export function formatTokens(tokens: number): string {
 	return `${Math.round(tokens / 1_000)}k`;
 }
 
-type SystemPromptOptions = {
-	contextFiles?: Array<{ path: string; content: string }>;
-	skills?: Skill[];
-	selectedTools?: string[];
-	toolSnippets?: Record<string, string>;
-	promptGuidelines?: string[];
-};
+export function resolveUsedTokens(
+	usage: { tokens: number | null; percent: number | null } | undefined,
+	estimated: number,
+	contextWindow: number,
+): number {
+	const reported = usage?.tokens;
+	const fromPercent =
+		usage?.percent !== null && usage?.percent !== undefined && contextWindow > 0
+			? Math.round((usage.percent / 100) * contextWindow)
+			: undefined;
+	let resolved = reported ?? fromPercent ?? estimated;
+	if (reported !== null && reported !== undefined && fromPercent !== undefined) {
+		// 某些 Provider 会返回异常 totalTokens；百分比与底部状态栏不一致时优先采用百分比。
+		const tolerance = Math.max(32, Math.round(contextWindow * 0.001));
+		if (Math.abs(reported - fromPercent) > tolerance) resolved = fromPercent;
+	}
+	// tokens 与 percent 可能同时源自异常 usage；数量级明显偏小时回退到实际内容估算。
+	if (estimated > 0 && resolved < estimated * 0.25) return estimated;
+	return resolved;
+}
 
 type ContextBreakdown = {
 	parts: ContextPart[];
-	options: SystemPromptOptions;
-	systemPrompt: string;
-	toolResults: string;
+	previews: Record<PreviewKey, string>;
 };
 
-/**
- * Single pass over prompt options + session entries. Returns options/systemPrompt
- * so the /context UI does not re-fetch or re-stringify the same sources.
- */
-export function collectContextBreakdown(ctx: ExtensionCommandContext): ContextBreakdown {
-	const options = (ctx.getSystemPromptOptions?.() ?? {}) as SystemPromptOptions;
-	const systemPrompt = typeof ctx.getSystemPrompt === "function" ? ctx.getSystemPrompt() : "";
+function previewValue(value: unknown): string {
+	if (typeof value === "string") return value;
+	return `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
+}
 
-	const contextFileTokens = (options.contextFiles ?? []).reduce(
-		(sum, file) => sum + embeddedTokens(systemPrompt, file.content),
-		0,
-	);
-	const skillsText = formatSkillsForPrompt(options.skills ?? []).trim();
-	const skillTokens = embeddedTokens(systemPrompt, skillsText);
-	const tools = options.selectedTools ?? [];
-	const snippets = options.toolSnippets;
-	let toolTokens = tokenEstimate(options.promptGuidelines);
-	for (const name of tools) {
-		toolTokens += tokenEstimate(name) + tokenEstimate(snippets?.[name]);
+/** 按真实请求的 systemPrompt、tools、messages 三部分同步组装计数与预览。 */
+export function collectContextBreakdown(
+	ctx: ExtensionCommandContext,
+	allTools: ToolInfo[],
+): ContextBreakdown {
+	const options = (ctx.getSystemPromptOptions?.() ?? {}) as BuildSystemPromptOptions;
+	const systemPrompt = typeof ctx.getSystemPrompt === "function" ? ctx.getSystemPrompt() : "";
+	const selectedTools = new Set(options.selectedTools ?? ["read", "bash", "edit", "write"]);
+	const toolDefinitionPreview: string[] = [];
+	const toolResultPreview: string[] = [];
+	const contextPreview: string[] = [];
+	let toolDefinitionTokens = 0;
+	let toolResultTokens = 0;
+	let contextTokens = 0;
+
+	const memoryPreview: string[] = [];
+	let memoryTokens = 0;
+	for (const file of options.contextFiles ?? []) {
+		memoryTokens += embeddedTokens(systemPrompt, file.content);
+		memoryPreview.push(`## ${file.path}\n\n${previewValue(file.content)}`);
 	}
 
-	let user = 0;
-	let assistant = 0;
-	let toolResults = 0;
-	let summaries = 0;
-	const toolResultPreview: string[] = [];
+	const skillsText = formatSkillsForPrompt(options.skills ?? []).trim();
+	const skillsTokens = embeddedTokens(systemPrompt, skillsText);
+
+	for (const tool of allTools) {
+		if (!selectedTools.has(tool.name)) continue;
+		const definition = {
+			name: tool.name,
+			description: tool.description,
+			parameters: tool.parameters,
+		};
+		toolDefinitionTokens += tokenEstimate(definition);
+		toolDefinitionPreview.push(`## Definition: ${tool.name}\n\n${previewValue(definition)}`);
+	}
+
 	for (const entry of ctx.sessionManager.buildContextEntries()) {
 		if (entry.type === "message") {
-			const tokens = estimateTokens(entry.message);
-			if (entry.message.role === "user") user += tokens;
-			else if (entry.message.role === "assistant") assistant += tokens;
-			else toolResults += tokens;
-			if (entry.message.role === "toolResult") {
-				toolResultPreview.push(`## Tool result\n\n${JSON.stringify(entry.message, null, 2)}`);
+			const message = entry.message;
+			if (message.role === "assistant") {
+				for (const block of message.content) {
+					if (block.type === "toolCall") {
+						contextTokens += tokenEstimate(block.name) + tokenEstimate(block.arguments);
+						contextPreview.push(
+							`## Assistant tool call: ${block.name}\n\n${previewValue(block.arguments)}`,
+						);
+					} else if (block.type === "text") {
+						contextTokens += tokenEstimate(block.text);
+						contextPreview.push(`## Assistant\n\n${block.text}`);
+					} else if (block.type === "thinking") {
+						contextTokens += tokenEstimate(block.thinking);
+						contextPreview.push(`## Assistant thinking\n\n${block.thinking}`);
+					}
+				}
+			} else if (message.role === "toolResult") {
+				toolResultTokens += estimateTokens(message);
+				toolResultPreview.push(
+					`## Result: ${message.toolName}\n\n${previewValue(message.content)}`,
+				);
+			} else if (message.role === "bashExecution") {
+				toolResultTokens += estimateTokens(message);
+				toolResultPreview.push(
+					`## Bash\n\nCommand:\n\n${previewValue(message.command)}\n\nOutput:\n\n${previewValue(message.output)}`,
+				);
+			} else if (message.role === "branchSummary" || message.role === "compactionSummary") {
+				contextTokens += estimateTokens(message);
+				contextPreview.push(`## ${message.role}\n\n${message.summary}`);
+			} else {
+				contextTokens += estimateTokens(message);
+				contextPreview.push(`## ${message.role}\n\n${previewValue(message.content)}`);
 			}
 		} else if (entry.type === "compaction" || entry.type === "branch_summary") {
-			summaries += tokenEstimate(entry);
+			contextTokens += tokenEstimate(entry.summary);
+			contextPreview.push(
+				`## ${entry.type === "compaction" ? "Compaction" : "Branch summary"}\n\n${entry.summary}`,
+			);
+		} else if (entry.type === "custom_message") {
+			contextTokens += tokenEstimate(entry.content);
+			contextPreview.push(`## Custom: ${entry.customType}\n\n${previewValue(entry.content)}`);
 		}
 	}
 
-	const systemTotal = tokenEstimate(systemPrompt);
-	const baseSystem = Math.max(0, systemTotal - contextFileTokens - skillTokens - toolTokens);
-	const parts: ContextPart[] = [
-		{ label: "System prompt", tokens: baseSystem, color: "accent" },
-		{ label: "Tools", tokens: toolTokens, color: "success" },
-		{ label: "Memory", tokens: contextFileTokens, color: "error" },
-		{ label: "Skills", tokens: skillTokens, color: "warning" },
-		{ label: "User messages", tokens: user, color: "muted" },
-		{ label: "Assistant messages", tokens: assistant, color: "accent" },
-		{ label: "Tool results", tokens: toolResults, color: "dim" },
-		{ label: "Compaction summaries", tokens: summaries, color: "success" },
-	];
+	const systemTokens = Math.max(0, tokenEstimate(systemPrompt) - memoryTokens - skillsTokens);
 	return {
-		parts: parts.filter((part) => part.tokens > 0),
-		options,
-		systemPrompt,
-		toolResults: toolResultPreview.join("\n\n") || "No tool results in the current context.",
+		parts: [
+			{ label: "System prompt", tokens: systemTokens, color: "accent" },
+			{ label: "Memory", tokens: memoryTokens, color: "error" },
+			{ label: "Skills", tokens: skillsTokens, color: "warning" },
+			{ label: "Tools definition", tokens: toolDefinitionTokens, color: "success" },
+			{ label: "Tool results", tokens: toolResultTokens, color: "customMessageLabel" },
+			{ label: "Context", tokens: contextTokens, color: "warning" },
+		] satisfies ContextPart[],
+		previews: {
+			systemPrompt: systemPrompt || "No system prompt.",
+			memoryFiles: memoryPreview.join("\n\n") || "No memory files in context.",
+			skills: skillsText || "No skills in context.",
+			tools: toolDefinitionPreview.join("\n\n") || "No active tool definitions.",
+			toolResults: toolResultPreview.join("\n\n") || "No tool results in the current context.",
+			contextFiles: contextPreview.join("\n\n") || "No conversation context.",
+		},
 	};
 }
 
@@ -445,26 +451,13 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 		handler: async (_args, ctx) => {
 			const usage = ctx.getContextUsage();
 			const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
-			const breakdown = collectContextBreakdown(ctx);
+			const tools = pi.getAllTools();
+			const breakdown = collectContextBreakdown(ctx, tools);
 			const estimated = breakdown.parts.reduce((sum, part) => sum + part.tokens, 0);
-			const fixedParts = breakdown.parts.filter(
-				(part) =>
-					part.label === "System prompt" ||
-					part.label === "Memory" ||
-					part.label === "Skills" ||
-					part.label === "Tools",
-			);
-			const variableParts = breakdown.parts.filter(
-				(part) =>
-					part.label !== "System prompt" &&
-					part.label !== "Memory" &&
-					part.label !== "Skills" &&
-					part.label !== "Tools",
-			);
-			const orderedParts = [...fixedParts, ...variableParts];
-			const fixedTokens = fixedParts.reduce((sum, part) => sum + part.tokens, 0);
+			// System / Memory / Skills / Tools definition 为固定项，capParts 时保持原值不压缩。
+			const fixedTokens = breakdown.parts.slice(0, 4).reduce((sum, part) => sum + part.tokens, 0);
 			const used = Math.max(resolveUsedTokens(usage, estimated, contextWindow), fixedTokens);
-			const parts = capParts(orderedParts, used, fixedParts.length);
+			const parts = capParts(breakdown.parts, used, 4);
 			const attributed = parts.reduce((sum, part) => sum + part.tokens, 0);
 			const other = Math.max(0, used - attributed);
 			const free = Math.max(0, contextWindow - used);
@@ -480,70 +473,42 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const options = breakdown.options;
-			const toolByName = new Map<string, ToolPreviewInfo>(
-				(pi.getAllTools() as ToolPreviewInfo[]).map((tool) => [tool.name, tool] as const),
-			);
-			const toolContent = (options.selectedTools ?? []).map((name) => {
-				const tool = toolByName.get(name);
-				const lines = [`## ${name}`];
-				if (tool?.description) lines.push(tool.description);
-				if (options.toolSnippets?.[name]) lines.push(`Prompt: ${options.toolSnippets[name]}`);
-				if (tool?.promptGuidelines?.length) {
-					lines.push("Guidelines:", ...tool.promptGuidelines.map((guideline) => `- ${guideline}`));
-				}
-				return lines.join("\n");
-			});
-			if (options.promptGuidelines?.length) {
-				toolContent.push(
-					`## Shared prompt guidelines\n${options.promptGuidelines.map((guideline) => `- ${guideline}`).join("\n")}`,
-				);
-			}
-			const contextFilesContent = (options.contextFiles ?? [])
-				.map((file) => `===== ${file.path} =====\n${file.content}`)
-				.join("\n\n");
-			const skillsContent = (options.skills ?? [])
-				.map((skill) =>
-					[
-						`## ${skill.name}`,
-						skill.description,
-						`Path: ${skill.filePath}`,
-						`Model invocation: ${skill.disableModelInvocation ? "disabled" : "enabled"}`,
-					]
-						.filter(Boolean)
-						.join("\n"),
-				)
-				.join("\n\n");
 			const rawPreviews: ContextPreview[] = [
 				{
 					key: "systemPrompt",
 					label: "System prompt",
 					title: "System Prompt",
-					content: breakdown.systemPrompt,
+					content: breakdown.previews.systemPrompt,
 				},
 				{
-					key: "tools",
-					label: "Tools",
-					title: "Tools",
-					content: toolContent.join("\n\n") || "No active tools.",
-				},
-				{
-					key: "toolResults",
-					label: "Tool results",
-					title: "Tool Results",
-					content: breakdown.toolResults,
-				},
-				{
-					key: "contextFiles",
+					key: "memoryFiles",
 					label: "Memory",
 					title: "Memory Files",
-					content: contextFilesContent || "No memory files loaded.",
+					content: breakdown.previews.memoryFiles,
 				},
 				{
 					key: "skills",
 					label: "Skills",
 					title: "Skills",
-					content: skillsContent || "No skills loaded.",
+					content: breakdown.previews.skills,
+				},
+				{
+					key: "tools",
+					label: "Tools definition",
+					title: "Tools definition",
+					content: breakdown.previews.tools,
+				},
+				{
+					key: "toolResults",
+					label: "Tool results",
+					title: "Tool Results",
+					content: breakdown.previews.toolResults,
+				},
+				{
+					key: "contextFiles",
+					label: "Context",
+					title: "Context",
+					content: breakdown.previews.contextFiles,
 				},
 			];
 			const previews = rawPreviews.map((preview) => ({
@@ -557,179 +522,184 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 			let selectedPreviewIndex = 0;
 
 			while (true) {
+				// 主弹框也计入活动 overlay，fullscreen 下官方输入链才会把鼠标包放行给行点击。
 				activeContextOverlays++;
-				const actionPromise = ctx.ui.custom(
-					(tui, theme, _keybindings, done) => {
-						ensureFullscreenMouseMotion(tui);
-						let previewHitboxes: Array<{
-							key: PreviewKey;
-							row: number;
-							startCol: number;
-							endCol: number;
-						}> = [];
-						let escHitbox: { row: number; startCol: number; endCol: number } | undefined;
-						let escHovered = false;
-						let hoveredKey: PreviewKey | undefined;
-
-						const padLine = (text: string, width: number): string => {
-							const truncated = truncateToWidth(text, width, "…");
-							return truncated + " ".repeat(Math.max(0, width - visibleWidth(truncated)));
-						};
-
-						return {
-							invalidate() {},
-							handleInput(data: string) {
-								if (matchesKey(data, Key.escape) || matchesKey(data, Key.ctrl("c"))) {
-									done(undefined);
-									return;
-								}
-								if (matchesKey(data, Key.up) && visiblePreviews.length > 0) {
-									selectedPreviewIndex =
-										(selectedPreviewIndex - 1 + visiblePreviews.length) % visiblePreviews.length;
-									tui.requestRender();
-									return;
-								}
-								if (matchesKey(data, Key.down) && visiblePreviews.length > 0) {
-									selectedPreviewIndex = (selectedPreviewIndex + 1) % visiblePreviews.length;
-									tui.requestRender();
-									return;
-								}
-								if (matchesKey(data, Key.enter)) {
-									done(visiblePreviews[selectedPreviewIndex]?.key);
-									return;
-								}
-
-								const mouse = parseSgrMousePacket(data);
-								if (!mouse || mouse.final !== "M") return;
-								const overEsc = Boolean(
-									escHitbox &&
-										mouse.row === escHitbox.row &&
-										mouse.col >= escHitbox.startCol &&
-										mouse.col <= escHitbox.endCol,
-								);
-								const hitbox = previewHitboxes.find(
-									(candidate) =>
-										mouse.row === candidate.row &&
-										mouse.col >= candidate.startCol &&
-										mouse.col <= candidate.endCol,
-								);
-								if ((mouse.code & 32) !== 0) {
-									if (overEsc !== escHovered || hitbox?.key !== hoveredKey) {
-										escHovered = overEsc;
-										hoveredKey = hitbox?.key;
-										tui.requestRender();
-									}
-									return;
-								}
-								if (mouseBaseButton(mouse.code) !== 0) return;
-								if (overEsc) {
-									done(undefined);
-									return;
-								}
-								if (hitbox) {
-									selectedPreviewIndex = Math.max(
-										0,
-										visiblePreviews.findIndex((preview) => preview.key === hitbox.key),
-									);
-									done(hitbox.key);
-								}
-							},
-							render(width: number) {
-								const inner = Math.max(1, width - 2);
-								const escWidth = visibleWidth("[esc]");
-								const percent = contextWindow > 0 ? (used / contextWindow) * 100 : 0;
-								const title = theme.bold(theme.fg("accent", "Context Usage"));
-								const subtitle = `${formatTokens(used)} / ${formatTokens(contextWindow)} tokens (${percent.toFixed(1)}%)`;
-								const barWidth = Math.max(1, Math.min(60, inner - 2));
-								let remaining = barWidth;
-								const segments = allParts
-									.map((part, index) => {
-										const cells =
-											index === allParts.length - 1
-												? remaining
-												: Math.min(
-														remaining,
-														Math.round((part.tokens / Math.max(1, contextWindow)) * barWidth),
-													);
-										remaining -= cells;
-										return theme.fg(part.color, "█".repeat(Math.max(0, cells)));
-									})
-									.join("");
-								const labelWidth = Math.min(
-									24,
-									Math.max(...allParts.map((part) => part.label.length)),
-								);
-								const selectedLabel = visiblePreviews[selectedPreviewIndex]?.label;
-								const hoverLabel = visiblePreviews.find(
-									(preview) => preview.key === hoveredKey,
-								)?.label;
-								const partRows = allParts.map((part) => {
-									const pct = contextWindow > 0 ? (part.tokens / contextWindow) * 100 : 0;
-									const swatch = theme.fg(part.color, "■");
-									const label = part.label.padEnd(labelWidth);
-									const amount = `${formatTokens(part.tokens).padStart(7)}  ${pct.toFixed(1).padStart(5)}%`;
-									const selected = part.label === selectedLabel;
-									const prefix = selected ? "› " : "  ";
-									const row = padLine(`${prefix}${swatch} ${label} ${amount}`, inner);
-									if (selected) return theme.bg("selectedBg", row);
-									return part.label === hoverLabel ? theme.bg("customMessageBg", row) : row;
-								});
-								const border = (text: string) => theme.fg("border", text);
-								const lines = [
-									border(`╭${"─".repeat(inner)}╮`),
-									`${border("│")}${padLine(` ${title}  ${theme.fg("muted", subtitle)}`, inner - escWidth)}${theme.fg(escHovered ? "text" : "muted", "[esc]")}${border("│")}`,
-									`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
-									`${border("│")}${padLine(` ${segments}`, inner)}${border("│")}`,
-									`${border("│")}${" ".repeat(inner)}${border("│")}`,
-									...partRows.map((row) => `${border("│")}${row}${border("│")}`),
-									`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
-									`${border("│")}${padLine(theme.fg("dim", " ↑↓ select · Click / Enter to preview · [esc] close"), inner)}${border("│")}`,
-									border(`╰${"─".repeat(inner)}╯`),
-								];
-
-								const terminalHeight = Math.max(1, tui.terminal.rows);
-								const maxHeight = Math.min(
-									Math.max(1, Math.floor(terminalHeight * 0.9)),
-									Math.max(1, terminalHeight - 2),
-								);
-								const visibleHeight = Math.min(lines.length, maxHeight);
-								const overlayTop =
-									1 + Math.floor((Math.max(1, terminalHeight - 2) - visibleHeight) / 2);
-								const overlayLeft = Math.floor((Math.max(1, tui.terminal.columns) - width) / 2);
-								escHitbox = escCloseHitbox({ left: overlayLeft, top: overlayTop, width });
-								previewHitboxes = visiblePreviews.flatMap((preview) => {
-									const partIndex = allParts.findIndex((part) => part.label === preview.label);
-									const line = 5 + partIndex;
-									return partIndex >= 0 && line < visibleHeight
-										? [
-												{
-													key: preview.key,
-													row: overlayTop + line + 1,
-													startCol: overlayLeft + 1,
-													endCol: overlayLeft + width,
-												},
-											]
-										: [];
-								});
-
-								return lines;
-							},
-						};
-					},
-					{
-						overlay: true,
-						overlayOptions: {
-							anchor: "center",
-							width: 64,
-							minWidth: 44,
-							maxHeight: "90%",
-							margin: 1,
-						},
-					},
-				);
 				let action;
 				try {
-					action = await actionPromise;
+					action = await ctx.ui.custom(
+						(tui, theme, _keybindings, done) => {
+							ensureFullscreenMouseMotion(tui);
+							let previewHitboxes: Array<{
+								key: PreviewKey;
+								row: number;
+								startCol: number;
+								endCol: number;
+							}> = [];
+							let escHitbox: { row: number; startCol: number; endCol: number } | undefined;
+							let escHovered = false;
+							let hoveredKey: PreviewKey | undefined;
+
+							return {
+								invalidate() {},
+								handleInput(data: string) {
+									if (matchesKey(data, Key.escape) || matchesKey(data, Key.ctrl("c"))) {
+										done(undefined);
+										return;
+									}
+									if (matchesKey(data, Key.up) && visiblePreviews.length > 0) {
+										selectedPreviewIndex =
+											(selectedPreviewIndex - 1 + visiblePreviews.length) % visiblePreviews.length;
+										tui.requestRender();
+										return;
+									}
+									if (matchesKey(data, Key.down) && visiblePreviews.length > 0) {
+										selectedPreviewIndex = (selectedPreviewIndex + 1) % visiblePreviews.length;
+										tui.requestRender();
+										return;
+									}
+									if (matchesKey(data, Key.enter)) {
+										done(visiblePreviews[selectedPreviewIndex]?.key);
+										return;
+									}
+
+									const mouse = parseSgrMousePacket(data);
+									if (!mouse || mouse.final !== "M") return;
+									if ((mouse.code & 32) !== 0) {
+										// SGR 1003 的无按键 hover code 为 35，不能按左键事件过滤。
+										const overEsc = Boolean(
+											escHitbox &&
+												mouse.row === escHitbox.row &&
+												mouse.col >= escHitbox.startCol &&
+												mouse.col <= escHitbox.endCol,
+										);
+										const hovered = previewHitboxes.find(
+											(candidate) =>
+												mouse.row === candidate.row &&
+												mouse.col >= candidate.startCol &&
+												mouse.col <= candidate.endCol,
+										);
+										if (overEsc !== escHovered || hovered?.key !== hoveredKey) {
+											escHovered = overEsc;
+											hoveredKey = hovered?.key;
+											tui.requestRender();
+										}
+										return;
+									}
+									if (mouseBaseButton(mouse.code) !== 0) return;
+									if (
+										escHitbox &&
+										mouse.row === escHitbox.row &&
+										mouse.col >= escHitbox.startCol &&
+										mouse.col <= escHitbox.endCol
+									) {
+										done(undefined);
+										return;
+									}
+									const hitbox = previewHitboxes.find(
+										(candidate) =>
+											mouse.row === candidate.row &&
+											mouse.col >= candidate.startCol &&
+											mouse.col <= candidate.endCol,
+									);
+									if (hitbox) {
+										selectedPreviewIndex = Math.max(
+											0,
+											visiblePreviews.findIndex((preview) => preview.key === hitbox.key),
+										);
+										done(hitbox.key);
+									}
+								},
+								render(width: number) {
+									const inner = Math.max(1, width - 2);
+									const escWidth = visibleWidth("[esc]");
+									const percent = contextWindow > 0 ? (used / contextWindow) * 100 : 0;
+									const title = theme.bold(theme.fg("accent", "Context Usage"));
+									const subtitle = `${formatTokens(used)} / ${formatTokens(contextWindow)} tokens (${percent.toFixed(1)}%)`;
+									const barWidth = Math.max(1, Math.min(60, inner - 2));
+									let remaining = barWidth;
+									const segments = allParts
+										.map((part, index) => {
+											const cells =
+												index === allParts.length - 1
+													? remaining
+													: Math.min(
+															remaining,
+															Math.round((part.tokens / Math.max(1, contextWindow)) * barWidth),
+														);
+											remaining -= cells;
+											return theme.fg(part.color, "█".repeat(Math.max(0, cells)));
+										})
+										.join("");
+									const labelWidth = Math.min(
+										24,
+										Math.max(...allParts.map((part) => part.label.length)),
+									);
+									const selectedLabel = visiblePreviews[selectedPreviewIndex]?.label;
+									const partRows = allParts.map((part) => {
+										const pct = contextWindow > 0 ? (part.tokens / contextWindow) * 100 : 0;
+										const swatch = theme.fg(part.color, "■");
+										const label = part.label.padEnd(labelWidth);
+										const amount = `${formatTokens(part.tokens).padStart(7)}  ${pct.toFixed(1).padStart(5)}%`;
+										const selected = part.label === selectedLabel;
+										const hoverLabel = visiblePreviews.find((p) => p.key === hoveredKey)?.label;
+										const prefix = selected ? "› " : "  ";
+										const row = padLine(`${prefix}${swatch} ${label} ${amount}`, inner);
+										if (selected) return theme.bg("selectedBg", row);
+										return part.label === hoverLabel ? theme.bg("customMessageBg", row) : row;
+									});
+									const border = (text: string) => theme.fg("border", text);
+									const lines = [
+										border(`╭${"─".repeat(inner)}╮`),
+										`${border("│")}${padLine(` ${title}  ${theme.fg("muted", subtitle)}`, inner - escWidth)}${theme.fg(escHovered ? "text" : "muted", "[esc]")}${border("│")}`,
+										`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
+										`${border("│")}${padLine(` ${segments}`, inner)}${border("│")}`,
+										`${border("│")}${" ".repeat(inner)}${border("│")}`,
+										...partRows.map((row) => `${border("│")}${row}${border("│")}`),
+										`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
+										`${border("│")}${padLine(theme.fg("dim", " ↑↓ select · Click / Enter to preview · [esc] close"), inner)}${border("│")}`,
+										border(`╰${"─".repeat(inner)}╯`),
+									];
+
+									const terminalHeight = Math.max(1, tui.terminal.rows);
+									const maxHeight = Math.min(
+										Math.max(1, Math.floor(terminalHeight * 0.9)),
+										Math.max(1, terminalHeight - 2),
+									);
+									const visibleHeight = Math.min(lines.length, maxHeight);
+									const overlayTop =
+										1 + Math.floor((Math.max(1, terminalHeight - 2) - visibleHeight) / 2);
+									const overlayLeft = Math.floor((Math.max(1, tui.terminal.columns) - width) / 2);
+									escHitbox = escCloseHitbox({ left: overlayLeft, top: overlayTop, width });
+									previewHitboxes = visiblePreviews.flatMap((preview) => {
+										const partIndex = allParts.findIndex((part) => part.label === preview.label);
+										const line = 5 + partIndex;
+										return partIndex >= 0 && line < visibleHeight
+											? [
+													{
+														key: preview.key,
+														row: overlayTop + line + 1,
+														startCol: overlayLeft + 1,
+														endCol: overlayLeft + width,
+													},
+												]
+											: [];
+									});
+
+									return lines;
+								},
+							};
+						},
+						{
+							overlay: true,
+							overlayOptions: {
+								anchor: "center",
+								width: 64,
+								minWidth: 44,
+								maxHeight: "90%",
+								margin: 1,
+							},
+						},
+					);
 				} finally {
 					activeContextOverlays--;
 				}

@@ -1,5 +1,6 @@
 import { ThinkingPreviewBlock } from "../../feature/compact-thinking.ts";
 import { setHoveredCompactAssistant } from "../compact-mode.ts";
+import { patchRegistry, TOOL_HOVER_STATE_KEY } from "../../utils/patch-keys.ts";
 import {
 	isExpandedToolIoView,
 	invalidateIoView,
@@ -10,8 +11,6 @@ import type { ToolGroupComponent } from "../tool/grouping.ts";
 import { componentAtLocalRow, type ComponentRowHit } from "./layout.ts";
 import { setScrollButtonHovered } from "./scroll.ts";
 
-const TOOL_HOVER_STATE_KEY = Symbol.for("pi.ccstyle.tool-hover-state");
-
 type SharedToolHoverState = { toolCallId: string | null };
 
 /**
@@ -19,14 +18,10 @@ type SharedToolHoverState = { toolCallId: string | null };
  * 测试依赖该跨实例语义。
  */
 export function sharedToolHoverState(): SharedToolHoverState {
-	const host = globalThis as any;
-	return (host[TOOL_HOVER_STATE_KEY] ??= { toolCallId: null });
+	return patchRegistry.ensure(TOOL_HOVER_STATE_KEY, () => ({ toolCallId: null }));
 }
 
-export let hoveredToolCallId: string | null = sharedToolHoverState().toolCallId;
-
 export function setHoveredToolCallId(toolCallId: string | null): void {
-	hoveredToolCallId = toolCallId;
 	sharedToolHoverState().toolCallId = toolCallId;
 }
 

@@ -94,10 +94,6 @@
       "repository": "https://github.com/ouzhenkun/pi-next-cue"
     },
     {
-      "package": "pi-footer",
-      "repository": "https://github.com/wobondar/pi-footer"
-    },
-    {
       "package": "pi-jev-auto-mode",
       "repository": "https://github.com/jomatsu/pi-jev-auto-mode"
     },

@@ -223,7 +223,7 @@ test("stale before_agent_start rejection does not notify or register a provider"
 	try {
 		await harness.handlers.get("session_start")?.({}, ctx);
 		const beforeStart = harness.handlers.get("before_agent_start")?.(
-			{ prompt: "include @session:missing" },
+			{ prompt: "include @session:[missing]" },
 			ctx,
 		);
 		await Promise.resolve();
@@ -257,7 +257,7 @@ test("fallback before_agent_start ignores a stale listAll rejection", {
 
 	try {
 		const beforeStart = harness.handlers.get("before_agent_start")?.(
-			{ prompt: "include @session:missing" },
+			{ prompt: "include @session:[missing]" },
 			ctx,
 		);
 		await Promise.resolve();
@@ -288,7 +288,7 @@ test("before_agent_start drops resolved fallback work after session replacement"
 
 	try {
 		const beforeStart = harness.handlers.get("before_agent_start")?.(
-			{ prompt: "include @session:missing" },
+			{ prompt: "include @session:[missing]" },
 			first.ctx,
 		);
 		await Promise.resolve();
@@ -325,7 +325,7 @@ test("a cancelled session switch preserves the current reference loader", {
 		await harness.handlers.get("session_before_switch")?.({}, ctx);
 		assert.equal(
 			await harness.handlers.get("before_agent_start")?.(
-				{ prompt: "include @session:missing" },
+				{ prompt: "include @session:[missing]" },
 				ctx,
 			),
 			undefined,

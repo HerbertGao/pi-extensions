@@ -441,11 +441,13 @@ function ownershipSymbols() {
     });
 }
 function configMode() {
-  try {
-    return JSON.parse(readFileSync(process.env.PI_CODING_AGENT_DIR + "/claude-code-style.json", "utf8")).mode;
-  } catch {
-    return undefined;
+  // pi-cc-extensions 0.9.x 写入 pi-cc-extensions.json；旧版 claude-code-style.json 仅作迁移前回退。
+  for (const file of ["pi-cc-extensions.json", "claude-code-style.json"]) {
+    try {
+      return JSON.parse(readFileSync(process.env.PI_CODING_AGENT_DIR + "/" + file, "utf8")).mode;
+    } catch {}
   }
+  return undefined;
 }
 function componentSnapshots(width) {
   const hoverId = host[Symbol.for("pi.ccstyle.tool-hover-state")]?.toolCallId ?? null;
@@ -455,7 +457,12 @@ function componentSnapshots(width) {
     const toolLike = typeof component.toolCallId === "string" && typeof component.setExpanded === "function";
     const assistantLike = name.includes("AssistantMessage") || Boolean(component.lastMessage && component.contentContainer);
     const groupLike = name.includes("ToolGroup") || component.toolName === "Tool group";
-    if (!toolLike && !assistantLike && !groupLike) continue;
+    // compact 回合尾行 host 是普通对象（compact-mode.ts ensureTailHost）：按注册符号识别，
+    // 否则快照抓不到“Ran for …”摘要行，误报 compact 丢摘要。
+    const tailLike =
+      typeof component[Symbol.for("pi.ccstyle.compact-assistant-toggle-round")] === "function" &&
+      typeof component.render === "function";
+    if (!toolLike && !assistantLike && !groupLike && !tailLike) continue;
     let lines = [];
     try {
       lines = renderComponentTree(component, width).slice(0, 16).map(plain);

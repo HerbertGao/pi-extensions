@@ -2,13 +2,14 @@
  * Agent 回合摘要：统计一次 agent 运行的工具使用并格式化成摘要文本。
  *
  * 分类：bash / read / edit / write / other（精确工具名；MCP 风格名归 other）。
- * 计数：bash 按调用次数；read/edit/write 按非空 path/file_path 去重；other 按调用次数。
+ * 计数：bash/powershell 按调用次数；read/edit/write 按非空 path/file_path 去重；other 按调用次数。
  * 失败单独累计；另记回合耗时。
  *
  * 呈现：`summaryLine` 纯文本，`summaryMarkdown` Markdown（可 box 引用块）。
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { formatDuration } from "../../utils/format.ts";
 
 /** 工具分类。 */
 export type AgentToolCategory = "bash" | "read" | "edit" | "write" | "other";
@@ -38,6 +39,7 @@ function nonEmptyString(value: unknown): value is string {
 }
 
 function toolPath(args?: Record<string, unknown> | null): string | undefined {
+	// path 为空字符串时回退 file_path 别名，避免该文件不被计入去重集合。
 	if (nonEmptyString(args?.path)) return args.path;
 	return nonEmptyString(args?.file_path) ? args.file_path : undefined;
 }
@@ -98,18 +100,6 @@ export class AgentRunSummary {
 	}
 }
 
-/** 毫秒 → "1h 2m 3s"/"2m 3s"/"3s"；低于 1 秒返回 ""（省略）。 */
-export function formatDuration(ms: number): string {
-	const totalSec = Math.floor(ms / 1000);
-	if (totalSec < 1) return "";
-	const hours = Math.floor(totalSec / 3600);
-	const minutes = Math.floor((totalSec % 3600) / 60);
-	const seconds = totalSec % 60;
-	if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-	if (minutes > 0) return `${minutes}m ${seconds}s`;
-	return `${seconds}s`;
-}
-
 const plural = (count: number) => (count === 1 ? "" : "s");
 
 /** 输出顺序：bash → read → edit → write → other → failed。 */
@@ -124,24 +114,8 @@ function summaryParts(data: AgentSummaryData): string[] {
 	return parts;
 }
 
-/** 纯文本摘要行：句首大写 + 可选耗时。 */
-export function summaryLine(data: AgentSummaryData): string {
-	const parts = summaryParts(data);
-	if (parts.length === 0) return "";
-	const text = parts.join(", ");
-	const capitalized = text[0].toUpperCase() + text.slice(1);
-	const duration = formatDuration(data.durationMs);
-	return duration ? `${capitalized} · ${duration}` : capitalized;
-}
-
-/**
- * Markdown 摘要行。
- * `box` 为 true：引用块 `> *斜体*`；false：整体加粗。
- * `colors`：仅数字染色（success / failed）。
- */
 export function summaryMarkdown(
 	data: AgentSummaryData,
-	box = false,
 	colors: { success: string; failed: string } = { success: "", failed: "" },
 ): string {
 	const parts = summaryParts(data);
@@ -158,7 +132,7 @@ export function summaryMarkdown(
 		.join(", ");
 	const duration = formatDuration(data.durationMs);
 	const line = duration ? `${text} · ${duration}` : text;
-	return box ? `> *${line}*` : `**${line}**`;
+	return `> *${line}*`;
 }
 
 /**
@@ -170,8 +144,7 @@ export function summaryMarkdown(
 export function bindAgentSummary(
 	pi: ExtensionAPI,
 	onSummary: (data: AgentSummaryData) => void,
-	minToolCount = 2,
-): () => void {
+): void {
 	let summary = new AgentRunSummary();
 	pi.on("agent_start", async () => {
 		summary = new AgentRunSummary();
@@ -183,9 +156,6 @@ export function bindAgentSummary(
 		summary.recordToolResult(event.isError === true);
 	});
 	pi.on("agent_end", async () => {
-		if (summary.toolCount >= minToolCount) onSummary(summary.snapshot());
+		if (summary.toolCount >= 2) onSummary(summary.snapshot());
 	});
-	return () => {
-		summary = new AgentRunSummary();
-	};
 }
