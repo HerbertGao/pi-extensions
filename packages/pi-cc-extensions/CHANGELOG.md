@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.9.6
+
+### Patch Changes
+
+- [#248](https://github.com/HerbertGao/pi-extensions/pull/248) [`c14c004`](https://github.com/HerbertGao/pi-extensions/commit/c14c0042a8e02862cd6718dd60e4ffb22314165c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Use Pi 0.99+'s native MCP implementation instead of registering the removed `pi-mcp-adapter`, declare Pi-hosted packages as wildcard peers, update `@tifan/pi-handoff` to 2.2.2 for its Herdr startup retry fix, and pin `pi-typesafe` to 0.8.0.
+
 ## 0.9.5
 
 ### Patch Changes
