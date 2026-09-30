@@ -87,13 +87,16 @@ bun run typecheck
 
 - Node.js `>=24`，Pi `^0.84.0 || ^0.85.0`（通过根目录 `package.json` 的 `pi.extensions` 和 `pi.themes` 加载）
 
+## 内置能力
+
+Pi 0.99+ 的内置 MCP 负责 MCP 工具与 `/mcp` 管理；不要再安装会注册 `/mcp` 的第三方 MCP 扩展。
+
 ## 推荐搭配
 
 | 扩展                                     | 用途                                             |
 | ------------------------------------------ | -------------------------------------------------- |
 | `npm:@tintinweb/pi-subagents`            | 并行 SubAgent、后台任务与工作树隔离              |
 | `npm:@tintinweb/pi-tasks`                | Claude Code 风格任务跟踪与协调                   |
-| `npm:pi-mcp-adapter`                     | 按需发现 MCP 工具，减少上下文占用                |
 | `npm:@ff-labs/pi-fff`                    | 模糊文件与内容检索（fffind / ffgrep）            |
 | `npm:pi-web-access`                      | 网页搜索、URL 抓取、GitHub 克隆、PDF/视频解析    |
 | `npm:pi-theme-picker`                    | 主题搜索和实时预览                               |
