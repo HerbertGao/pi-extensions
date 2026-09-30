@@ -17,6 +17,7 @@ import {
 import {
 	DEFAULT_TOOL_DISPLAY_CONFIG,
 	installWriteOverride,
+	ownsWriteTool,
 	renderRichToolResult,
 	WriteExecutionMetadataStore,
 	type ToolDisplayConfig,
@@ -482,6 +483,7 @@ test("third-party write ownership prevents registration", () => {
 		},
 	} as any);
 	assert.deepEqual(registered, []);
+	restoreBuiltinWriteOwnership();
 });
 
 function lineEntries(diff: string): DiffLineEntry[] {
@@ -736,5 +738,65 @@ test("pi intermediate omissions retain split number gutters", () => {
 	assert.ok(
 		rows.every((row) => !row.includes("...")),
 		"the terminal raw marker is omitted",
+	);
+});
+
+/** 内置 write 归还所有权，避免影响后续用例。 */
+function restoreBuiltinWriteOwnership(): void {
+	installWriteOverride({
+		getAllTools: () => [
+			{ name: "write", sourceInfo: { source: "builtin", path: "<builtin:write>" } },
+		],
+		registerTool: () => {},
+	} as any);
+}
+
+test("external write owner disables rich diff instead of degrading every card", () => {
+	const registered: unknown[] = [];
+	const notices: string[] = [];
+	const store = new WriteExecutionMetadataStore();
+	try {
+		installWriteOverride(
+			{
+				getAllTools: () => [
+					{ name: "write", sourceInfo: { source: "extension", path: "sol-pi/action-fusion" } },
+				],
+				registerTool: (tool: unknown) => registered.push(tool),
+			} as any,
+			store,
+			(owner) => notices.push(owner.path),
+		);
+
+		assert.deepEqual(registered, [], "让位后不再注册 write");
+		assert.equal(ownsWriteTool(), false);
+		assert.equal(
+			renderRichToolResult(
+				"write",
+				{ content: [] },
+				{},
+				theme,
+				{ args: { path: "a.ts" }, toolCallId: "w-external" },
+				store,
+			),
+			undefined,
+			"让位后交回普通结果行，不再输出 unavailable 卡片",
+		);
+		assert.deepEqual(notices, ["sol-pi/action-fusion"], "提示冲突来源");
+	} finally {
+		restoreBuiltinWriteOwnership();
+	}
+
+	assert.equal(ownsWriteTool(), true, "内置 write 恢复后继续提供富 diff");
+	// 恢复后缺元数据仍是 ccstyle 自己的降级提示（真异常，不是冲突）。
+	assert.notEqual(
+		renderRichToolResult(
+			"write",
+			{ content: [] },
+			{},
+			theme,
+			{ args: { path: "a.ts" }, toolCallId: "w-restored" },
+			store,
+		),
+		undefined,
 	);
 });

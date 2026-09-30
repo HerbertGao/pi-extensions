@@ -19,7 +19,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.5`          | `e43e0041b59f`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `0.8.71`         | `0.9.9`          | `e43e0041b59f`  |
 | `@herbertgao/resume-from`      | `resume-from`             | `0.2.0`          | `0.2.0`          | `e1dad0d`       |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `22277b7`       |
@@ -107,6 +107,18 @@ The range `efc30c3..08ecbf7` and the matching published tags were reviewed packa
 - `pi-review` is a new optional product rather than an update to an imported package. It is reviewed but **not imported**: adding another aggregate extension is outside this maintenance issue and has no existing local compatibility contract.
 
 The repository review cursor advances to `08ecbf7`; documentation-only commits after the published tags do not change package provenance.
+
+### pi-cc-extensions 0.9.9 review
+
+The issue #246 review covered the range `47bfce7..17d294b` (0.9.6–0.9.9) against the local fork. The repository cursor advances to `17d294b`; `x-upstream.reviewedVersion` is `0.9.9` and the imported version remains `0.8.71`.
+
+- `3f4da77` is **ported**: the working-message refresh timer stops quietly when the captured ctx goes stale instead of raising an uncaughtException that kills Pi.
+- `706fbec`/`febde5c` are **ported**: POSIX absolute paths are checked before Windows paths so separators are preserved.
+- `bba48fb` is **selectively ported**: write-ownership detection runs one tick after `session_start`, rich diff yields when another extension owns `write`, and a one-time conflict notice is shown. Locally, our own override is recognised on later session starts and the deferred notice tolerates a stale ctx. A request sent in the same tick as `session_start` (for example print mode) may still render its first write without the rich diff.
+- `405a259` is **ported** for alignment; it has no visible effect under the local full-terminal-width viewport.
+- The compact live-slot and compact-expand line (`1258cbd`, `14ed290`, `3f427d1`, `e11d10c`, `aca313b`, `26c554f`, `eeeba04`, `c48b89b`), the regular-mode scrollback and tail-row rework (`8cf57e9`, `6f2ed1e`), and the early startup header (`d56fbcc`) are **deferred**: they depend on upstream compact-mode and patch-registry structure that conflicts with the preserved renderer-lifecycle and mouse-slot fixes.
+- `ecbb13e` is **reviewed without import**: the local terminal-width fix already renders summaries at full width.
+- Tooling, docs-snapshot, dependency-pin, merge, and version-bump commits are not imported.
 
 ### pi-cc-extensions 0.8.70 review
 
@@ -217,31 +229,40 @@ For Subagents, the direct migration is complete. The package retains only reposi
 
 The aggregate package also pins the following npm packages under their original names without modifying their upstream source. The generated bundled `remote-pi` manifest declares its Pi host packages as wildcard peers so it uses the running Pi host:
 
-| Package                              | Version  | Upstream                   |
-| ------------------------------------ | -------- | -------------------------- |
-| `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`  |
-| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`     |
-| `@narumitw/pi-btw`                   | `0.61.0` | `narumiruna/pi-extensions` |
-| `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions` |
-| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`         |
-| `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions` |
-| `@tifan/pi-handoff`                  | `2.2.2`  | `tifandotme/pi-extensions` |
-| `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions` |
-| `@tifan/pi-mermaid-open`             | `0.2.1`  | `tifandotme/pi-extensions` |
-| `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions` |
-| `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions` |
-| `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions` |
-| `pi-typesafe`                        | `0.8.0`  | `DevMortimer/pi-typesafe`  |
-| `pi-multi-account`                   | `1.23.2` | `Sarrius/pi-multi-account` |
-| `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`       |
-| `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode` |
-| `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`         |
-| `pi-web-access`                      | `0.31.0` | `nicobailon/pi-web-access` |
-| `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`   |
+| Package                              | Version  | Upstream                     |
+| ------------------------------------ | -------- | ---------------------------- |
+| `pi-antigravity`                     | `0.8.1`  | `Rahularya01/pi-antigravity` |
+| `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`    |
+| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`       |
+| `@narumitw/pi-btw`                   | `0.61.1` | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions`   |
+| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`           |
+| `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`   |
+| `@tifan/pi-handoff`                  | `2.2.2`  | `tifandotme/pi-extensions`   |
+| `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions`   |
+| `@tifan/pi-mermaid-open`             | `0.2.1`  | `tifandotme/pi-extensions`   |
+| `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions`   |
+| `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`   |
+| `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`   |
+| `pi-typesafe`                        | `0.8.1`  | `DevMortimer/pi-typesafe`    |
+| `pi-multi-account`                   | `1.23.2` | `Sarrius/pi-multi-account`   |
+| `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`         |
+| `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode`   |
+| `pi-lens`                            | `4.3.0`  | `apmantza/pi-lens`           |
+| `pi-web-access`                      | `0.34.0` | `nicobailon/pi-web-access`   |
+| `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`     |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
 The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #246 upstream review accepted three companion updates and advanced three repository cursors:
+
+- `pi-antigravity@0.8.1` pins the companion release at `b335fae`. It is required on Pi 0.86+: 0.7.2 still read `context.systemPrompt` and `context.tools`, which Pi 0.86 replaced with transcript system messages, so Antigravity requests were sent without Pi's system prompt or any tools and Gemini models claimed they could not run shell commands. 0.8.x reads `getCurrentSystemPrompt()` / `getCurrentTools()` and also adds multi-account quota failover (`antigravity-accounts.json`) and an always-registered `google_search` tool that overlaps with `pi-web-access` search. `pi-antigravity` is now listed as an `upstreams.json` companion so npm releases are monitored, not just repository commits.
+- `pi-typesafe@0.8.1` pins the companion release; the only change moves `typebox` to a host-provided peer, already covered by the aggregate's host peer set.
+- `pi-web-access@0.34.0` pins the companion release. `typebox` becomes a host-provided peer, `toolActivation` defaults to `auto`, and Z.ai GLM Coding Plan search is added.
+- `resume-from` cursor advances to `1dfae78` as reviewed-without-import: `c2c67c9` declares `pi-tui` as a host peer, which the local package already does since the native MCP migration, and `1dfae78` adds only a worktree implementation plan document.
+- `Tifan Pi extensions` cursor advances to `50f6c4f` as reviewed-without-import: `7201f33` and `d753b5c` release `@tifan/pi-handoff@2.2.2`, already pinned; `34b2ea9` and `d20c3b3` change `@tifan/pi-fast-mode`, which the aggregate does not bundle (it uses `@pi-plugins/fast-mode`); `50f6c4f` renames a repository document.
 
 The issue #238 upstream review accepted three companion updates, advanced the reviewed cursors for two derived repositories, and classified their changes as reviewed-without-import:
 

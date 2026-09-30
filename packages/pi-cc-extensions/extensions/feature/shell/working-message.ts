@@ -98,18 +98,30 @@ export default function (pi: ExtensionAPI): void {
 		return parts.length ? `Working... (${parts.join(" · ")})` : "";
 	}
 
+	function workingUiAvailable(): boolean {
+		try {
+			return activeCtx?.hasUI === true;
+		} catch {
+			// A stale ctx after session replacement/reload throws from its getter; stop driving the footer.
+			turnActive = false;
+			activeCtx = null;
+			stopRefreshLoop();
+			return false;
+		}
+	}
+
 	function restoreDefaultWorkingMessage(): void {
 		lastMessage = null;
-		if (!activeCtx?.hasUI) return;
+		if (!workingUiAvailable()) return;
 		try {
-			activeCtx.ui.setWorkingMessage();
+			activeCtx?.ui.setWorkingMessage();
 		} catch {
 			// Noop when the TUI is unavailable.
 		}
 	}
 
 	function syncWorkingMessage(force = false): void {
-		if (!activeCtx?.hasUI) return;
+		if (!workingUiAvailable()) return;
 		const next = buildWorkingMessage();
 		if (!next) {
 			if (force) restoreDefaultWorkingMessage();
@@ -118,7 +130,7 @@ export default function (pi: ExtensionAPI): void {
 		if (!force && next === lastMessage) return;
 		lastMessage = next;
 		try {
-			activeCtx.ui.setWorkingMessage(next);
+			activeCtx?.ui.setWorkingMessage(next);
 		} catch {
 			// Noop when the TUI is unavailable.
 		}
@@ -130,9 +142,12 @@ export default function (pi: ExtensionAPI): void {
 			refreshTimer = null;
 			try {
 				syncWorkingMessage();
-			} finally {
-				scheduleRefreshTick();
+			} catch {
+				// An exception here would become an uncaughtException and kill Pi; stop the decorative refresh.
+				turnActive = false;
+				return;
 			}
+			scheduleRefreshTick();
 		}, REFRESH_INTERVAL_MS);
 		refreshTimer.unref?.();
 	}

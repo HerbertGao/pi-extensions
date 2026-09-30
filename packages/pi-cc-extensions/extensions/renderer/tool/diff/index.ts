@@ -59,6 +59,8 @@ export function renderRichToolResult(
 		);
 	}
 	if (toolName !== "write") return undefined;
+	// Yield point: when another extension owns write there is no execution metadata; fall back to the plain result row.
+	if (!ownsWriteTool()) return undefined;
 
 	const metadata = writeMetadata.get(context?.toolCallId);
 	if (!metadata) {
@@ -83,24 +85,58 @@ export function renderRichToolResult(
 	);
 }
 
-function hasExternalWriteOwner(pi: ExtensionAPI): boolean {
+/** Extension currently owning write, reported in the conflict notice. */
+export type ExternalWriteOwner = { source: string; path: string };
+
+const WRITE_OWNERSHIP_SLOT = Symbol.for("pi.ccstyle.write-ownership");
+/** Parameters object of the write override registered by this module; identifies our own tool in getAllTools(). */
+let ownWriteParameters: unknown;
+
+function writeOwnership(): { owned?: boolean } {
+	const slots = globalThis as any;
+	slots[WRITE_OWNERSHIP_SLOT] ??= {};
+	return slots[WRITE_OWNERSHIP_SLOT];
+}
+
+/** Whether this package executes write; unknown ownership keeps the existing rich-diff behavior. */
+export function ownsWriteTool(): boolean {
+	return writeOwnership().owned !== false;
+}
+
+function findExternalWriteOwner(pi: ExtensionAPI): ExternalWriteOwner | undefined {
 	try {
-		const tools = pi.getAllTools();
-		const write = tools.find((tool: any) => tool?.name === "write") as any;
-		const source = write?.sourceInfo?.source;
-		return Boolean(write && typeof source === "string" && source !== "builtin");
+		const tools = pi.getAllTools() as any[];
+		const write = tools?.find((tool: any) => tool?.name === "write") as any;
+		const sourceInfo = write?.sourceInfo;
+		const source = sourceInfo?.source;
+		if (!write || typeof source !== "string" || source === "builtin") return undefined;
+		// Our own override from an earlier session_start in this runtime.
+		if (ownWriteParameters !== undefined && write.parameters === ownWriteParameters)
+			return undefined;
+		return { source, path: typeof sourceInfo?.path === "string" ? sourceInfo.path : "" };
 	} catch {
 		// getAllTools is unavailable before the extension runtime is bound.
-		return false;
+		return undefined;
 	}
 }
 
 export function installWriteOverride(
 	pi: ExtensionAPI,
 	store = new WriteExecutionMetadataStore(),
+	/** Called when another extension already owns write. */
+	onExternalOwner?: (owner: ExternalWriteOwner) => void,
 ): WriteExecutionMetadataStore {
-	if (typeof (pi as any).registerTool !== "function" || hasExternalWriteOwner(pi)) return store;
+	if (typeof (pi as any).registerTool !== "function") return store;
+	const state = writeOwnership();
+	const external = findExternalWriteOwner(pi);
+	if (external) {
+		state.owned = false;
+		onExternalOwner?.(external);
+		return store;
+	}
+	state.owned = true;
 	const nativeWrite = createWriteToolDefinition(process.cwd()) as any;
+	ownWriteParameters = nativeWrite.parameters;
 	pi.registerTool({
 		...nativeWrite,
 		async execute(

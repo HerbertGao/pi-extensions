@@ -216,10 +216,21 @@ export default function (
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
-		// 延迟到 session_start 注册 write override：加载阶段 getAllTools 不可用且其他扩展
-		// 尚未注册工具，无法检测外部 write 所有者（如 pi-spark），直接注册会与对方撞名。
-		// session_start 时所有扩展已加载完毕，installWriteOverride 内部会检测并让位。
-		installWriteOverride(pi, writeExecutionMetadata);
+		// Confirm write ownership one tick after every extension's session_start has run:
+		// others register tools in their own session_start, and registering first would
+		// silently drop their write (first registration wins).
+		setTimeout(() => {
+			installWriteOverride(pi, writeExecutionMetadata, (owner) => {
+				try {
+					ctx.ui?.notify?.(
+						`ccstyle: write is owned by ${owner.path || owner.source}; rich diff yields`,
+						"warning",
+					);
+				} catch {
+					// ctx may be stale by the next tick; the notice is decorative.
+				}
+			});
+		}, 0);
 		const hooks = ensureTuiInstallation(ctx);
 		// 鼠标交互独立于渲染层：fullscreen 渲染层让位（hooks undefined）但
 		// 工具点击/回到底部适配仍需安装；保持在渲染层安装之后以维持原顺序。
