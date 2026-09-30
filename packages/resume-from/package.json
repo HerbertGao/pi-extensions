@@ -63,8 +63,10 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@earendil-works/pi-tui": "^0.87.1",
     "gpt-tokenizer": "^3.4.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-tui": "*"
   },
   "pi": {
     "extensions": [

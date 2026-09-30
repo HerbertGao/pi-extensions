@@ -82,10 +82,6 @@
       "repository": "https://github.com/tifandotme/pi-extensions"
     },
     {
-      "package": "pi-mcp-adapter",
-      "repository": "https://github.com/nicobailon/pi-mcp-adapter"
-    },
-    {
       "package": "pi-typesafe",
       "repository": "https://github.com/DevMortimer/pi-typesafe"
     },

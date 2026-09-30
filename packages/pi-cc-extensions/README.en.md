@@ -87,13 +87,16 @@ bun run typecheck
 
 - Node.js `>=24`, Pi `^0.84.0 || ^0.85.0` (loaded through `pi.extensions` and `pi.themes` in the root `package.json`)
 
+## Built-in capabilities
+
+Pi 0.99+ provides native MCP tools and `/mcp` management; do not install another MCP extension that registers `/mcp`.
+
 ## Recommended companions
 
 | Extension                                | Purpose                                                      |
 | ------------------------------------------ | -------------------------------------------------------------- |
 | `npm:@tintinweb/pi-subagents`            | Parallel SubAgents, background tasks, and worktree isolation |
 | `npm:@tintinweb/pi-tasks`                | Claude Code-style task tracking and coordination             |
-| `npm:pi-mcp-adapter`                     | On-demand MCP tool discovery with lower context usage        |
 | `npm:@ff-labs/pi-fff`                    | FFF-powered fuzzy file and content search (fffind / ffgrep)  |
 | `npm:pi-web-access`                      | Web search, URL fetching, GitHub cloning, PDF/video parsing  |
 | `npm:pi-theme-picker`                    | Theme search and live preview                                |

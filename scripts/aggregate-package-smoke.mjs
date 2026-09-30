@@ -170,6 +170,40 @@ try {
       `Registry dependency metadata would differ from the tarball:\n${metadataDrift.join("\n")}`,
     )
   }
+  const hostPeerDependencies = [
+    "@earendil-works/pi-agent-core",
+    "@earendil-works/pi-ai",
+    "@earendil-works/pi-coding-agent",
+    "@earendil-works/pi-tui",
+    "@sinclair/typebox",
+    "typebox",
+  ]
+  for (const dependency of hostPeerDependencies) {
+    if (
+      sourceManifest.peerDependencies?.[dependency] !== "*" ||
+      manifest.peerDependencies?.[dependency] !== "*" ||
+      sourceManifest.dependencies?.[dependency] !== undefined ||
+      manifest.dependencies?.[dependency] !== undefined
+    ) {
+      throw new Error(
+        `Aggregate host package ${dependency} must be a wildcard peer, not a dependency`,
+      )
+    }
+  }
+  if (
+    sourceManifest.dependencies?.["pi-mcp-adapter"] !== undefined ||
+    manifest.dependencies?.["pi-mcp-adapter"] !== undefined ||
+    manifest.bundledDependencies?.includes("pi-mcp-adapter") ||
+    manifest.pi?.extensions?.some((entry) =>
+      entry.includes("pi-mcp-adapter"),
+    ) ||
+    manifest.pi?.skills?.some((entry) => entry.includes("pi-mcp-adapter")) ||
+    (await pathExists(join(packageRoot, "node_modules", "pi-mcp-adapter")))
+  ) {
+    throw new Error(
+      "The aggregate must not bundle or register pi-mcp-adapter alongside Pi's native MCP",
+    )
+  }
 
   const unbashVersion = sourceManifest.dependencies.unbash
   if (!unbashVersion) {
@@ -290,8 +324,8 @@ try {
   }
   const expectedLensPeers = {
     "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "^0.84.1 || ^0.85.0",
-    typebox: "^1.0.0",
+    "@earendil-works/pi-tui": "*",
+    typebox: "*",
   }
   for (const [dependency, range] of Object.entries(expectedLensPeers)) {
     if (
@@ -312,12 +346,6 @@ try {
     throw new Error(
       `Expected aggregate jiti host for pi-lens ${lensJitiRange}, got ${sourceManifest.dependencies.jiti}`,
     )
-  }
-  if (
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.87.1" ||
-    sourceManifest.dependencies.typebox !== "^1.1.38"
-  ) {
-    throw new Error("Aggregate pi-lens host ranges are no longer compatible")
   }
   const lensHosts = Object.keys(expectedLensPeers)
   const nestedLensHosts = await Promise.all(
@@ -878,251 +906,6 @@ try {
   pasteEditor.handleInput(`\u001b[200~${pasted}\u001b[201~`)
   if (pasteEditor.getExpandedText() !== pasted) {
     throw new Error("ask-user-question lost expanded paste-marker text")
-  }
-
-  const mcpRoot = join(packageRoot, "node_modules", "pi-mcp-adapter")
-  const mcpManifestPath = join(mcpRoot, "package.json")
-  const mcpManifest = parseJson(
-    await readFile(mcpManifestPath, "utf8"),
-    mcpManifestPath,
-  )
-  const expectedMcpVersion = sourceManifest.dependencies["pi-mcp-adapter"]
-  if (mcpManifest.version !== expectedMcpVersion) {
-    throw new Error(
-      `Expected bundled pi-mcp-adapter ${expectedMcpVersion}, got ${mcpManifest.version}`,
-    )
-  }
-  if (mcpManifest.license !== "MIT") {
-    throw new Error(
-      `Expected pi-mcp-adapter MIT license, got ${mcpManifest.license}`,
-    )
-  }
-  const mcpLicense = await readFile(join(mcpRoot, "LICENSE"), "utf8")
-  if (!mcpLicense.startsWith("MIT License")) {
-    throw new Error(
-      "Bundled pi-mcp-adapter LICENSE is not the expected MIT text",
-    )
-  }
-  const mcpEntryRelative = "./index.ts"
-  const mcpSkillsRelative = "./skills"
-  if (!mcpManifest.pi?.extensions?.includes(mcpEntryRelative)) {
-    throw new Error(
-      "Bundled pi-mcp-adapter no longer declares its expected Pi entry",
-    )
-  }
-  if (!mcpManifest.files?.includes("skills")) {
-    throw new Error(
-      "Bundled pi-mcp-adapter no longer declares its expected skills",
-    )
-  }
-  if (mcpManifest.exports?.["./oauth"]?.import !== "./oauth.ts") {
-    throw new Error(
-      "Bundled pi-mcp-adapter no longer exports its OAuth public API",
-    )
-  }
-  if (mcpManifest.bin?.["pi-mcp-adapter"] !== "cli.js") {
-    throw new Error("Bundled pi-mcp-adapter no longer declares its CLI")
-  }
-  for (const [dependency, range] of Object.entries(
-    mcpManifest.dependencies ?? {},
-  )) {
-    if (dependency === "undici") {
-      // undici is shared with pi-web-access and promoted to the newer ^8.9.0 range.
-      continue
-    }
-    if (sourceManifest.dependencies[dependency] !== range) {
-      throw new Error(
-        `Expected pi-mcp-adapter dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
-      )
-    }
-  }
-
-  const mcpRequire = createRequire(join(mcpRoot, mcpEntryRelative))
-  const { createJiti: createMcpJiti } = await import(
-    pathToFileURL(mcpRequire.resolve("jiti"))
-  )
-  const mcpJiti = createMcpJiti(mcpManifestPath, {
-    alias: {
-      "@earendil-works/pi-ai": join(
-        root,
-        "node_modules/@earendil-works/pi-ai/dist/index.js",
-      ),
-      "@earendil-works/pi-ai/compat": join(
-        root,
-        "node_modules/@earendil-works/pi-ai/dist/compat.js",
-      ),
-    },
-    moduleCache: false,
-  })
-  const { KNOWN_SERVER_PRESETS } = await mcpJiti.import(
-    join(mcpRoot, "config.ts"),
-  )
-  const parallelSearchPreset = KNOWN_SERVER_PRESETS.find(
-    (preset) => preset.id === "parallel-search",
-  )
-  if (
-    parallelSearchPreset?.entry.url !== "https://search.parallel.ai/mcp" ||
-    parallelSearchPreset.entry.directTools !== true
-  ) {
-    throw new Error("pi-mcp-adapter lost its Parallel Search setup preset")
-  }
-  const { updateStatusBar } = await mcpJiti.import(join(mcpRoot, "init.ts"))
-  let plainThemeStatus
-  updateStatusBar({
-    config: {
-      mcpServers: { parallel: parallelSearchPreset.entry },
-      settings: { mcpFooterStatus: "compact" },
-    },
-    manager: { getAllConnections: () => [] },
-    ui: {
-      theme: "plain",
-      setStatus: (key, value) => {
-        if (key === "mcp") plainThemeStatus = value
-      },
-    },
-  })
-  if (plainThemeStatus !== "MCP 0/1") {
-    throw new Error("pi-mcp-adapter plain-theme status fallback failed")
-  }
-
-  const packageMcpCwd = join(stageDir, "package-mcp")
-  const packageMcpConfigDir = join(packageMcpCwd, ".pi")
-  const packageMcpRoot = join(packageMcpConfigDir, "fixture")
-  await mkdir(packageMcpRoot, { recursive: true })
-  await writeFile(
-    join(packageMcpConfigDir, "settings.json"),
-    `${JSON.stringify({ packages: ["./fixture"] })}\n`,
-  )
-  await writeFile(
-    join(packageMcpRoot, "package.json"),
-    `${JSON.stringify({ name: "@smoke/pack", pi: { mcp: "./mcp.json" } })}\n`,
-  )
-  await writeFile(
-    join(packageMcpRoot, "mcp.json"),
-    `${JSON.stringify({ mcpServers: { alpha: { command: "node", args: ["server.mjs"] } } })}\n`,
-  )
-  const previousCodingAgentDir = process.env.PI_CODING_AGENT_DIR
-  const previousPiPackageDir = process.env.PI_PACKAGE_DIR
-  process.env.PI_CODING_AGENT_DIR = join(stageDir, "mcp-agent")
-  process.env.PI_PACKAGE_DIR = packageRoot
-  try {
-    const { loadPackageMcpConfigs } = await mcpJiti.import(
-      join(mcpRoot, "package-mcp-loader.ts"),
-    )
-    const packageMcpConfig = loadPackageMcpConfigs(packageMcpCwd)
-    const packageServer = packageMcpConfig.mcpServers.smoke_pack__alpha
-    if (
-      packageServer?.command !== "node" ||
-      packageServer.args?.[0] !== "server.mjs"
-    ) {
-      throw new Error(
-        "pi-mcp-adapter did not load a package-declared MCP server",
-      )
-    }
-  } finally {
-    if (previousCodingAgentDir === undefined) {
-      delete process.env.PI_CODING_AGENT_DIR
-    } else {
-      process.env.PI_CODING_AGENT_DIR = previousCodingAgentDir
-    }
-    if (previousPiPackageDir === undefined) delete process.env.PI_PACKAGE_DIR
-    else process.env.PI_PACKAGE_DIR = previousPiPackageDir
-  }
-
-  const { ensureToolCallApproved } = await mcpJiti.import(
-    join(mcpRoot, "tool-approval.ts"),
-  )
-  let approvalPrompts = 0
-  const approvalState = {
-    config: { mcpServers: { smoke: { approveTools: true } } },
-    approvedToolCalls: new Map(),
-    toolMetadata: new Map(),
-    ui: {
-      select: async () => {
-        approvalPrompts++
-        return "Allow for session"
-      },
-    },
-  }
-  const approvalTool = { name: "mcp_smoke_write", originalName: "write" }
-  await ensureToolCallApproved(approvalState, "smoke", approvalTool, {
-    path: "a.txt",
-    content: "first",
-  })
-  await ensureToolCallApproved(approvalState, "smoke", approvalTool, {
-    content: "first",
-    path: "a.txt",
-  })
-  await ensureToolCallApproved(approvalState, "smoke", approvalTool, {
-    path: "a.txt",
-    content: "changed",
-  })
-  if (approvalPrompts !== 2 || approvalState.approvedToolCalls.size !== 2) {
-    throw new Error(
-      "pi-mcp-adapter approvals were not scoped to normalized tool arguments",
-    )
-  }
-
-  const mcpCommandsSource = await readFile(join(mcpRoot, "commands.ts"), "utf8")
-  if (
-    !/return ctx\.hasUI && ctx\.mode === ["']tui["'];/.test(
-      mcpCommandsSource,
-    ) ||
-    !/export async function openMcpPanel[\s\S]*?if \(!canRenderPanel\(ctx\)\) \{[\s\S]*?await showStatus\(state, ctx\);/.test(
-      mcpCommandsSource,
-    )
-  ) {
-    throw new Error("pi-mcp-adapter RPC panel lost its text fallback guard")
-  }
-  const mcpAuthFlow = await mcpJiti.import(join(mcpRoot, "mcp-auth-flow.ts"))
-  if (
-    mcpAuthFlow.parseAuthorizationCodeInput(
-      "https://callback.test/complete?code=smoke-code&state=smoke-state",
-      "smoke-state",
-    ) !== "smoke-code"
-  ) {
-    throw new Error("pi-mcp-adapter lost full callback URL parsing")
-  }
-  let mismatchedOAuthStateRejected = false
-  try {
-    mcpAuthFlow.parseAuthorizationCodeInput(
-      "https://callback.test/complete?code=smoke-code&state=wrong",
-      "smoke-state",
-    )
-  } catch (error) {
-    mismatchedOAuthStateRejected =
-      error instanceof Error && error.message.includes("state mismatch")
-  }
-  if (!mismatchedOAuthStateRejected) {
-    throw new Error("pi-mcp-adapter accepted a mismatched OAuth state")
-  }
-  const manualOAuth = await mcpAuthFlow.waitForAuthorizationResponse(
-    new Promise(() => {}),
-    "https://auth.test/authorize",
-    "smoke-state",
-    async () =>
-      "https://callback.test/complete?code=manual-code&state=smoke-state",
-  )
-  if (
-    manualOAuth.source !== "manual" ||
-    manualOAuth.input.code !== "manual-code"
-  ) {
-    throw new Error("pi-mcp-adapter lost manual HTTPS OAuth completion")
-  }
-  const { McpServerManager } = await mcpJiti.import(
-    join(mcpRoot, "server-manager.ts"),
-  )
-  const mcpClientCapabilities =
-    McpServerManager.prototype.buildClientCapabilities.call({
-      samplingConfig: undefined,
-      elicitationConfig: undefined,
-    })
-  if (
-    JSON.stringify(
-      mcpClientCapabilities.extensions?.["io.modelcontextprotocol/ui"],
-    ) !== JSON.stringify({ mimeTypes: ["text/html;profile=mcp-app"] })
-  ) {
-    throw new Error("pi-mcp-adapter lost its MCP UI client capability")
   }
 
   const webAccessRoot = join(packageRoot, "node_modules", "pi-web-access")
@@ -1703,6 +1486,7 @@ try {
   const hostDependencies = [
     "@earendil-works/pi-coding-agent",
     "@earendil-works/pi-tui",
+    "typebox",
   ]
   const nestedHosts = await Promise.all(
     hostDependencies.map((hostDependency) =>
@@ -1712,46 +1496,30 @@ try {
     ),
   )
   for (const [index, hostDependency] of hostDependencies.entries()) {
-    if (remotePiManifest.dependencies?.[hostDependency]) {
+    if (
+      remotePiManifest.dependencies?.[hostDependency] ||
+      remotePiManifest.peerDependencies?.[hostDependency] !== "*"
+    ) {
       throw new Error(
-        `Bundled remote-pi must use the aggregate ${hostDependency} host`,
+        `Bundled remote-pi must use the aggregate ${hostDependency} host peer`,
       )
     }
     if (nestedHosts[index]) {
       throw new Error(`Bundled remote-pi contains a nested ${hostDependency}`)
     }
   }
-  if (
-    sourceManifest.dependencies["@earendil-works/pi-coding-agent"] !==
-      "^0.87.1" ||
-    sourceManifest.dependencies["@earendil-works/pi-tui"] !== "^0.87.1"
-  ) {
-    throw new Error(
-      'Aggregate Pi host ranges must be exactly "^0.87.1"; update this check when the host is bumped',
-    )
-  }
   const installedHosts = await Promise.all(
-    hostDependencies.map(async (hostDependency) => {
-      const hostManifestPath = join(
-        installDir,
-        "node_modules",
-        ...hostDependency.split("/"),
-        "package.json",
-      )
-      const hostManifest = parseJson(
-        await readFile(hostManifestPath, "utf8"),
-        hostManifestPath,
-      )
-      return { hostDependency, version: hostManifest.version }
-    }),
+    hostPeerDependencies.map(async (hostDependency) => ({
+      hostDependency,
+      installed: await pathExists(
+        join(installDir, "node_modules", ...hostDependency.split("/")),
+      ),
+    })),
   )
-  for (const { hostDependency, version } of installedHosts) {
-    // Keep the 0.87 line pinned while accepting compatible later patches;
-    // bump the source range and this guard together when Pi moves again.
-    const patch = /^0\.87\.(\d+)$/.exec(version)?.[1]
-    if (patch === undefined || Number(patch) < 1) {
+  for (const { hostDependency, installed } of installedHosts) {
+    if (!installed) {
       throw new Error(
-        `Expected remote-pi ${hostDependency} host compatible with ^0.87.1, got ${version}`,
+        `Aggregate host peer ${hostDependency} was not installed for smoke testing`,
       )
     }
   }
@@ -2203,7 +1971,6 @@ try {
       "node_modules/pi-footer/LICENSE",
       "node_modules/pi-jev-auto-mode/LICENSE",
       "node_modules/pi-lens/LICENSE",
-      "node_modules/pi-mcp-adapter/LICENSE",
       "node_modules/pi-typesafe/LICENSE",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
@@ -2239,84 +2006,6 @@ try {
     "loader.js",
   )
   const { loadExtensions } = await import(pathToFileURL(loaderPath))
-  const mcpRuntimeSmokePath = join(stageDir, "mcp-runtime-smoke.ts")
-  await writeFile(
-    mcpRuntimeSmokePath,
-    `import { createMcpAdapter, getRuntimeMcpServerSnapshot, registerMcpServer } from ${JSON.stringify(resolve(mcpRoot, mcpEntryRelative))}\n\n` +
-      `export default function runtimeSmoke(pi) {\n` +
-      `  createMcpAdapter({ config: { mcpServers: {} } })(pi)\n` +
-      `  const definition = { url: "https://snapshot.test/mcp", directTools: ["search"], headers: { Authorization: "Bearer test" } }\n` +
-      `  const registration = registerMcpServer({ pi, name: "aggregate-runtime", definition })\n` +
-      `  let inactiveRejected = false\n` +
-      `  try { getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" }) } catch (error) { inactiveRejected = error instanceof Error && error.message.includes("no active state") }\n` +
-      `  if (!inactiveRejected) throw new Error("inactive runtime MCP snapshot did not fail closed")\n` +
-      `  let duplicateRejected = false\n` +
-      `  try { registerMcpServer({ pi, name: "aggregate-runtime", definition: { url: "https://duplicate.test/mcp" } }) } catch (error) { duplicateRejected = error instanceof Error && error.message.includes("already registered") }\n` +
-      `  if (!duplicateRejected) throw new Error("duplicate runtime MCP server accepted")\n` +
-      `  pi.on("input", async () => {\n` +
-      `    const snapshot = getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" })\n` +
-      `    if (!snapshot.runtime || snapshot.persisted || snapshot.definition.directTools?.[0] !== "search") throw new Error("runtime MCP snapshot lost its detached contract")\n` +
-      `    snapshot.definition.headers.Authorization = "changed"\n` +
-      `    if (getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" }).definition.headers.Authorization !== "Bearer test") throw new Error("runtime MCP snapshot leaked a mutable definition")\n` +
-      `    await registration.dispose()\n` +
-      `    let disposedRejected = false\n` +
-      `    try { getRuntimeMcpServerSnapshot({ pi, name: "aggregate-runtime" }) } catch (error) { disposedRejected = error instanceof Error && error.message.includes("disposed") }\n` +
-      `    if (!disposedRejected) throw new Error("disposed runtime MCP snapshot remained readable")\n` +
-      `    await registerMcpServer({ pi, name: "aggregate-runtime", definition: { url: "https://replacement.test/mcp" } }).dispose()\n` +
-      `  })\n` +
-      `}\n`,
-  )
-  const mcpRuntimeSmoke = await loadExtensions(
-    [mcpRuntimeSmokePath],
-    installDir,
-  )
-  if (mcpRuntimeSmoke.errors.length > 0) {
-    throw new Error(
-      `pi-mcp-adapter runtime registration smoke failed:\n${JSON.stringify(mcpRuntimeSmoke.errors, null, 2)}`,
-    )
-  }
-  Object.assign(mcpRuntimeSmoke.runtime, {
-    getAllTools: () => [],
-    getActiveTools: () => [],
-    setActiveTools: () => {},
-    getCommands: () => [],
-  })
-  const mcpRuntimeExtension = mcpRuntimeSmoke.extensions[0]
-  if (!mcpRuntimeExtension) {
-    throw new Error("pi-mcp-adapter runtime smoke extension did not load")
-  }
-  const mcpRuntimeContext = {
-    mode: "print",
-    hasUI: false,
-    cwd: installDir,
-    model: undefined,
-    modelRegistry: undefined,
-    signal: undefined,
-    ui: { setStatus() {}, notify() {}, setWidget() {} },
-  }
-  for (const handler of mcpRuntimeExtension.handlers.get("session_start") ??
-    []) {
-    // Lifecycle hooks must run in registration order, matching Pi.
-    // eslint-disable-next-line no-await-in-loop
-    await handler({}, mcpRuntimeContext)
-  }
-  await new Promise((resolvePromise) => setImmediate(resolvePromise))
-  await new Promise((resolvePromise) => setImmediate(resolvePromise))
-  for (const handler of mcpRuntimeExtension.handlers.get("input") ?? []) {
-    // Lifecycle hooks must run in registration order, matching Pi.
-    // eslint-disable-next-line no-await-in-loop
-    await handler(
-      { source: "interactive", text: "aggregate runtime snapshot smoke" },
-      mcpRuntimeContext,
-    )
-  }
-  for (const handler of mcpRuntimeExtension.handlers.get("session_shutdown") ??
-    []) {
-    // Lifecycle hooks must run in registration order, matching Pi.
-    // eslint-disable-next-line no-await-in-loop
-    await handler({ reason: "quit" }, mcpRuntimeContext)
-  }
-
   beginPhase("extension-registration-and-contracts")
   const result = await loadExtensions(extensionPaths, installDir)
   cleanupLoadedExtensions = async () => {
@@ -2414,84 +2103,6 @@ try {
   }
 
   beginPhase("runtime-smokes")
-
-  const mcpEntry = resolve(mcpRoot, mcpEntryRelative)
-  if (!extensionPaths.includes(mcpEntry)) {
-    throw new Error(
-      "Packed aggregate is missing the pi-mcp-adapter extension entry",
-    )
-  }
-  const mcpSkills = resolve(mcpRoot, mcpSkillsRelative)
-  if (!skillPaths.includes(mcpSkills)) {
-    throw new Error("Packed aggregate is missing the pi-mcp-adapter skills")
-  }
-  const mcpOAuthEntry = resolve(mcpRoot, "oauth.ts")
-  const mcpRequestHeadersCommandEntry = resolve(
-    mcpRoot,
-    "request-headers-command.ts",
-  )
-  await Promise.all([
-    stat(mcpOAuthEntry),
-    stat(join(mcpRoot, "cli.js")),
-    stat(mcpRequestHeadersCommandEntry),
-  ])
-  const previousAuthStore = process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE
-  process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE = "memory"
-  try {
-    const require = createRequire(mcpOAuthEntry)
-    const { createJiti } = await import(pathToFileURL(require.resolve("jiti")))
-    const jiti = createJiti(mcpOAuthEntry, { moduleCache: false })
-    const oauth = await jiti.import(mcpOAuthEntry)
-    const bearerStore = await jiti.import(join(mcpRoot, "mcp-bearer-store.ts"))
-    const serverName = "aggregate-smoke"
-    const serverUrl = "https://mcp.example.test/server"
-    const tokens = { accessToken: "smoke-token" }
-    oauth.updateMcpOAuthTokensForUrl(serverName, serverUrl, tokens)
-    const present = oauth.inspectMcpOAuthTokensForUrl(serverName, serverUrl)
-    if (
-      present.status !== "present" ||
-      present.tokens.accessToken !== tokens.accessToken
-    ) {
-      throw new Error("pi-mcp-adapter OAuth token reuse failed")
-    }
-    const mismatched = oauth.inspectMcpOAuthTokensForUrl(
-      serverName,
-      "https://other.example.test/server",
-    )
-    if (mismatched.status !== "absent") {
-      throw new Error("pi-mcp-adapter OAuth tokens were not URL-bound")
-    }
-
-    bearerStore.resetTestBearerTokenStore()
-    bearerStore.saveBearerTokenForUrl(serverName, "bearer-smoke", serverUrl)
-    if (
-      bearerStore.getBearerTokenForUrl(serverName, serverUrl) !==
-        "bearer-smoke" ||
-      bearerStore.getBearerTokenForUrl(
-        serverName,
-        "https://other.example.test/server",
-      ) !== undefined ||
-      bearerStore.inspectBearerTokenForUrl(
-        serverName,
-        "https://other.example.test/server",
-      ).status !== "url-mismatch"
-    ) {
-      throw new Error("pi-mcp-adapter bearer tokens were not URL-bound")
-    }
-    bearerStore.removeBearerToken(serverName)
-    if (
-      bearerStore.inspectBearerTokenForUrl(serverName, serverUrl).status !==
-      "missing"
-    ) {
-      throw new Error("pi-mcp-adapter bearer token removal failed")
-    }
-  } finally {
-    if (previousAuthStore === undefined) {
-      delete process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE
-    } else {
-      process.env.PI_MCP_ADAPTER_TEST_AUTH_STORE = previousAuthStore
-    }
-  }
 
   const webAccessEntry = resolve(webAccessRoot, webAccessEntryRelative)
   if (!extensionPaths.includes(webAccessEntry)) {

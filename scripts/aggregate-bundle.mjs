@@ -40,6 +40,14 @@ const nodeModulesDir = join(aggregateDir, "node_modules")
 const backupDir = join(aggregateDir, ".aggregate-node-modules-backup")
 const statePath = join(aggregateDir, ".aggregate-pack-state.json")
 const manifestBackupPath = join(aggregateDir, ".aggregate-package-backup.json")
+const PI_HOST_DEPENDENCIES = new Set([
+  "@earendil-works/pi-agent-core",
+  "@earendil-works/pi-ai",
+  "@earendil-works/pi-coding-agent",
+  "@earendil-works/pi-tui",
+  "@sinclair/typebox",
+  "typebox",
+])
 
 async function pathExists(path) {
   try {
@@ -122,6 +130,12 @@ async function buildMaterializedNodeModules(stageDir) {
   const tarballByName = await packWorkspacePackages(tarballsDir)
   const manifestPath = join(stagedAggregateDir, "package.json")
   const manifest = await readJson(manifestPath)
+  manifest.peerDependencies ??= {}
+  for (const dependency of PI_HOST_DEPENDENCIES) {
+    delete manifest.dependencies?.[dependency]
+    delete manifest.optionalDependencies?.[dependency]
+    manifest.peerDependencies[dependency] = "*"
+  }
   const publishedDependencies = { ...manifest.dependencies }
 
   for (const name of Object.keys(manifest.dependencies)) {
@@ -157,39 +171,55 @@ async function buildMaterializedNodeModules(stageDir) {
       readJson(join(installedNodeModules, ...name.split("/"), "package.json")),
     ),
   )
+  const childManifestWrites = []
   for (const childManifest of childManifests) {
+    const declaredHostDependencies = new Set(
+      [
+        ...Object.keys(childManifest.dependencies ?? {}),
+        ...Object.keys(childManifest.optionalDependencies ?? {}),
+        ...Object.keys(childManifest.peerDependencies ?? {}),
+      ].filter((dependency) => PI_HOST_DEPENDENCIES.has(dependency)),
+    )
+    if (declaredHostDependencies.size > 0) {
+      childManifest.peerDependencies ??= {}
+      for (const dependency of declaredHostDependencies) {
+        delete childManifest.dependencies?.[dependency]
+        delete childManifest.optionalDependencies?.[dependency]
+        childManifest.peerDependencies[dependency] = "*"
+      }
+      childManifestWrites.push(
+        writeFile(
+          join(
+            installedNodeModules,
+            ...childManifest.name.split("/"),
+            "package.json",
+          ),
+          `${JSON.stringify(childManifest, null, 2)}\n`,
+        ),
+      )
+    }
+
     for (const [dependency, range] of Object.entries(
       childManifest.dependencies ?? {},
     )) {
-      if (!bundled.has(dependency)) {
+      if (!bundled.has(dependency) && !PI_HOST_DEPENDENCIES.has(dependency)) {
         manifest.dependencies[dependency] ??= range
       }
     }
     for (const [dependency, range] of Object.entries(
       childManifest.optionalDependencies ?? {},
     )) {
-      if (!bundled.has(dependency) && !manifest.dependencies[dependency]) {
+      if (
+        !bundled.has(dependency) &&
+        !PI_HOST_DEPENDENCIES.has(dependency) &&
+        !manifest.dependencies[dependency]
+      ) {
         manifest.optionalDependencies ??= {}
         manifest.optionalDependencies[dependency] ??= range
       }
     }
   }
-
-  // remote-pi 0.7.0 declares Pi host packages as runtime dependencies with a
-  // 0.79-only range. Keep its published source intact, but make the bundled
-  // copy use the aggregate's single compatible Pi 0.85 host at runtime.
-  const remotePiManifest = childManifests.find(
-    (childManifest) => childManifest.name === "remote-pi",
-  )
-  if (!remotePiManifest)
-    throw new Error("Bundled remote-pi manifest is missing")
-  remotePiManifest.dependencies ??= {}
-  delete remotePiManifest.dependencies["@earendil-works/pi-coding-agent"]
-  delete remotePiManifest.dependencies["@earendil-works/pi-tui"]
-  await writeFile(
-    join(installedNodeModules, "remote-pi", "package.json"),
-    `${JSON.stringify(remotePiManifest, null, 2)}\n`,
-  )
+  await Promise.all(childManifestWrites)
 
   const installedEntries = await readdir(installedNodeModules, {
     withFileTypes: true,

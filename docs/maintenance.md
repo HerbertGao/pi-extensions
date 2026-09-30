@@ -215,32 +215,31 @@ For Subagents, the direct migration is complete. The package retains only reposi
 
 ## Bundled upstream companions
 
-The aggregate package also pins the following npm packages under their original names without modifying their upstream source. The generated bundled `remote-pi` manifest omits its Pi coding-agent/TUI dependencies so it uses the aggregate's single host versions:
+The aggregate package also pins the following npm packages under their original names without modifying their upstream source. The generated bundled `remote-pi` manifest declares its Pi host packages as wildcard peers so it uses the running Pi host:
 
-| Package                              | Version  | Upstream                    |
-| ------------------------------------ | -------- | --------------------------- |
-| `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`   |
-| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`      |
-| `@narumitw/pi-btw`                   | `0.61.0` | `narumiruna/pi-extensions`  |
-| `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions`  |
-| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`          |
-| `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-handoff`                  | `2.2.1`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-mermaid-open`             | `0.2.1`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`  |
-| `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`  |
-| `pi-mcp-adapter`                     | `2.37.0` | `nicobailon/pi-mcp-adapter` |
-| `pi-typesafe`                        | `0.7.4`  | `DevMortimer/pi-typesafe`   |
-| `pi-multi-account`                   | `1.23.2` | `Sarrius/pi-multi-account`  |
-| `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`        |
-| `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode`  |
-| `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`          |
-| `pi-web-access`                      | `0.31.0` | `nicobailon/pi-web-access`  |
-| `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`    |
+| Package                              | Version  | Upstream                   |
+| ------------------------------------ | -------- | -------------------------- |
+| `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`  |
+| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`     |
+| `@narumitw/pi-btw`                   | `0.61.0` | `narumiruna/pi-extensions` |
+| `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions` |
+| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`         |
+| `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions` |
+| `@tifan/pi-handoff`                  | `2.2.2`  | `tifandotme/pi-extensions` |
+| `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions` |
+| `@tifan/pi-mermaid-open`             | `0.2.1`  | `tifandotme/pi-extensions` |
+| `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions` |
+| `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions` |
+| `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions` |
+| `pi-typesafe`                        | `0.8.0`  | `DevMortimer/pi-typesafe`  |
+| `pi-multi-account`                   | `1.23.2` | `Sarrius/pi-multi-account` |
+| `pi-footer`                          | `0.5.1`  | `wobondar/pi-footer`       |
+| `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode` |
+| `pi-lens`                            | `4.2.1`  | `apmantza/pi-lens`         |
+| `pi-web-access`                      | `0.31.0` | `nicobailon/pi-web-access` |
+| `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`   |
 
-`pi-multi-account@1.23.2` is bundled on the aggregate's Pi 0.85.1 host. Pi 0.86.1 is available, but the currently pinned pi-lens and pi-mcp-adapter companions declare support only through the 0.85 line.
+On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
 The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
 
@@ -248,7 +247,7 @@ The issue #238 upstream review accepted three companion updates, advanced the re
 
 - `@narumitw/pi-btw@0.61.1` pins the companion release.
 - `pi-lens@4.3.0` pins the companion release.
-- `pi-mcp-adapter@2.38.0` pins the companion release.
+- `pi-mcp-adapter@2.38.0` pins the companion release (subsequently removed in the native MCP migration).
 - `@herbertgao/pi-cc-extensions` is advanced to reviewed version `0.9.5` and its repository cursor is advanced to `47bfce7aebfb`. The upstream v0.9.3 - v0.9.5 updates (including renderer animations, click-to-collapse, and expanded diffs) were reviewed and classified as reviewed-without-import because our local customized `pi-cc-extensions` version `0.9.5` is working correctly and preserves our local terminal-width, mouse-slot, and rich-diff customizations.
 - `NVlabs SoL-Pi` repository cursor is advanced to `1559b5cb12c7` and classified as reviewed-without-import as the upstream changes address Windows-specific shell paths and Unicode-space normalizations that are not required for our platform baseline, keeping our POSIX-specific implementation stable.
 

@@ -1,15 +1,16 @@
 import { readFile } from "node:fs/promises"
+import { parseJson } from "./npm-pack-json.mjs"
 
 const root = new URL("../", import.meta.url)
 const readJson = async (path) =>
-  JSON.parse(await readFile(new URL(path, root), "utf8"))
+  parseJson(await readFile(new URL(path, root), "utf8"), path)
 const rootManifest = await readJson("package.json")
-const expected = Object.fromEntries(
-  Object.entries(rootManifest.devDependencies ?? {}).filter(([name]) =>
-    name.startsWith("@earendil-works/pi-"),
-  ),
+const hostPackages = Object.keys(rootManifest.devDependencies).filter(
+  (name) =>
+    name.startsWith("@earendil-works/pi-") ||
+    name === "typebox" ||
+    name === "@sinclair/typebox",
 )
-
 const packages = [
   "pi-bark",
   "pi-cc-extensions",
@@ -18,23 +19,24 @@ const packages = [
   "resume-from",
   "sol-pi",
 ]
+const manifests = await Promise.all(
+  packages.map((name) => readJson(`packages/${name}/package.json`)),
+)
 const errors = []
-for (const name of packages) {
-  const manifest = await readJson(`packages/${name}/package.json`)
-  for (const section of [
-    "dependencies",
-    "peerDependencies",
-    "devDependencies",
-  ]) {
-    for (const dependency of Object.keys(manifest[section] ?? {})) {
-      if (
-        dependency in expected &&
-        manifest[section][dependency] !== expected[dependency]
-      ) {
+for (const manifest of manifests) {
+  for (const dependency of hostPackages) {
+    for (const section of ["dependencies", "optionalDependencies"]) {
+      if (manifest[section]?.[dependency] !== undefined) {
         errors.push(
-          `${name} ${section}.${dependency}: ${manifest[section][dependency]} (expected ${expected[dependency]})`,
+          `${manifest.name} ${section}.${dependency}: use peerDependencies with a "*" range`,
         )
       }
+    }
+    const peer = manifest.peerDependencies?.[dependency]
+    if (peer !== undefined && peer !== "*") {
+      errors.push(
+        `${manifest.name} peerDependencies.${dependency}: ${peer} (expected *)`,
+      )
     }
   }
 }
@@ -43,5 +45,5 @@ if (errors.length) {
   process.exit(1)
 }
 console.log(
-  `Pi dependency ranges consistent (${Object.values(expected).join(", ")})`,
+  `Pi host dependency declarations valid (${manifests.length} packages)`,
 )

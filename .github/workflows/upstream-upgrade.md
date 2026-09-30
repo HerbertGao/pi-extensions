@@ -99,9 +99,9 @@ pre-agent-steps:
       mkdir -p "$(dirname "$settings")"
       tmp="$(mktemp)"
       if [[ -f "$settings" ]]; then
-        jq '.security.auth.selectedType = "gemini-api-key"' "$settings" > "$tmp"
+        jq '.security.auth.selectedType = "gemini-api-key" | .model.skipNextSpeakerCheck = false' "$settings" > "$tmp"
       else
-        printf '%s\n' '{"security":{"auth":{"selectedType":"gemini-api-key"}}}' > "$tmp"
+        printf '%s\n' '{"security":{"auth":{"selectedType":"gemini-api-key"}},"model":{"skipNextSpeakerCheck":false}}' > "$tmp"
       fi
       mv "$tmp" "$settings"
   - name: Configure proxy for agent tools
