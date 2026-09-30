@@ -18,16 +18,19 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Box, Markdown, Spacer, Text, type Component } from "@earendil-works/pi-tui";
-import { isToolTuiFullscreen } from "../renderer/show-more-hint.ts";
+import { isToolTuiFullscreen } from "../renderer/tool/show-more-hint.ts";
 import {
 	animateCompactThinkingText,
 	formatThoughtDuration,
 	styleCompactThinkingText,
 } from "../renderer/compact-mode.ts";
 import { refreshMountedTranscript } from "../renderer/transcript-refresh.ts";
-// 保持导出兼容：渲染函数已并入 renderer/compact-mode.ts，这里 re-export。
-export { animateCompactThinkingText, formatThoughtDuration, styleCompactThinkingText };
-
+import {
+	COMPACT_THINKING_OWNER,
+	COMPACT_THINKING_PATCH_KEY,
+	patchRegistry,
+	PROTOTYPE_ORIGINAL_KEY,
+} from "../utils/patch-keys.ts";
 // pi-tui 类型声明中 TUI 的 re-export 解析失败，本地用最小结构化类型（只用到 requestRender）。
 type RenderTui = { requestRender(force?: boolean): void };
 
@@ -112,8 +115,6 @@ const config: CompactThinkingConfig = {
 };
 
 const DURATION_ENTRY_TYPE = "compact-thinking-duration";
-const COMPACT_THINKING_PATCH_KEY = Symbol.for("pi.ccstyle.compact-thinking-update");
-const PROTOTYPE_ORIGINAL_KEY = Symbol.for("pi.ccstyle.prototype-original");
 
 /** 当前激活 session 的只读查询委托（compact 渲染层使用）。 */
 type ThinkingDurationQuery = (messageTimestamp: number) => number | undefined;
@@ -203,12 +204,8 @@ type ExpandedWrapEntry = { text: string; lines: string[] };
 const expandedWrapCache = new Map<string, ExpandedWrapEntry>();
 export const THINKING_EXPANDED_WRAP_CACHE_MAX = 64;
 
-export function thinkingRunKey(messageTimestamp: number, runStartIndex: number): string {
-	return `${messageTimestamp}:${runStartIndex}`;
-}
-
 function expandedWrapKey(messageTimestamp: number, runStartIndex: number, width: number): string {
-	return `${thinkingRunKey(messageTimestamp, runStartIndex)}:${width}`;
+	return `${messageTimestamp}:${runStartIndex}:${width}`;
 }
 
 function wrapExpandedThinking(
@@ -236,9 +233,11 @@ function wrapExpandedThinking(
 }
 
 function evictExpandedWraps(messageTimestamp: number, runStartIndex: number): void {
-	const prefix = `${thinkingRunKey(messageTimestamp, runStartIndex)}:`;
 	for (const key of expandedWrapCache.keys()) {
-		if (key.startsWith(prefix)) expandedWrapCache.delete(key);
+		const [ts, run] = key.split(":");
+		if (Number(ts) === messageTimestamp && Number(run) === runStartIndex) {
+			expandedWrapCache.delete(key);
+		}
 	}
 }
 
@@ -322,9 +321,9 @@ function hiddenPreviewHint(
 	return undefined;
 }
 
-const expandedThinking = new Set<string>();
+const expandedThinking = new Set<number>();
 
-/** 折叠预览 + 展开全文。fullscreen 点击 hint 展开、双击整块收起，对齐工具卡。 */
+/** 折叠预览 + 展开全文。fullscreen 点击 hint 展开、展开卡单击整块收起（拖动选择文本时不收起）。 */
 export class ThinkingPreviewBlock implements Component {
 	private heading: string;
 	private text: string;
@@ -361,7 +360,7 @@ export class ThinkingPreviewBlock implements Component {
 		this.runStartIndex = runStartIndex;
 		this.style = style;
 		this.theme = theme;
-		this._expanded = expandedThinking.has(thinkingRunKey(messageTimestamp, runStartIndex));
+		this._expanded = expandedThinking.has(messageTimestamp);
 	}
 
 	private paint(color: string, text: string): string {
@@ -377,10 +376,9 @@ export class ThinkingPreviewBlock implements Component {
 	setExpanded(expanded: boolean): void {
 		if (this._expanded !== expanded) this.collapsedMemo = undefined;
 		this._expanded = expanded;
-		const key = thinkingRunKey(this.messageTimestamp, this.runStartIndex);
-		if (expanded) expandedThinking.add(key);
+		if (expanded) expandedThinking.add(this.messageTimestamp);
 		else {
-			expandedThinking.delete(key);
+			expandedThinking.delete(this.messageTimestamp);
 			evictExpandedWraps(this.messageTimestamp, this.runStartIndex);
 		}
 	}
@@ -632,6 +630,7 @@ function compactThinking(pi: ExtensionAPI) {
 	) {
 		const component = this as AssistantMessageComponentLike;
 		const self = this as unknown as AssistantInternals;
+		// isStreaming 丢失 → mermaid 流式误渲染来回闪。
 		self.isStreaming = isStreaming ?? self.isStreaming;
 		self.lastMessage = message;
 		latestComponent = component;
@@ -1044,8 +1043,6 @@ type CompactThinkingOwner = {
 	stop(event?: any, ctx?: any): void;
 };
 
-const COMPACT_THINKING_OWNER = Symbol.for("pi.ccstyle.compact-thinking-owner");
-
 type UpstreamHandler = (event: any, ctx: any) => void;
 
 export function installCompactThinking(
@@ -1053,10 +1050,6 @@ export function installCompactThinking(
 	initialConfig: CompactThinkingConfig,
 ): CompactThinkingController {
 	const owner = {};
-	const host = globalThis as typeof globalThis & {
-		[COMPACT_THINKING_OWNER]?: CompactThinkingOwner;
-	};
-
 	let session: { event: any; ctx: any } | undefined;
 	let active = false;
 	// Stable pi.on wrappers delegate here so activate/reload never double-binds.
@@ -1092,7 +1085,8 @@ export function installCompactThinking(
 		const shutdown = delegates.get("session_shutdown");
 		delegates.clear();
 		shutdown?.(event ?? session?.event ?? {}, ctx ?? session?.ctx ?? { mode: "rpc", ui: {} });
-		if (host[COMPACT_THINKING_OWNER]?.owner === owner) delete host[COMPACT_THINKING_OWNER];
+		if (patchRegistry.get<CompactThinkingOwner>(COMPACT_THINKING_OWNER)?.owner === owner)
+			patchRegistry.delete(COMPACT_THINKING_OWNER);
 	};
 
 	const activate = (event: any, ctx: any) => {
@@ -1100,7 +1094,7 @@ export function installCompactThinking(
 		// TUI prototype patch or kill its thinking ticker.
 		if (ctx?.mode !== "tui") return;
 
-		host[COMPACT_THINKING_OWNER]?.stop(event, ctx);
+		patchRegistry.get<CompactThinkingOwner>(COMPACT_THINKING_OWNER)?.stop(event, ctx);
 		session = { event, ctx };
 
 		// 配置统一由 claude-code-style 管控，加载时覆盖库默认值。
@@ -1125,7 +1119,7 @@ export function installCompactThinking(
 		} as unknown as ExtensionAPI);
 
 		active = true;
-		host[COMPACT_THINKING_OWNER] = { owner, stop };
+		patchRegistry.install(COMPACT_THINKING_OWNER, { owner, stop });
 	};
 
 	pi.on("session_start", (event, ctx) => {
@@ -1133,7 +1127,8 @@ export function installCompactThinking(
 		activate(event, ctx);
 	});
 	pi.on("session_shutdown", (event, ctx) => {
-		if (host[COMPACT_THINKING_OWNER]?.owner === owner) stop(event, ctx);
+		if (patchRegistry.get<CompactThinkingOwner>(COMPACT_THINKING_OWNER)?.owner === owner)
+			stop(event, ctx);
 		session = undefined;
 	});
 

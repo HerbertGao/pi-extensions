@@ -4,8 +4,10 @@ import {
 	SkillInvocationMessageComponent,
 } from "@earendil-works/pi-coding-agent";
 import { Markdown, Spacer, Text } from "@earendil-works/pi-tui";
-import { config } from "../config/config.ts";
+import { MESSAGE_DISPLAY_PATCH, patchRegistry } from "../../utils/patch-keys.ts";
+import { config } from "../../config/config.ts";
 import { showMoreHintText } from "./show-more-hint.ts";
+import { walkComponentTree } from "../../utils/component-tree.ts";
 
 /**
  * 接管三个消息组件（`<skill>` 块、压缩摘要、分支摘要），ccstyle on 时渲染为
@@ -15,11 +17,6 @@ import { showMoreHintText } from "./show-more-hint.ts";
  * 三条路径都经过 updateDisplay，patch 一处即可全覆盖。它们不走
  * ToolExecutionComponent，无法复用其原型 patch，这里单独统一管理。
  */
-
-const MESSAGE_DISPLAY_PATCH = Symbol.for("pi.ccstyle.message-display-patch");
-const MESSAGE_DISPLAY_ORIGINAL_BG = Symbol.for("pi.ccstyle.message-display-original-bg");
-const MESSAGE_DISPLAY_ORIGINAL_PADDING = Symbol.for("pi.ccstyle.message-display-original-padding");
-const MESSAGE_DISPLAY_ORIGINAL_SAVED = Symbol.for("pi.ccstyle.message-display-original-saved");
 
 // 与 renderer/index.ts renderCall 的成功勾一致：亮绿 ✓（truecolor ANSI）。
 const BRIGHT_GREEN = "\x1b[38;2;80;220;100m";
@@ -67,30 +64,14 @@ function ensureHintHover(component: any): void {
 	};
 }
 
-function rememberMessageDisplay(component: any): void {
-	if (component[MESSAGE_DISPLAY_ORIGINAL_SAVED]) return;
-	component[MESSAGE_DISPLAY_ORIGINAL_BG] = component.bgFn;
-	component[MESSAGE_DISPLAY_ORIGINAL_PADDING] = [component.paddingX, component.paddingY];
-	component[MESSAGE_DISPLAY_ORIGINAL_SAVED] = true;
-}
-
-function restoreMessageDisplay(component: any): void {
-	if (!component[MESSAGE_DISPLAY_ORIGINAL_SAVED]) return;
-	const [paddingX, paddingY] = component[MESSAGE_DISPLAY_ORIGINAL_PADDING];
-	component.paddingX = paddingX;
-	component.paddingY = paddingY;
-	component.setBgFn?.(component[MESSAGE_DISPLAY_ORIGINAL_BG]);
-	delete component[MESSAGE_DISPLAY_ORIGINAL_BG];
-	delete component[MESSAGE_DISPLAY_ORIGINAL_PADDING];
-	delete component[MESSAGE_DISPLAY_ORIGINAL_SAVED];
-}
-
-function renderCcstyle(component: any, kind: DisplayKind): boolean {
+function renderCcstyle(component: any, kind: DisplayKind): void {
 	const theme = displayTheme;
-	if (!theme) return false; // 主题未就绪时回退原生渲染
-	rememberMessageDisplay(component);
+	if (!theme) return; // 主题未就绪时保留原生渲染
 	if (component.bgFn) component.setBgFn?.(undefined); // 与工具调用一致，去掉灰底
-	component.paddingY = 0; // 工具组件 paddingY=0；原生 Box 默认 1，会上下各留一个空行
+	if (component.paddingY !== 0) {
+		component._ccstyleOriginalPaddingY = component.paddingY;
+		component.paddingY = 0; // 工具组件 paddingY=0；原生 Box 默认 1，会上下各留一个空行
+	}
 	component.clear();
 	ensureHintHover(component);
 	const icon = `${BRIGHT_GREEN}✓${ANSI_FG_RESET}`; // 已完成消息，等同工具成功态
@@ -99,7 +80,7 @@ function renderCcstyle(component: any, kind: DisplayKind): boolean {
 		const hovered = component.hintHovered === true;
 		const hint = `${theme.fg("dim", " • ")}${theme.fg(hovered ? "text" : "dim", showMoreHintText())}`;
 		component.addChild(new Text(`${icon} ${title}${hint}`, 0, 0));
-		return true;
+		return;
 	}
 	// 展开卡与 tool 一致：userMessageBg + 上下左右 1 格
 	component.paddingX = 1;
@@ -114,7 +95,6 @@ function renderCcstyle(component: any, kind: DisplayKind): boolean {
 			color: (text: string) => theme.fg("customMessageText", text),
 		}),
 	);
-	return true;
 }
 
 type PatchEntry = {
@@ -125,29 +105,12 @@ type PatchEntry = {
 
 /** patch 三个消息组件的 updateDisplay，返回统一 dispose（/reload 链安全）。 */
 export function installMessageDisplayRendering(): () => void {
-	const host = globalThis as any;
-	const previous = host[MESSAGE_DISPLAY_PATCH];
+	const previous = patchRegistry.get<{ dispose: () => void }>(MESSAGE_DISPLAY_PATCH);
 	if (previous) previous.dispose();
-	const patch: {
-		active: boolean;
-		entries: PatchEntry[];
-		components: Set<WeakRef<any>>;
-		tracked: WeakSet<object>;
-		dispose: () => void;
-	} = {
+	const patch: { active: boolean; entries: PatchEntry[]; dispose: () => void } = {
 		active: true,
 		entries: [],
-		components: new Set(),
-		tracked: new WeakSet(),
 		dispose: () => {},
-	};
-	const track = (component: Record<PropertyKey, unknown>): void => {
-		for (const ref of patch.components) {
-			if (!ref.deref()) patch.components.delete(ref);
-		}
-		if (patch.tracked.has(component)) return;
-		patch.tracked.add(component);
-		patch.components.add(new WeakRef(component));
 	};
 	const installOne = (ComponentClass: any, kind: DisplayKind): void => {
 		const prototype = ComponentClass.prototype;
@@ -155,15 +118,17 @@ export function installMessageDisplayRendering(): () => void {
 		const installed = function (this: any) {
 			if (patch.active && config.mode !== "off") {
 				try {
-					if (renderCcstyle(this, kind)) {
-						track(this);
-						return;
-					}
+					renderCcstyle(this, kind);
+					return;
 				} catch {
 					// 渲染失败回退原生
 				}
 			}
-			restoreMessageDisplay(this);
+			// 回退原生前恢复 paddingY，避免原生渲染丢失上下内边距
+			if (this._ccstyleOriginalPaddingY !== undefined) {
+				this.paddingY = this._ccstyleOriginalPaddingY;
+				delete this._ccstyleOriginalPaddingY;
+			}
 			original.call(this);
 		};
 		prototype.updateDisplay = installed;
@@ -179,20 +144,9 @@ export function installMessageDisplayRendering(): () => void {
 				entry.prototype.updateDisplay = entry.original;
 			}
 		}
-		for (const ref of patch.components) {
-			const component = ref.deref();
-			if (!component) continue;
-			try {
-				restoreMessageDisplay(component);
-				component.updateDisplay();
-			} catch {
-				// 单个陈旧组件不应阻断其余原型与组件恢复
-			}
-		}
-		patch.components.clear();
-		if (host[MESSAGE_DISPLAY_PATCH] === patch) delete host[MESSAGE_DISPLAY_PATCH];
+		patchRegistry.dispose(MESSAGE_DISPLAY_PATCH, patch);
 	};
-	host[MESSAGE_DISPLAY_PATCH] = patch;
+	patchRegistry.install(MESSAGE_DISPLAY_PATCH, patch);
 	return patch.dispose;
 }
 
@@ -210,30 +164,10 @@ export function isMessageDisplayComponent(value: any): boolean {
 
 /** 遍历当前 transcript，让已挂载的消息组件按当前 mode 重渲染（/ccstyle on|off 切换）。 */
 export function refreshMessageDisplays(root: any): void {
-	const seen = new Set<any>();
-	const visit = (value: any): void => {
-		if (!value || typeof value !== "object" || seen.has(value)) return;
-		seen.add(value);
-		if (Array.isArray(value)) {
-			for (const child of value) visit(child);
-			return;
-		}
+	walkComponentTree(root, (value: any) => {
 		if (isMessageDisplayComponent(value)) {
 			value.invalidate?.();
-			return;
+			return false;
 		}
-		const children = value.children;
-		if (Array.isArray(children)) {
-			for (const child of children) visit(child);
-		}
-		try {
-			const mounted = value.getMountedRoots?.();
-			if (Array.isArray(mounted)) {
-				for (const root of mounted) visit(root);
-			}
-		} catch {
-			// 惰性 Proxy 可能暂时没有 mounted roots
-		}
-	};
-	visit(root);
+	});
 }

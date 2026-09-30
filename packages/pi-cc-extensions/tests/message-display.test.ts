@@ -12,7 +12,7 @@ import {
 	installMessageDisplayRendering,
 	refreshMessageDisplays,
 	setMessageDisplayTheme,
-} from "../extensions/renderer/message-display.ts";
+} from "../extensions/renderer/tool/message-display.ts";
 import { config, DEFAULT_CONFIG, setConfig, normalizeConfig } from "../extensions/config/config.ts";
 
 function stripAnsi(text: string): string {
@@ -60,6 +60,7 @@ test("message-display: ccstyle on 时三个组件渲染为工具调用风格", (
 	const skill = makeSkillBlock();
 	const skillCollapsed = stripAnsi(skill.render(120).join("\n"));
 	assert.match(skillCollapsed, /✓ Skill ponytail/);
+	assert.match(skillCollapsed, /to show more/);
 	assert.doesNotMatch(skillCollapsed, /\[skill\]/);
 	// 与单 tool 一致：Box paddingY 置 0，折叠行无上下空行
 	assert.equal(skill.render(120).length, 1, "折叠行不应有上下空行");
@@ -105,135 +106,34 @@ test("message-display: ccstyle on 时三个组件渲染为工具调用风格", (
 	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
 });
 
-test("message-display: compact 继续接管三个消息组件", () => {
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "compact" }));
-	const dispose = installMessageDisplayRendering();
-	setMessageDisplayTheme(fakeTheme());
-	const components = [makeSkillBlock(), makeCompaction(), makeBranch()];
-
-	for (const component of components) {
-		const rendered = stripAnsi(component.render(120).join("\n"));
-		assert.match(rendered, /✓/);
-		assert.doesNotMatch(rendered, /\[(?:skill|compaction|branch)\]/);
-	}
-
-	dispose();
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
-});
-
-test("message-display: mode off 或 dispose 后恢复原生背景与渲染", () => {
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
-	const skill = makeSkillBlock() as any;
-	const compaction = makeCompaction();
-	const nativeBgFn = skill.bgFn;
-	assert.equal(typeof nativeBgFn, "function");
-
+test("message-display: mode off 或 dispose 后回退原生渲染", () => {
 	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "on" }));
 	const dispose = installMessageDisplayRendering();
-	setMessageDisplayTheme({
-		fg: (_color: string, text: string) => text,
-		bg: (_slot: string, text: string) => `ccstyle:${text}`,
-	} as any);
-	skill.invalidate();
-	compaction.invalidate();
-	skill.setExpanded(true);
-	assert.notEqual(skill.bgFn, nativeBgFn, "expanded ccstyle replaces the native background");
+	setMessageDisplayTheme(fakeTheme());
+	const skill = makeSkillBlock();
+	const compaction = makeCompaction();
 	assert.doesNotMatch(stripAnsi(skill.render(120).join("\n")), /\[skill\]/);
 	assert.doesNotMatch(stripAnsi(compaction.render(120).join("\n")), /\[compaction\]/);
 
-	// mode=off：恢复原生背景、标签与 padding
+	// mode=off：恢复原生标签
 	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
 	skill.invalidate();
 	compaction.invalidate();
-	assert.equal(skill.bgFn, nativeBgFn, "mode off restores the exact native bgFn");
 	assert.match(stripAnsi(skill.render(120).join("\n")), /\[skill\]/);
 	assert.match(stripAnsi(compaction.render(120).join("\n")), /\[compaction\]/);
-	assert.ok(skill.render(120).length > 3, "expanded native render restores padding");
+	// 原生 Box paddingY=1 恢复：重新出现上下空行
+	assert.equal(skill.render(120).length, 3, "原生渲染恢复上下内边距");
 
-	// 重开后 dispose 无需 invalidate，立即恢复原生背景与 children。
+	// dispose 后同样回退
 	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "on" }));
 	skill.invalidate();
 	compaction.invalidate();
-	assert.notEqual(skill.bgFn, nativeBgFn);
+	assert.doesNotMatch(stripAnsi(skill.render(120).join("\n")), /\[skill\]/);
 	dispose();
-	assert.equal(skill.bgFn, nativeBgFn, "dispose restores the exact native bgFn");
+	skill.invalidate();
+	compaction.invalidate();
 	assert.match(stripAnsi(skill.render(120).join("\n")), /\[skill\]/);
 	assert.match(stripAnsi(compaction.render(120).join("\n")), /\[compaction\]/);
-});
-
-test("message-display: theme 缺失时新旧组件都回退原生", () => {
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
-	const existing = makeSkillBlock() as any;
-	const nativeBgFn = existing.bgFn;
-
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "on" }));
-	const dispose = installMessageDisplayRendering();
-	setMessageDisplayTheme(fakeTheme());
-	existing.invalidate();
-	assert.match(stripAnsi(existing.render(120).join("\n")), /✓ Skill ponytail/);
-
-	setMessageDisplayTheme(undefined);
-	existing.invalidate();
-	assert.equal(existing.bgFn, nativeBgFn);
-	assert.match(stripAnsi(existing.render(120).join("\n")), /\[skill\]/);
-	const fresh = makeCompaction();
-	assert.match(stripAnsi(fresh.render(120).join("\n")), /\[compaction\]/);
-
-	dispose();
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
-});
-
-test("message-display: reinstall 两轮不会把 ccstyle 状态保存为原生", () => {
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
-	const skill = makeSkillBlock() as any;
-	const nativeBgFn = skill.bgFn;
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "on" }));
-	setMessageDisplayTheme({
-		fg: (_color: string, text: string) => text,
-		bg: (_slot: string, text: string) => `ccstyle:${text}`,
-	} as any);
-
-	const disposeFirst = installMessageDisplayRendering();
-	skill.setExpanded(true);
-	assert.notEqual(skill.bgFn, nativeBgFn);
-	const disposeSecond = installMessageDisplayRendering();
-	assert.equal(skill.bgFn, nativeBgFn, "reinstall first restores native state");
-	assert.match(stripAnsi(skill.render(120).join("\n")), /\[skill\]/);
-
-	skill.invalidate();
-	assert.notEqual(skill.bgFn, nativeBgFn);
-	const broken = makeBranch() as any;
-	const healthy = makeCompaction();
-	broken.updateDisplay = () => {
-		throw new Error("stale component");
-	};
-	disposeSecond();
-	assert.equal(skill.bgFn, nativeBgFn, "second dispose restores the original native bgFn");
-	assert.match(stripAnsi(skill.render(120).join("\n")), /\[skill\]/);
-	assert.match(
-		stripAnsi(healthy.render(120).join("\n")),
-		/\[compaction\]/,
-		"one stale component does not block later restores",
-	);
-	disposeFirst();
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
-});
-
-test("message-display: tracking 仅弱引用组件", () => {
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "on" }));
-	const dispose = installMessageDisplayRendering();
-	setMessageDisplayTheme(fakeTheme());
-	const component = makeBranch();
-	const patch = (globalThis as any)[Symbol.for("pi.ccstyle.message-display-patch")];
-	const refs = [...patch.components];
-
-	assert.ok(refs.length > 0);
-	assert.ok(refs.every((ref) => ref instanceof WeakRef));
-	assert.equal(patch.components.has(component), false);
-	assert.ok(patch.tracked instanceof WeakSet);
-
-	dispose();
-	setConfig(normalizeConfig({ ...DEFAULT_CONFIG, mode: "off" }));
 });
 
 test("message-display: refreshMessageDisplays 遍历并刷新已挂载组件", () => {

@@ -94,6 +94,7 @@ export async function executeWriteWithMetadata(
 			await mkdir(dirname(absolutePath), { recursive: true });
 			throwIfAborted();
 			await writeFile(absolutePath, params.content, "utf8");
+			// 写入后不再检查 abort：文件已变更，必须如实报告成功
 			store.set(toolCallId, metadata);
 			return {
 				content: [

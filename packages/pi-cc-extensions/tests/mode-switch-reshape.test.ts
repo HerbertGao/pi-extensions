@@ -74,20 +74,6 @@ function textMsg(timestamp: number, text: string) {
 	} as unknown as AssistantMessage;
 }
 
-/** applyStyleMode 同款：collect → sync/refresh。emptyRoot 模拟面板扫空。 */
-function switchMode(
-	mode: "on" | "compact",
-	hooks: ReturnType<typeof installCompactMode>,
-	root: any,
-	opts: { emptyRoot?: boolean } = {},
-) {
-	config.mode = mode;
-	refreshCompactModeComponents(opts.emptyRoot ? { children: [] } : root);
-	if (mode === "compact") hooks.sync({ ui });
-	refreshCompactModeComponents(opts.emptyRoot ? { children: [] } : root);
-	hooks.refresh();
-}
-
 function withTempConfigDir() {
 	const dir = mkdtempSync(join(tmpdir(), "pi-mode-switch-"));
 	const prev = process.env.PI_CODING_AGENT_DIR;
@@ -118,6 +104,20 @@ function extensionRuntime() {
 		for (const handler of events.get(name) ?? []) await handler(event, ctx);
 	};
 	return { pi, emit, events };
+}
+
+/** applyStyleMode 同款：collect → sync/refresh。emptyRoot 模拟面板扫空。 */
+function switchMode(
+	mode: "on" | "compact",
+	hooks: ReturnType<typeof installCompactMode>,
+	root: any,
+	opts: { emptyRoot?: boolean } = {},
+) {
+	config.mode = mode;
+	refreshCompactModeComponents(opts.emptyRoot ? { children: [] } : root);
+	if (mode === "compact") hooks.sync({ ui });
+	refreshCompactModeComponents(opts.emptyRoot ? { children: [] } : root);
+	hooks.refresh();
 }
 
 // ─── live on ↔ compact ───────────────────────────────────────────────
@@ -253,72 +253,43 @@ test("round accumulation survives on → compact switch", () => {
 	}
 });
 
-// ─── extension: reload / resume / session_tree ───────────────────────
-
-test("extension reload: second install reshapes under current mode without recursion", async () => {
-	const tmp = withTempConfigDir();
+test("messages created while mode=on stay tracked for later compact switch", () => {
 	const previous = config.mode;
-	const { pi: pi1, emit: emit1 } = extensionRuntime();
-	const { pi: pi2, emit: emit2 } = extensionRuntime();
-	const ctx = {
-		mode: "tui",
-		hasUI: true,
-		sessionManager: { getBranch: () => [], getEntries: () => [] },
-		ui: {
-			theme: ui.theme,
-			setStatus() {},
-			notify() {},
-			requestRender() {},
-			setWidget(_k: string, factory: any) {
-				if (typeof factory === "function") {
-					factory({
-						getMountedRoots: () => [],
-						requestRender() {},
-						terminal: { write() {} },
-					});
-				}
-			},
-			onTerminalInput: () => () => {},
-			getToolsExpanded: () => false,
+	config.mode = "on";
+	const hooks = installCompactMode({
+		query: {
+			getMessageThinkingDurationMs: () => 1000,
+			isMessageThinkingActive: () => false,
 		},
-	};
+		writeMetadata: new WriteExecutionMetadataStore(),
+	});
 	try {
-		config.mode = "on";
-		claudeCodeStyleExtension(pi1, { mode: "on" });
-		await emit1("session_start", {}, ctx);
+		// 先 refresh 一次（旧逻辑会在 on 下释放所有权；现应保持补丁）
+		hooks.refresh();
 
-		const msg = toolCallMsg(Date.now(), [{ id: "b1", name: "bash", args: { command: "echo" } }]);
+		const msg = toolCallMsg(10, [{ id: "g1", name: "grep", args: { pattern: "z" } }]);
 		const a1 = new AssistantMessageComponent(msg, true) as any;
 		a1.updateContent(msg);
-		const bash = tool("bash", "b1", { command: "echo" });
-		bash.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
-		assert.ok(renderText(bash).length > 0, "pre-reload on: tool visible");
+		const grep = tool("grep", "g1", { pattern: "z" });
+		grep.updateResult({ content: [{ type: "text", text: "hit" }], isError: false });
 
-		// 模拟 /reload：新模块安装替换补丁；mode 已是 compact
+		assert.ok(renderText(grep).length > 0);
+		assert.ok(!renderText(a1).some((l) => /grep×1/.test(l)));
+
+		// 不依赖树扫描：仅靠 live tracked
 		config.mode = "compact";
-		claudeCodeStyleExtension(pi2, { mode: "compact" });
-		await emit2("session_start", {}, ctx);
-		await new Promise((r) => setTimeout(r, 10));
+		hooks.sync({ ui });
+		hooks.refresh();
 
-		// reload 后旧实例被新补丁接管
-		a1.updateContent(msg);
-		bash.updateDisplay();
-		assert.match(renderText(a1).join("\n"), /bash×1/);
-		assert.deepEqual(renderText(bash), []);
-
-		await emit1("session_shutdown", {}, ctx);
-		// 旧 shutdown 不得拆掉新补丁
-		a1.updateContent(msg);
-		assert.match(renderText(a1).join("\n"), /bash×1/);
-
-		await emit2("session_shutdown", {}, ctx);
+		assert.match(renderText(a1).join("\n"), /1s, grep×1/);
+		assert.deepEqual(renderText(grep), []);
 	} finally {
 		config.mode = previous;
-		await emit1("session_shutdown", {}, ctx).catch(() => {});
-		await emit2("session_shutdown", {}, ctx).catch(() => {});
-		tmp.restore();
+		hooks.shutdown();
 	}
 });
+
+// ─── extension: reload / resume / session_tree ───────────────────────
 
 test("resume (session_tree) under compact rebuilds summary over compact-thinking", async () => {
 	const tmp = withTempConfigDir();
@@ -369,7 +340,9 @@ test("resume (session_tree) under compact rebuilds summary over compact-thinking
 		await emit("session_tree", {}, ctx);
 		refreshMountedTranscript(tui);
 
-		const lines = renderText(a1);
+		// 上游 0.9.9 尾行模型：回合摘要挂为容器里的尾行兄弟而非锚点内部；
+		// 在 transcript 容器层捕获，断言与挂载模型无关。
+		const lines = renderText(parent);
 		assert.ok(
 			lines.some((l) => /bash×1/.test(l) && /read×1/.test(l)),
 			`resume summary must count tools, got: ${JSON.stringify(lines)}`,
@@ -429,47 +402,12 @@ test("resume under on, then switch to compact via refresh path", async () => {
 		await emit("session_tree", {}, ctx);
 		refreshMountedTranscript(tui);
 
-		assert.match(renderText(a1).join("\n"), /bash×1/);
+		// 尾行模型下摘要在容器尾行兄弟上；容器层捕获，断言与挂载模型无关。
+		assert.match(renderText(parent).join("\n"), /bash×1/);
 		assert.deepEqual(renderText(bash), []);
 	} finally {
 		config.mode = previous;
 		await emit("session_shutdown", {}, ctx);
 		tmp.restore();
-	}
-});
-
-test("messages created while mode=on stay tracked for later compact switch", () => {
-	const previous = config.mode;
-	config.mode = "on";
-	const hooks = installCompactMode({
-		query: {
-			getMessageThinkingDurationMs: () => 1000,
-			isMessageThinkingActive: () => false,
-		},
-		writeMetadata: new WriteExecutionMetadataStore(),
-	});
-	try {
-		// 先 refresh 一次（旧逻辑会在 on 下释放所有权；现应保持补丁）
-		hooks.refresh();
-
-		const msg = toolCallMsg(10, [{ id: "g1", name: "grep", args: { pattern: "z" } }]);
-		const a1 = new AssistantMessageComponent(msg, true) as any;
-		a1.updateContent(msg);
-		const grep = tool("grep", "g1", { pattern: "z" });
-		grep.updateResult({ content: [{ type: "text", text: "hit" }], isError: false });
-
-		assert.ok(renderText(grep).length > 0);
-		assert.ok(!renderText(a1).some((l) => /grep×1/.test(l)));
-
-		// 不依赖树扫描：仅靠 live tracked
-		config.mode = "compact";
-		hooks.sync({ ui });
-		hooks.refresh();
-
-		assert.match(renderText(a1).join("\n"), /1s, grep×1/);
-		assert.deepEqual(renderText(grep), []);
-	} finally {
-		config.mode = previous;
-		hooks.shutdown();
 	}
 });

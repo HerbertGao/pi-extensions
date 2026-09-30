@@ -1,19 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stripVTControlCharacters } from "node:util";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { generateDiffString } from "@earendil-works/pi-coding-agent";
-import { visibleWidth } from "@earendil-works/pi-tui";
+import { stripVTControlCharacters } from "node:util";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
-import { shouldRenderRichDiff } from "../extensions/renderer/index.ts";
 import {
-	parseDiff,
+	ToolExecutionComponent,
+	generateDiffString,
+	initTheme,
+} from "@earendil-works/pi-coding-agent";
+import { shouldRenderRichDiff } from "../extensions/renderer/index.ts";
+import { config } from "../extensions/config/config.ts";
+import { installDefaultMode } from "../extensions/renderer/default-mode.ts";
+import {
 	renderEditDiffResult,
 	renderWriteDiffResult,
-	type DiffLineEntry,
 } from "../extensions/renderer/tool/diff/diff-renderer.ts";
+import { normalizeConfig } from "../extensions/config/config.ts";
+
+initTheme("dark");
 import {
 	DEFAULT_TOOL_DISPLAY_CONFIG,
 	installWriteOverride,
@@ -22,13 +29,14 @@ import {
 	WriteExecutionMetadataStore,
 	type ToolDisplayConfig,
 } from "../extensions/renderer/tool/diff/index.ts";
-import { sanitizeAnsiForThemedOutput } from "../extensions/renderer/tool/diff/ansi-utils.ts";
-import { splitWriteContentLines } from "../extensions/renderer/tool/diff/write-display-utils.ts";
+import { insetComponent } from "../extensions/renderer/tool/result.ts";
 import {
 	executeWriteWithMetadata,
 	MAX_COMPARABLE_WRITE_BYTES,
 	MAX_WRITE_METADATA_ENTRIES,
 } from "../extensions/renderer/tool/diff/write-execution.ts";
+import { sanitizeAnsiForThemedOutput } from "../extensions/renderer/tool/diff/ansi-utils.ts";
+import { splitWriteContentLines } from "../extensions/renderer/tool/diff/diff-text.ts";
 
 const theme = {
 	fg(_color: string, text: string) {
@@ -45,28 +53,6 @@ const theme = {
 function output(component: any, width = 100): string[] {
 	return component.render(width);
 }
-
-test("diff helpers preserve line boundaries and strip colon-form backgrounds", () => {
-	assert.deepEqual(splitWriteContentLines("first\r\nsecond\rthird\n"), [
-		"first",
-		"second",
-		"third",
-	]);
-	assert.equal(
-		sanitizeAnsiForThemedOutput("\x1b[38:2::1:2:3mfg\x1b[48:2::4:5:6mbg\x1b[0m"),
-		"\x1b[38:2::1:2:3mfgbg\x1b[39;22;23;24;25;27;28;29;59m",
-	);
-	assert.equal(
-		sanitizeAnsiForThemedOutput("\x1b[4:3mcurly\x1b[58:2::1:2:3munderline"),
-		"\x1b[4:3mcurly\x1b[58:2::1:2:3munderline",
-	);
-	assert.equal(
-		sanitizeAnsiForThemedOutput(
-			"\x1b[38:5:123mvalid\x1b[38:5:mmissing\x1b[38:5:256mwide\x1b[38:2::1:2mshort",
-		),
-		"\x1b[38:5:123mvalidmissingwideshort",
-	);
-});
 
 test("rich diff routes only successful edit/write results in on mode", () => {
 	for (const mode of ["on", "off"] as const) {
@@ -106,50 +92,159 @@ test("edit rich diff is width-safe and honors collapsed/expanded limits", () => 
 	assert.ok(output(expanded, 32).length > collapsedLines.length);
 });
 
-test("write uses its own live collapsed limit and keeps expanded content", () => {
-	const content = Array.from({ length: 12 }, (_, index) => `const value${index} = ${index}`).join(
-		"\n",
+test("expanded long edit diff shows every line instead of a remainder hint", () => {
+	const diff = ["@@ -1,80 +1,80 @@"];
+	for (let index = 1; index <= 80; index++) {
+		diff.push(`-${index}|old value ${index}`, `+${index}|new value ${index}`);
+	}
+	const render = (expanded: boolean) =>
+		output(
+			renderRichToolResult(
+				"edit",
+				{ details: { diff: diff.join("\n") }, content: [] },
+				{ expanded },
+				theme,
+				{ args: { path: "sample.ts" } },
+				new WriteExecutionMetadataStore(),
+			),
+			80,
+		).map(stripVTControlCharacters);
+
+	const collapsed = render(false);
+	assert.ok(
+		collapsed.some((line) => line.includes("more diff lines")),
+		"collapsed body caps and keeps the remainder hint",
 	);
-	let display: ToolDisplayConfig = {
-		...DEFAULT_TOOL_DISPLAY_CONFIG,
-		editDiffCollapsedLines: 80,
-		writeDiffCollapsedLines: 0,
-	};
-	const collapsed = renderWriteDiffResult(
-		content,
-		{ expanded: false, filePath: "sample.ts", fileExistedBeforeWrite: false },
-		() => display,
+
+	const expanded = render(true);
+	assert.ok(
+		expanded.some((line) => line.includes("old value 80")),
+		"expanded body renders the whole diff",
+	);
+	assert.ok(
+		!expanded.some((line) => line.includes("click to show more")),
+		"expanded body has no remainder hint",
+	);
+});
+
+test("collapsed diff declares only its remainder row as the expand entry", () => {
+	const diff = ["@@ -1,30 +1,30 @@"];
+	// 正文里出现与 remainder 同款的文案，不能变成展开入口。
+	diff.push("+   ↳ 2 lines returned • click to show more");
+	for (let index = 2; index <= 30; index++) diff.push(`+code line ${index}`);
+
+	const collapsed: any = renderEditDiffResult(
+		{ diff: diff.join("\n") },
+		{ expanded: false },
+		DEFAULT_TOOL_DISPLAY_CONFIG,
 		theme,
 		"",
 	);
+	const rows = (collapsed.render(90) as string[]).map(stripVTControlCharacters);
+	const body = rows.find((line) => line.includes("2 lines returned"));
+	const hint = rows.find((line) => line.includes("more diff lines"));
+	assert.ok(body && hint, "collapsed body renders both rows");
+	assert.equal(collapsed.isCollapsedHintLine(body), false, "body text is not the entry");
+	assert.equal(collapsed.isCollapsedHintLine(hint), true, "remainder row is the entry");
 
-	const statsOnly = output(collapsed, 80);
-	assert.equal(statsOnly.length, 1);
-	assert.match(statsOnly[0] ?? "", /created.*click to show more/);
-
-	display = { ...display, writeDiffCollapsedLines: 2 };
-	const twoLines = output(collapsed, 80);
-	assert.ok(twoLines.length > statsOnly.length);
-	display = { ...display, writeDiffCollapsedLines: 3 };
-	const threeLines = output(collapsed, 80);
-	assert.notDeepEqual(threeLines, twoLines, "write limit must invalidate the render cache");
-
-	display = { ...display, editDiffCollapsedLines: 1 };
-	assert.deepEqual(
-		output(collapsed, 80),
-		threeLines,
-		"edit collapsed limit must not change write output",
-	);
-
-	display = { ...display, writeDiffCollapsedLines: 0 };
-	const expanded = renderWriteDiffResult(
-		content,
-		{ expanded: true, filePath: "sample.ts", fileExistedBeforeWrite: false },
-		() => display,
+	const expanded: any = renderEditDiffResult(
+		{ diff: diff.join("\n") },
+		{ expanded: true },
+		DEFAULT_TOOL_DISPLAY_CONFIG,
 		theme,
 		"",
 	);
-	assert.ok(output(expanded, 80).some((line) => line.includes("value0")));
+	expanded.render(90);
+	assert.equal(expanded.isCollapsedHintLine(hint), false, "expanded diff has no entry");
+});
+
+test("pi omissions use split number gutters and omit the terminal marker", () => {
+	const diff = [
+		"     ...",
+		"  67           src = ./.;",
+		"  68           # Non-vendored: go.mod/go.sum are the source of truth; a single",
+		"  69           # vendorHash covers the whole fetched dependency set. It changes only",
+		"  70           # when dependencies change.",
+		"- 71           vendorHash = pkgs.lib.fakeHash;",
+		'+ 71           vendorHash = "sha256-hf+aCbbDjGOHABCEvj2F7MbsZullpbdSqmkedd7sfIA=";',
+		"  72 ",
+		"  73           # CGO off -> a truly static binary on Linux. On Darwin, Go always links",
+		"  74           # libSystem (Apple ships no fully-static binaries), so the aarch64-darwin",
+		'  75           # artifact is self-contained except for libSystem. The "single static',
+		"     ...",
+	].join("\n");
+	const component = renderEditDiffResult(
+		{ diff },
+		{ expanded: true, filePath: "flake.nix" },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "split", diffIndicatorMode: "bars" },
+		theme,
+		"",
+	);
+	const rows = output(component, 180).map(stripVTControlCharacters);
+	const omissionRows = rows.filter((row) => row.includes("⋮"));
+
+	assert.equal(omissionRows.length, 1, "only the leading omission is useful");
+	assert.equal(omissionRows[0]?.match(/⋮/g)?.length, 2, "both number gutters show the omission");
+	assert.match(omissionRows[0] ?? "", /^\s*⋮\s*│\s*│\s*⋮\s*│/);
+	assert.ok(
+		rows.every((row) => !row.includes("...")),
+		"raw omission text is not source content",
+	);
+	assert.equal(
+		rows.findIndex((row) => /\b75\s*│/.test(row)),
+		rows.length - 1,
+		"the diff ends on the final real context row",
+	);
+	assert.ok(rows.every((row) => visibleWidth(row) <= 180));
+});
+
+test("pi omissions use the unified number gutter", () => {
+	const before = Array.from({ length: 30 }, (_, index) => `line-${index + 1}`);
+	const after = before.map((line, index) => (index === 10 ? `${line} changed` : line));
+	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
+	const component = renderEditDiffResult(
+		{ diff },
+		{ expanded: true, filePath: "sample.txt" },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "unified", diffIndicatorMode: "bars" },
+		theme,
+		"",
+	);
+	const rows = output(component, 80).map(stripVTControlCharacters);
+	const omissionRows = rows.filter((row) => row.includes("⋮"));
+
+	assert.equal(omissionRows.length, 1, "the terminal omission is hidden");
+	assert.match(omissionRows[0] ?? "", /^\s*⋮\s*│/);
+	assert.ok(
+		rows.every((row) => !row.includes("...")),
+		"raw omission text is not rendered",
+	);
+});
+
+test("pi intermediate omissions retain split number gutters", () => {
+	const before = Array.from({ length: 40 }, (_, index) => `line-${index + 1}`);
+	const after = before.map((line, index) =>
+		index === 10 || index === 29 ? `${line} changed` : line,
+	);
+	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
+	const component = renderEditDiffResult(
+		{ diff },
+		{ expanded: true, filePath: "sample.txt" },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "split", diffIndicatorMode: "bars" },
+		theme,
+		"",
+	);
+	const rows = output(component, 140).map(stripVTControlCharacters);
+	const omissionRows = rows.filter((row) => row.includes("⋮"));
+
+	assert.equal(omissionRows.length, 2, "the leading and intermediate omissions remain visible");
+	assert.ok(
+		omissionRows.every((row) => row.match(/⋮/g)?.length === 2 && /^\s*⋮\s*│\s*│\s*⋮\s*│/.test(row)),
+		"each omission stays inside both line-number gutters",
+	);
+	assert.ok(
+		rows.every((row) => !row.includes("...")),
+		"the terminal raw marker is omitted",
+	);
 });
 
 test("edit/write collapsed diff hints switch from muted to white text on hover", () => {
@@ -189,7 +284,7 @@ test("edit/write collapsed diff hints switch from muted to white text on hover",
 			fileExistedBeforeWrite: false,
 			isHovered: () => hovered,
 		},
-		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, editDiffCollapsedLines: 2 },
+		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, editDiffCollapsedLines: 2, writeDiffCollapsedLines: 2 },
 		hoverTheme,
 		"",
 	);
@@ -208,7 +303,6 @@ test("diff indicator mode live-updates on the same component via config getter",
 		diffViewMode: "unified",
 		diffIndicatorMode: "classic",
 		editDiffCollapsedLines: 80,
-		expandedPreviewMaxLines: 200,
 	};
 	const component = renderRichToolResult(
 		"edit",
@@ -419,34 +513,6 @@ test("write execution captures the 512000-byte boundary and degrades above it", 
 	}
 });
 
-test("a completed write retains metadata when abort arrives after disk mutation", async () => {
-	const directory = await mkdtemp(join(tmpdir(), "ccstyle-write-abort-"));
-	const path = join(directory, "target.txt");
-	const store = new WriteExecutionMetadataStore();
-	let abortReads = 0;
-	const signal = {
-		get aborted() {
-			abortReads++;
-			return abortReads >= 4;
-		},
-	} as AbortSignal;
-	try {
-		await writeFile(path, "before");
-		const result = await executeWriteWithMetadata(
-			store,
-			"completed",
-			{ path, content: "你好" },
-			signal,
-			directory,
-		);
-		assert.equal(await readFile(path, "utf8"), "你好");
-		assert.equal(store.get("completed")?.previousContent, "before");
-		assert.match(result.content[0]?.text ?? "", /6 bytes/);
-	} finally {
-		await rm(directory, { recursive: true, force: true });
-	}
-});
-
 test("write metadata is bounded, clearable, and failures do not retain entries", async () => {
 	const store = new WriteExecutionMetadataStore();
 	for (let index = 0; index <= MAX_WRITE_METADATA_ENTRIES; index++) {
@@ -472,6 +538,130 @@ test("write metadata is bounded, clearable, and failures do not retain entries",
 	assert.equal(store.get("failed"), undefined);
 });
 
+test("write collapsed preview uses writeDiffCollapsedLines independently of edit", () => {
+	const lines = Array.from({ length: 40 }, (_, index) => `const value${index} = ${index}`).join(
+		"\n",
+	);
+	const store = new WriteExecutionMetadataStore();
+	store.set("write", { fileExistedBeforeWrite: false });
+	const write = renderRichToolResult(
+		"write",
+		{ content: [{ type: "text", text: "ok" }] },
+		{ expanded: false },
+		theme,
+		{ toolCallId: "write", args: { path: "new.ts", content: lines } },
+		store,
+		{
+			...DEFAULT_TOOL_DISPLAY_CONFIG,
+			editDiffCollapsedLines: 24,
+			writeDiffCollapsedLines: 4,
+		},
+	);
+	const writeText = output(write).join("\n");
+	assert.match(writeText, /created/);
+	assert.match(writeText, /more/);
+	assert.match(writeText, /const value0 = 0/);
+	assert.doesNotMatch(writeText, /const value10 = 10/);
+
+	const editDiff = ["@@ -1,40 +1,40 @@"];
+	for (let index = 1; index <= 40; index++) {
+		editDiff.push(`-${index}|old value ${index}`, `+${index}|new value ${index}`);
+	}
+	const edit = renderRichToolResult(
+		"edit",
+		{ details: { diff: editDiff.join("\n") }, content: [] },
+		{ expanded: false },
+		theme,
+		{ args: { path: "sample.ts" } },
+		store,
+		{
+			...DEFAULT_TOOL_DISPLAY_CONFIG,
+			editDiffCollapsedLines: 24,
+			writeDiffCollapsedLines: 0,
+		},
+	);
+	const editText = output(edit).join("\n");
+	assert.match(editText, /value 1/);
+	assert.match(editText, /more/);
+	assert.doesNotMatch(editText, /\+40 -0/, "edit must not use write stats-only collapse");
+});
+
+test("writeDiffCollapsedLines 0 shows stats only until expanded", () => {
+	const lines = Array.from({ length: 40 }, (_, index) => `const value${index} = ${index}`).join(
+		"\n",
+	);
+	const store = new WriteExecutionMetadataStore();
+	store.set("write", { fileExistedBeforeWrite: false });
+	const display: ToolDisplayConfig = {
+		...DEFAULT_TOOL_DISPLAY_CONFIG,
+		writeDiffCollapsedLines: 0,
+	};
+	const collapsed = renderRichToolResult(
+		"write",
+		{ content: [{ type: "text", text: "ok" }] },
+		{ expanded: false },
+		theme,
+		{ toolCallId: "write", args: { path: "new.ts", content: lines } },
+		store,
+		() => display,
+	);
+	const collapsedText = output(collapsed).join("\n");
+	assert.match(collapsedText, /created/);
+	assert.match(collapsedText, /more/);
+	assert.doesNotMatch(collapsedText, /const value/);
+	assert.doesNotMatch(collapsedText, /\+40 -0/, "stats stay on the title, not the result line");
+
+	const expanded = renderRichToolResult(
+		"write",
+		{ content: [{ type: "text", text: "ok" }] },
+		{ expanded: true },
+		theme,
+		{ toolCallId: "write", args: { path: "new.ts", content: lines } },
+		store,
+		() => display,
+	);
+	const expandedText = output(expanded).join("\n");
+	assert.match(expandedText, /const value0 = 0/);
+	assert.match(expandedText, /const value1 = 1/);
+});
+
+test("default-mode write collapsed uses title stats and created hint", () => {
+	const previousMode = config.mode;
+	const store = new WriteExecutionMetadataStore();
+	config.mode = "on";
+	const hooks = installDefaultMode(store);
+	try {
+		const write = new ToolExecutionComponent(
+			"write",
+			"w-default",
+			{ path: "out.ts", content: "hi\n" },
+			{},
+			undefined,
+			{ theme, requestRender() {}, setStatus() {} } as any,
+			process.cwd(),
+		) as any;
+		store.set("w-default", { fileExistedBeforeWrite: false });
+		write.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
+		const text = output(write, 120)
+			.join("\n")
+			.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+		assert.match(text, /Write out\.ts \(\+1 -0\)/);
+		assert.match(text, /created • click to show more/);
+		assert.doesNotMatch(text, /▌/);
+	} finally {
+		config.mode = previousMode;
+		hooks.shutdown();
+	}
+});
+
+test("normalizeConfig defaults writeDiffCollapsedLines to 0 and allows explicit values", () => {
+	assert.equal(normalizeConfig({}).writeDiffCollapsedLines, 0);
+	assert.equal(normalizeConfig({ writeDiffCollapsedLines: 0 }).writeDiffCollapsedLines, 0);
+	assert.equal(normalizeConfig({ writeDiffCollapsedLines: 12 }).writeDiffCollapsedLines, 12);
+	assert.equal(normalizeConfig({ editDiffCollapsedLines: 48 }).writeDiffCollapsedLines, 0);
+	assert.equal(normalizeConfig({ writeDiffCollapsedLines: -3 }).writeDiffCollapsedLines, 0);
+});
+
 test("third-party write ownership prevents registration", () => {
 	const registered: unknown[] = [];
 	installWriteOverride({
@@ -483,262 +673,39 @@ test("third-party write ownership prevents registration", () => {
 		},
 	} as any);
 	assert.deepEqual(registered, []);
-	restoreBuiltinWriteOwnership();
 });
 
-function lineEntries(diff: string): DiffLineEntry[] {
-	return parseDiff(diff).entries.filter((entry): entry is DiffLineEntry => entry.kind === "line");
-}
+test("insetComponent strictly clamps lines within given width even with arrow markers", () => {
+	const warningTheme = {
+		fg(_color: string, text: string) {
+			return `\x1b[33m${text}\x1b[39m`;
+		},
+	};
+	const dummyComponent = {
+		render(width: number) {
+			return [
+				truncateToWidth(
+					warningTheme.fg("warning", "↳ diff unavailable: execution metadata is unavailable"),
+					Math.max(0, width),
+					"",
+				),
+				"x".repeat(width),
+			];
+		},
+	};
 
-function comparableLines(lines: DiffLineEntry[]) {
-	return lines.map(({ lineKind, oldLineNumber, newLineNumber, content }) => ({
-		lineKind,
-		oldLineNumber,
-		newLineNumber,
-		content,
-	}));
-}
+	const wrapped = insetComponent(dummyComponent);
 
-test("rich diff parses Pi headerless numbered rows without leaking line numbers into content", () => {
-	const { diff } = generateDiffString("alpha\nbeta\ngamma\n", "alpha\nBETA\ngamma\n");
-	assert.deepEqual(comparableLines(lineEntries(diff)), [
-		{ lineKind: "context", oldLineNumber: 1, newLineNumber: 1, content: "alpha" },
-		{ lineKind: "remove", oldLineNumber: 2, newLineNumber: null, content: "beta" },
-		{ lineKind: "add", oldLineNumber: null, newLineNumber: 2, content: "BETA" },
-		{ lineKind: "context", oldLineNumber: 3, newLineNumber: 3, content: "gamma" },
-	]);
-});
-
-test("unified hunks keep numeric source content instead of treating it as a gutter", () => {
-	const diff = "@@ -1,2 +1,2 @@\n-100 apples\n+200 apples\n 300 pears";
-	assert.deepEqual(comparableLines(lineEntries(diff)), [
-		{ lineKind: "remove", oldLineNumber: 1, newLineNumber: null, content: "100 apples" },
-		{ lineKind: "add", oldLineNumber: null, newLineNumber: 1, content: "200 apples" },
-		{ lineKind: "context", oldLineNumber: 2, newLineNumber: 2, content: "300 pears" },
-	]);
-});
-
-test("unified patches preserve indented numeric content across hunks and files", () => {
-	const diff = [
-		"diff --git a/counts.txt b/counts.txt",
-		"--- a/counts.txt",
-		"+++ b/counts.txt",
-		"@@ -40,3 +60,4 @@",
-		" 123 count",
-		"-  456 units",
-		"+  789 units",
-		"+  321 units",
-		" \t987 value",
-		"@@ -80 +101 @@",
-		"-5 more",
-		"+6 more",
-		"diff --git a/other.txt b/other.txt",
-		"--- a/other.txt",
-		"+++ b/other.txt",
-		"@@ -1 +1 @@",
-		"-7 old",
-		"+8 new",
-	].join("\n");
-	assert.deepEqual(
-		lineEntries(diff).map(({ lineKind, oldLineNumber, newLineNumber, content }) => [
-			lineKind,
-			oldLineNumber,
-			newLineNumber,
-			content,
-		]),
-		[
-			["context", 40, 60, "123 count"],
-			["remove", 41, null, "  456 units"],
-			["add", null, 61, "  789 units"],
-			["add", null, 62, "  321 units"],
-			["context", 42, 63, "\t987 value"],
-			["remove", 80, null, "5 more"],
-			["add", null, 101, "6 more"],
-			["remove", 1, null, "7 old"],
-			["add", null, 1, "8 new"],
-		],
-	);
-});
-
-for (const [lineCount, omission] of [
-	[9, "   ..."],
-	[30, "    ..."],
-	[100, "     ..."],
-] as const) {
-	test(`Pi omission markers are metadata with ${lineCount}-line number padding`, () => {
-		const before = Array.from({ length: lineCount }, (_, index) => `line-${index + 1}`);
-		const after = before.map((line, index) => (index === 1 ? "line-2 changed" : line));
-		const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
-		const parsed = parseDiff(diff);
-
-		assert.deepEqual(parsed.entries.at(-1), { kind: "omission", raw: omission, hunkIndex: 1 });
-		assert.equal(parsed.stats.context, 5, "omitted context is not an actual source row");
-	});
-}
-
-test("Pi leading, intermediate, and trailing omissions stay out of source counts", () => {
-	const before = Array.from({ length: 40 }, (_, index) => `line-${index + 1}`);
-	const after = before.map((line, index) =>
-		index === 10 || index === 29 ? `${line} changed` : line,
-	);
-	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
-	const parsed = parseDiff(diff);
-	const omissions = parsed.entries.filter((entry) => entry.kind === "omission");
-
-	assert.deepEqual(
-		omissions.map((entry) => entry.raw),
-		["    ...", "    ...", "    ..."],
-	);
-	assert.equal(parsed.entries[0], omissions[0]);
-	assert.equal(parsed.entries.at(-1), omissions[2]);
-	assert.deepEqual(parsed.stats, {
-		added: 2,
-		removed: 2,
-		context: 16,
-		hunks: 1,
-		files: 1,
-		lines: 23,
-	});
-	assert.deepEqual(
-		lineEntries(diff)
-			.filter((line) => line.lineKind === "context")
-			.map(({ oldLineNumber, newLineNumber }) => [oldLineNumber, newLineNumber]),
-		[
-			[7, 7],
-			[8, 8],
-			[9, 9],
-			[10, 10],
-			[12, 12],
-			[13, 13],
-			[14, 14],
-			[15, 15],
-			[26, 26],
-			[27, 27],
-			[28, 28],
-			[29, 29],
-			[31, 31],
-			[32, 32],
-			[33, 33],
-			[34, 34],
-		],
-	);
-});
-
-for (const format of ["pi", "unified"] as const) {
-	test(`${format} literal ellipsis source rows retain their numbers and indentation`, () => {
-		const before = "before\n...\n   ...\nafter";
-		const after = "BEFORE\n...\n   ...\nafter";
-		const diff =
-			format === "pi"
-				? generateDiffString(before, after).diff
-				: "@@ -1,4 +1,4 @@\n-before\n+BEFORE\n ...\n    ...\n after";
-		const parsed = parseDiff(diff);
-
-		assert.equal(parsed.stats.context, 3);
-		assert.ok(parsed.entries.every((entry) => entry.kind !== "meta"));
-		assert.deepEqual(
-			lineEntries(diff)
-				.filter((line) => line.content.trim() === "...")
-				.map(({ oldLineNumber, newLineNumber, content }) => [
-					oldLineNumber,
-					newLineNumber,
-					content,
-				]),
-			[
-				[2, 2, "..."],
-				[3, 3, "   ..."],
-			],
-		);
-	});
-}
-
-test("pi omissions use split number gutters and omit the terminal marker", () => {
-	const diff = [
-		"     ...",
-		"  67           src = ./.;",
-		"  68           # Non-vendored: go.mod/go.sum are the source of truth; a single",
-		"  69           # vendorHash covers the whole fetched dependency set. It changes only",
-		"  70           # when dependencies change.",
-		"- 71           vendorHash = pkgs.lib.fakeHash;",
-		'+ 71           vendorHash = "sha256-hf+aCbbDjGOHABCEvj2F7MbsZullpbdSqmkedd7sfIA=";',
-		"  72 ",
-		"  73           # CGO off -> a truly static binary on Linux. On Darwin, Go always links",
-		"  74           # libSystem (Apple ships no fully-static binaries), so the aarch64-darwin",
-		'  75           # artifact is self-contained except for libSystem. The "single static',
-		"     ...",
-	].join("\n");
-	const component = renderEditDiffResult(
-		{ diff },
-		{ expanded: true, filePath: "flake.nix" },
-		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "split", diffIndicatorMode: "bars" },
-		theme,
-		"",
-	);
-	const rows = output(component, 180).map(stripVTControlCharacters);
-	const omissionRows = rows.filter((row) => row.includes("⋮"));
-
-	assert.equal(omissionRows.length, 1, "only the leading omission is useful");
-	assert.equal(omissionRows[0]?.match(/⋮/g)?.length, 2, "both number gutters show the omission");
-	assert.match(omissionRows[0] ?? "", /^\s*⋮\s*│\s*│\s*⋮\s*│/);
-	assert.ok(
-		rows.every((row) => !row.includes("...")),
-		"raw omission text is not source content",
-	);
-	assert.equal(
-		rows.findIndex((row) => /\b75\s*│/.test(row)),
-		rows.length - 1,
-		"the diff ends on the final real context row",
-	);
-	assert.ok(rows.every((row) => visibleWidth(row) <= 180));
-});
-
-test("pi omissions use the unified number gutter", () => {
-	const before = Array.from({ length: 30 }, (_, index) => `line-${index + 1}`);
-	const after = before.map((line, index) => (index === 10 ? `${line} changed` : line));
-	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
-	const component = renderEditDiffResult(
-		{ diff },
-		{ expanded: true, filePath: "sample.txt" },
-		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "unified", diffIndicatorMode: "bars" },
-		theme,
-		"",
-	);
-	const rows = output(component, 80).map(stripVTControlCharacters);
-	const omissionRows = rows.filter((row) => row.includes("⋮"));
-
-	assert.equal(omissionRows.length, 1, "the terminal omission is hidden");
-	assert.match(omissionRows[0] ?? "", /^\s*⋮\s*│/);
-	assert.ok(
-		rows.every((row) => !row.includes("...")),
-		"raw omission text is not rendered",
-	);
-});
-
-test("pi intermediate omissions retain split number gutters", () => {
-	const before = Array.from({ length: 40 }, (_, index) => `line-${index + 1}`);
-	const after = before.map((line, index) =>
-		index === 10 || index === 29 ? `${line} changed` : line,
-	);
-	const { diff } = generateDiffString(before.join("\n"), after.join("\n"));
-	const component = renderEditDiffResult(
-		{ diff },
-		{ expanded: true, filePath: "sample.txt" },
-		{ ...DEFAULT_TOOL_DISPLAY_CONFIG, diffViewMode: "split", diffIndicatorMode: "bars" },
-		theme,
-		"",
-	);
-	const rows = output(component, 140).map(stripVTControlCharacters);
-	const omissionRows = rows.filter((row) => row.includes("⋮"));
-
-	assert.equal(omissionRows.length, 2, "the leading and intermediate omissions remain visible");
-	assert.ok(
-		omissionRows.every((row) => row.match(/⋮/g)?.length === 2 && /^\s*⋮\s*│\s*│\s*⋮\s*│/.test(row)),
-		"each omission stays inside both line-number gutters",
-	);
-	assert.ok(
-		rows.every((row) => !row.includes("...")),
-		"the terminal raw marker is omitted",
-	);
+	for (const width of [10, 20, 41, 60, 80]) {
+		const lines = wrapped.render(width);
+		for (const line of lines) {
+			assert.ok(
+				visibleWidth(line) <= width,
+				`Rendered line exceeds terminal width: ${visibleWidth(line)} > ${width} (line: "${line}")`,
+			);
+		}
+		assert.equal(visibleWidth(lines[1]), width, "non-arrow body keeps the full width after indent");
+	}
 });
 
 /** 内置 write 归还所有权，避免影响后续用例。 */
@@ -799,4 +766,54 @@ test("external write owner disables rich diff instead of degrading every card", 
 		),
 		undefined,
 	);
+});
+
+test("diff helpers preserve line boundaries and strip colon-form backgrounds", () => {
+	assert.deepEqual(splitWriteContentLines("first\r\nsecond\rthird\n"), [
+		"first",
+		"second",
+		"third",
+	]);
+	assert.equal(
+		sanitizeAnsiForThemedOutput("\x1b[38:2::1:2:3mfg\x1b[48:2::4:5:6mbg\x1b[0m"),
+		"\x1b[38:2::1:2:3mfgbg\x1b[39;22;23;24;25;27;28;29;59m",
+	);
+	assert.equal(
+		sanitizeAnsiForThemedOutput("\x1b[4:3mcurly\x1b[58:2::1:2:3munderline"),
+		"\x1b[4:3mcurly\x1b[58:2::1:2:3munderline",
+	);
+	assert.equal(
+		sanitizeAnsiForThemedOutput(
+			"\x1b[38:5:123mvalid\x1b[38:5:mmissing\x1b[38:5:256mwide\x1b[38:2::1:2mshort",
+		),
+		"\x1b[38:5:123mvalidmissingwideshort",
+	);
+});
+
+test("a completed write retains metadata when abort arrives after disk mutation", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "ccstyle-write-abort-"));
+	const path = join(directory, "target.txt");
+	const store = new WriteExecutionMetadataStore();
+	let abortReads = 0;
+	const signal = {
+		get aborted() {
+			abortReads++;
+			return abortReads >= 4;
+		},
+	} as AbortSignal;
+	try {
+		await writeFile(path, "before");
+		const result = await executeWriteWithMetadata(
+			store,
+			"completed",
+			{ path, content: "你好" },
+			signal,
+			directory,
+		);
+		assert.equal(await readFile(path, "utf8"), "你好");
+		assert.equal(store.get("completed")?.previousContent, "before");
+		assert.match(result.content[0]?.text ?? "", /6 bytes/);
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
 });

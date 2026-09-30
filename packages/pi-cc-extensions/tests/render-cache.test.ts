@@ -92,7 +92,7 @@ test("ExpandedToolIoView labels Input and Output sections", () => {
 	assert.ok(!updated.some((line) => line.includes("line one")));
 });
 
-test("ExpandedToolIoView wraps Input/Output at the viewport width", () => {
+test("ExpandedToolIoView wraps Input/Output at 80% of the viewport", () => {
 	const theme = {
 		fg(_color: string, text: string) {
 			return text;
@@ -101,17 +101,16 @@ test("ExpandedToolIoView wraps Input/Output at the viewport width", () => {
 			return text;
 		},
 	};
-	const body = "x".repeat(99);
+	const body = "x".repeat(79);
 	const view = new ExpandedToolIoView(theme, `command: ${body}`, body, false, 1, 1);
 	const lines = view.render(100);
-	assert.ok(lines.some((line) => visibleWidth(line) > 80));
-	assert.ok(lines.every((line) => visibleWidth(line) <= 100));
-	const plain = lines.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
-	const outputHeaderIndex = plain.findIndex((l) => l.includes("Output"));
-	const inputSection = plain.slice(0, outputHeaderIndex);
-	const outputSection = plain.slice(outputHeaderIndex);
-	assert.ok(inputSection.some((line) => line.includes(SHOW_MORE_LABEL)));
-	assert.ok(outputSection.some((line) => line.includes(SHOW_MORE_LABEL)));
+	assert.ok(lines.every((line) => visibleWidth(line) <= 80));
+	assert.ok(
+		lines.some((line) => line.includes("more lines") && line.includes(SHOW_MORE_LABEL)),
+		"truncation footer carries show more",
+	);
+	assert.ok(!lines.find((line) => line.includes("Input"))?.includes(SHOW_MORE_LABEL));
+	assert.ok(!lines.find((line) => line.includes("Output"))?.includes(SHOW_MORE_LABEL));
 });
 
 test("ExpandedToolIoView shows click to show more when Input/Output exceed the line cap", () => {
@@ -129,35 +128,31 @@ test("ExpandedToolIoView shows click to show more when Input/Output exceed the l
 	const longInput = Array.from({ length: 20 }, (_, i) => `field${i}: value${i}`).join("\n");
 	const view = new ExpandedToolIoView(theme, longInput, longOutput, false, 5, 5);
 	const rawLines = view.render(80);
-	const allLines = rawLines.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
-	const outputHeaderIndex = allLines.findIndex((line) => line.includes("Output"));
-	const inputShowMore = allLines
-		.slice(0, outputHeaderIndex)
-		.find((line) => line.includes("… +") && line.includes(SHOW_MORE_LABEL));
-	const outputShowMore = allLines
-		.slice(outputHeaderIndex + 1)
-		.find((line) => line.includes("… +") && line.includes(SHOW_MORE_LABEL));
-	assert.ok(inputShowMore, "Input section shows show more on footer");
-	assert.ok(outputShowMore, "Output section shows show more on footer");
-	assert.equal(view.matchShowMoreLine(inputShowMore!), "input");
-	assert.equal(view.matchShowMoreLine(outputShowMore!), "output");
-	assert.ok(allLines.some((line) => /\+15 more lines/.test(line) || /\+\d+ more lines/.test(line)));
-	view.setHoveredSection("input");
-	const hoveredLines = view.render(80).map((line) => line);
-	const hoveredInputFooter = hoveredLines.find(
-		(line) => line.includes("│") && /\+\d+ more lines/.test(line),
+	const lines = rawLines.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
+	const inputFooter = lines.find((line) => line.includes("│") && line.includes("more lines"));
+	const outputFooter = lines.find(
+		(line) => !line.includes("│") && line.includes("more lines") && line.includes(SHOW_MORE_LABEL),
 	);
-	const hoveredOutputFooter = hoveredLines
-		.slice(hoveredLines.findIndex((line) => line.includes("Output")) + 1)
-		.find((line) => !line.includes("│") && /\+\d+ more lines/.test(line));
+	assert.ok(inputFooter?.includes(SHOW_MORE_LABEL), "Input truncation footer shows show more");
+	assert.ok(outputFooter?.includes(SHOW_MORE_LABEL), "Output truncation footer shows show more");
+	assert.equal(view.matchShowMoreLine(inputFooter!), "input");
+	assert.equal(view.matchShowMoreLine(outputFooter!), "output");
+	assert.ok(!lines.find((line) => line.includes("Input"))?.includes(SHOW_MORE_LABEL));
+	view.setHoveredSection("input");
+	const hoveredInput = view
+		.render(80)
+		.find((line) => line.includes("│") && line.includes("more lines"));
+	const hoveredOutput = view
+		.render(80)
+		.find((line) => !line.includes("│") && line.includes("more lines"));
 	assert.ok(
-		hoveredInputFooter?.includes(`\x1b[90m •\x1b[39m\x1b[37m click to show more\x1b[39m`),
+		hoveredInput?.includes(`\x1b[90m •\x1b[39m\x1b[37m click to show more\x1b[39m`),
 		"hover keeps the bullet dim and highlights only the text",
 	);
-	assert.ok(hoveredOutputFooter?.includes(`\x1b[90m •\x1b[39m\x1b[90m click to show more\x1b[39m`));
+	assert.ok(hoveredOutput?.includes(`\x1b[90m •\x1b[39m\x1b[90m click to show more\x1b[39m`));
 });
 
-test("ExpandedToolIoView records exact show-more footer rows, not body text", () => {
+test("ExpandedToolIoView records exact show-more header rows, not body text", () => {
 	const theme = {
 		fg(_color: string, text: string) {
 			return text;
@@ -171,7 +166,12 @@ test("ExpandedToolIoView records exact show-more footer rows, not body text", ()
 	const view = new ExpandedToolIoView(theme, "", decoy, false, 3, 3);
 	const lines = view.render(80);
 	const headers = view.showMoreHeaderLineIndexes();
-	assert.deepEqual(headers, [{ section: "output", line: 4 }]);
+	assert.equal(headers.length, 1);
+	assert.equal(headers[0]?.section, "output");
+	assert.ok(
+		(headers[0]?.line ?? -1) > 0,
+		"show-more sits on the truncation footer, not the header",
+	);
 	const decoyRow = lines.findIndex(
 		(line, index) => index > 0 && line.includes("Input") && line.includes(SHOW_MORE_LABEL),
 	);

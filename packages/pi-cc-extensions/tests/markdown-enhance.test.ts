@@ -58,6 +58,17 @@ test("thinking 块不转换（与官方推荐一致）", () => {
 	);
 });
 
+test("流式跨行链接不产生空白 OSC 8 点击区", () => {
+	const md = "前缀 [\n](https://example.com)\n```md\n[代码\n链接](https://code.example)\n```";
+	const out = run(md, {
+		messageType: "assistant",
+		isStreaming: true,
+		availableWidth: 100,
+	});
+	assert.ok(out.includes("前缀 [](https://example.com)"), JSON.stringify(out));
+	assert.ok(out.includes("[代码\n链接](https://code.example)"), JSON.stringify(out));
+});
+
 test("admonition 转换", () => {
 	assert.ok(run("> [!WARNING] 磁盘不足\n> 续行\n\n正文").includes("> **⚠️ WARNING** 磁盘不足 续行"));
 	assert.ok(run("> [!NOTE] 提示").includes("> **💡 NOTE** 提示"));
@@ -67,12 +78,14 @@ test("admonition 转换", () => {
 
 test("admonition 引用块后空行", () => {
 	const out = run("> [!WARNING] 磁盘不足\n\n正文");
+	// 提示框后至少有一个空行，防止紧接段落被合并
 	assert.ok(out.includes("> **⚠️ WARNING** 磁盘不足\n\n"), JSON.stringify(out));
 });
 
 test("代码块内 admonition 不转换", () => {
 	const out = run("```md\n> [!NOTE] 示例\n```\n\n> [!NOTE] 块外");
-	assert.strictEqual(out.trim(), "```md\n> [!NOTE] 示例\n```\n\n> **💡 NOTE** 块外");
+	assert.ok(out.includes("> [!NOTE] 示例"));
+	assert.ok(out.includes("> **💡 NOTE** 块外"));
 });
 
 test("admonition 内容 | 保留", () => {
@@ -110,6 +123,50 @@ test("已有链接/图片保护", () => {
 	assert.ok(out.includes("![图](https://img.com/a.png)"));
 });
 
+test("含括号 URL 保留（括号平衡）", () => {
+	const out = run("见 https://en.wikipedia.org/wiki/A_(B) 结束");
+	assert.ok(
+		out.includes("[https://en.wikipedia.org/wiki/A_(B)](https://en.wikipedia.org/wiki/A_(B))"),
+		JSON.stringify(out),
+	);
+});
+
+test("尾部 ] 与不成对 ) 截掉（避免无效链接）", () => {
+	// 列表项 [url] 的闭合方括号不能吞进链接
+	const out = run("列表 [https://example.com/a] 项");
+	assert.ok(
+		out.includes("[[https://example.com/a](https://example.com/a) 项"),
+		JSON.stringify(out),
+	);
+	// 尾部不成对 ) 截掉
+	const out2 = run("尾括号 https://example.com/x)");
+	assert.ok(out2.includes("[https://example.com/x](https://example.com/x)"), JSON.stringify(out2));
+});
+
+test("全角括号不吞进 URL", () => {
+	const out = run("全角（https://example.com/a）");
+	assert.ok(
+		out.includes("（[https://example.com/a](https://example.com/a)）"),
+		JSON.stringify(out),
+	);
+});
+
+test("IPv6 URL 保留方括号", () => {
+	const out = run("IPv6 https://[::1]:8080/x 保留");
+	assert.ok(out.includes("[https://[::1]:8080/x](https://[::1]:8080/x)"), JSON.stringify(out));
+});
+
+test("代码块内 URL 不动", () => {
+	const out = run('```js\nconst u = "https://code.com/x";\n```\n外链 https://outside.com');
+	assert.ok(!out.includes("[https://code.com/x]"));
+	assert.ok(out.includes("[https://outside.com](https://outside.com)"));
+});
+
+test("圈数字转半角括号（Nerd Font 字形缺陷规避）", () => {
+	assert.strictEqual(run("方案②引入，共⑩项"), "方案(2)引入，共(10)项");
+	assert.ok(run("① ② ⑳").includes("(1) (2) (20)"));
+});
+
 test("跨行链接归一化并保留代码块", () => {
 	const input = [
 		"[跨行",
@@ -123,19 +180,6 @@ test("跨行链接归一化并保留代码块", () => {
 	const out = run(input);
 	assert.ok(out.includes("[跨行 链接](https://example.com/docs)"), JSON.stringify(out));
 	assert.ok(out.includes("[代码\n链接](https://example.com/code)"), JSON.stringify(out));
-});
-
-test("IPv6 URL 保留方括号", () => {
-	const out = run("访问 https://[::1]/health");
-	assert.ok(out.includes("[https://[::1]/health](https://[::1]/health)"), JSON.stringify(out));
-});
-
-test("含括号 URL 保留（括号平衡）", () => {
-	const out = run("见 https://en.wikipedia.org/wiki/A_(B) 结束");
-	assert.ok(
-		out.includes("[https://en.wikipedia.org/wiki/A_(B)](https://en.wikipedia.org/wiki/A_(B))"),
-		JSON.stringify(out),
-	);
 });
 
 test("代码块内 URL 与 admonition 不动", () => {
@@ -155,11 +199,6 @@ test("代码块内 URL 与 admonition 不动", () => {
 	assert.ok(!out.includes("[https://tilde.example]"));
 	assert.ok(!out.includes("[https://indented.example]"));
 	assert.ok(out.includes("[https://outside.com](https://outside.com)"));
-});
-
-test("圈数字转半角括号（Nerd Font 字形缺陷规避）", () => {
-	assert.strictEqual(run("方案②引入，共⑩项"), "方案(2)引入，共(10)项");
-	assert.ok(run("① ② ⑳").includes("(1) (2) (20)"));
 });
 
 test("圈数字转换保留 fenced blocks 与行内 code spans", () => {

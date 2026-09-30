@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -7,15 +8,13 @@ import {
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { Text, visibleWidth } from "@earendil-works/pi-tui";
-// Constructor fixtures intentionally omit execute/schema fields that these renderer tests never use.
 type AnyToolDefinition = ToolDefinition<any, any, any>;
+import { config } from "../extensions/config/config.ts";
 import claudeCodeStyleExtension, {
 	ExpandedToolIoView,
-	humanizeMcpToolName,
 	isMcpToolDefinition,
 	preservesOriginalRenderer,
 } from "../extensions/renderer/index.ts";
-import { config, setConfig, normalizeConfig, DEFAULT_CONFIG } from "../extensions/config/config.ts";
 
 initTheme("dark");
 
@@ -51,7 +50,7 @@ test("claude-code-style registers the write override at session_start", async ()
 		registeredTools.map((tool: any) => tool.name),
 		[],
 	);
-	// One tick later, after every extension's session_start, ownership is confirmed and write registers.
+	// 延后一拍：等所有扩展的 session_start 跑完，确认没有外部 write 后才注册。
 	await new Promise((resolve) => setTimeout(resolve, 0));
 	assert.deepEqual(
 		registeredTools.map((tool: any) => tool.name),
@@ -102,7 +101,6 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 			/[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Bash /,
 			"single tools use the shared Braille loader",
 		);
-		assert.notEqual(component.state?.ccstyleAnimationScheduled, true);
 		component.updateResult({
 			content: [{ type: "text", text: "first line\nsecond line\nthird line" }],
 			isError: false,
@@ -115,36 +113,11 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 		const collapsedOutput = collapsedLines.filter((line: string) => line.includes("↳"));
 		assert.ok(collapsedCall);
 		assert.ok(collapsedOutput.length === 1);
-		assert.ok(visibleWidth(collapsedCall) > 80, "collapsed input uses space beyond the old clamp");
-		assert.ok(visibleWidth(collapsedCall) <= 100, "collapsed input stays within the viewport");
+		assert.ok(visibleWidth(collapsedCall) <= 80, "collapsed input uses 80% of the viewport");
 		assert.ok(
-			collapsedOutput.every((line: string) => visibleWidth(line) <= 100),
-			"collapsed output stays within the viewport",
+			collapsedOutput.every((line: string) => visibleWidth(line) <= 80),
+			"collapsed output uses 80% of the viewport",
 		);
-
-		const readPath =
-			"/Users/example/projects/tool-width/packages/pi-cc-extensions/src/deeply/nested/renderer/contract_service.ts";
-		const read = new ToolExecutionComponent(
-			"read",
-			"cache-width-read",
-			{ path: readPath, offset: Number.MAX_SAFE_INTEGER, limit: Number.MAX_SAFE_INTEGER },
-			{},
-			undefined,
-			ui as any,
-			process.cwd(),
-		) as any;
-		const wideRead = read.render(180);
-		assert.ok(
-			wideRead.some((line: string) => line.replace(/\x1b\[[0-9;]*m/g, "").includes(readPath)),
-			"wide single-tool summaries retain content beyond 96 characters",
-		);
-		const firstRead = read.render(40);
-		const cachedRead = read.render(40);
-		assert.ok(firstRead.some((line: string) => visibleWidth(line) > 32));
-		assert.ok(firstRead.every((line: string) => visibleWidth(line) <= 40));
-		assert.deepEqual(cachedRead, firstRead);
-		assert.deepEqual(read.render(180), wideRead, "width changes invalidate stale cached output");
-
 		component.setExpanded(true);
 		assert.equal(component.children.includes(component.contentBox), true);
 		assert.equal(component.children.includes(component.selfRenderContainer), false);
@@ -177,12 +150,38 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 			"background card title stays within its full-width row",
 		);
 		const plainCallLine = callLine.replace(/\x1b\[[0-9;]*m/g, "").trimEnd();
-		// input 摘要与多 tool 一致：按实际渲染宽度从头截断（保留开头，省略尾部）
+		// input 摘要与多 tool 一致：从头截断（保留开头，省略尾部），默认上限 100 字符
 		assert.match(plainCallLine, /✓ Bash .*…$/);
 		assert.doesNotMatch(plainCallLine, /compositor\.ts'$/);
 		assert.doesNotMatch(callLine, /\x1b\[0m/, "tool title must not reset the card background");
 		component.setExpanded(false);
 		assert.equal(component.children.includes(component.selfRenderContainer), true);
+
+		const longPath = join(
+			process.cwd(),
+			"extensions",
+			"very-long-feature-name",
+			"nested-renderer-implementation",
+			"target-file.ts",
+		);
+		const read = new ToolExecutionComponent(
+			"read",
+			"path-summary",
+			{ path: longPath },
+			{},
+			undefined,
+			ui as any,
+			process.cwd(),
+		) as any;
+		const readCall = read
+			.render(55)
+			.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+			.find((line: string) => line.includes("Read"));
+		assert.match(readCall!, /Read extensions.*…[\\/]target-file\.ts$/);
+		assert.doesNotMatch(
+			readCall!,
+			new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+		);
 
 		const edit = new ToolExecutionComponent(
 			"edit",
@@ -209,15 +208,14 @@ test("expanded ccstyle tools use Pi's native background card", async () => {
 });
 
 test("MCP detection, titles, details, and custom tools use the global wrapper", async () => {
-	assert.equal(isMcpToolDefinition({ label: "MCP: Files" }, "read_file"), true);
+	const previousOutputLines = config.expandedOutputMaxLines;
+	config.expandedOutputMaxLines = 80;
 	assert.equal(isMcpToolDefinition({}, "mcp__filesystem__read_file"), true);
-	assert.equal(isMcpToolDefinition({ description: "Model Context Protocol tool" }, "remote"), true);
-	assert.equal(
-		isMcpToolDefinition({ label: "Ordinary", description: "mentions MCP" }, "remote"),
-		false,
-	);
-	assert.equal(isMcpToolDefinition({ description: "not an MCP tool" }, "remote"), false);
-	assert.equal(humanizeMcpToolName("mcp__filesystem__read_file"), "Filesystem Read File");
+	// 名字里没有 mcp 片段时靠 adapter 的 label 判定
+	assert.equal(isMcpToolDefinition({ label: "MCP: read_file" }, "read_file"), true);
+	assert.equal(isMcpToolDefinition({ label: "read" }, "read"), false);
+	assert.equal(isMcpToolDefinition({}, "remote"), false);
+	assert.equal(isMcpToolDefinition({}, "github_search_code"), false);
 
 	const events = new Map<string, Function>();
 	claudeCodeStyleExtension(
@@ -239,7 +237,8 @@ test("MCP detection, titles, details, and custom tools use the global wrapper", 
 	try {
 		await events.get("session_start")?.({}, ctx);
 		for (const [name, expected] of [
-			["mcp__filesystem__read_file", "Filesystem Read File"],
+			// MCP 工具标题用真实工具名
+			["mcp__filesystem__read_file", "mcp__filesystem__read_file"],
 			["openai_custom_search", "Openai Custom Search"],
 			["custom_lookup", "Custom Lookup"],
 		] as const) {
@@ -267,13 +266,8 @@ test("MCP detection, titles, details, and custom tools use the global wrapper", 
 			const collapsed = component.render(100).join("\n");
 			assert.match(collapsed, new RegExp(expected));
 			assert.match(collapsed, /2 lines returned.*click to show more/);
-			// Details can exceed the default expandedOutputMaxLines; raise limit for this check.
-			const prevConfig = { ...config };
-			setConfig(normalizeConfig({ ...DEFAULT_CONFIG, expandedOutputMaxLines: 40 }));
 			component.setExpanded(true);
 			const expanded = component.render(100).join("\n");
-			component.setExpanded(false);
-			setConfig(normalizeConfig(prevConfig));
 			assert.match(expanded, /first block[\s\S]*second block[\s\S]*Details:/);
 			assert.match(expanded, /1n/);
 			assert.match(expanded, /Circular/);
@@ -385,6 +379,7 @@ test("MCP detection, titles, details, and custom tools use the global wrapper", 
 		duplicate.setExpanded(true);
 		assert.doesNotMatch(duplicate.render(100).join("\n"), /Details:/);
 	} finally {
+		config.expandedOutputMaxLines = previousOutputLines;
 		await events.get("session_shutdown")?.({}, ctx);
 	}
 });
@@ -533,76 +528,6 @@ test("global renderer reload chains external wrappers and shutdown restores them
 	} finally {
 		await firstEvents.get("session_shutdown")?.({}, ctx);
 		await secondEvents.get("session_shutdown")?.({}, ctx);
-		for (const name of methodNames) prototype[name] = originals[name];
-		delete (globalThis as any)[Symbol.for("pi.ccstyle.global-tool-render-patch")];
-	}
-});
-
-test("global renderer migrates legacy Symbol state without retaining old wrappers", async () => {
-	const prototype = ToolExecutionComponent.prototype as any;
-	const methodNames = [
-		"hasRendererDefinition",
-		"getRenderShell",
-		"getCallRenderer",
-		"getResultRenderer",
-	] as const;
-	const originals = Object.fromEntries(
-		methodNames.map((name) => [name, prototype[name]]),
-	) as Record<string, Function>;
-	const events = new Map<string, Function>();
-	const legacy: any = {
-		prototype,
-		owner: {},
-		enabled: () => true,
-		wrap: (tool: any) => tool,
-		byDefinition: new WeakMap(),
-		byName: new Map(),
-		originalHasRendererDefinition: originals.hasRendererDefinition,
-		originalGetRenderShell: originals.getRenderShell,
-		originalGetCallRenderer: originals.getCallRenderer,
-		originalGetResultRenderer: originals.getResultRenderer,
-	};
-	const shouldGloballyStyleTool = () => false;
-	const shouldUseSelfShell = () => false;
-	prototype.hasRendererDefinition = function (this: any, ...args: any[]) {
-		if (shouldGloballyStyleTool()) return true;
-		return legacy.originalHasRendererDefinition.apply(this, args);
-	};
-	prototype.getRenderShell = function (this: any, ...args: any[]) {
-		if (shouldUseSelfShell() || shouldGloballyStyleTool()) return "self";
-		return legacy.originalGetRenderShell.apply(this, args);
-	};
-	prototype.getCallRenderer = function (this: any, ...args: any[]) {
-		if (shouldGloballyStyleTool()) return undefined;
-		return legacy.originalGetCallRenderer.apply(this, args);
-	};
-	prototype.getResultRenderer = function (this: any, ...args: any[]) {
-		if (shouldGloballyStyleTool()) return undefined;
-		return legacy.originalGetResultRenderer.apply(this, args);
-	};
-	(globalThis as any)[Symbol.for("pi.ccstyle.global-tool-render-patch")] = legacy;
-	const ctx = {
-		mode: "tui",
-		hasUI: true,
-		ui: { theme: {}, setStatus() {}, requestRender() {} },
-	} as any;
-
-	try {
-		claudeCodeStyleExtension({
-			registerCommand() {},
-			registerShortcut() {},
-			on(name: string, handler: Function) {
-				events.set(name, handler);
-			},
-		} as any);
-		await events.get("session_start")?.({}, ctx);
-		const migrated = (globalThis as any)[Symbol.for("pi.ccstyle.global-tool-render-patch")];
-		for (const name of methodNames) assert.equal(migrated.downstream[name], originals[name]);
-		assert.equal(legacy.enabled(), false, "legacy callbacks are disconnected");
-		await events.get("session_shutdown")?.({}, ctx);
-		for (const name of methodNames) assert.equal(prototype[name], originals[name]);
-	} finally {
-		await events.get("session_shutdown")?.({}, ctx);
 		for (const name of methodNames) prototype[name] = originals[name];
 		delete (globalThis as any)[Symbol.for("pi.ccstyle.global-tool-render-patch")];
 	}

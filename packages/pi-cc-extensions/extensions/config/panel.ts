@@ -7,9 +7,24 @@
 import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
 import { Input, SettingsList, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import type { CompactThinkingController } from "../feature/compact-thinking.ts";
-import { applyStartupHeader } from "../feature/shell/startup-header.ts";
+import {
+	applyCustomFooter,
+	clearCustomFooter,
+	getFooterStatusSnapshot,
+} from "../feature/shell/footer.ts";
+import {
+	footerChipDescription,
+	footerLineOfKey,
+	formatFooterChipSummary,
+	orderedFooterKeys,
+	reorderFooterKey,
+	resolveFooterChipLayout,
+	shiftFooterKeyLine,
+	toggleFooterKeyHidden,
+	type FooterChipLayout,
+} from "../feature/shell/footer-layout.ts";
+import { applyStartupHeader, clearStartupHeader } from "../feature/shell/startup-header.ts";
 import type { ToolGroupingHooks } from "../renderer/tool/grouping.ts";
-import type { DiffIndicatorMode, DiffViewMode } from "../renderer/tool/diff/index.ts";
 import {
 	config,
 	DEFAULT_CONFIG,
@@ -23,14 +38,19 @@ import {
 	EXPANDED_PREVIEW_MAX_LINES_VALUES,
 	formatExcludeRenderers,
 	getCompactThinkingConfig,
+	pickInputClip,
 	pickPositiveInt,
 	pickPositiveNumber,
-	saveConfig,
 	SCROLL_STEP_LINES_VALUES,
 	THINKING_ANIMATION_INTERVAL_VALUES,
 	THINKING_PREVIEW_LINES_VALUES,
+	INPUT_CLIP_VALUES,
 	WRITE_DIFF_COLLAPSED_LINES_VALUES,
+	updateConfig,
 	type CompactStyleMode,
+	type Config,
+	type DiffIndicatorMode,
+	type DiffViewMode,
 } from "./config.ts";
 
 /** renderer 注入的渲染副作用，面板自身不触碰渲染状态。 */
@@ -41,7 +61,7 @@ export type CcstylePanelHooks = {
 
 function modeSettingDescription(mode: CompactStyleMode): string {
 	if (mode === "compact") {
-		return "(Experimental) One summary line per assistant round; edit/write stay single-line until expanded.";
+		return "(Experimental) One summary line per assistant round; edit/write reuse the same Diff preview settings as on.";
 	}
 	if (mode === "off") {
 		return "Pi native tool rendering. Diff options below still apply independently.";
@@ -53,6 +73,120 @@ function excludeRenderersDescription(names: readonly string[]): string {
 	return names.length === 0
 		? "No tools excluded. Agent always keeps its dedicated renderer. Enter to toggle common tools."
 		: `Native renderer for: ${names.join(", ")}. Agent is always native. Enter to toggle.`;
+}
+
+function customFooterDescription(enabled: boolean): string {
+	if (!enabled) return "Pi native footer restored. Chip layout below still applies when turned on.";
+	return "Custom status bar with model, context, cache, cost, git, and plugin chips.";
+}
+
+function pluginChipsDescription(): string {
+	return `Arrange plugin chips: ${formatFooterChipSummary(config)}. Enter to edit.`;
+}
+
+function footerLayoutFromConfig(): FooterChipLayout {
+	return {
+		footerHiddenKeys: config.footerHiddenKeys,
+		footerLine1Keys: config.footerLine1Keys,
+		footerLine2Keys: config.footerLine2Keys,
+		footerLine3Keys: config.footerLine3Keys,
+	};
+}
+
+function persistFooterLayout(layout: FooterChipLayout): void {
+	updateConfig({
+		footerHiddenKeys: layout.footerHiddenKeys,
+		footerLine1Keys: layout.footerLine1Keys,
+		footerLine2Keys: layout.footerLine2Keys,
+		footerLine3Keys: layout.footerLine3Keys,
+	});
+}
+
+function footerChipItem(
+	key: string,
+	layout: FooterChipLayout,
+	snapshot: ReadonlyMap<string, string>,
+) {
+	const line = footerLineOfKey(layout, key) ?? 2;
+	const hidden = layout.footerHiddenKeys.includes(key);
+	const live = snapshot.get(key)?.trim() ?? "";
+	return {
+		id: key,
+		label: key,
+		description: footerChipDescription(key, live),
+		currentValue: hidden ? `line${line} · hidden` : `line${line}`,
+	};
+}
+
+function buildFooterChipsSubmenu(
+	onClose: () => void,
+	onLiveChange: () => void,
+): {
+	render: (width: number) => string[];
+	invalidate: () => void;
+	handleInput: (data: string) => void;
+} {
+	const snapshot = () => getFooterStatusSnapshot();
+	const resolved = () => resolveFooterChipLayout(footerLayoutFromConfig(), [...snapshot().keys()]);
+	const items: ReturnType<typeof footerChipItem>[] = [];
+	const rebuildItems = (layout: FooterChipLayout, selectedKey?: string) => {
+		const next = orderedFooterKeys(layout).map((key) => footerChipItem(key, layout, snapshot()));
+		items.length = 0;
+		items.push(...next);
+		if (!selectedKey) return 0;
+		const index = items.findIndex((item) => item.id === selectedKey);
+		return index >= 0 ? index : 0;
+	};
+	rebuildItems(resolved());
+	const list = new SettingsList(
+		items,
+		Math.min(8, Math.max(4, items.length)),
+		getSettingsListTheme(),
+		() => {},
+		() => onClose(),
+		{ enableSearch: false },
+	);
+	const listState = list as unknown as { selectedIndex: number; items: typeof items };
+
+	const mutate = (transform: (layout: FooterChipLayout, key: string) => FooterChipLayout) => {
+		const key = listState.items[listState.selectedIndex]?.id;
+		if (!key) return;
+		const next = transform(resolved(), key);
+		persistFooterLayout(next);
+		listState.selectedIndex = rebuildItems(
+			resolveFooterChipLayout(next, [...snapshot().keys()]),
+			key,
+		);
+		onLiveChange();
+	};
+
+	return {
+		render: (width: number) => list.render(width),
+		invalidate: () => list.invalidate(),
+		handleInput: (data: string) => {
+			if (matchesKey(data, "left")) {
+				mutate((layout, key) => shiftFooterKeyLine(layout, key, -1));
+				return;
+			}
+			if (matchesKey(data, "right")) {
+				mutate((layout, key) => shiftFooterKeyLine(layout, key, 1));
+				return;
+			}
+			if (data === "[") {
+				mutate((layout, key) => reorderFooterKey(layout, key, -1));
+				return;
+			}
+			if (data === "]") {
+				mutate((layout, key) => reorderFooterKey(layout, key, 1));
+				return;
+			}
+			if (data === " " || matchesKey(data, "space")) {
+				mutate((layout, key) => toggleFooterKeyHidden(layout, key));
+				return;
+			}
+			list.handleInput(data);
+		},
+	};
 }
 
 function diffViewModeDescription(mode: DiffViewMode): string {
@@ -67,6 +201,7 @@ function diffIndicatorDescription(mode: DiffIndicatorMode): string {
 	return "Vertical bar indicators on changed lines (default).";
 }
 
+/** 额外功能开关项：on/off 二值，描述随状态切换；切换后需重启生效。 */
 function featureToggleSetting(
 	id: string,
 	label: string,
@@ -119,8 +254,7 @@ function buildExcludeRenderersSubmenu(
 			const excluded = new Set(config.excludeRenderers);
 			if (value === "exclude") excluded.add(id);
 			else excluded.delete(id);
-			config.excludeRenderers = [...excluded].sort((a, b) => a.localeCompare(b));
-			saveConfig();
+			updateConfig({ excludeRenderers: [...excluded].sort((a, b) => a.localeCompare(b)) });
 			onLiveChange();
 		},
 		() => onClose(),
@@ -182,7 +316,7 @@ function buildNumberInputSubmenu(
 
 /** Section tabs for /ccstyle — matches Zentui-style "A / B / C" headers. */
 type CcstyleSection = {
-	id: "style" | "diff" | "thinking" | "ui" | "feature";
+	id: "style" | "diff" | "thinking" | "ui" | "feature" | "footer";
 	label: string;
 	items: any[];
 };
@@ -238,19 +372,22 @@ export async function showCcstylePanel(
 			currentValue: config.mode === "compact" ? "compact (Experimental)" : config.mode,
 			values: ["on", "compact (Experimental)", "off"],
 		};
-		// Tracks whether the Exclude-tools submenu is open so Tab switches sections
+		// Tracks whether a nested submenu is open so Tab switches sections
 		// only at the top level (mirrors Zentui settings: Tab = switch sections).
-		let excludeSubmenuOpen = false;
+		let nestedSubmenuOpen = false;
+		let nestedHint = "";
 		const excludeSetting = {
 			id: "excludeRenderers",
 			label: "Exclude tools",
 			description: excludeRenderersDescription(config.excludeRenderers),
 			currentValue: formatExcludeRenderers(config.excludeRenderers),
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) => {
-				excludeSubmenuOpen = true;
+				nestedSubmenuOpen = true;
+				nestedHint = "  Enter/Space to toggle · Esc back to Style";
 				return buildExcludeRenderersSubmenu(
 					() => {
-						excludeSubmenuOpen = false;
+						nestedSubmenuOpen = false;
+						nestedHint = "";
 						excludeSetting.currentValue = formatExcludeRenderers(config.excludeRenderers);
 						excludeSetting.description = excludeRenderersDescription(config.excludeRenderers);
 						closeSubmenu();
@@ -262,6 +399,16 @@ export async function showCcstylePanel(
 					},
 				);
 			},
+		};
+		const inputClipSetting = {
+			id: "inputClip",
+			label: "Input clip",
+			description:
+				"Max characters for path/command/name in single and grouped tool summaries; 0 fits available width. Enter to type a custom value.",
+			currentValue: String(config.inputClip),
+			values: [...INPUT_CLIP_VALUES],
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
+				buildNumberInputSubmenu(theme, inputClipSetting, closeSubmenu),
 		};
 		const diffViewSetting = {
 			id: "diffViewMode",
@@ -301,7 +448,7 @@ export async function showCcstylePanel(
 			id: "writeDiffCollapsedLines",
 			label: "Write collapsed lines",
 			description:
-				"Write-only collapsed body lines. 0 shows ↳ created + expand hint. Enter to type a custom value.",
+				"Write-only collapsed body lines. 0 shows ↳ created + expand hint (stats stay on the title). Enter to type a custom value.",
 			currentValue: String(config.writeDiffCollapsedLines),
 			values: [...WRITE_DIFF_COLLAPSED_LINES_VALUES],
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
@@ -316,20 +463,11 @@ export async function showCcstylePanel(
 			currentValue: config.diffWordWrap ? "on" : "off",
 			values: ["on", "off"],
 		};
-		const expandedMaxSetting = {
-			id: "expandedPreviewMaxLines",
-			label: "Expanded max lines",
-			description:
-				"Max Output/diff body lines when expanded. Default 40 keeps the TUI compact; raise for large dumps.",
-			currentValue: String(config.expandedPreviewMaxLines),
-			values: [...EXPANDED_PREVIEW_MAX_LINES_VALUES],
-			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
-				buildNumberInputSubmenu(theme, expandedMaxSetting, closeSubmenu),
-		};
 		const expandedInputSetting = {
 			id: "expandedInputMaxLines",
-			label: "Expanded Input max lines",
-			description: "Max Input body lines before the show-more footer appears.",
+			label: "Expanded input lines",
+			description:
+				"Max Input section lines in an expanded tool card. Overflow shows click to show more. Default 5.",
 			currentValue: String(config.expandedInputMaxLines),
 			values: [...EXPANDED_INPUT_MAX_LINES_VALUES],
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
@@ -337,12 +475,22 @@ export async function showCcstylePanel(
 		};
 		const expandedOutputSetting = {
 			id: "expandedOutputMaxLines",
-			label: "Expanded Output max lines",
-			description: "Max Output body lines before the show-more footer appears.",
+			label: "Expanded output lines",
+			description:
+				"Max Output section lines in an expanded tool card. Overflow shows click to show more. Default 10.",
 			currentValue: String(config.expandedOutputMaxLines),
 			values: [...EXPANDED_OUTPUT_MAX_LINES_VALUES],
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
 				buildNumberInputSubmenu(theme, expandedOutputSetting, closeSubmenu),
+		};
+		const expandedMaxSetting = {
+			id: "expandedPreviewMaxLines",
+			label: "Expanded max lines",
+			description: "Max TaskList body lines when expanded. Expanded diffs show every line.",
+			currentValue: String(config.expandedPreviewMaxLines),
+			values: [...EXPANDED_PREVIEW_MAX_LINES_VALUES],
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
+				buildNumberInputSubmenu(theme, expandedMaxSetting, closeSubmenu),
 		};
 		const thinkingTitleSetting = {
 			id: "useSummaryTitlesAsThinkingTitle",
@@ -396,48 +544,89 @@ export async function showCcstylePanel(
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
 				buildNumberInputSubmenu(theme, scrollStepSetting, closeSubmenu),
 		};
+
+		// 额外功能开关：注册于扩展加载期，切换后需重启（/reload）生效。
 		const sessionReferenceToggle = featureToggleSetting(
 			"enableSessionReference",
 			"Session reference",
-			"@ session mentions search and inject referenced context after restart.",
+			"@ session mentions search & inject referenced session context. Next restart applies.",
 			"Session reference disabled.",
 			config.enableSessionReference,
 		);
 		const subagentAutocompleteToggle = featureToggleSetting(
 			"enableSubagentAutocomplete",
 			"Subagent autocomplete",
-			"@ subagent mentions suggest agents and delegation instructions after restart.",
+			"@subagent:[name] mentions suggest agents and inject delegation instructions. Next restart applies.",
 			"Subagent autocomplete disabled.",
 			config.enableSubagentAutocomplete,
 		);
 		const contextCommandToggle = featureToggleSetting(
 			"enableContextCommand",
 			"Context usage",
-			"/context shows context-window distribution after restart.",
+			"/context shows context-window distribution with previews. Next restart applies.",
 			"Context command disabled.",
 			config.enableContextCommand,
 		);
 		const agentSummaryToggle = featureToggleSetting(
 			"enableAgentSummary",
 			"Agent summary",
-			"Append per-round tool stats after each agent turn after restart.",
+			"Append per-round tool stats after each agent turn. Next restart applies.",
 			"Agent summary disabled.",
 			config.enableAgentSummary,
 		);
 		const workingMessageToggle = featureToggleSetting(
 			"enableWorkingMessage",
 			"Working message",
-			"Extend Working... with token count and elapsed time after restart.",
+			"Extend Working... footer with token count and elapsed time. Next restart applies.",
 			"Native Working... footer only.",
 			config.enableWorkingMessage,
 		);
 		const aliasesToggle = featureToggleSetting(
 			"enableAliases",
 			"Aliases",
-			"/clear and /exit aliases enabled after restart.",
+			"/clear and /exit aliases enabled. Next restart applies.",
 			"Aliases disabled.",
 			config.enableAliases,
 		);
+		const footerNerdIconsSetting = {
+			id: "footerNerdIcons",
+			label: "Nerd Font icons",
+			description: config.footerNerdIcons
+				? "Git and cache chips use Nerd Font glyphs. Turn off for plain text."
+				: "Git and cache chips use plain text. No Nerd Font required.",
+			currentValue: config.footerNerdIcons ? "on" : "off",
+			values: ["on", "off"],
+		};
+		const customFooterSetting = {
+			id: "enableCustomFooter",
+			label: "Status bar",
+			description: customFooterDescription(config.enableCustomFooter),
+			currentValue: config.enableCustomFooter ? "on" : "off",
+			values: ["on", "off"],
+		};
+		const pluginChipsSetting = {
+			id: "footerPluginChips",
+			label: "Plugin chips",
+			description: pluginChipsDescription(),
+			currentValue: formatFooterChipSummary(config),
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) => {
+				nestedSubmenuOpen = true;
+				nestedHint = "  ←→ line · [ ] reorder · Space hide · Esc back to Footer";
+				return buildFooterChipsSubmenu(
+					() => {
+						nestedSubmenuOpen = false;
+						nestedHint = "";
+						pluginChipsSetting.currentValue = formatFooterChipSummary(config);
+						pluginChipsSetting.description = pluginChipsDescription();
+						closeSubmenu();
+					},
+					() => {
+						pluginChipsSetting.currentValue = formatFooterChipSummary(config);
+						pluginChipsSetting.description = pluginChipsDescription();
+					},
+				);
+			},
+		};
 		const featureToggles: Record<string, { apply: (on: boolean) => void }> = {
 			enableSessionReference: sessionReferenceToggle,
 			enableSubagentAutocomplete: subagentAutocompleteToggle,
@@ -448,16 +637,41 @@ export async function showCcstylePanel(
 		};
 
 		const onSettingChange = (id: string, value: string) => {
+			if (id === "enableCustomFooter") {
+				const enabled = value === "on";
+				updateConfig({ enableCustomFooter: enabled });
+				customFooterSetting.currentValue = enabled ? "on" : "off";
+				customFooterSetting.description = customFooterDescription(enabled);
+				if (enabled) applyCustomFooter(ctx);
+				else clearCustomFooter(ctx);
+				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
+				return;
+			}
+			if (id === "footerNerdIcons") {
+				const enabled = value === "on";
+				updateConfig({ footerNerdIcons: enabled });
+				footerNerdIconsSetting.currentValue = enabled ? "on" : "off";
+				footerNerdIconsSetting.description = enabled
+					? "Git and cache chips use Nerd Font glyphs. Turn off for plain text."
+					: "Git and cache chips use plain text. No Nerd Font required.";
+				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
+				return;
+			}
+			// 额外功能开关：字段名与配置布尔字段一一对应，切换后重启生效。
 			const featureToggle = featureToggles[id];
 			if (featureToggle) {
-				// SAFETY: featureToggles contains only boolean keys from Config.
-				(config as unknown as Record<string, boolean>)[id] = value === "on";
+				updateConfig({ [id]: value === "on" } as Partial<Config>);
 				featureToggle.apply(value === "on");
-				saveConfig();
 				ctx.ui.notify(`Updated ${id}: ${value} (next restart)`, "info");
 				return;
 			}
 			switch (id) {
+				case "inputClip":
+					updateConfig({
+						inputClip: pickInputClip(value),
+					});
+					inputClipSetting.currentValue = String(config.inputClip);
+					break;
 				case "mode": {
 					// 选项值带 Experimental 标记，选择后还原为真实 mode 值。
 					const mode: CompactStyleMode =
@@ -471,109 +685,118 @@ export async function showCcstylePanel(
 					excludeSetting.description = excludeRenderersDescription(config.excludeRenderers);
 					return;
 				case "diffViewMode":
-					config.diffViewMode = value as DiffViewMode;
+					updateConfig({ diffViewMode: value as DiffViewMode });
 					diffViewSetting.description = diffViewModeDescription(config.diffViewMode);
 					break;
 				case "diffIndicatorMode":
-					config.diffIndicatorMode = value as DiffIndicatorMode;
+					updateConfig({ diffIndicatorMode: value as DiffIndicatorMode });
 					diffIndicatorSetting.description = diffIndicatorDescription(config.diffIndicatorMode);
 					break;
 				case "diffSplitMinWidth":
-					config.diffSplitMinWidth = pickPositiveInt(
-						value,
-						DEFAULT_CONFIG.diffSplitMinWidth,
-						40,
-						300,
-					);
+					updateConfig({
+						diffSplitMinWidth: pickPositiveInt(value, DEFAULT_CONFIG.diffSplitMinWidth, 40, 300),
+					});
 					diffSplitSetting.currentValue = String(config.diffSplitMinWidth);
 					break;
 				case "editDiffCollapsedLines":
-					config.editDiffCollapsedLines = pickPositiveInt(
-						value,
-						DEFAULT_CONFIG.editDiffCollapsedLines,
-						1,
-						500,
-					);
+					updateConfig({
+						editDiffCollapsedLines: pickPositiveInt(
+							value,
+							DEFAULT_CONFIG.editDiffCollapsedLines,
+							1,
+							500,
+						),
+					});
 					diffCollapsedSetting.currentValue = String(config.editDiffCollapsedLines);
 					break;
 				case "writeDiffCollapsedLines":
-					config.writeDiffCollapsedLines = pickPositiveInt(
-						value,
-						DEFAULT_CONFIG.writeDiffCollapsedLines,
-						0,
-						500,
-					);
+					updateConfig({
+						writeDiffCollapsedLines: pickPositiveInt(
+							value,
+							DEFAULT_CONFIG.writeDiffCollapsedLines,
+							0,
+							500,
+						),
+					});
 					writeDiffCollapsedSetting.currentValue = String(config.writeDiffCollapsedLines);
 					break;
 				case "diffWordWrap":
-					config.diffWordWrap = value === "on";
+					updateConfig({ diffWordWrap: value === "on" });
 					diffWordWrapSetting.description = config.diffWordWrap
 						? "Long diff lines wrap within the panel width."
 						: "Long diff lines are truncated to the panel width.";
 					break;
-				case "expandedPreviewMaxLines":
-					config.expandedPreviewMaxLines = pickPositiveInt(
-						value,
-						DEFAULT_CONFIG.expandedPreviewMaxLines,
-						10,
-						50_000,
-					);
-					expandedMaxSetting.currentValue = String(config.expandedPreviewMaxLines);
-					break;
 				case "expandedInputMaxLines":
-					config.expandedInputMaxLines = pickPositiveInt(
-						value,
-						DEFAULT_CONFIG.expandedInputMaxLines,
-						1,
-						5_000,
-					);
+					updateConfig({
+						expandedInputMaxLines: pickPositiveInt(
+							value,
+							DEFAULT_CONFIG.expandedInputMaxLines,
+							1,
+							5_000,
+						),
+					});
 					expandedInputSetting.currentValue = String(config.expandedInputMaxLines);
 					break;
 				case "expandedOutputMaxLines":
-					config.expandedOutputMaxLines = pickPositiveInt(
-						value,
-						DEFAULT_CONFIG.expandedOutputMaxLines,
-						1,
-						5_000,
-					);
+					updateConfig({
+						expandedOutputMaxLines: pickPositiveInt(
+							value,
+							DEFAULT_CONFIG.expandedOutputMaxLines,
+							1,
+							5_000,
+						),
+					});
 					expandedOutputSetting.currentValue = String(config.expandedOutputMaxLines);
 					break;
+				case "expandedPreviewMaxLines":
+					updateConfig({
+						expandedPreviewMaxLines: pickPositiveInt(
+							value,
+							DEFAULT_CONFIG.expandedPreviewMaxLines,
+							10,
+							50_000,
+						),
+					});
+					expandedMaxSetting.currentValue = String(config.expandedPreviewMaxLines);
+					break;
 				case "useSummaryTitlesAsThinkingTitle":
-					config.useSummaryTitlesAsThinkingTitle = value === "on";
+					updateConfig({ useSummaryTitlesAsThinkingTitle: value === "on" });
 					break;
 				case "previewLines":
-					config.previewLines = pickPositiveInt(value, DEFAULT_CONFIG.previewLines, 0);
+					updateConfig({ previewLines: pickPositiveInt(value, DEFAULT_CONFIG.previewLines, 0) });
 					thinkingPreviewSetting.currentValue = String(config.previewLines);
 					break;
 				case "animationIntervalMs":
-					config.animationIntervalMs = pickPositiveNumber(
-						value,
-						DEFAULT_CONFIG.animationIntervalMs,
-					);
+					updateConfig({
+						animationIntervalMs: pickPositiveNumber(value, DEFAULT_CONFIG.animationIntervalMs),
+					});
 					thinkingAnimationSetting.currentValue = String(config.animationIntervalMs);
 					break;
 				case "dimThinkingText":
-					config.dimThinkingText = value === "on";
+					updateConfig({ dimThinkingText: value === "on" });
 					thinkingDimSetting.description = config.dimThinkingText
 						? "Thinking text uses the theme's dim color."
 						: "Keep the default thinking text color.";
 					break;
-				case "showStartupHeader":
-					config.showStartupHeader = value === "on";
+				case "showStartupHeader": {
+					const enabled = value === "on";
+					updateConfig({ showStartupHeader: enabled });
 					startupHeaderSetting.description = config.showStartupHeader
 						? "Show the custom startup header (logo + tips) on new sessions."
 						: "Use Pi's native startup header instead.";
-					// 实时切换：on → 自定义 header；off → 官方默认 header。
-					applyStartupHeader(ctx);
+					if (enabled) applyStartupHeader(ctx);
+					else clearStartupHeader(ctx);
 					break;
+				}
 				case "scrollStepLines":
-					config.scrollStepLines = pickPositiveInt(value, DEFAULT_CONFIG.scrollStepLines, 1, 50);
+					updateConfig({
+						scrollStepLines: pickPositiveInt(value, DEFAULT_CONFIG.scrollStepLines, 1, 50),
+					});
 					scrollStepSetting.currentValue = String(config.scrollStepLines);
 					break;
 				default:
 					return;
 			}
-			saveConfig();
 			compactThinking?.updateConfig(getCompactThinkingConfig());
 			hooks.refreshCurrentTranscript(ctx);
 			ctx.ui.notify(`Updated ${id}: ${value}`, "info");
@@ -586,12 +809,37 @@ export async function showCcstylePanel(
 				items: [modeSetting, excludeSetting],
 			},
 			{
+				id: "feature",
+				label: "Features",
+				items: [
+					sessionReferenceToggle.setting,
+					subagentAutocompleteToggle.setting,
+					contextCommandToggle.setting,
+					agentSummaryToggle.setting,
+					workingMessageToggle.setting,
+					aliasesToggle.setting,
+				],
+			},
+			{
+				id: "ui",
+				label: "UI",
+				items: [
+					expandedInputSetting,
+					expandedOutputSetting,
+					expandedMaxSetting,
+					inputClipSetting,
+					startupHeaderSetting,
+					scrollStepSetting,
+				],
+			},
+			{
 				id: "diff",
 				label: "Diff",
 				items: [
 					diffViewSetting,
 					diffIndicatorSetting,
 					diffSplitSetting,
+					diffCollapsedSetting,
 					writeDiffCollapsedSetting,
 					diffWordWrapSetting,
 				],
@@ -607,28 +855,9 @@ export async function showCcstylePanel(
 				],
 			},
 			{
-				id: "ui",
-				label: "UI",
-				items: [
-					expandedMaxSetting,
-					expandedInputSetting,
-					expandedOutputSetting,
-					diffCollapsedSetting,
-					startupHeaderSetting,
-					scrollStepSetting,
-				],
-			},
-			{
-				id: "feature",
-				label: "Feature",
-				items: [
-					sessionReferenceToggle.setting,
-					subagentAutocompleteToggle.setting,
-					contextCommandToggle.setting,
-					agentSummaryToggle.setting,
-					workingMessageToggle.setting,
-					aliasesToggle.setting,
-				],
+				id: "footer",
+				label: "Footer",
+				items: [customFooterSetting, footerNerdIconsSetting, pluginChipsSetting],
 			},
 		];
 
@@ -649,13 +878,12 @@ export async function showCcstylePanel(
 		const activeList = () => lists[activeSection]!;
 
 		const switchSection = (delta: number) => {
-			if (excludeSubmenuOpen) return;
+			if (nestedSubmenuOpen) return;
 			activeSection = (activeSection + delta + sections.length) % sections.length;
 		};
 
 		/** 数值项：当前选中项有 submenu + values 时，Space 仅循环预设，不打开子面板。 */
 		const cyclePresetInList = (list: InstanceType<typeof SettingsList>): boolean => {
-			// SAFETY: SettingsList owns these stable fields used by its built-in input handler.
 			const internal = list as unknown as {
 				submenuComponent: unknown;
 				items: {
@@ -700,7 +928,8 @@ export async function showCcstylePanel(
 					truncateToWidth(
 						theme.fg(
 							"dim",
-							"  Enter/Space to change · Enter on numbers types a custom value · Tab/Shift+Tab to switch sections · Esc to close",
+							nestedHint ||
+								"  Enter/Space to change · Enter on numbers types a custom value · Tab/Shift+Tab to switch sections · Esc to close",
 						),
 						safeWidth,
 					),
@@ -711,12 +940,12 @@ export async function showCcstylePanel(
 				for (const list of lists) list.invalidate();
 			},
 			handleInput(data: string) {
-				if (!excludeSubmenuOpen && isForwardTabKey(data)) {
+				if (!nestedSubmenuOpen && isForwardTabKey(data)) {
 					switchSection(1);
 					tui.requestRender();
 					return;
 				}
-				if (!excludeSubmenuOpen && isBackTabKey(data)) {
+				if (!nestedSubmenuOpen && isBackTabKey(data)) {
 					switchSection(-1);
 					tui.requestRender();
 					return;

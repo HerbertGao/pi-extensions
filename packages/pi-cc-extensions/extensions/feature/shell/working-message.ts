@@ -1,38 +1,38 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getCompactRunStatusText } from "../../renderer/compact-mode.ts";
+import {
+	fullscreenLazyTui,
+	getToolMouseTui,
+	isFullscreenAtBottom,
+} from "../../renderer/mouse/scroll.ts";
+import { formatDuration } from "../../utils/format.ts";
 
 const REFRESH_INTERVAL_MS = 1_000;
 /** Elapsed time is only shown once the turn has run this long. */
 const SHOW_TIMER_AFTER_MS = 3_000;
 
-function formatDuration(ms: number): string {
-	const totalSec = Math.floor(ms / 1000);
-	const hours = Math.floor(totalSec / 3600);
-	const minutes = Math.floor((totalSec % 3600) / 60);
-	const seconds = totalSec % 60;
-	if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-	if (minutes > 0) return `${minutes}m ${seconds}s`;
-	return `${seconds}s`;
-}
-
 function formatCount(value: number): string {
 	return new Intl.NumberFormat("en-US").format(value);
 }
 
-function estimateTextLength(message: any): number {
-	if (!Array.isArray(message?.content)) return 0;
-	return message.content.reduce((sum: number, block: any) => {
-		if (block?.type === "text" && typeof block.text === "string") return sum + block.text.length;
-		if (block?.type === "thinking" && block.thinkingSignature?.body)
-			return sum + (block.thinkingSignature.body as string).length;
-		return sum;
-	}, 0);
-}
+type ContentBlock = {
+	type?: unknown;
+	text?: unknown;
+	thinkingSignature?: { body?: unknown };
+};
 
-function textBlockLengths(message: any): number[] {
-	if (!Array.isArray(message?.content)) return [];
+type StreamMessage = {
+	content?: unknown;
+	usage?: { output?: unknown };
+};
+
+/** 每个 content index 的可见文本/思考长度；无对应块的 index 保持稀疏洞。 */
+function textBlockLengths(message: StreamMessage): number[] {
+	const content = message.content;
+	if (!Array.isArray(content)) return [];
 	const lengths: number[] = [];
-	for (let index = 0; index < message.content.length; index++) {
-		const block = message.content[index];
+	for (let index = 0; index < content.length; index++) {
+		const block = content[index] as ContentBlock;
 		if (block?.type === "text" && typeof block.text === "string") {
 			lengths[index] = block.text.length;
 		} else if (block?.type === "thinking" && block.thinkingSignature?.body) {
@@ -42,10 +42,14 @@ function textBlockLengths(message: any): number[] {
 	return lengths;
 }
 
-function outputUsage(message: any): number {
+function outputUsage(message: StreamMessage): number {
 	const value = Number(message?.usage?.output);
 	return Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
 }
+
+type WorkingUi = {
+	setWorkingMessage(message?: string): void;
+};
 
 /**
  * Extend Pi's footer working row while preserving its spinner and "Working...":
@@ -63,7 +67,7 @@ export default function (pi: ExtensionAPI): void {
 	let providerOutputTokens = 0;
 	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastMessage: string | null = null;
-	let activeCtx: { ui: any; hasUI: boolean } | null = null;
+	let activeCtx: { ui: WorkingUi | undefined; hasUI: boolean } | null = null;
 
 	function tokenCount(): number {
 		return providerOutputTokens || Math.max(0, Math.round(responseLength / 4));
@@ -75,26 +79,41 @@ export default function (pi: ExtensionAPI): void {
 		responseLength = Math.max(0, responseLength + responseTextBlockLengths[index] - previous);
 	}
 
-	function resetResponseTracking(message?: any): void {
+	function resetResponseTracking(message?: StreamMessage): void {
 		responseTextBlockLengths = message ? textBlockLengths(message) : [];
-		responseLength = message ? estimateTextLength(message) : 0;
+		responseLength = responseTextBlockLengths.reduce((sum, length) => sum + length, 0);
 		providerOutputTokens = message ? outputUsage(message) : 0;
 	}
 
-	function updateProviderUsage(message: any): void {
+	function updateProviderUsage(message: StreamMessage): void {
 		const output = outputUsage(message);
 		if (output > 0) providerOutputTokens = output;
 	}
 
+	/**
+	 * 摘要行滚出视口才镜像：仅 fullscreen 且已离开 transcript 底部。
+	 * regular 没有“离开底部”信号（transcript 在终端回滚区），保持 Pi 默认文案。
+	 */
+	function compactMirrorText(): string | undefined {
+		const tui = getToolMouseTui();
+		if (!tui || !fullscreenLazyTui(tui) || isFullscreenAtBottom(tui)) return undefined;
+		return getCompactRunStatusText();
+	}
+
 	function buildWorkingMessage(): string {
+		// turn_end 后迟到的 provider 事件不得再驱动 footer（否则渲染出 epoch 级计时）。
 		if (!turnActive) return "";
-		const startedAt = agentStartTime || turnStartTime;
-		if (!startedAt) return "";
-		const elapsed = Date.now() - startedAt;
-		const tokens = tokenCount();
 		const parts: string[] = [];
+		const tokens = tokenCount();
 		if (tokens > 0) parts.push(`↓ ${formatCount(tokens)} tokens`);
-		if (elapsed >= SHOW_TIMER_AFTER_MS || tokens > 0) parts.push(formatDuration(elapsed));
+		// compact 活动回合且已滚出摘要行：直接用摘要行文案（自带回合时长，不叠 agent 计时）。
+		const compactStatus = compactMirrorText();
+		if (compactStatus) return [compactStatus, ...parts].join(" · ");
+		const elapsed = Date.now() - (agentStartTime || turnStartTime);
+		if (elapsed >= SHOW_TIMER_AFTER_MS || tokens > 0) {
+			// formatDuration 低于 1 秒返回 ""，此处回退 "0s" 保持计时器连续跳动。
+			parts.push(formatDuration(elapsed) || "0s");
+		}
 		return parts.length ? `Working... (${parts.join(" · ")})` : "";
 	}
 
@@ -102,7 +121,7 @@ export default function (pi: ExtensionAPI): void {
 		try {
 			return activeCtx?.hasUI === true;
 		} catch {
-			// A stale ctx after session replacement/reload throws from its getter; stop driving the footer.
+			// 会话替换/reload 后捕获的 ctx 失效，getter 抛错；停止驱动 footer。
 			turnActive = false;
 			activeCtx = null;
 			stopRefreshLoop();
@@ -114,7 +133,7 @@ export default function (pi: ExtensionAPI): void {
 		lastMessage = null;
 		if (!workingUiAvailable()) return;
 		try {
-			activeCtx?.ui.setWorkingMessage();
+			activeCtx?.ui?.setWorkingMessage();
 		} catch {
 			// Noop when the TUI is unavailable.
 		}
@@ -130,7 +149,7 @@ export default function (pi: ExtensionAPI): void {
 		if (!force && next === lastMessage) return;
 		lastMessage = next;
 		try {
-			activeCtx?.ui.setWorkingMessage(next);
+			activeCtx?.ui?.setWorkingMessage(next);
 		} catch {
 			// Noop when the TUI is unavailable.
 		}
@@ -143,7 +162,7 @@ export default function (pi: ExtensionAPI): void {
 			try {
 				syncWorkingMessage();
 			} catch {
-				// An exception here would become an uncaughtException and kill Pi; stop the decorative refresh.
+				// 定时器内的异常会成为 uncaughtException 终止 Pi；装饰性刷新直接停止。
 				turnActive = false;
 				return;
 			}
@@ -203,6 +222,7 @@ export default function (pi: ExtensionAPI): void {
 		} else if (evt.type === "done") {
 			resetResponseTracking(evt.message);
 		} else if (evt.type === "error") {
+			// provider 错误事件的 usage.output 不可信，不得计入 token 统计。
 			resetResponseTracking();
 		} else {
 			updateProviderUsage(evt.partial);

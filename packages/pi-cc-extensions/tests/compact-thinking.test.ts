@@ -6,20 +6,62 @@ import test from "node:test";
 import { AssistantMessageComponent, initTheme } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 
+import { config as ccstyleConfig } from "../extensions/config/config.ts";
 import {
-	animateCompactThinkingText,
 	clearThinkingPreviewCache,
 	installCompactThinking,
 	ThinkingPreviewBlock,
-	thinkingExpandedWrapCacheSize,
-	THINKING_EXPANDED_WRAP_CACHE_MAX,
 } from "../extensions/feature/compact-thinking.ts";
+import { animateCompactThinkingText } from "../extensions/renderer/compact-mode.ts";
 
 const config = {
 	useSummaryTitlesAsThinkingTitle: false,
 	previewLines: 0,
 	animationIntervalMs: 30,
 };
+
+test("collapsed thinking previews memoize complete output until invalidated", () => {
+	const originalConfig = { ...config };
+	const { pi } = runtime();
+	const controller = installCompactThinking(pi, { ...originalConfig });
+	controller.updateConfig({ ...originalConfig, previewLines: 1 });
+	clearThinkingPreviewCache();
+	try {
+		const preview = new ThinkingPreviewBlock(
+			"Thought",
+			"alpha beta gamma delta epsilon zeta eta theta",
+			0,
+			1,
+			(text) => text,
+		);
+		const first = preview.render(12);
+		assert.ok(
+			first.some((line) => line.includes("more")),
+			"composed output includes its hint",
+		);
+		assert.strictEqual(preview.render(12), first, "same state reuses complete output");
+
+		assert.notStrictEqual(preview.render(16), first, "width changes recompute output");
+		const beforeConfigChange = preview.render(16);
+		controller.updateConfig({ ...originalConfig, previewLines: 2 });
+		assert.notStrictEqual(
+			preview.render(16),
+			beforeConfigChange,
+			"preview-line changes recompute output",
+		);
+
+		const beforeHover = preview.render(16);
+		preview.setHintHovered(true);
+		assert.notStrictEqual(preview.render(16), beforeHover, "hover changes recompute output");
+
+		const beforeInvalidation = preview.render(16);
+		preview.invalidate();
+		assert.notStrictEqual(preview.render(16), beforeInvalidation, "invalidation clears memo");
+	} finally {
+		controller.updateConfig(originalConfig);
+		clearThinkingPreviewCache();
+	}
+});
 
 test("compact summary reuses compact-thinking's sweep animation", () => {
 	const theme = {
@@ -32,66 +74,6 @@ test("compact summary reuses compact-thinking's sweep animation", () => {
 	assert.notEqual(first, second);
 	assert.equal(first.replace(/<[^>]+>/g, ""), "Thinking...");
 	assert.equal(second.replace(/<[^>]+>/g, ""), "Thinking...");
-});
-
-test("expanded wrap cache keys by run and evicts on collapse", () => {
-	clearThinkingPreviewCache();
-	const theme = {
-		fg: (_color: string, text: string) => text,
-		bg: (_slot: string, text: string) => text,
-	} as any;
-	const bodyA = Array.from({ length: 12 }, (_, i) => `alpha-${i}`).join(" ");
-	const bodyB = Array.from({ length: 12 }, (_, i) => `beta-${i}`).join(" ");
-	const a = new ThinkingPreviewBlock("Thought", bodyA, 0, 7, (text) => text, theme, 1);
-	const b = new ThinkingPreviewBlock("Thought", bodyB, 0, 7, (text) => text, theme, 10);
-	a.setExpanded(true);
-	b.setExpanded(true);
-	a.render(40);
-	b.render(40);
-	assert.equal(thinkingExpandedWrapCacheSize(), 2, "two runs keep separate wrap slots");
-	a.render(40);
-	b.render(40);
-	assert.equal(thinkingExpandedWrapCacheSize(), 2, "rerender does not thrash sibling slots");
-	a.render(24);
-	assert.equal(thinkingExpandedWrapCacheSize(), 3, "each width keeps its own wrap slot");
-	a.setExpanded(false);
-	assert.equal(thinkingExpandedWrapCacheSize(), 1, "collapse drops all wraps for only that run");
-	const rebuiltA = new ThinkingPreviewBlock("Thought", bodyA, 0, 7, (text) => text, theme, 1);
-	const rebuiltB = new ThinkingPreviewBlock("Thought", bodyB, 0, 7, (text) => text, theme, 10);
-	assert.equal(rebuiltA.expanded, false, "rebuilt collapsed run stays collapsed");
-	assert.equal(rebuiltB.expanded, true, "rebuilt sibling run stays expanded");
-	rebuiltB.render(40);
-	assert.equal(thinkingExpandedWrapCacheSize(), 1, "rebuilt sibling reuses its surviving wrap");
-	rebuiltB.setExpanded(false);
-	assert.equal(thinkingExpandedWrapCacheSize(), 0);
-	clearThinkingPreviewCache();
-});
-
-test("expanded wrap cache evicts oldest beyond cap", () => {
-	clearThinkingPreviewCache();
-	const theme = {
-		fg: (_color: string, text: string) => text,
-		bg: (_slot: string, text: string) => text,
-	} as any;
-	const blocks: ThinkingPreviewBlock[] = [];
-	for (let index = 0; index <= THINKING_EXPANDED_WRAP_CACHE_MAX; index++) {
-		const block = new ThinkingPreviewBlock(
-			"Thought",
-			`wrap-body-${index} `.repeat(8),
-			0,
-			index,
-			(text) => text,
-			theme,
-			0,
-		);
-		block.setExpanded(true);
-		block.render(40);
-		blocks.push(block);
-	}
-	assert.equal(thinkingExpandedWrapCacheSize(), THINKING_EXPANDED_WRAP_CACHE_MAX);
-	clearThinkingPreviewCache();
-	assert.equal(thinkingExpandedWrapCacheSize(), 0, "lifecycle clear drops expanded wraps");
-	for (const block of blocks) block.setExpanded(false);
 });
 
 function runtime() {
@@ -570,6 +552,214 @@ test("completed run without duration never falls back to the loading label", () 
 			!plainLines.some((line) => line.includes("Thinking...")),
 			"no loading label fallback",
 		);
+	} finally {
+		emit("session_shutdown", {}, ctx);
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+function previewMessage(thinking: string) {
+	return {
+		role: "assistant",
+		timestamp: Date.now(),
+		content: [{ type: "thinking", thinking }],
+	} as unknown as AssistantMessage;
+}
+
+test("thinking preview counts wrapped hidden lines and does not restyle from cache", () => {
+	const dir = mkdtempSync(join(tmpdir(), "pi-compact-thinking-preview-"));
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	const { emit, pi } = runtime();
+	const theme = {
+		fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+		italic: (text: string) => text,
+		bold: (text: string) => text,
+	};
+	const ctx = {
+		mode: "tui",
+		sessionManager: { getBranch: () => [], getEntries: () => [] },
+		ui: {
+			theme,
+			setWidget() {},
+			requestRender() {},
+		},
+	} as any;
+	const width = 80;
+	const previewLines = 3;
+	const body = "x".repeat(4000);
+	try {
+		installCompactThinking(pi, {
+			useSummaryTitlesAsThinkingTitle: false,
+			previewLines,
+			animationIntervalMs: 30,
+		});
+		emit("session_start", {}, ctx);
+
+		const msg = previewMessage(body);
+		const first = new AssistantMessageComponent(msg, true) as any;
+		first.updateContent(msg);
+		const firstLines = first.render(width) as string[];
+		const firstPlain = firstLines.map((line: string) => line.trim()).filter(Boolean);
+		const hint = firstPlain.find((line: string) => /Thought/.test(line) && /more lines/.test(line));
+		assert.ok(hint, `expected hidden-line hint after Thought, got: ${JSON.stringify(firstPlain)}`);
+		assert.match(hint, /<dim> • \(\d+ more lines/);
+		const bodyToken = ccstyleConfig.dimThinkingText ? "dim" : "thinkingText";
+		assert.ok(
+			!firstPlain.some(
+				(line: string) => new RegExp(`^<${bodyToken}>x+`).test(line) && /more line/.test(line),
+			),
+			"preview body must not carry the more-line hint",
+		);
+		const hidden = Number(/\((\d+) more lines/.exec(hint)?.[1]);
+		// Raw newline count of the discarded prefix is 0; wrapped count is ~width-based.
+		assert.ok(
+			hidden > 20,
+			`hidden lines should follow wrap width, not raw newlines, got ${hidden}`,
+		);
+		assert.ok(
+			firstPlain.filter((line: string) => new RegExp(`^<${bodyToken}>x+`).test(line)).length <=
+				previewLines,
+			"preview body stays capped at previewLines",
+		);
+		assert.ok(
+			firstPlain.every((line: string) => !/^x{80,}/.test(line)),
+			"full unwrapped paragraph must not leak into the preview",
+		);
+
+		theme.fg = (color: string, text: string) => `[${color}]${text}[/${color}]`;
+		const second = new AssistantMessageComponent(msg, true) as any;
+		second.updateContent(msg);
+		const secondPlain = (second.render(width) as string[])
+			.map((line: string) => line.trim())
+			.filter(Boolean);
+		assert.ok(
+			secondPlain.some((line: string) => line.includes(`[${bodyToken}]`)),
+			"theme change must restyle preview body, not reuse cached ANSI",
+		);
+		assert.ok(
+			secondPlain.some((line: string) => /\[dim\] • \(\d+ more lines/.test(line)),
+			"more-line hint uses the dim token after theme change",
+		);
+		assert.ok(
+			secondPlain.every(
+				(line: string) => !line.includes("<thinkingText>") && !line.includes("<dim>"),
+			),
+			"cached wrap must not keep the previous theme's markup",
+		);
+	} finally {
+		emit("session_shutdown", {}, ctx);
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("previewLines 0 still offers click to show more and expands the body", () => {
+	const dir = mkdtempSync(join(tmpdir(), "pi-compact-thinking-preview-zero-"));
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	const { emit, pi } = runtime();
+	const ctx = themeCtx();
+	const body = Array.from({ length: 8 }, (_, i) => `line-${i}`).join("\n");
+	try {
+		installCompactThinking(pi, {
+			useSummaryTitlesAsThinkingTitle: false,
+			previewLines: 0,
+			animationIntervalMs: 30,
+		});
+		emit("session_start", {}, ctx);
+		const msg = previewMessage(body);
+		const component = new AssistantMessageComponent(msg, true) as any;
+		component.updateContent(msg);
+		const collapsed = renderText(component);
+		assert.ok(
+			collapsed.some((line) => /Thought.*click to show more/.test(line)),
+			`expected click hint with no preview body, got: ${JSON.stringify(collapsed)}`,
+		);
+		assert.ok(
+			!collapsed.some((line) => /^line-\d+$/.test(line)),
+			"previewLines 0 hides the thinking body",
+		);
+
+		thinkingBlockOf(component).setExpanded(true);
+		const expanded = renderText(component);
+		assert.ok(!expanded.some((line) => line.includes("click to show more")));
+		assert.ok(expanded.some((line) => line.includes("line-0")));
+		assert.ok(expanded.some((line) => line.includes("line-7")));
+	} finally {
+		emit("session_shutdown", {}, ctx);
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+function thinkingBlockOf(component: any): ThinkingPreviewBlock {
+	const block = component.contentContainer?.children?.find(
+		(child: unknown) => child instanceof ThinkingPreviewBlock,
+	);
+	assert.ok(block instanceof ThinkingPreviewBlock, "assistant mounts a thinking preview block");
+	return block;
+}
+
+test("thinking preview expands the full body and keeps that state across updateContent", () => {
+	const dir = mkdtempSync(join(tmpdir(), "pi-compact-thinking-preview-expand-"));
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	const { emit, pi } = runtime();
+	const ctx = themeCtx();
+	(ctx.ui.theme as any).bg = (_slot: string, text: string) => `<bg>${text}</bg>`;
+	const previewLines = 3;
+	const body = Array.from({ length: 20 }, (_, i) => `line-${i}`).join("\n");
+	try {
+		installCompactThinking(pi, {
+			useSummaryTitlesAsThinkingTitle: false,
+			previewLines,
+			animationIntervalMs: 30,
+		});
+		emit("session_start", {}, ctx);
+		const msg = previewMessage(body);
+		const component = new AssistantMessageComponent(msg, true) as any;
+		component.updateContent(msg);
+		const collapsed = renderText(component);
+		assert.ok(collapsed.some((line) => /more lines.*click to show more/.test(line)));
+		assert.ok(
+			collapsed.every((line) => !line.includes("<bg>")),
+			"collapsed preview is not wrapped in a card",
+		);
+		assert.equal(
+			collapsed.filter((line) => /^line-\d+$/.test(line)).length,
+			previewLines,
+			"collapsed body stays capped",
+		);
+
+		const block = thinkingBlockOf(component);
+		block.setExpanded(true);
+		const rawExpanded = component.render(120) as string[];
+		assert.ok(
+			rawExpanded.some((line) => line.includes("<bg>")),
+			"expanded thinking is wrapped in the userMessageBg card",
+		);
+		const expanded = renderText(component);
+		assert.ok(!expanded.some((line) => line.includes("more line")));
+		assert.ok(expanded.some((line) => line.includes("line-0")));
+		assert.ok(expanded.some((line) => line.includes("line-19")));
+		assert.ok(
+			expanded.filter((line) => /line-\d+/.test(line)).length > previewLines,
+			"expanded body shows more than the preview window",
+		);
+
+		component.updateContent(msg);
+		assert.equal(thinkingBlockOf(component).expanded, true);
+		assert.ok(renderText(component).some((line) => line.includes("line-0")));
+
+		thinkingBlockOf(component).setExpanded(false);
+		const recollapsed = renderText(component);
+		assert.ok(recollapsed.some((line) => /more lines.*click to show more/.test(line)));
+		assert.equal(recollapsed.filter((line) => /^line-\d+$/.test(line)).length, previewLines);
 	} finally {
 		emit("session_shutdown", {}, ctx);
 		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;

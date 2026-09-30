@@ -1,109 +1,126 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="pi-cc-extensions：Pi 终端效率扩展套件">
-</p>
-
-<p align="center">
-  <a href="https://pi.dev/packages?name=%40herbertgao%2Fpi-cc-extensions"><img alt="Pi package catalog" src="https://img.shields.io/badge/Pi-package-58B7FF?style=flat-square"></a>
-  <a href="https://www.npmjs.com/package/@herbertgao/pi-cc-extensions"><img alt="npm version" src="https://img.shields.io/npm/v/%40herbertgao%2Fpi-cc-extensions?style=flat-square&color=66E3C4"></a>
-  <a href="#兼容性"><img alt="Node.js 24 or newer" src="https://img.shields.io/badge/Node.js-%E2%89%A524-66E3C4?style=flat-square"></a>
-  <a href="./extensions"><img alt="TypeScript extensions" src="https://img.shields.io/badge/TypeScript-extensions-3178C6?style=flat-square"></a>
-</p>
-
-<p align="center">
-  类 Claude Code TUI 输出风格，并融入了一些个人喜好，和一些实用小功能。
-</p>
-
-<p align="center">
   <strong>简体中文</strong> · <a href="./README.en.md">English</a>
 </p>
 
----
+# pi-cc-extensions
+
+> 类 Claude Code TUI 输出风格，并融入了一些个人喜好，和一些实用小功能。
 
 ## 界面预览
 
-<table>
-  <img width="100%" alt="demo_new" src="https://github.com/user-attachments/assets/d4f9bb51-a49a-4a34-aa60-006514d37b09" />
-</table>
+<a href="https://github.com/user-attachments/assets/6c858000-fdad-43f9-957f-4d0278648498"><img src="./assets/readme/preview.webp" alt="pi-cc-extensions 界面预览" width="100%"></a>
+
+点击封面播放演示视频
 
 ## 快速开始
 
 ```bash
 pi install npm:@herbertgao/pi-cc-extensions
+
+# GitHub（本 monorepo）
+pi install git:github.com/HerbertGao/pi-extensions
 ```
 
 安装后执行 `/reload`
 
 ## 功能
 
-| 功能                 | 说明                                                                                                     | 入口        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- | ------------- |
-| Claude Code UI | 工具摘要、折叠展开、rich edit/write diff，以及 `on` / `compact` / `off` 三种模式                          | `/ccstyle`  |
-| Fullscreen mode  | 工具卡/group 点击展开与收起、预览、hover 高亮、回到底部按钮 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
-| 配置面板             | `Style / Diff / Thinking / UI / Feature` 五页签，含启动头、滚轮步进及可选功能开关                              | `/ccstyle`  |
-| 上下文检查           | 查看上下文占用，并预览 System prompt、Memory、Tools、Tool results、Skills 和消息内容                              | `/context`  |
-| Session/Subagent 引用         | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                                                      | `@` |
-| 主题                 | 随包提供内置 CC Dark、CC Light 主题                                                                      | `/theme`    |
+| 功能                  | 说明                                                                            | 入口                                            |
+| --------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Claude Code UI        | 工具摘要、折叠展开、rich edit/write diff，以及`on` / `compact` / `off` 三种模式 | `/ccstyle`                                      |
+| Markdown 增强         | Mermaid 图、提示框、URL 链接化等                                                        | 自动生效                                        |
+| Fullscreen mode       | 工具卡/group 单击展开与收起、预览、hover 高亮、回到底部按钮                 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
+| 配置面板              | `Style / Features / UI / Diff / Thinking / Footer` 六页签                       | `/ccstyle`                                      |
+| 上下文检查            | 查看上下文占用，并预览 System prompt、Memory、Skills、Tools definition 和消息内容 | `/context`                                      |
+| Session/Subagent 引用 | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                             | `@`                                             |
+| 状态栏                | 显示：模型、上下文、缓存、费用、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存图标可关 Nerd Font | `/ccstyle`                              |
+| 主题                  | 随包提供内置 CC Dark、CC Light 主题                                             | `/theme`                                        |
+
+`on` / `compact` 两种模式的渲染样例：[默认模式](./docs/tool-render-examples-default.md) · [紧凑模式](./docs/tool-render-examples-compact.md)
 
 ## 配置
 
-`/ccstyle` 的行为由 `~/.pi/agent/claude-code-style.json` 配置：
+`/ccstyle` 的行为由 `~/.pi/agent/pi-cc-extensions.json` 配置：
 
-```js
+```jsonc
 {
-  "mode": "on",                            // on：Claude Code 风格；compact：单行摘要；off：Pi 原生渲染
-  "excludeRenderers": [],                  // 走原生渲染的工具名列表（精确匹配），Agent 始终保留专用渲染器
-  "diffViewMode": "auto",                  // diff 布局：auto / split / unified
-  "diffIndicatorMode": "bars",             // diff 变更指示：bars / classic / none
-  "diffSplitMinWidth": 120,                // 自动布局下使用左右分栏的最小终端宽度
-  "editDiffCollapsedLines": 24,                // 折叠时展示的 diff 行数，超出显示展开提示（Ctrl+O / 点击）
-  "diffWordWrap": true,                    // 长 diff 行是否换行（否则截断）
-  "expandedPreviewMaxLines": 40,           // 展开后输出/diff 正文的最大行数
-  "useSummaryTitlesAsThinkingTitle": true, // 用最新 provider 摘要作为思考标题
-  "previewLines": 3,                       // thinking 预览行数，0 隐藏预览正文
-  "animationIntervalMs": 90,               // thinking 标题动画间隔（毫秒）
-  "dimThinkingText": false,                // thinking 正文使用 dim 色
-  "showStartupHeader": true,               // 自定义启动头（logo + tips）开关
-  "scrollStepLines": 3,                    // fullscreen 滚轮滚动步进行数
+  // style
+  "mode": "on",                            // on / compact / off
+  "excludeRenderers": [],                  // 走原生渲染的工具名；Agent 始终保留专用渲染器
+
+  // features
   "enableSessionReference": true,          // @ session 引用
-  "enableSubagentAutocomplete": true,      // @ subagent 自动补全
+  "enableSubagentAutocomplete": true,      // @subagent:[name] 补全与委派提示
   "enableContextCommand": true,            // /context 上下文检查
-  "enableAgentSummary": true,              // 每回合工具统计摘要
-  "enableWorkingMessage": true,            // Working... token/耗时展示
-  "enableAliases": true                    // /clear、/exit 别名
+  "enableAgentSummary": true,              // 每回合工具摘要
+  "enableWorkingMessage": true,            // Working... 底部 token/耗时
+  "enableAliases": true,                   // /clear、/exit 别名
+
+  // ui
+  "expandedInputMaxLines": 5,              // 展开工具卡 Input 可见行数，超出在末行显示展开提示
+  "expandedOutputMaxLines": 10,            // 展开工具卡 Output 可见行数，超出在末行显示展开提示
+  "expandedPreviewMaxLines": 40,           // 展开 TaskList 正文最大行数（展开 diff 始终全量）
+  "inputClip": 0,                          // 工具摘要 path/command 折叠字符数；0 = 按可用宽度
+  "showStartupHeader": true,               // 启动头（logo + tips）开关
+  "scrollStepLines": 3,                    // fullscreen 滚轮步进
+
+  // diff
+  "diffViewMode": "auto",                  // 布局：auto / split / unified
+  "diffIndicatorMode": "bars",             // 变更指示：bars / classic / none
+  "diffSplitMinWidth": 120,                // 左右分栏的最小终端宽度
+  "editDiffCollapsedLines": 24,            // Edit 折叠行数，超出显示展开提示
+  "writeDiffCollapsedLines": 0,            // write 折叠行数，0 仅显示创建摘要
+  "diffWordWrap": true,                    // 长 diff 行换行
+
+  // thinking
+  "useSummaryTitlesAsThinkingTitle": true, // 用最新摘要作思考标题
+  "previewLines": 3,                       // 预览行数，0 隐藏
+  "animationIntervalMs": 90,               // 标题动画间隔（毫秒）
+  "dimThinkingText": false,                // thinking 正文用 dim 色
+
+  // footer
+  "enableCustomFooter": true,              // 自定义状态栏
+  "footerNerdIcons": true,                 // git/缓存用 Nerd Font 图标；false 为纯文本
+  "footerHiddenKeys": [],                  // 隐藏的插件芯片 key
+  "footerLine1Keys": ["pi-usage"],         // line1 插件芯片顺序；pi-usage 默认显示，数据来自 @narumitw/pi-usage
+  "footerLine2Keys": [],                   // line2 插件芯片顺序（接在 cwd/git 后）
+  "footerLine3Keys": []                    // line3 备用槽，有可见芯片才占行
 }
 ```
 
-> **建议**：在 `/settings` 中将 Mermaid diagrams 设为 `final`，避免流式内容逐帧重绘。
+> [!TIP]
+> **全屏模式**：单击 `click to show more` 展开工具卡、思考、Skill 和 compact 摘要；工具卡展开态 diff 全量显示，Input/Output 超行时末行 `… +N more lines • click to show more` 打开全量预览，单击收起（卡内拖动为选中文本）。
+
+> [!NOTE]
+> **Mermaid 渲染**：建议把 `markdown.mermaid` 设为 `final`（`~/.pi/agent/settings.json` 或 `/settings` 面板的 Mermaid diagrams 选项）。默认 `streaming` 逐帧重绘，`final` 渲染最终版更稳定。
 
 ## 本地开发
 
 ```bash
-bun run test
-bun run typecheck
+npm test
+npm run typecheck
 ./test.bat # or pi -e .
 ```
 
 ## 兼容性
 
-- Node.js `>=24`，Pi `^0.84.0 || ^0.85.0`（通过根目录 `package.json` 的 `pi.extensions` 和 `pi.themes` 加载）
-
-## 内置能力
-
-Pi 0.99+ 的内置 MCP 负责 MCP 工具与 `/mcp` 管理；不要再安装会注册 `/mcp` 的第三方 MCP 扩展。
+- Node.js `>=22.19.0`，Pi `^0.84.0`
 
 ## 推荐搭配
 
 | 扩展                                     | 用途                                             |
-| ------------------------------------------ | -------------------------------------------------- |
+| ---------------------------------------- | ------------------------------------------------ |
 | `npm:@tintinweb/pi-subagents`            | 并行 SubAgent、后台任务与工作树隔离              |
 | `npm:@tintinweb/pi-tasks`                | Claude Code 风格任务跟踪与协调                   |
+| `npm:pi-mcp-adapter`                     | 按需发现 MCP 工具，减少上下文占用                |
 | `npm:@ff-labs/pi-fff`                    | 模糊文件与内容检索（fffind / ffgrep）            |
 | `npm:pi-web-access`                      | 网页搜索、URL 抓取、GitHub 克隆、PDF/视频解析    |
-| `npm:pi-theme-picker`                    | 主题搜索和实时预览                               |
 | `npm:@narumitw/pi-usage`                 | 查看当前账号用量（Codex / Copilot / OpenRouter） |
-| `git:github.com/DietrichGebert/ponytail` | 极简编码：强制最懒但有效的方案                   |
 
 ## 致谢
 
-- 基于 MIT 许可的 [`minuque/pi-cc-extensions` v0.8.68](https://github.com/minuque/pi-cc-extensions/releases/tag/v0.8.68)（`1ca144c`）衍生维护。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
+
+## 许可证
+
+[MIT](./LICENSE) © 2026 minuque；衍生维护：[HerbertGao/pi-extensions](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-cc-extensions)

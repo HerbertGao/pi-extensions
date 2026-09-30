@@ -7,16 +7,19 @@
 import { ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
 import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { config, getToolDisplayConfig, type CompactStyleMode } from "../config/config.ts";
-import { isToolCallHovered } from "./mouse/interaction.ts";
+import {
+	COMPONENT_TOOL_RENDER_MODE,
+	GLOBAL_TOOL_RENDER_PATCH,
+	patchRegistry,
+	TOOL_EXPANDED_BACKGROUND_PATCH,
+} from "../utils/patch-keys.ts";
+import { isToolCallHovered } from "./mouse/hover.ts";
 import {
 	countLines,
-	fitToolCallSummary,
 	hasExpandableDetail,
 	insetComponent,
 	isToolExpanded,
-	oneLine,
 	outputLineCount,
-	pathSummary,
 	pendingIcon,
 	renderCollapsedToolResultToWidth,
 	renderExpandedToolResult,
@@ -27,27 +30,24 @@ import {
 	textFromResult,
 	toolIconColor,
 	toolViewportWidth,
-	type ToolCallSummary,
 } from "./tool/result.ts";
-import { showMoreHintText } from "./show-more-hint.ts";
+import { oneLine } from "../utils/format.ts";
+import { showMoreHintText } from "./tool/show-more-hint.ts";
+import { countWriteDiffStats } from "./tool/diff/diff-renderer.ts";
 import { renderRichToolResult, type WriteExecutionMetadataStore } from "./tool/diff/index.ts";
-import { getMessageDisplayTheme } from "./message-display.ts";
+import { getMessageDisplayTheme } from "./tool/message-display.ts";
+import { mcpToolTitle } from "./tool/mcp-title.ts";
+import {
+	fitToolCallSummary,
+	humanizeToolLabel,
+	renderToolSummary,
+	toolCallSummary,
+} from "./tool/names.ts";
 
 // 成功勾：亮绿 truecolor（与 message-display 一致）
 const BRIGHT_GREEN = "\x1b[38;2;80;220;100m";
 const ANSI_FG_RESET = "\x1b[39m";
 
-const GLOBAL_TOOL_RENDER_PATCH = Symbol.for("pi.ccstyle.global-tool-render-patch");
-const COMPONENT_TOOL_RENDER_MODE = Symbol.for("pi.ccstyle.component-tool-render-mode");
-const COMPONENT_TOOL_SELF_SHELL_MODE = Symbol.for("pi.ccstyle.component-tool-self-shell-mode");
-const TOOL_EXPANDED_BACKGROUND_PATCH = Symbol.for("pi.ccstyle.tool-expanded-background-patch");
-
-const AGENT_FAMILY_TOOL_NAMES = new Set([
-	"Agent",
-	"Agents",
-	"get_subagent_result",
-	"steer_subagent",
-]);
 // pi-subagents 等扩展为 Agent 提供专用渲染器，ccstyle 必须保留。
 const DEDICATED_RENDERER_TOOLS = new Set(["Agent"]);
 
@@ -64,23 +64,32 @@ type ToolRenderMethods = {
 	getResultRenderer: (...args: any[]) => any;
 };
 
+type ToolPaintHit = {
+	width: number;
+	expanded: boolean;
+	isPartial: boolean;
+	result: unknown;
+	args: unknown;
+	callHover: boolean;
+	ioHover: string | null;
+	lines: string[];
+};
+
 type GlobalToolRenderPatch = {
 	version: 2;
 	prototype: any;
-	owner: object;
 	active: boolean;
-	enabled: () => boolean;
 	mode: () => CompactStyleMode;
 	wrap: (tool: any) => any;
 	byDefinition: WeakMap<object, any>;
 	byName: Map<string, any>;
 	downstream: ToolRenderMethods;
 	installed: ToolRenderMethods;
-	// 兼容旧扩展读取 Symbol 上的 legacy 字段。
-	originalHasRendererDefinition: ToolRenderMethods["hasRendererDefinition"];
-	originalGetRenderShell: ToolRenderMethods["getRenderShell"];
-	originalGetCallRenderer: ToolRenderMethods["getCallRenderer"];
-	originalGetResultRenderer: ToolRenderMethods["getResultRenderer"];
+	originalRender?: (width: number) => string[];
+	originalInvalidate?: () => void;
+	renderPaint?: (width: number) => string[];
+	invalidatePaint?: () => void;
+	paintCache?: WeakMap<object, ToolPaintHit>;
 };
 
 type ToolExpandedBackgroundPatch = {
@@ -91,31 +100,14 @@ type ToolExpandedBackgroundPatch = {
 	dispose: () => void;
 };
 
+/** rich diff 的两个入口（本处与 compact 的 paintCompactEditWrite）都靠 renderRichToolResult
+ * 返回 undefined 让位，这里只判断模式与工具名，避免多一个可能与让位不一致的 gate。 */
 export function shouldRenderRichDiff(
 	mode: CompactStyleMode,
 	toolName: string,
 	isError: boolean,
 ): boolean {
 	return mode === "on" && !isError && (toolName === "edit" || toolName === "write");
-}
-
-export function isMcpToolDefinition(definition: any, toolName: string): boolean {
-	const label = typeof definition?.label === "string" ? definition.label.trim() : "";
-	if (/^MCP(?::|$)/i.test(label)) return true;
-	if (toolName === "mcp" || /^mcp[_:-]|[_:-]mcp[_:-]/i.test(toolName)) return true;
-	if (label) return false;
-	const description = typeof definition?.description === "string" ? definition.description : "";
-	return /\bModel Context Protocol\b/i.test(description);
-}
-
-export function humanizeMcpToolName(toolName: string): string {
-	const words = toolName
-		.replace(/^mcp(?:[_:-]+)+/i, "")
-		.split(/[_:-]+/)
-		.filter(Boolean);
-	return words.length
-		? words.map((word) => word[0]!.toUpperCase() + word.slice(1)).join(" ")
-		: "MCP";
 }
 
 /** 排除名单内且自带 renderer 的工具保留原渲染。 */
@@ -141,97 +133,6 @@ function renderDefault(tool: any, slot: "renderCall" | "renderResult", args: any
 		// Fall through to raw fallback.
 	}
 	return new Text(fallback, 0, 0);
-}
-
-function humanizeToolLabel(label: string): string {
-	return label
-		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-		.replace(/[_-]+/g, " ")
-		.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function singleToolCallSummary(
-	toolName: string,
-	label: string,
-	args: any,
-	cwd?: string,
-): ToolCallSummary {
-	const title = label === toolName ? humanizeToolLabel(label) : label;
-	if (!args || typeof args !== "object") return { main: title, detail: "" };
-	const name = toolName.toLowerCase();
-	const value = (fallback: string, ...keys: string[]) => {
-		const found = keys.map((key) => args[key]).find((item) => typeof item === "string" && item);
-		return `${title} ${oneLine(found || fallback)}`;
-	};
-	if (AGENT_FAMILY_TOOL_NAMES.has(toolName) && args.agent_id) {
-		return { main: `${title} ${oneLine(args.agent_id)}`, detail: "" };
-	}
-	// Agents 走 ccstyle wrapper；Agent 保留专用渲染器。
-	if (name === "agents") {
-		return {
-			main: value("launch agents", "description", "prompt"),
-			detail: "",
-		};
-	}
-	if (name === "skill") return { main: value("run skill", "name"), detail: "" };
-	if (name === "enterplanmode" || name === "enter_plan_mode") {
-		return { main: `${title} enable read-only planning`, detail: "" };
-	}
-	if (name === "exitplanmode" || name === "exit_plan_mode") {
-		return { main: `${title} present plan`, detail: "" };
-	}
-	if (name === "taskcreate") return { main: value("create task", "subject"), detail: "" };
-	if (name === "tasklist") return { main: `${title} task list`, detail: "" };
-	if (name === "taskget" || name === "taskupdate") {
-		return { main: value("task", "taskId", "task_id"), detail: "" };
-	}
-	if (name === "taskoutput" || name === "taskstop") {
-		return { main: value("background task", "task_id", "taskId"), detail: "" };
-	}
-	if (name === "taskexecute") {
-		const ids = Array.isArray(args.task_ids)
-			? args.task_ids
-			: Array.isArray(args.taskIds)
-				? args.taskIds
-				: [];
-		const summary = ids.length
-			? `${ids[0]}${ids.length > 1 ? ` (+${ids.length - 1} tasks)` : ""}`
-			: "start tasks";
-		return { main: `${title} ${summary}`, detail: "" };
-	}
-	if (toolName === "read") {
-		const details = [
-			args.offset !== undefined ? `offset=${args.offset}` : "",
-			args.limit !== undefined ? `limit=${args.limit}` : "",
-		].filter(Boolean);
-		const detail = details.length ? ` (${details.join(", ")})` : "";
-		if (typeof args.path === "string" && args.path) {
-			return pathSummary(title, args.path, cwd, detail);
-		}
-		return { main: title, detail };
-	}
-	const preferredPath = args.path ?? args.file_path;
-	if (typeof preferredPath === "string" && preferredPath) {
-		return pathSummary(title, preferredPath, cwd);
-	}
-	const preferred =
-		args.command ??
-		args.query ??
-		args.question ??
-		args.pattern ??
-		args.url ??
-		args.name ??
-		args.tool_use_id ??
-		args.toolCallId ??
-		args.id ??
-		args.message;
-	return {
-		main:
-			preferred !== undefined && preferred !== null && typeof preferred !== "object"
-				? `${title} ${oneLine(preferred)}`
-				: title,
-		detail: "",
-	};
 }
 
 type ParsedTask = { id: string; status: string; subject: string };
@@ -277,11 +178,16 @@ function renderExpandedTaskResult(
 					: task.status === "in_progress"
 						? "warning"
 						: "muted";
-			return `   ${theme.fg("accent", `#${task.id}`)} ${theme.fg(color, task.status)} ${theme.fg("dim", task.subject)}`;
+			return `${theme.fg("accent", `#${task.id}`)} ${theme.fg(color, task.status)} ${theme.fg("dim", task.subject)}`;
 		});
 		if (tasks.length > rows.length)
-			rows.push(theme.fg("muted", `   … ${tasks.length - rows.length} more tasks`));
-		return new Text(` ↳ ${theme.fg("muted", taskListSummary(tasks))}\n${rows.join("\n")}`, 0, 0);
+			rows.push(theme.fg("muted", `… ${tasks.length - rows.length} more tasks`));
+		// 贴左：外层展开卡片 Box(1,1) 提供 1 格 padding
+		return new Text(
+			`↳ ${theme.fg("muted", taskListSummary(tasks))}\n${rows.map((r) => `  ${r}`).join("\n")}`,
+			0,
+			0,
+		);
 	}
 	const line = text.trim();
 	if (!line || line.includes("\n")) return undefined;
@@ -299,7 +205,7 @@ function renderExpandedTaskResult(
 	} else if (toolName === "TaskStop") {
 		formatted = `${theme.fg("success", "Stopped")} ${theme.fg("muted", line)}`;
 	}
-	return formatted ? new Text(` ↳ ${formatted}`, 0, 0) : undefined;
+	return formatted ? new Text(`↳ ${formatted}`, 0, 0) : undefined;
 }
 
 /** 用 ccstyle call/result 包装任意工具定义。 */
@@ -308,15 +214,16 @@ function createCcstyleTool(
 	writeExecutionMetadata: WriteExecutionMetadataStore,
 ): any {
 	const toolName = originalTool.name;
-	const label = isMcpToolDefinition(originalTool, toolName)
-		? humanizeMcpToolName(toolName)
-		: originalTool.label || toolName;
+	const label = originalTool.label || toolName;
+	const defaultTitle = label === toolName ? humanizeToolLabel(label) : label;
+	// MCP 工具直接用 adapter 暴露的真实工具名，不做人性化
+	const title = mcpToolTitle({ toolName, definition: originalTool }) ?? defaultTitle;
 
 	return {
 		...originalTool,
 		renderShell: "self",
 		renderCall(args: any, theme: any, context: any) {
-			if (config.mode !== "on") {
+			if (config.mode === "off") {
 				return renderDefault(originalTool, "renderCall", [args, theme, context], String(toolName));
 			}
 
@@ -324,31 +231,71 @@ function createCcstyleTool(
 			const isPending =
 				visualState === "pending" ||
 				(!visualState && (context?.isPartial || context?.executionStarted));
-			if (isPending && context?.executionStarted) scheduleAnimation(context);
-			const rawIcon = isPending ? pendingIcon(toolName) : settledIcon(toolName, visualState);
-			const icon =
+			const animating = isPending && Boolean(context?.executionStarted);
+			if (animating) scheduleAnimation(context, { light: true });
+			const settledRawIcon = isPending ? "" : settledIcon(toolName, visualState);
+			const settledIconStyled =
 				visualState === "success"
-					? `${BRIGHT_GREEN}${rawIcon}${ANSI_FG_RESET}`
-					: theme.fg(toolIconColor(context), rawIcon);
-			const summary = singleToolCallSummary(toolName, label, args, context?.cwd);
+					? `${BRIGHT_GREEN}${settledRawIcon}${ANSI_FG_RESET}`
+					: theme.fg(toolIconColor(context), settledRawIcon);
+			// 逐帧 spinner：帧在 render() 内取，动画定时器只需 requestRender，
+			// 不再每次 tick 走 updateDisplay 把整张卡重建一遍。
+			const pendingIconStyled = () => theme.fg(toolIconColor(context), pendingIcon(toolName));
+			const summary = toolCallSummary(toolName, args, {
+				title,
+				variant: "default",
+				cwd: context?.cwd,
+			});
+			let writeStatsText = "";
+			let writeStatsStyled = "";
+			if (toolName === "write" && visualState === "success") {
+				const meta = writeExecutionMetadata.get(context?.toolCallId);
+				const stats = countWriteDiffStats(
+					typeof args?.content === "string" ? args.content : undefined,
+					meta?.previousContent,
+					meta?.fileExistedBeforeWrite,
+				);
+				if (stats) {
+					writeStatsText = ` (+${stats.added} -${stats.removed})`;
+					writeStatsStyled = ` ${theme.fg("dim", "(")}${theme.fg("success", `+${stats.added}`)} ${theme.fg("error", `-${stats.removed}`)}${theme.fg("dim", ")")}`;
+				}
+			}
+			const extraText = writeStatsText || summary.detail;
+			const extraStyled = writeStatsStyled || theme.fg("dim", summary.detail);
 			let cachedWidth: number | undefined;
 			let cachedLine: string | undefined;
+			let cachedIcon: string | undefined;
+			const expanded = Boolean(context?.expanded);
 			return {
 				render(width: number) {
-					if (cachedLine !== undefined && cachedWidth === width) return [cachedLine];
+					// 轻量 tick 只会 requestRender，靠这里续期，动画才能自维持。
+					if (animating) scheduleAnimation(context, { light: true });
+					const icon = isPending ? pendingIconStyled() : settledIconStyled;
+					if (cachedLine !== undefined && cachedWidth === width && cachedIcon === icon) {
+						return [cachedLine];
+					}
 					const viewportWidth = toolViewportWidth(width);
-					const callWidth = Math.max(0, viewportWidth - visibleWidth(icon) - 2);
-					const mainWidth = Math.max(0, callWidth - visibleWidth(summary.detail));
+					// 展开态贴左（外层 Box 已 pad 1）；折叠 self-shell 保留 1 格前导空格
+					const lead = expanded ? "" : " ";
+					const callWidth = Math.max(
+						0,
+						viewportWidth - visibleWidth(icon) - 1 - (expanded ? 0 : 1),
+					);
+					const mainWidth = Math.max(0, callWidth - visibleWidth(extraText));
 					cachedWidth = width;
-					const line = ` ${icon} ${theme.fg("toolTitle", fitToolCallSummary(summary, mainWidth))}${theme.fg("dim", summary.detail)}`;
-					cachedLine = truncateToWidth(line, viewportWidth, "");
-					return [cachedLine];
+					cachedIcon = icon;
+					// 路径按最终可用宽度中间截断，避免整行二次截断隐藏文件名。
+					cachedLine = `${lead}${icon} ${renderToolSummary(summary, mainWidth, theme.fg.bind(theme))}${extraStyled}`;
+					return [truncateToWidth(cachedLine, viewportWidth, "")];
 				},
-				invalidate() {},
+				invalidate() {
+					cachedLine = undefined;
+					cachedIcon = undefined;
+				},
 			};
 		},
 		renderResult(result: any, options: any, theme: any, context: any) {
-			if (config.mode !== "on") {
+			if (config.mode === "off") {
 				return renderDefault(
 					originalTool,
 					"renderResult",
@@ -357,13 +304,15 @@ function createCcstyleTool(
 				);
 			}
 
+			const expanded = isToolExpanded(options, context);
 			if (options?.isPartial) {
-				return new Text(theme.fg("muted", "   ↳ Pending…"), 0, 0);
+				// 展开态贴左（Box 提供 1 格 pad）；折叠态保持 3 格对齐标题
+				const pending = expanded ? "↳ Pending…" : "   ↳ Pending…";
+				return new Text(theme.fg("muted", pending), 0, 0);
 			}
 
 			const isError = options?.isError || context?.isError;
 			setToolVisualState(context, isError ? "error" : "success");
-			const expanded = isToolExpanded(options, context);
 			const toolCallId = context?.toolCallId;
 			if (shouldRenderRichDiff(config.mode, toolName, Boolean(isError))) {
 				// getter 保证 Diff indicator / wrap / limits 下次绘制即更新
@@ -381,7 +330,8 @@ function createCcstyleTool(
 					writeExecutionMetadata,
 					getToolDisplayConfig,
 				);
-				if (richResult) return insetComponent(richResult);
+				// 展开态由 Box(1,1) 提供内边距；折叠态 inset 一级缩进
+				if (richResult) return expanded ? richResult : insetComponent(richResult);
 			}
 
 			const text = textFromResult(result, expanded);
@@ -398,7 +348,8 @@ function createCcstyleTool(
 				? taskListSummary(tasks)
 				: isError
 					? text
-						? oneLine(text)
+						? // 72 与原 result.ts 默认一致，保持错误摘要截断宽度。
+							oneLine(text, 72)
 						: "Failed"
 					: outputLines
 						? `${outputLines} ${lineWord} ${action}`
@@ -416,6 +367,7 @@ function createCcstyleTool(
 					context?.lastComponent,
 					args,
 					context,
+					true, // mode=on：贴左，由外层 Box(1,1) 提供 1 格 padding
 				);
 			}
 			if (context?.state) context.state.ccstyleIoView = undefined;
@@ -466,17 +418,13 @@ function shouldGloballyStyleTool(component: any, patch: GlobalToolRenderPatch): 
 	const builtInDefinition = component.builtInToolDefinition;
 	const definition = extensionDefinition ?? builtInDefinition;
 	const toolName = String(component.toolName || definition?.name || "");
+	// compact 也复用同一套 ccstyle call/result，避免折叠态工具卡回落到 Pi 原生样式。
 	const useCcstyle =
-		patch.mode() === "on" &&
+		patch.mode() !== "off" &&
 		!DEDICATED_RENDERER_TOOLS.has(toolName) &&
 		!preservesOriginalRenderer(extensionDefinition, toolName, builtInDefinition);
 	component[COMPONENT_TOOL_RENDER_MODE] = useCcstyle;
 	return useCcstyle;
-}
-
-function shouldUseSelfShell(component: any, _patch: GlobalToolRenderPatch): boolean {
-	component[COMPONENT_TOOL_SELF_SHELL_MODE] = false;
-	return false;
 }
 
 function getGloballyStyledTool(component: any, patch: GlobalToolRenderPatch): any {
@@ -516,107 +464,88 @@ function isOwnershipAwarePatch(value: any): value is GlobalToolRenderPatch {
 	);
 }
 
-function isLegacyInstalledWrapper(method: unknown, downstreamField: string): boolean {
-	if (typeof method !== "function") return false;
-	try {
-		const source = Function.prototype.toString.call(method);
-		return (
-			source.includes(downstreamField) &&
-			(source.includes("shouldGloballyStyleTool") ||
-				source.includes("shouldUseSelfShell") ||
-				source.includes("getGloballyStyledTool"))
-		);
-	} catch {
-		return false;
-	}
-}
-
-function downstreamForGlobalToolInstall(prototype: any, previous: any): ToolRenderMethods {
+function downstreamForGlobalToolInstall(
+	prototype: any,
+	previous: GlobalToolRenderPatch | undefined,
+): ToolRenderMethods {
 	const current = prototypeToolRenderMethods(prototype);
-	if (!previous || previous.prototype !== prototype) return current;
-	if (isOwnershipAwarePatch(previous)) {
-		return {
-			hasRendererDefinition:
-				current.hasRendererDefinition === previous.installed.hasRendererDefinition
-					? previous.downstream.hasRendererDefinition
-					: current.hasRendererDefinition,
-			getRenderShell:
-				current.getRenderShell === previous.installed.getRenderShell
-					? previous.downstream.getRenderShell
-					: current.getRenderShell,
-			getCallRenderer:
-				current.getCallRenderer === previous.installed.getCallRenderer
-					? previous.downstream.getCallRenderer
-					: current.getCallRenderer,
-			getResultRenderer:
-				current.getResultRenderer === previous.installed.getResultRenderer
-					? previous.downstream.getResultRenderer
-					: current.getResultRenderer,
-		};
+	if (!previous || previous.prototype !== prototype || !isOwnershipAwarePatch(previous)) {
+		return current;
 	}
-
-	// pre-v2 Symbol 无 wrapper 引用；能识别则回退，否则保留当前方法为 external。
-	const legacyDownstream = (method: Function, field: string): Function => {
-		const saved = previous[field];
-		return typeof saved === "function" && isLegacyInstalledWrapper(method, field) ? saved : method;
-	};
 	return {
-		hasRendererDefinition: legacyDownstream(
-			current.hasRendererDefinition,
-			"originalHasRendererDefinition",
-		) as ToolRenderMethods["hasRendererDefinition"],
-		getRenderShell: legacyDownstream(
-			current.getRenderShell,
-			"originalGetRenderShell",
-		) as ToolRenderMethods["getRenderShell"],
-		getCallRenderer: legacyDownstream(
-			current.getCallRenderer,
-			"originalGetCallRenderer",
-		) as ToolRenderMethods["getCallRenderer"],
-		getResultRenderer: legacyDownstream(
-			current.getResultRenderer,
-			"originalGetResultRenderer",
-		) as ToolRenderMethods["getResultRenderer"],
+		hasRendererDefinition:
+			current.hasRendererDefinition === previous.installed.hasRendererDefinition
+				? previous.downstream.hasRendererDefinition
+				: current.hasRendererDefinition,
+		getRenderShell:
+			current.getRenderShell === previous.installed.getRenderShell
+				? previous.downstream.getRenderShell
+				: current.getRenderShell,
+		getCallRenderer:
+			current.getCallRenderer === previous.installed.getCallRenderer
+				? previous.downstream.getCallRenderer
+				: current.getCallRenderer,
+		getResultRenderer:
+			current.getResultRenderer === previous.installed.getResultRenderer
+				? previous.downstream.getResultRenderer
+				: current.getResultRenderer,
 	};
 }
 
-function disconnectGlobalToolRenderPatch(patch: any): void {
-	if (!patch || typeof patch !== "object") return;
+function disconnectGlobalToolRenderPatch(patch: GlobalToolRenderPatch | undefined): void {
+	if (!patch) return;
 	patch.active = false;
-	patch.enabled = () => false;
-	patch.mode = () => "off";
-	patch.wrap = (tool: any) => tool;
 	patch.byDefinition = new WeakMap();
-	if (patch.byName && typeof patch.byName.clear === "function") patch.byName.clear();
-	else patch.byName = new Map();
+	patch.byName.clear();
+}
+
+function ioHoverOf(tool: any): string | null {
+	const view = tool?.resultRendererComponent;
+	if (!view || typeof view.getHoveredSection !== "function") return null;
+	return view.getHoveredSection();
+}
+
+function toolPaintMatches(hit: ToolPaintHit, tool: any, width: number): boolean {
+	return (
+		hit.width === width &&
+		hit.expanded === Boolean(tool.expanded) &&
+		hit.isPartial === Boolean(tool.isPartial) &&
+		hit.result === tool.result &&
+		hit.args === tool.args &&
+		hit.callHover === isToolCallHovered(tool.toolCallId) &&
+		hit.ioHover === ioHoverOf(tool)
+	);
 }
 
 function installGlobalToolRendering(
 	writeExecutionMetadata: WriteExecutionMetadataStore,
 ): GlobalToolRenderPatch {
 	const prototype = (ToolExecutionComponent as any).prototype;
-	const host = globalThis as any;
-	const previous = host[GLOBAL_TOOL_RENDER_PATCH];
+	const previous = patchRegistry.get<GlobalToolRenderPatch>(GLOBAL_TOOL_RENDER_PATCH);
 	const downstream = downstreamForGlobalToolInstall(prototype, previous);
-	// 外部仍持有的旧 wrapper 先变为无回调 pass-through，再挂新安装。
-	disconnectGlobalToolRenderPatch(previous);
+	const originalRender =
+		previous?.originalRender && prototype.render === previous.renderPaint
+			? previous.originalRender
+			: prototype.render;
+	const originalInvalidate =
+		previous?.originalInvalidate && prototype.invalidate === previous.invalidatePaint
+			? previous.originalInvalidate
+			: prototype.invalidate;
+	if (isOwnershipAwarePatch(previous)) disconnectGlobalToolRenderPatch(previous);
 
 	const patch: GlobalToolRenderPatch = {
 		version: 2,
 		prototype,
-		owner: {},
 		active: true,
-		enabled: () => config.mode === "on",
 		mode: () => config.mode,
 		wrap: (tool: any) => createCcstyleTool(tool, writeExecutionMetadata),
 		byDefinition: new WeakMap(),
 		byName: new Map(),
 		downstream,
 		installed: undefined as any,
-		originalHasRendererDefinition: downstream.hasRendererDefinition,
-		originalGetRenderShell: downstream.getRenderShell,
-		originalGetCallRenderer: downstream.getCallRenderer,
-		originalGetResultRenderer: downstream.getResultRenderer,
+		originalRender,
+		originalInvalidate,
+		paintCache: new WeakMap(),
 	};
 
 	patch.installed = {
@@ -626,14 +555,12 @@ function installGlobalToolRendering(
 		},
 		getRenderShell: function (this: any, ...args: any[]) {
 			if (!patch.active) return patch.downstream.getRenderShell.apply(this, args);
-			const useSelfShell = shouldUseSelfShell(this, patch);
 			const useCcstyle = shouldGloballyStyleTool(this, patch);
-			const shell =
-				useSelfShell || (useCcstyle && !this.expanded)
-					? "self"
-					: useCcstyle
-						? "default"
-						: patch.downstream.getRenderShell.apply(this, args);
+			const shell = useCcstyle
+				? this.expanded
+					? "default"
+					: "self"
+				: patch.downstream.getRenderShell.apply(this, args);
 			syncToolShell(this, shell);
 			return shell;
 		},
@@ -655,7 +582,42 @@ function installGlobalToolRendering(
 	prototype.getRenderShell = patch.installed.getRenderShell;
 	prototype.getCallRenderer = patch.installed.getCallRenderer;
 	prototype.getResultRenderer = patch.installed.getResultRenderer;
-	host[GLOBAL_TOOL_RENDER_PATCH] = patch;
+	// fullscreen 滚动/选区每帧整树 render；内容未变时复用上一帧行，避免重做 diff/Box。
+	patch.renderPaint = function (this: any, width: number): string[] {
+		if (!patch.active || patch.mode() === "off") {
+			return originalRender.call(this, width);
+		}
+		const cache = patch.paintCache;
+		// A running partial tool owns a time-varying spinner. Light animation ticks
+		// request a repaint without invalidating the component, so settled-content
+		// caching must not intercept those paints.
+		const cacheable = !(this.executionStarted && this.isPartial);
+		const hit = cacheable ? cache?.get(this) : undefined;
+		if (hit && toolPaintMatches(hit, this, width)) return hit.lines;
+		const lines = originalRender.call(this, width);
+		if (cacheable) {
+			cache?.set(this, {
+				width,
+				expanded: Boolean(this.expanded),
+				isPartial: Boolean(this.isPartial),
+				result: this.result,
+				args: this.args,
+				callHover: isToolCallHovered(this.toolCallId),
+				ioHover: ioHoverOf(this),
+				lines,
+			});
+		} else {
+			cache?.delete(this);
+		}
+		return lines;
+	};
+	patch.invalidatePaint = function (this: any): void {
+		patch.paintCache?.delete(this);
+		originalInvalidate.call(this);
+	};
+	prototype.render = patch.renderPaint;
+	prototype.invalidate = patch.invalidatePaint;
+	patchRegistry.install(GLOBAL_TOOL_RENDER_PATCH, patch);
 	return patch;
 }
 
@@ -675,15 +637,23 @@ function deactivateGlobalToolRendering(patch: GlobalToolRenderPatch): void {
 	if (prototype.getResultRenderer === patch.installed.getResultRenderer) {
 		prototype.getResultRenderer = patch.downstream.getResultRenderer;
 	}
+	if (patch.renderPaint && prototype.render === patch.renderPaint && patch.originalRender) {
+		prototype.render = patch.originalRender;
+	}
+	if (
+		patch.invalidatePaint &&
+		prototype.invalidate === patch.invalidatePaint &&
+		patch.originalInvalidate
+	) {
+		prototype.invalidate = patch.originalInvalidate;
+	}
 }
 
 /** 展开面板背景统一为 user message 背景色；折叠行保持原生状态色。
  *  必须在 compact-mode 之后安装，shutdown 时先于 compact-mode 释放。 */
 export function installToolExpandedBackground(): () => void {
-	const host = globalThis as any;
-	const previous = host[TOOL_EXPANDED_BACKGROUND_PATCH] as ToolExpandedBackgroundPatch | undefined;
+	const previous = patchRegistry.get<ToolExpandedBackgroundPatch>(TOOL_EXPANDED_BACKGROUND_PATCH);
 	if (previous) previous.dispose();
-	// SAFETY: Pi's runtime ToolExecutionComponent prototype owns updateDisplay; its public type omits it.
 	const prototype = ToolExecutionComponent.prototype as unknown as { updateDisplay: () => void };
 	const original = prototype.updateDisplay;
 	const patch: ToolExpandedBackgroundPatch = {
@@ -695,7 +665,12 @@ export function installToolExpandedBackground(): () => void {
 			const theme = getMessageDisplayTheme();
 			if (!theme?.bg) return;
 			const box = this.contentBox;
-			if (box?.setBgFn) box.setBgFn((text: string) => theme.bg("userMessageBg", text));
+			// 展开最外层卡片：上下左右内间距 1 格
+			if (box) {
+				box.paddingX = 1;
+				box.paddingY = 1;
+				if (box.setBgFn) box.setBgFn((text: string) => theme.bg("userMessageBg", text));
+			}
 		},
 		original,
 		dispose: () => {
@@ -703,13 +678,11 @@ export function installToolExpandedBackground(): () => void {
 			if (prototype.updateDisplay === patch.installed) {
 				prototype.updateDisplay = original;
 			}
-			if (host[TOOL_EXPANDED_BACKGROUND_PATCH] === patch) {
-				delete host[TOOL_EXPANDED_BACKGROUND_PATCH];
-			}
+			patchRegistry.dispose(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
 		},
 	};
 	prototype.updateDisplay = patch.installed;
-	host[TOOL_EXPANDED_BACKGROUND_PATCH] = patch;
+	patchRegistry.install(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
 	return patch.dispose;
 }
 
@@ -721,7 +694,7 @@ export function installDefaultMode(
 	return {
 		isOwner() {
 			return (
-				(globalThis as any)[GLOBAL_TOOL_RENDER_PATCH] === globalToolRendering &&
+				patchRegistry.owns(GLOBAL_TOOL_RENDER_PATCH, globalToolRendering) &&
 				globalToolRendering.active
 			);
 		},
