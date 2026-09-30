@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.9.20
+
+### Minor Changes
+
+- [#252](https://github.com/HerbertGao/pi-extensions/pull/252) [`056db8f`](https://github.com/HerbertGao/pi-extensions/commit/056db8f9bb2ebadbc6297435d6df67d5da175e8e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove the pi-footer companion and its promoted chalk dependency; the footer is now provided by @herbertgao/pi-cc-extensions' built-in configurable footer.
+
+### Patch Changes
+
+- Updated dependencies [[`056db8f`](https://github.com/HerbertGao/pi-extensions/commit/056db8f9bb2ebadbc6297435d6df67d5da175e8e)]:
+  - @herbertgao/pi-cc-extensions@0.10.0
+
 ## 2026.9.19
 
 ### Patch Changes
