@@ -566,8 +566,8 @@ export type ToolCallSummary = {
 };
 
 function pathApi(value: string) {
-	if (win32.isAbsolute(value)) return win32;
 	if (posix.isAbsolute(value)) return posix;
+	if (win32.isAbsolute(value)) return win32;
 	return undefined;
 }
 

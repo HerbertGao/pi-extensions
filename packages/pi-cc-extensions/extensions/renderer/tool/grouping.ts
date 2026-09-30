@@ -8,7 +8,12 @@ import {
 } from "@earendil-works/pi-tui";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
-import { fitToolCallSummary, pathSummary, type ToolCallSummary } from "./result.ts";
+import {
+	fitToolCallSummary,
+	pathSummary,
+	toolViewportWidth,
+	type ToolCallSummary,
+} from "./result.ts";
 import { isToolTuiFullscreen, showMoreHintText } from "../show-more-hint.ts";
 
 const PATCH_KEY = Symbol.for("pi.ccstyle.tool-grouping-patch");
@@ -444,7 +449,7 @@ export class ToolGroupComponent extends Container {
 			"",
 			truncateToWidth(
 				` ${fg(overallColor, "●")} ${label}: ${countText}${nameList} ${hint}`,
-				width,
+				toolViewportWidth(width),
 				"…",
 			),
 		];
