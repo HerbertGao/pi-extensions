@@ -242,12 +242,12 @@ The aggregate package also pins the following npm packages under their original 
 
 | Package                              | Version  | Upstream                     |
 | ------------------------------------ | -------- | ---------------------------- |
-| `pi-antigravity`                     | `0.8.1`  | `Rahularya01/pi-antigravity` |
+| `pi-antigravity`                     | `0.9.0`  | `Rahularya01/pi-antigravity` |
 | `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`    |
-| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`       |
+| `@juicesharp/rpiv-ask-user-question` | `2.12.0` | `juicesharp/rpiv-mono`       |
 | `@narumitw/pi-btw`                   | `0.61.1` | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions`   |
-| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`           |
+| `@pi-plugins/fast-mode`              | `0.1.13` | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions`   |
@@ -259,12 +259,20 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-multi-account`                   | `1.23.2` | `Sarrius/pi-multi-account`   |
 | `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode`   |
 | `pi-lens`                            | `4.3.0`  | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.34.0` | `nicobailon/pi-web-access`   |
+| `pi-web-access`                      | `0.35.0` | `nicobailon/pi-web-access`   |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`     |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
 The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The issue #254 upstream review accepted four companion updates, advanced the review cursor of one derived repository (classified as reviewed-without-import), and advanced the review cursor of `pi-antigravity`:
+
+- `pi-antigravity@0.9.0` pins the companion release at `a3d8caba1b10263420060406de57112ce16490d0`. It includes bug fixes for surrogate pairs, compressed OAuth responses via Undici, and adds model-disabling toggles like `ANTIGRAVITY_NO_EXTRA_TOOLS`.
+- `@juicesharp/rpiv-ask-user-question@2.12.0` pins the companion release and advances its `rpiv-config` dependency to `^2.12.0`.
+- `@pi-plugins/fast-mode@0.1.13` pins the companion release.
+- `pi-web-access@0.35.0` pins the companion release.
+- `resume-from` cursor advances to `49e077c` (upstream release `0.3.1`) as reviewed-without-import: the upstream changes address dialog schemas, windowOverrides, and error cleanup paths, but do not yet merge the stable repository-ownership fix.
 
 The issue #246 upstream review accepted three companion updates and advanced three repository cursors:
 

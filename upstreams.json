@@ -19,7 +19,7 @@
     {
       "name": "resume-from",
       "repository": "https://github.com/alexei-led/resume-from",
-      "reviewedCommit": "1dfae785f77f3bc1b564b958cfc7ed9078fbe230"
+      "reviewedCommit": "49e077cb927d1da22e64680d4412bbdf30a3c753"
     },
     {
       "name": "NVlabs SoL-Pi",
@@ -29,7 +29,7 @@
     {
       "name": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity",
-      "reviewedCommit": "b335fae76478b108a6d559d00fe6fb52b5d4bd13"
+      "reviewedCommit": "a3d8caba1b10263420060406de57112ce16490d0"
     }
   ],
   "companions": [
