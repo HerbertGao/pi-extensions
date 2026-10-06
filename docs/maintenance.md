@@ -252,10 +252,10 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version  | Upstream                     |
 | ------------------------------------ | -------- | ---------------------------- |
 | `pi-antigravity`                     | `0.9.0`  | `Rahularya01/pi-antigravity` |
-| `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`    |
+| `@dietrichgebert/ponytail`           | `4.13.0` | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.12.0` | `juicesharp/rpiv-mono`       |
 | `@narumitw/pi-btw`                   | `0.61.1` | `narumiruna/pi-extensions`   |
-| `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-caffeinate`            | `0.49.9` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.13` | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`  | `tifandotme/pi-extensions`   |
@@ -264,11 +264,11 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-preferred-thinking`       | `1.0.2`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-recap`                    | `0.4.7`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-rename`                   | `0.6.0`  | `tifandotme/pi-extensions`   |
-| `pi-typesafe`                        | `0.8.1`  | `DevMortimer/pi-typesafe`    |
+| `pi-typesafe`                        | `0.9.1`  | `DevMortimer/pi-typesafe`    |
 | `pi-multi-account`                   | `1.24.0` | `Sarrius/pi-multi-account`   |
 | `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode`   |
 | `pi-lens`                            | `4.3.0`  | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.35.0` | `nicobailon/pi-web-access`   |
+| `pi-web-access`                      | `0.37.0` | `nicobailon/pi-web-access`   |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`     |
 | `resume-from`                        | `0.4.1`  | `alexei-led/resume-from`     |
 
@@ -276,7 +276,18 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
-The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-06 remaining issue #254 companions
+
+The remaining reviewed release pins are Ponytail `4.13.0`, Caffeinate `0.49.9`, TypeSafe `0.9.1`, and Web Access `0.37.0`. Original package names, MIT licenses, Pi entries, and skills paths remain intact; no maintained-package versions are manually bumped.
+
+- Ponytail fixes command aliases by explicitly expanding skill templates and supports the host's structured prompt sections. npm gitHead: `08e952d7a8057a57ce561ff1330d093fd92eec67`.
+- Caffeinate's extension source is unchanged; its D-Bus dependency gains the conditional Bun transport described above. npm gitHead: `55d784704cdec1ec1534b59f78f07f139539119e`.
+- TypeSafe keeps its Pi entry, schema, opt-in, and default TypeSafe endpoint unchanged. Its programmatic client adds Liquid with a separate key and free/paid models; existing usage writes now merge under a short-lived file lock, with at most 200ms synchronous wait under contention. Neither `0.8.1` nor `0.9.1` declares Pi 1.x compatibility (`>=0.85.1 <1` optional peers); this inherited metadata limitation is not silently patched. Pi 1.0.4 integration is checked without private host SDKs or real semantic requests. npm publishes no gitHead, so provenance is the registry version and tarball integrity, not an inferred commit.
+- Web Access adds optional manual MCP stdio, explicit-only degoog/Keenable (not auto/all), structured codemode search/fetch results, and correct failure markers. Perplexity searches now return Search API pages/snippets instead of Sonar-generated prose; prose-specific requests still use Sonar. npm gitHead: `f0c0a96a8f19198e767cbec2e447f38779ccca50`.
+
+The new endpoints/entry, Perplexity result change, conditional Bun reader, and TypeSafe accounting behavior were explicitly accepted before upgrading. No installed config, provider key, background server, OAuth session, or live OS inhibitor is changed by this sync; test traffic uses isolated fixtures.
 
 The four companion upgrades reviewed for issue #254 in PR #255 are carried into PR #258: `@juicesharp/rpiv-ask-user-question@2.12.0` with `rpiv-config@^2.12.0`, `@pi-plugins/fast-mode@0.1.13`, `pi-antigravity@0.9.0`, and `pi-web-access@0.35.0`. The Antigravity review cursor advances to `a3d8caba1b10263420060406de57112ce16490d0`. PR #255's resume-from review-only metadata is deliberately excluded: `49e077c` is not the v0.3.1 release commit, and upstream `resume-from@0.4.1` now directly supersedes the retired local fork.
 

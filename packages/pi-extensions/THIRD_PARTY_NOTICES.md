@@ -62,7 +62,7 @@ SOFTWARE.
 
 ## `@narumitw/pi-caffeinate`
 
-The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.7 under its original MIT license:
+The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.9 under its original MIT license:
 
 MIT License
 
@@ -137,7 +137,7 @@ THE SOFTWARE.
 
 ## `pi-typesafe`
 
-The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.5.0 under its original MIT license:
+The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.9.1 under its original MIT license:
 
 MIT License
 

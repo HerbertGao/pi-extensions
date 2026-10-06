@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import {
   mkdir,
   mkdtemp,
@@ -2098,6 +2099,33 @@ try {
   if (!skillPaths.includes(ponytailSkills)) {
     throw new Error("Packed aggregate is missing the ponytail skills")
   }
+  const loadedPonytail = result.extensions.find(
+    (extension) => extension.resolvedPath === ponytailEntry,
+  )
+  const aliasMessages = []
+  const originalSendUserMessage = result.runtime.sendUserMessage
+  result.runtime.sendUserMessage = (content, options) =>
+    aliasMessages.push({ content, options })
+  try {
+    await loadedPonytail.commands
+      .get("ponytail-review")
+      .handler("", { isIdle: () => true })
+    await loadedPonytail.commands
+      .get("ponytail-review")
+      .handler("src/", { isIdle: () => false })
+    assert.deepEqual(aliasMessages, [
+      {
+        content: "/skill:ponytail-review",
+        options: { expandPromptTemplates: true },
+      },
+      {
+        content: "/skill:ponytail-review src/",
+        options: { expandPromptTemplates: true, deliverAs: "followUp" },
+      },
+    ])
+  } finally {
+    result.runtime.sendUserMessage = originalSendUserMessage
+  }
   const fastModeEntry = resolve(fastModeRoot, fastModeEntryRelative)
   if (!extensionPaths.includes(fastModeEntry)) {
     throw new Error("Packed aggregate is missing the fast-mode extension entry")
@@ -2148,6 +2176,60 @@ try {
   }
   if (!loadedTypesafe.tools.has("typesafe_evaluate")) {
     throw new Error("Packed pi-typesafe did not register typesafe_evaluate")
+  }
+  const originalTypesafeDir = process.env.PI_CODING_AGENT_DIR
+  const originalTypesafeEnabled = process.env.PI_TYPESAFE_ENABLED
+  process.env.PI_CODING_AGENT_DIR = join(installDir, "typesafe-fixture")
+  delete process.env.PI_TYPESAFE_ENABLED
+  try {
+    for (const handler of loadedTypesafe.handlers.get("session_start") ?? [])
+      await handler({}, { hasUI: false })
+    const request = {
+      state: "offline fixture",
+      questions: { urgent: { type: "noul", instructions: "Is this urgent?" } },
+    }
+    await assert.rejects(
+      loadedTypesafe.tools
+        .get("typesafe_evaluate")
+        .definition.execute("disabled", request, undefined, undefined, {
+          hasUI: false,
+        }),
+      /TypeSafe is disabled/,
+    )
+    const { createTypeSafe } = await import(
+      pathToFileURL(join(typesafeRoot, "dist/index.js"))
+    )
+    const submissions = []
+    const client = createTypeSafe({
+      apiKey: "offline-fixture-key",
+      maxRequests: 1,
+      fetch: async (url, options) => {
+        submissions.push({ url: String(url), body: JSON.parse(options.body) })
+        return new Response(
+          JSON.stringify({
+            model: "jev-latest",
+            answers: { urgent: { type: "noul", noul: 0.75 } },
+            usage: { input_tokens: 8, output_tokens: 2 },
+          }),
+          { headers: { "content-type": "application/json" } },
+        )
+      },
+    })
+    const evaluation = await client.evaluate(request)
+    assert.equal(evaluation.answers.urgent.noul, 0.75)
+    assert.equal(submissions.length, 1)
+    assert.equal(new URL(submissions[0].url).origin, "https://api.typesafe.ai")
+    assert.equal(submissions[0].body.model, "jev-latest")
+    assert.deepEqual(submissions[0].body.questions, request.questions)
+    await assert.rejects(client.evaluate(request), /request limit reached/)
+    assert.equal(submissions.length, 1)
+  } finally {
+    if (originalTypesafeDir === undefined)
+      delete process.env.PI_CODING_AGENT_DIR
+    else process.env.PI_CODING_AGENT_DIR = originalTypesafeDir
+    if (originalTypesafeEnabled === undefined)
+      delete process.env.PI_TYPESAFE_ENABLED
+    else process.env.PI_TYPESAFE_ENABLED = originalTypesafeEnabled
   }
   const typesafeLicense = await readFile(join(typesafeRoot, "LICENSE"), "utf8")
   if (

@@ -1283,7 +1283,8 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
     )
     assert.equal(dataUriEnd?.isError, false)
     const dataUriResult = JSON.stringify(dataUriEnd.result)
-    assert.ok(Buffer.byteLength(dataUriResult) < 1024, dataUriResult)
+    // 0.37 carries the redacted snippet in both text and structured content.
+    assert.ok(Buffer.byteLength(dataUriResult) < 2048, dataUriResult)
     assert.match(dataUriResult, /inline data URI omitted/)
     assert.match(
       dataUriResult,
@@ -1372,7 +1373,7 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
         event.type === "tool_execution_end" &&
         event.toolName === "fetch_content",
     )
-    assert.equal(disabledMediaEnd?.isError, false)
+    assert.equal(disabledMediaEnd?.isError, true)
     assert.equal(disabledMediaEnd.result.details.successful, 0)
     assert.match(resultText(disabledMediaEnd), /Image fetching is disabled/)
     assert.match(resultText(disabledMediaEnd), /PDF extraction is disabled/)
@@ -1416,7 +1417,7 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
         event.type === "tool_execution_end" &&
         event.toolName === "get_search_content",
     )
-    assert.equal(corruptEnd?.isError, false)
+    assert.equal(corruptEnd?.isError, true)
     assert.match(
       resultText(corruptEnd),
       /Cached fetched content could not be read/,
@@ -1437,7 +1438,7 @@ symlinkSync(process.env.PI_WEB_ACCESS_SENTINEL, new URL("sentinel-link", \`file:
         event.type === "tool_execution_end" &&
         event.toolName === "get_search_content",
     )
-    assert.equal(missingEnd?.isError, false)
+    assert.equal(missingEnd?.isError, true)
     assert.match(
       resultText(missingEnd),
       /Cached fetched content is missing or expired/,
