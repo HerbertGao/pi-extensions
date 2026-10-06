@@ -32,10 +32,10 @@ These packages retain their original names and upstream maintainers. The aggrega
 
 | Package                                                                         | Pinned version | Purpose                                       |
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
-| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.10.0`       | Minimal coding mode and maintenance skills.   |
+| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `4.13.0`       | Minimal coding mode and maintenance skills.   |
 | [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.12.0`       | Structured user questionnaires.               |
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.61.1`       | Parallel side questions outside main history. |
-| [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.8`       | Keep the computer awake during Pi agent runs. |
+| [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.9`       | Keep the computer awake during Pi agent runs. |
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.13`       | Priority service tier for selected models.    |
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.          |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                 |
@@ -45,10 +45,10 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.7`        | Generate one-line session recaps.             |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
 | [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.5.0`        | Fail-closed Jev safety gates for tool calls.  |
-| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.8.1`        | Structured TypeSafe/Jev decisions.            |
+| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.9.1`        | Structured TypeSafe/Jev decisions.            |
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.3.0`        | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.35.0`       | Web search and content access.                |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.37.0`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
 | [`resume-from`](https://github.com/alexei-led/resume-from)                      | `0.4.1`        | Continue Pi, Claude Code, and Codex sessions. |
 
