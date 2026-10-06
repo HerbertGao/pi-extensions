@@ -7,12 +7,10 @@ import { homedir, hostname } from "node:os"
 import { join } from "node:path"
 
 const ASK_USER_PROMPT_EVENT = "rpiv:ask-user:prompt"
-/** Grace period for `ui_prompt_start` to win over the ask_user_question fallback. */
-const UI_PROMPT_FALLBACK_DELAY_MS = 400
-/**
- * One dialog can surface through both sources, and the order is not guaranteed.
- * Collapse needs-input notifications that arrive this close together.
- */
+/** Give closed/unsupported UI calls time to finish before notifying. */
+const NEEDS_INPUT_DELAY_MS = 400
+// ponytail: fallback events lack dialog IDs; this window can merge distinct fallback prompts.
+// Replace it with dialog IDs if the event source provides them.
 const NEEDS_INPUT_DEDUP_MS = 1_500
 const DEFAULT_TIMEOUT_MS = 4_000
 const DEFAULT_MAX_TITLE_LENGTH = 40
@@ -120,9 +118,12 @@ function normalizeText(value: unknown): string {
 }
 
 export function truncateTitle(text: string, maxLength: number): string {
-  const normalized = normalizeText(text)
-  if (!maxLength || normalized.length <= maxLength) return normalized
-  return `${normalized.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`
+  const characters = Array.from(normalizeText(text))
+  if (!maxLength || characters.length <= maxLength) return characters.join("")
+  return `${characters
+    .slice(0, maxLength - 1)
+    .join("")
+    .trimEnd()}…`
 }
 
 /** Read the text of a message content value (string or content-part array). */
@@ -229,7 +230,9 @@ export function normalizeConfig(input: unknown): BarkConfig | undefined {
     title: {
       source: titleSource.source === "session" ? "session" : "fixed",
       maxLength:
-        typeof titleSource.maxLength === "number" && titleSource.maxLength > 0
+        typeof titleSource.maxLength === "number" &&
+        Number.isFinite(titleSource.maxLength) &&
+        titleSource.maxLength >= 1
           ? Math.floor(titleSource.maxLength)
           : DEFAULT_MAX_TITLE_LENGTH,
     },
@@ -280,7 +283,10 @@ export default function piBark(pi: ExtensionAPI): void {
   let userFacingSession = false
   let cachedTitle = ""
   let runStartedAt: number | null = null
-  let lastNeedsInputAt = 0
+  let pendingNeedsInput: ReturnType<typeof setTimeout> | undefined
+  let uiPromptActive = false
+  let lastFallbackAt = 0
+  let lastUIPromptEndAt = 0
 
   const refreshTitle = (ctx: ExtensionContext | undefined): string => {
     const resolved = resolveSessionTitle(ctx, () => pi.getSessionName?.())
@@ -308,37 +314,66 @@ export default function piBark(pi: ExtensionAPI): void {
     }
   }
 
-  const unsubscribeAskUser = pi.events.on(ASK_USER_PROMPT_EVENT, () => {
-    setTimeout(() => {
-      void notifyNeedsInput(undefined)
-    }, UI_PROMPT_FALLBACK_DELAY_MS)
-  })
-
-  const notifyNeedsInput = async (ctx: ExtensionContext | undefined) => {
-    if (!config?.events.needsInput) return
-    const now = Date.now()
-    if (now - lastNeedsInputAt < NEEDS_INPUT_DEDUP_MS) return
-    lastNeedsInputAt = now
-    const prefix =
-      config.title.source === "session"
-        ? `${COPY[config.locale].needsInputBody}\n`
-        : ""
-    await notify(
-      titleFor(ctx, "needsInput"),
-      `${prefix}${formatBody(config, cwd)}`,
-    )
+  const cancelNeedsInput = () => {
+    clearTimeout(pendingNeedsInput)
+    pendingNeedsInput = undefined
   }
 
-  // Primary source: Pi blocks on a user-facing dialog (approval, select, input,
-  // custom panel, or ask_user_question). Carries a context, so the title is live.
-  // The deferred ask_user_question fallback above covers hosts that render the
-  // questionnaire without going through Pi's UI-context wrapper.
-  pi.on("ui_prompt_start", async (_event, ctx) => {
+  const resetNeedsInput = () => {
+    cancelNeedsInput()
+    uiPromptActive = false
+    lastFallbackAt = 0
+    lastUIPromptEndAt = 0
+  }
+
+  const scheduleNeedsInput = (ctx: ExtensionContext | undefined) => {
+    if (!config?.events.needsInput || !userFacingSession) return
+    cancelNeedsInput()
+    pendingNeedsInput = setTimeout(() => {
+      pendingNeedsInput = undefined
+      if (!config?.events.needsInput || !userFacingSession) return
+      if (!ctx) lastFallbackAt = Date.now()
+      const prefix =
+        config.title.source === "session"
+          ? `${COPY[config.locale].needsInputBody}\n`
+          : ""
+      void notify(
+        titleFor(ctx, "needsInput"),
+        `${prefix}${formatBody(config, cwd)}`,
+      )
+    }, NEEDS_INPUT_DELAY_MS)
+  }
+
+  const unsubscribeAskUser = pi.events.on(ASK_USER_PROMPT_EVENT, () => {
+    const now = Date.now()
+    if (
+      uiPromptActive ||
+      now - lastUIPromptEndAt < NEEDS_INPUT_DEDUP_MS ||
+      now - lastFallbackAt < NEEDS_INPUT_DEDUP_MS
+    )
+      return
+    scheduleNeedsInput(undefined)
+  })
+
+  // Native prompt lifecycle cancels notifications for UI calls that finish
+  // without opening a dialog, or that the user answers before the grace period.
+  pi.on("ui_prompt_start", (_event, ctx) => {
     cwd = ctx.cwd
-    await notifyNeedsInput(ctx)
+    uiPromptActive = true
+    cancelNeedsInput()
+    if (Date.now() - lastFallbackAt >= NEEDS_INPUT_DEDUP_MS)
+      scheduleNeedsInput(ctx)
+  })
+
+  pi.on("ui_prompt_end", () => {
+    uiPromptActive = false
+    lastFallbackAt = 0
+    lastUIPromptEndAt = Date.now()
+    cancelNeedsInput()
   })
 
   pi.on("session_start", (_event, ctx) => {
+    resetNeedsInput()
     config = loadConfig()
     cwd = ctx.cwd
     userFacingSession = ctx.hasUI
@@ -362,12 +397,16 @@ export default function piBark(pi: ExtensionAPI): void {
   })
 
   pi.on("agent_start", (_event, ctx) => {
-    if (runStartedAt === null) runStartedAt = Date.now()
+    if (runStartedAt === null) {
+      resetNeedsInput()
+      runStartedAt = Date.now()
+    }
     refreshTitle(ctx)
   })
 
   pi.on("agent_settled", async (_event, ctx) => {
     cwd = ctx.cwd
+    resetNeedsInput()
     const startedAt = runStartedAt
     runStartedAt = null
     if (!config?.events.agentSettled) return
@@ -392,6 +431,8 @@ export default function piBark(pi: ExtensionAPI): void {
   })
 
   pi.on("session_shutdown", () => {
+    userFacingSession = false
+    resetNeedsInput()
     unsubscribeAskUser()
   })
 }

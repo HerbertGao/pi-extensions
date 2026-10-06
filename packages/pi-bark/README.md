@@ -46,7 +46,7 @@ The default `title.source` is `"fixed"`, which keeps Pi's localized copy (`✅ P
 { "title": { "source": "session", "maxLength": 40 } }
 ```
 
-`maxLength` defaults to `40` and the ellipsis counts toward it. With `"session"`, the event state moves to the first line of the body:
+`maxLength` defaults to `40`, counts Unicode code points without splitting emoji surrogate pairs, and includes the ellipsis. Non-finite values or values below `1` fall back to the default. With `"session"`, the event state moves to the first line of the body:
 
 ```
 title:  Please reply with exactly the single wo…
@@ -65,7 +65,9 @@ The title is resolved when the notification is sent, so a session that is rename
 { "minDurationMs": 30000 }
 ```
 
-The needs-input notification is never suppressed — that one always needs a person.
+`minDurationMs` never suppresses needs-input notifications. Input notifications wait 400ms so an unsupported, cancelled, or quickly answered UI call does not send a stale alert. Pending alerts are cancelled when the prompt, run, or session ends. Questionnaire fallback events use a 1.5s de-duplication window because they have no shared dialog ID; separate fallback-only prompts inside that window may be merged. Native dialogs are tracked independently.
+
+Completion notifications await the Bark request before Pi finishes settling, including during session switching or exit. This can delay those operations up to `timeoutMs` (default 4 seconds). Errors and timeouts are ignored; delivery is best-effort, with no persistent queue or retries.
 
 The notification body uses `💻` for the configured machine name and `📁` for Pi's full working directory. Questionnaire text is intentionally not sent because it may contain sensitive context. Only sessions with a user-facing UI notify, so nested `pi-subagents` sessions do not create duplicate pushes.
 

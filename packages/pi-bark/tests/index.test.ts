@@ -3,7 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
+import {
+  ExtensionRunner,
+  type ExtensionAPI,
+} from "@earendil-works/pi-coding-agent"
 import piBark, {
   formatDuration,
   normalizeConfig,
@@ -214,6 +217,7 @@ test("prefers Pi's session name over the first user message", async () => {
   try {
     await h.handlers.get("session_start")?.({}, h.ctx)
     await h.handlers.get("ui_prompt_start")?.({ kind: "confirm" }, h.ctx)
+    await afterFallback()
 
     assert.equal(h.requests.length, 1)
     assert.equal(h.requests[0]?.body.get("title"), "Fix the flaky test")
@@ -322,6 +326,24 @@ test("truncateTitle collapses whitespace and counts the ellipsis", () => {
   assert.equal(truncateTitle("a\n\nb   c", 40), "a b c")
   assert.equal(truncateTitle("x".repeat(50), 40), `${"x".repeat(39)}…`)
   assert.equal(truncateTitle("short", 40), "short")
+  assert.equal(truncateTitle("long", 1), "…")
+  assert.equal(truncateTitle("😀😀😀", 2), "😀…")
+  for (const maxLength of [0, 0.5, -1, NaN, Infinity]) {
+    assert.equal(
+      normalizeConfig({
+        endpoint: "https://example.test/key",
+        title: { maxLength },
+      })?.title.maxLength,
+      40,
+    )
+  }
+  assert.equal(
+    normalizeConfig({
+      endpoint: "https://example.test/key",
+      title: { maxLength: 1.5 },
+    })?.title.maxLength,
+    1,
+  )
 })
 
 test("formatDuration renders seconds, minutes, and hours", () => {
@@ -371,4 +393,170 @@ test("resolveSessionTitle walks name, then first non-empty user message", () => 
     resolveSessionTitle(undefined, () => undefined),
     "",
   )
+})
+
+test("cancels pending input notifications when a run or session ends", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 })
+  const h = createHarness({ config: { events: { agentSettled: false } } })
+  try {
+    await h.handlers.get("session_start")?.({}, h.ctx)
+    h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+    await h.handlers.get("agent_settled")?.({}, h.ctx)
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 0)
+
+    h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+    await h.handlers.get("session_shutdown")?.({}, h.ctx)
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 0)
+    assert.equal(h.busHandlers.has("rpiv:ask-user:prompt"), false)
+  } finally {
+    h.dispose()
+  }
+})
+
+test("real SDK prompt lifecycle cancels an unsupported RPC custom call", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 })
+  const h = createHarness({})
+  try {
+    await h.handlers.get("session_start")?.({}, h.ctx)
+    const runner = Object.create(ExtensionRunner.prototype) as any
+    runner.uiPromptDepth = 0
+    runner.setUIContext({ custom: async () => undefined }, "rpc")
+    const events: string[] = []
+    runner.emit = async (event: { type: string }) => {
+      events.push(event.type)
+      await h.handlers.get(event.type)?.(event, h.ctx)
+    }
+    assert.equal(runner.hasUI(), true)
+    assert.equal(await runner.getUIContext().custom(() => undefined), undefined)
+    await Promise.resolve()
+    t.mock.timers.tick(500)
+    assert.deepEqual(events, ["ui_prompt_start", "ui_prompt_end"])
+    assert.equal(h.requests.length, 0)
+
+    // A late duplicate questionnaire event must not revive the closed prompt.
+    h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 0)
+  } finally {
+    h.dispose()
+  }
+})
+
+test("deduplicates fallback-first prompts without suppressing the next native dialog", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 })
+  const h = createHarness({})
+  try {
+    await h.handlers.get("session_start")?.({}, h.ctx)
+    h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 1)
+
+    await h.handlers.get("ui_prompt_start")?.({ kind: "custom" }, h.ctx)
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 1)
+    await h.handlers.get("ui_prompt_end")?.({}, h.ctx)
+
+    // This is a distinct native prompt, even inside the fallback's dedup window.
+    await h.handlers.get("ui_prompt_start")?.({ kind: "confirm" }, h.ctx)
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 2)
+    await h.handlers.get("ui_prompt_end")?.({}, h.ctx)
+    await h.handlers.get("ui_prompt_start")?.({ kind: "input" }, h.ctx)
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 3)
+  } finally {
+    h.dispose()
+  }
+})
+
+test("a new run clears input dedup history, including a later settle UI hook", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 })
+  const cases = [
+    { previous: "fallback", next: "fallback" },
+    { previous: "native", next: "fallback" },
+    { previous: "fallback", next: "native" },
+    { previous: "after-settle", next: "fallback" },
+  ]
+  for (const { previous, next } of cases) {
+    const h = createHarness({ config: { events: { agentSettled: false } } })
+    try {
+      await h.handlers.get("session_start")?.({}, h.ctx)
+      await h.handlers.get("agent_start")?.({}, h.ctx)
+      if (previous === "after-settle")
+        await h.handlers.get("agent_settled")?.({}, h.ctx)
+
+      if (previous === "fallback")
+        h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+      else await h.handlers.get("ui_prompt_start")?.({ kind: "select" }, h.ctx)
+      t.mock.timers.tick(500)
+      assert.equal(h.requests.length, 1)
+      if (previous !== "fallback")
+        await h.handlers.get("ui_prompt_end")?.({}, h.ctx)
+      if (previous !== "after-settle")
+        await h.handlers.get("agent_settled")?.({}, h.ctx)
+
+      await h.handlers.get("agent_start")?.({}, h.ctx)
+      if (next === "fallback") h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+      else await h.handlers.get("ui_prompt_start")?.({ kind: "confirm" }, h.ctx)
+      t.mock.timers.tick(500)
+      assert.equal(h.requests.length, 2, `${previous} → ${next} across runs`)
+    } finally {
+      h.dispose()
+    }
+  }
+})
+
+test("a new session clears pending input state and resolves the live session name", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 })
+  const options = {
+    config: { title: { source: "session" } },
+    sessionName: "session A",
+  }
+  const h = createHarness(options)
+  try {
+    await h.handlers.get("session_start")?.({}, h.ctx)
+    h.busHandlers.get("rpiv:ask-user:prompt")?.({})
+    options.sessionName = "session B"
+    await h.handlers.get("session_start")?.({}, { ...h.ctx, cwd: "/fake/B" })
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 0)
+
+    const ctx = { ...h.ctx, cwd: "/fake/B" }
+    await h.handlers.get("ui_prompt_start")?.({ kind: "confirm" }, ctx)
+    options.sessionName = "renamed B"
+    t.mock.timers.tick(500)
+    assert.equal(h.requests.length, 1)
+    assert.equal(h.requests[0]?.body.get("title"), "renamed B")
+    assert.ok(h.requests[0]?.body.get("body")?.includes("/fake/B"))
+  } finally {
+    h.dispose()
+  }
+})
+
+test("settle waits for Bark while a failed request does not reject the event", async () => {
+  const h = createHarness({})
+  try {
+    await h.handlers.get("session_start")?.({}, h.ctx)
+    let release: ((value: Response) => void) | undefined
+    globalThis.fetch = (() =>
+      new Promise<Response>((resolve) => {
+        release = resolve
+      })) as typeof fetch
+    let finished = false
+    const settled = Promise.resolve(
+      h.handlers.get("agent_settled")?.({}, h.ctx),
+    ).then(() => {
+      finished = true
+    })
+    await Promise.resolve()
+    assert.equal(finished, false)
+    assert.ok(release)
+    release(new Response(null, { status: 500 }))
+    await settled
+    assert.equal(finished, true)
+  } finally {
+    h.dispose()
+  }
 })
