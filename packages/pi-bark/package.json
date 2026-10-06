@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-bark",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Send Bark notifications when Pi finishes or needs user input.",
   "keywords": [
     "bark",

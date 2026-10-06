@@ -1,5 +1,29 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.0
+
+### Minor Changes
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay the locally customized extensions on the latest upstream code while keeping the scoped packages, host-provided Pi SDK, and local rich-diff and Action Fusion compatibility.
+
+  - Bring in pi-cc-extensions 0.9.10, including codemode call trees, expanded input highlighting, the persistent expanded-card background setting, and MCP status chips.
+  - Bring in the latest SoL-Pi mainline, including projection-based compaction economics, cache-debt accounting, compaction-rejection recovery, and temporary evidence archives for non-persistent sessions.
+  - Keep all four SoL-Pi features opt-in. Temporary evidence archives remain on disk for consumers and require cleanup by the host or caller.
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Upgrade bundled pi-multi-account to 1.24.0 to fix OAuth lookup through the running Pi host's public APIs. Accept the optional `/multi-account pin`, `unpin`, and `pins` commands, which save or inspect persistent model routing preferences without changing the current foreground model.
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled companions to `@juicesharp/rpiv-ask-user-question@2.12.0` with `rpiv-config@^2.12.0`, `@pi-plugins/fast-mode@0.1.13`, `pi-antigravity@0.9.0`, and `pi-web-access@0.35.0`, carrying forward the reviewed upgrades from PR [#255](https://github.com/HerbertGao/pi-extensions/issues/255) alongside the direct upstream resume-from migration.
+
+### Patch Changes
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replace the retired `@herbertgao/resume-from` fork with upstream `resume-from@0.4.1`, bringing updated Codex transcript support, streaming session discovery, and the upstream Claude start-directory fix. Track the latest Pi release, validated with Pi 1.0.4; older Pi versions are no longer supported. Remove separately installed copies of the retired fork to avoid duplicate `/resume-from` registration.
+
+- Updated dependencies [[`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7), [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7), [`6ff0033`](https://github.com/HerbertGao/pi-extensions/commit/6ff003379940891ea8d5c6d991a0ab6bd86069bf), [`ab02b7b`](https://github.com/HerbertGao/pi-extensions/commit/ab02b7b2115bd9cc409f8d68c804e0cf6e76f6e1), [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7), [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7)]:
+  - @herbertgao/pi-cc-extensions@0.11.0
+  - @herbertgao/sol-pi@0.4.0
+  - @herbertgao/pi-bark@0.2.0
+  - @herbertgao/pi-subagents@0.18.5
+
 ## 2026.9.20
 
 ### Minor Changes

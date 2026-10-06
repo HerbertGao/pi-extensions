@@ -1,5 +1,19 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.11.0
+
+### Minor Changes
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay the locally customized extensions on the latest upstream code while keeping the scoped packages, host-provided Pi SDK, and local rich-diff and Action Fusion compatibility.
+
+  - Bring in pi-cc-extensions 0.9.10, including codemode call trees, expanded input highlighting, the persistent expanded-card background setting, and MCP status chips.
+  - Bring in the latest SoL-Pi mainline, including projection-based compaction economics, cache-debt accounting, compaction-rejection recovery, and temporary evidence archives for non-persistent sessions.
+  - Keep all four SoL-Pi features opt-in. Temporary evidence archives remain on disk for consumers and require cleanup by the host or caller.
+
+### Patch Changes
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Keep ccstyle write rich diffs when Action Fusion owns the write tool. Capture the bounded previous-file metadata inside Pi's mutation queue while retaining fused follow-up commands, file URL paths, and cancellation checks. Expanded edit/write diffs also retain sanitized follow-up command output. Third-party writers without the collaboration hook and custom write operations retain the existing ownership warning and fallback.
+
 ## 0.10.0
 
 ### Minor Changes

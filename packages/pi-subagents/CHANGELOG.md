@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.5
+
+### Patch Changes
+
+- [#258](https://github.com/HerbertGao/pi-extensions/pull/258) [`4f505b1`](https://github.com/HerbertGao/pi-extensions/commit/4f505b1456c5ea766121ee915f14ad29e48973e7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Keep Pi 1.x tool-call capabilities when starting a mentioned agent through a conversation clone, while preserving attribution to the main session.
+
 ## 0.18.4
 
 ### Patch Changes
