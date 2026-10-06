@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.1
+
+### Minor Changes
+
+- [#260](https://github.com/HerbertGao/pi-extensions/pull/260) [`e2091d2`](https://github.com/HerbertGao/pi-extensions/commit/e2091d2593be45c088b95029d9f0d43557493c9c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Upgrade Ponytail to 4.13.0, Caffeinate to 0.49.9, TypeSafe to 0.9.1, and Web Access to 0.37.0. Fix Ponytail skill-alias expansion and include optional MCP web tools, explicit-only search providers, structured codemode results, Perplexity Search API results, Liquid client support, and safer usage accounting. Keep TypeSafe agent calls opt-in; Node sleep inhibition is unchanged, while Bun can use the new D-Bus reader transport.
+
 ## 2026.10.0
 
 ### Minor Changes
