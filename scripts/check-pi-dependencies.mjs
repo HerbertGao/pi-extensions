@@ -16,7 +16,6 @@ const packages = [
   "pi-cc-extensions",
   "pi-extensions",
   "pi-subagents",
-  "resume-from",
   "sol-pi",
 ]
 const manifests = await Promise.all(

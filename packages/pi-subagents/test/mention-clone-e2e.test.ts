@@ -87,7 +87,11 @@ it("the real clone receives the live prompt and restored history, with only its 
       expect.objectContaining({ run_in_background: true }),
       expect.anything(),
       expect.anything(),
-      ctx,
+      expect.objectContaining({
+        ...ctx,
+        tools: [expect.objectContaining({ name: "Agent" })],
+        executeTool: expect.any(Function),
+      }),
     )
     expect(parent.getEntries()).toEqual(entriesBefore)
   } finally {

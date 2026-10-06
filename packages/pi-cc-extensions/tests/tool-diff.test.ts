@@ -3,6 +3,8 @@ import test from "node:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { createActionFusionExtension } from "../../sol-pi/src/sol-pi/extensions/action-fusion/index.ts";
 import { stripVTControlCharacters } from "node:util";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
@@ -130,7 +132,7 @@ test("expanded long edit diff shows every line instead of a remainder hint", () 
 test("collapsed diff declares only its remainder row as the expand entry", () => {
 	const diff = ["@@ -1,30 +1,30 @@"];
 	// 正文里出现与 remainder 同款的文案，不能变成展开入口。
-	diff.push("+   ↳ 2 lines returned • click to show more");
+	diff.push("+   ↳ 2 lines returned · click to show more");
 	for (let index = 2; index <= 30; index++) diff.push(`+code line ${index}`);
 
 	const collapsed: any = renderEditDiffResult(
@@ -272,8 +274,8 @@ test("edit/write collapsed diff hints switch from muted to white text on hover",
 	const hint = () => output(component).find((line) => line.includes("click to show more")) ?? "";
 	assert.match(hint(), /\x1b\[90m/, "resting edit hint uses muted color");
 	hovered = true;
-	assert.match(hint(), /\x1b\[90m[^\n]*• [^\n]*\x1b\[39m\x1b\[97mclick to show more/);
-	assert.doesNotMatch(hint(), /\x1b\[97m[^\n]*•/, "edit separator dot stays muted");
+	assert.match(hint(), /\x1b\[90m[^\n]*· [^\n]*\x1b\[39m\x1b\[97mclick to show more/);
+	assert.doesNotMatch(hint(), /\x1b\[97m[^\n]*·/, "edit separator dot stays muted");
 
 	hovered = false;
 	const writeComponent = renderWriteDiffResult(
@@ -292,8 +294,8 @@ test("edit/write collapsed diff hints switch from muted to white text on hover",
 		output(writeComponent).find((line) => line.includes("click to show more")) ?? "";
 	assert.match(writeHint(), /\x1b\[90m/, "resting write hint uses muted color");
 	hovered = true;
-	assert.match(writeHint(), /\x1b\[90m[^\n]*• [^\n]*\x1b\[39m\x1b\[97mclick to show more/);
-	assert.doesNotMatch(writeHint(), /\x1b\[97m[^\n]*•/, "write separator dot stays muted");
+	assert.match(writeHint(), /\x1b\[90m[^\n]*· [^\n]*\x1b\[39m\x1b\[97mclick to show more/);
+	assert.doesNotMatch(writeHint(), /\x1b\[97m[^\n]*·/, "write separator dot stays muted");
 });
 
 test("diff indicator mode live-updates on the same component via config getter", () => {
@@ -322,7 +324,7 @@ test("diff indicator mode live-updates on the same component via config getter",
 	assert.match(classicText, /\+.*added line/, "classic mode uses +/- content markers");
 	assert.doesNotMatch(
 		classicText,
-		/• \d+ hunks? • \d+ files?/,
+		/· \d+ hunks? · \d+ files?/,
 		"unified headers omit redundant hunk and file counts",
 	);
 
@@ -646,7 +648,7 @@ test("default-mode write collapsed uses title stats and created hint", () => {
 			.join("\n")
 			.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
 		assert.match(text, /Write out\.ts \(\+1 -0\)/);
-		assert.match(text, /created • click to show more/);
+		assert.match(text, /created · click to show more/);
 		assert.doesNotMatch(text, /▌/);
 	} finally {
 		config.mode = previousMode;
@@ -717,6 +719,118 @@ function restoreBuiltinWriteOwnership(): void {
 		registerTool: () => {},
 	} as any);
 }
+
+test("Action Fusion preserves write rich diff and then_run without replacing its tool", async () => {
+	const cwd = await mkdtemp(join(tmpdir(), "ccstyle-fused-write-"));
+	const tools = new Map<string, any>();
+	const notices: string[] = [];
+	const store = new WriteExecutionMetadataStore();
+	try {
+		createActionFusionExtension()({
+			registerTool: (tool: any) => tools.set(tool.name, tool),
+		} as any);
+		const write = tools.get("write");
+		installWriteOverride(
+			{
+				// Match Pi's shallow annotation copy; the callback must never enter model JSON.
+				getAllTools: () => [
+					{
+						name: "write",
+						annotations: { ...write.annotations },
+						sourceInfo: { source: "extension", path: "sol-pi/action-fusion" },
+					},
+				],
+				registerTool: () => assert.fail("ccstyle must not replace Action Fusion"),
+			} as any,
+			store,
+			(owner) => notices.push(owner.path),
+		);
+		assert.deepEqual(notices, []);
+		assert.equal(JSON.stringify(write.annotations), "{}");
+		const path = pathToFileURL(join(cwd, "space and #hash.txt")).href;
+		const ctx = {
+			cwd,
+			mode: "json",
+			hasUI: false,
+			sessionManager: {
+				getSessionId: () => "ccstyle-fused-write",
+				getSessionFile: () => undefined,
+			},
+		};
+		await write.execute("create", { path, content: "before\n" }, undefined, undefined, ctx);
+		assert.deepEqual(store.get("create"), { fileExistedBeforeWrite: false });
+		const args = {
+			path,
+			content: "after\n",
+			then_run: { command: "printf 'FUSED_DIFF_OK\\033]52;c;payload\\007'" },
+		};
+		const result = await write.execute("overwrite", args, undefined, undefined, ctx);
+		assert.deepEqual(store.get("overwrite"), {
+			fileExistedBeforeWrite: true,
+			previousContent: "before\n",
+		});
+		assert.match(JSON.stringify(result.content), /then_run:succeeded/);
+		assert.match(JSON.stringify(result.content), /FUSED_DIFF_OK/);
+		assert.equal(await readFile(join(cwd, "space and #hash.txt"), "utf8"), "after\n");
+		const diff = renderRichToolResult(
+			"write",
+			result,
+			{ expanded: true },
+			theme,
+			{ args, toolCallId: "overwrite" },
+			store,
+		);
+		const rawRendered = output(diff, 100).join("\n");
+		assert.doesNotMatch(rawRendered, /\x1b\]/);
+		const rendered = stripVTControlCharacters(rawRendered);
+		assert.match(rendered, /before/);
+		assert.match(rendered, /after/);
+		assert.match(rendered, /FUSED_DIFF_OK/);
+		assert.doesNotMatch(rendered, /diff unavailable/);
+		await assert.rejects(
+			write.execute(
+				"failed-command",
+				{ path, content: "kept\n", then_run: { command: "exit 7" } },
+				undefined,
+				undefined,
+				ctx,
+			),
+			/then_run:failed/,
+		);
+		assert.equal(await readFile(join(cwd, "space and #hash.txt"), "utf8"), "kept\n");
+	} finally {
+		restoreBuiltinWriteOwnership();
+		await rm(cwd, { recursive: true, force: true });
+	}
+});
+
+test("custom write operations reject local diff capture and retain the ownership warning", () => {
+	const tools = new Map<string, any>();
+	const notices: string[] = [];
+	try {
+		createActionFusionExtension({
+			writeOptions: { operations: { mkdir: async () => {}, writeFile: async () => {} } },
+		})({ registerTool: (tool: any) => tools.set(tool.name, tool) } as any);
+		installWriteOverride(
+			{
+				getAllTools: () => [
+					{
+						name: "write",
+						annotations: tools.get("write").annotations,
+						sourceInfo: { source: "extension", path: "remote-writer" },
+					},
+				],
+				registerTool: () => assert.fail("must preserve custom operations"),
+			} as any,
+			new WriteExecutionMetadataStore(),
+			(owner) => notices.push(owner.path),
+		);
+		assert.equal(ownsWriteTool(), false);
+		assert.deepEqual(notices, ["remote-writer"]);
+	} finally {
+		restoreBuiltinWriteOwnership();
+	}
+});
 
 test("external write owner disables rich diff instead of degrading every card", () => {
 	const registered: unknown[] = [];

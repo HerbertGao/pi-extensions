@@ -605,7 +605,7 @@ test("thinking preview counts wrapped hidden lines and does not restyle from cac
 		const firstPlain = firstLines.map((line: string) => line.trim()).filter(Boolean);
 		const hint = firstPlain.find((line: string) => /Thought/.test(line) && /more lines/.test(line));
 		assert.ok(hint, `expected hidden-line hint after Thought, got: ${JSON.stringify(firstPlain)}`);
-		assert.match(hint, /<dim> • \(\d+ more lines/);
+		assert.match(hint, /<dim> · \d+ more lines/);
 		const bodyToken = ccstyleConfig.dimThinkingText ? "dim" : "thinkingText";
 		assert.ok(
 			!firstPlain.some(
@@ -613,7 +613,7 @@ test("thinking preview counts wrapped hidden lines and does not restyle from cac
 			),
 			"preview body must not carry the more-line hint",
 		);
-		const hidden = Number(/\((\d+) more lines/.exec(hint)?.[1]);
+		const hidden = Number(/(\d+) more lines/.exec(hint)?.[1]);
 		// Raw newline count of the discarded prefix is 0; wrapped count is ~width-based.
 		assert.ok(
 			hidden > 20,
@@ -640,7 +640,7 @@ test("thinking preview counts wrapped hidden lines and does not restyle from cac
 			"theme change must restyle preview body, not reuse cached ANSI",
 		);
 		assert.ok(
-			secondPlain.some((line: string) => /\[dim\] • \(\d+ more lines/.test(line)),
+			secondPlain.some((line: string) => /\[dim\] · \d+ more lines/.test(line)),
 			"more-line hint uses the dim token after theme change",
 		);
 		assert.ok(
@@ -711,7 +711,11 @@ test("thinking preview expands the full body and keeps that state across updateC
 	process.env.PI_CODING_AGENT_DIR = dir;
 	const { emit, pi } = runtime();
 	const ctx = themeCtx();
-	(ctx.ui.theme as any).bg = (_slot: string, text: string) => `<bg>${text}</bg>`;
+	const bgSlots: string[] = [];
+	(ctx.ui.theme as any).bg = (slot: string, text: string) => {
+		bgSlots.push(slot);
+		return `<bg>${text}</bg>`;
+	};
 	const previewLines = 3;
 	const body = Array.from({ length: 20 }, (_, i) => `line-${i}`).join("\n");
 	try {
@@ -751,6 +755,24 @@ test("thinking preview expands the full body and keeps that state across updateC
 			expanded.filter((line) => /line-\d+/.test(line)).length > previewLines,
 			"expanded body shows more than the preview window",
 		);
+		assert.ok(
+			bgSlots.includes(ccstyleConfig.expandedCardBackground),
+			"expanded thinking card uses the configured slot",
+		);
+
+		// issue 46：展开卡背景槽位可配，渲染时现读配置。
+		const previousSlot = ccstyleConfig.expandedCardBackground;
+		// 本机的 pi-cc-extensions.json 可能就设成了 toolPendingBg，换个槽位验证跟随
+		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
+		try {
+			bgSlots.length = 0;
+			ccstyleConfig.expandedCardBackground = targetSlot;
+			component.render(120);
+			assert.ok(bgSlots.includes(targetSlot), "thinking card follows the configured slot");
+			assert.ok(!bgSlots.includes(previousSlot), "the previous slot leaves no card behind");
+		} finally {
+			ccstyleConfig.expandedCardBackground = previousSlot;
+		}
 
 		component.updateContent(msg);
 		assert.equal(thinkingBlockOf(component).expanded, true);

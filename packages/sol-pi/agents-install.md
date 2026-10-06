@@ -7,11 +7,11 @@ Installation and configuration are complete only when Pi remains unmodified, the
 ## Rules
 
 - Do not modify, patch, fork, or vendor upstream Pi. SoL-Pi must load as a standalone extension through Pi's public package interface.
-- Use Node.js 24 or newer and the tested Pi release `@earendil-works/pi-coding-agent@0.85.1`. Treat a different Pi version as a compatibility change and rerun the full suite before using it.
+- Use Node.js 24 or newer and the tested Pi release `@earendil-works/pi-coding-agent@1.0.4`. Treat a different Pi version as a compatibility change and rerun the full suite before using it.
 - Do not clean, reset, switch, or overwrite unrelated repository changes.
 - Do not print, log, commit, upload, or include any secret in a command line. Check only whether a credential is present.
 - Keep SoL-Pi settings in `sol-pi.json`. The Evidence-Preserving Reducer provider/model route is a SoL-Pi setting; provider URLs, credentials, the main agent model, and shell behavior remain Pi settings.
-- Keep persistent artifacts under Pi's session-derived `sol-pi/<session-id>/` root; do not configure a separate storage path.
+- Keep persistent artifacts under Pi's session-derived `sol-pi/<session-id>/` root. For `--no-session` and in-memory sessions, use the automatic private directory under the system temporary directory; do not configure a separate storage path. Temporary archives remain after worker exit for callers to read, with cleanup managed by the host or caller.
 
 ## Inputs
 
@@ -35,30 +35,33 @@ node --version
 npm --version
 ```
 
-Require Node.js 24 or newer. Install from the lockfile and run the source checks:
+Require Node.js 24 or newer. In this monorepo, run the dependency and full checks from the repository root, then return to `packages/sol-pi` for package validation:
 
 ```bash
-npm ci --ignore-scripts
-npm run check
-npm audit --audit-level=high
+# Repository root
+bun install --frozen-lockfile
+bun run check
+bun audit
+# packages/sol-pi
 node scripts/check-pi-compat.mjs
-npx vitest run tests/all-mechanisms.test.ts
+bun run test -- tests/all-mechanisms.test.ts
+npm pack --dry-run
 ```
 
-`npm run check` covers type checking, the complete test suite, and package inspection. `tests/all-mechanisms.test.ts` confirms that one all-enabled configuration registers all four mechanisms against Pi's public extension API. The tests run without a model provider.
+`bun run check` covers root formatting, linting, type checking, and the complete test suites; `npm pack --dry-run` inspects this package. `tests/all-mechanisms.test.ts` confirms that one all-enabled configuration registers all four mechanisms against Pi's public extension API. The tests run without a model provider.
 
-Stop if any command fails. Do not hide a failure with `|| true` or replace `npm ci` with an unlocked install.
+Stop if any command fails. Do not hide a failure with `|| true` or replace the frozen-lockfile install with an unlocked install.
 
 ## Phase 2: install Pi and SoL-Pi
 
 Install the tested Pi release without changing its source:
 
 ```bash
-npm install --global --ignore-scripts @earendil-works/pi-coding-agent@0.85.1
+npm install --global --ignore-scripts @earendil-works/pi-coding-agent@1.0.4
 pi --version
 ```
 
-Require `pi --version` to report `0.85.1`.
+Require `pi --version` to report `1.0.4`. Runtime peer ranges remain `*`; other hosts need their own validation.
 
 For a project-local registration, run this from `target_project` and substitute the resolved absolute `sol_pi_root`:
 
@@ -124,7 +127,7 @@ Require exit status 0 and retain its JSON output. The check applies SoL-Pi's def
 
 1. Run `pi list --approve` from `target_project` and confirm the expected SoL-Pi source and scope.
 2. Run `check-sol-pi-config.mjs --require-all-enabled` against the effective `sol-pi.json`.
-3. Re-run `npx vitest run tests/all-mechanisms.test.ts` from `sol_pi_root`.
+3. Re-run `bun run test -- tests/all-mechanisms.test.ts` from `sol_pi_root`.
 4. Start Pi with `--offline --approve`, send no prompt, confirm there is no extension load error, and exit.
 5. Confirm that upstream Pi was not patched and that the SoL-Pi checkout contains no vendored Pi monorepo source.
 

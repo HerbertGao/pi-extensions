@@ -327,7 +327,7 @@ describe("attributing the spawn to the real session", () => {
     await runMentionClone(o)
 
     expect(tool.execute).toHaveBeenCalledTimes(1)
-    expect(tool.execute.mock.calls[0][4]).toBe(o.ctx)
+    expect(tool.execute.mock.calls[0][4]).toMatchObject(o.ctx)
   })
 
   it("passes no tool-call id, since the real session issued none", async () => {

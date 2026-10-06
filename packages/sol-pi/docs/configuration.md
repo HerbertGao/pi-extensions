@@ -41,7 +41,7 @@ This preflight does not make every valid SoL-Pi configuration all-enabled. Witho
 
 ## Feature behavior
 
-- `actionFusion`: registers SoL-Pi replacements for Pi's `edit` and `write` tools.
+- `actionFusion`: registers SoL-Pi replacements for Pi's `edit` and `write` tools. With `@herbertgao/pi-cc-extensions` installed, local writes also provide the execution metadata needed for ccstyle's rich diff without replacing the fused tool. Custom write operations still defer to their owner because a local file snapshot may not describe a remote write.
 - `observationPack`: registers `obs_recall` and a provider-context projection handler.
 - `evidencePreservingReducer`: registers a `tool_result` handler and delegates long diagnostic-log reduction to the configured reducer provider/model.
 - `evidencePreservingReducerProvider`: provider namespace used to resolve the reducer model through Pi's model registry.
@@ -62,7 +62,7 @@ The release entry uses two runtime inputs:
 - **Context window** — from `ExtensionContext.getContextUsage()`, used for window-pressure protection.
 - **Cache write/read ratio** — from `cacheWriteReadRatio` in the effective `sol-pi.json`. The value remains fixed for the session and is not recomputed when the model changes. It drives one runtime decision and is not a cost report.
 
-The configured ratio stays fixed for the loaded extension. The mechanism stores its current plan, progress summaries, request horizon, context growth, and compaction debt as versioned custom entries in Pi's session log. After a successful compaction it sends one hidden, generic message with `triggerTurn: true`, which starts a new turn and instructs the assistant to rebuild its plan. A settlement barrier keeps print and JSON modes in the same Pi invocation until that continuation settles, so callers do not need to resume the session or inject `Continue working`. Cancelling or exiting does not schedule an automatic continuation. The mechanism creates no separate Online Context Compact files. The programmatic factory exposes only a matching retained-tail value for installations whose Pi compaction setting differs from the default.
+The configured ratio stays fixed for the loaded extension. The mechanism stores its current plan, progress summaries, request horizon, context growth, and compaction debt as versioned custom entries in Pi's session log. After a successful compaction it sends one hidden, generic message with `triggerTurn: true`, which starts a new turn and asks the assistant to continue the current plan, preserving existing step IDs when updating progress. A settlement barrier keeps print and JSON modes in the same Pi invocation until that continuation settles, so callers do not need to resume the session or inject `Continue working`. On Pi 1.x, OCC returns to the host to let its deferred continuation run after settled handlers finish. Recoverable native refusals (session too small, already compacted, or an incomplete summary at the token cap) resume with the unchanged context and no new cache debt; successful non-plan tool work or new user input is required before another plan-only attempt. Economic compaction has a two-provider-request cooldown, but window protection overrides it. Cancelling or exiting does not schedule an automatic continuation. The mechanism creates no separate Online Context Compact files. The programmatic factory exposes only a matching retained-tail value for installations whose Pi compaction setting differs from the default.
 
 ## Pi integration
 

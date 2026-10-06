@@ -8,7 +8,7 @@ A collection of HerbertGao-maintained and pinned upstream extensions for the [Pi
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer and Pi 0.85.1 or newer.
+Requires Node.js 24 or newer and Pi 1.0.4 or newer.
 
 The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual maintained packages can also be installed separately.
 
@@ -23,7 +23,6 @@ MCP is provided by Pi 0.99.0+, not by an extension in this collection. Configure
 | [`@herbertgao/pi-bark`](packages/pi-bark)                   | Bark notifications when Pi finishes or needs user input.                  | This repository                                                        |
 | [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions) | Claude Code-style output, fullscreen interaction, context and references. | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)      |
 | [`@herbertgao/sol-pi`](packages/sol-pi)                     | Token-efficient tools, observations, logs, and context compaction.        | [`NVlabs/SoL-Pi`](https://github.com/NVlabs/SoL-Pi)                    |
-| [`@herbertgao/resume-from`](packages/resume-from)           | Continue sessions across Pi, Claude Code, and Codex.                      | [`resume-from`](https://github.com/alexei-led/resume-from)             |
 | [`@herbertgao/pi-subagents`](packages/pi-subagents)         | Autonomous subagents with lifecycle and compatibility hardening.          | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) |
 | [`@herbertgao/pi-extensions`](packages/pi-extensions)       | Aggregate installer for the collection.                                   | This repository                                                        |
 
@@ -47,10 +46,11 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
 | [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.5.0`        | Fail-closed Jev safety gates for tool calls.  |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.8.1`        | Structured TypeSafe/Jev decisions.            |
-| [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.23.2`       | Multi-account failover and rotation.          |
+| [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.3.0`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.34.0`       | Web search and content access.                |
 | [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
+| [`resume-from`](https://github.com/alexei-led/resume-from)                      | `0.4.1`        | Continue Pi, Claude Code, and Codex sessions. |
 
 ### Remote Pi trust boundary
 
@@ -72,4 +72,4 @@ See [`docs/maintenance.md`](docs/maintenance.md) for per-package upstream baseli
 
 ## Attribution
 
-The maintained pi-cc, tintinweb-derived subagents, and Alexei Led's `resume-from` packages retain their original MIT notices and upstream links. Directly bundled companions retain their upstream package names; the aggregate ships their required notices in [`THIRD_PARTY_NOTICES.md`](packages/pi-extensions/THIRD_PARTY_NOTICES.md). HerbertGao's changes are maintained in this independent repository.
+The maintained pi-cc and tintinweb-derived subagents packages retain their original MIT notices and upstream links. Directly bundled companions retain their upstream package names; the aggregate ships their required notices in [`THIRD_PARTY_NOTICES.md`](packages/pi-extensions/THIRD_PARTY_NOTICES.md). HerbertGao's changes are maintained in this independent repository.

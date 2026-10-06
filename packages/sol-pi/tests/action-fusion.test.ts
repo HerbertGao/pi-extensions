@@ -6,7 +6,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BashOperations, ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { BashOperations, ExtensionAPI, ExtensionToolContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import {
 	type ActionFusionOptions,
 	assertUnchangedBeforeCommand,
@@ -53,7 +53,7 @@ function loadFusedTools(options?: ActionFusionOptions): FusedTools {
 	return { edit, write };
 }
 
-function createContext(cwd: string, overrides: Partial<ExtensionContext> = {}): ExtensionContext {
+function createContext(cwd: string, overrides: Partial<ExtensionToolContext> = {}): ExtensionToolContext {
 	return {
 		mode: "json",
 		hasUI: false,
@@ -65,7 +65,7 @@ function createContext(cwd: string, overrides: Partial<ExtensionContext> = {}): 
 		},
 		ui: {},
 		...overrides,
-	} as unknown as ExtensionContext;
+	} as unknown as ExtensionToolContext;
 }
 
 const tempDirs: string[] = [];
@@ -92,6 +92,21 @@ describe("action fusion then_run", () => {
 		createActionFusionExtension()(pi);
 
 		expect([...registered.keys()]).toEqual(["edit"]);
+	});
+
+	it("does not write when aborted during diff metadata capture", async () => {
+		const cwd = await createTempDir();
+		const target = join(cwd, "aborted.txt");
+		await writeFile(target, "before");
+		const { write } = loadFusedTools();
+		const controller = new AbortController();
+		const installObserver = Reflect.get(write.annotations!, Symbol.for("herbertgao.pi.writeMetadataObserver"));
+		expect(installObserver(async (_toolCallId: string, _path: string, mutate: () => Promise<void>) => {
+			controller.abort();
+			await mutate();
+		})).toBe(true);
+		await expect(write.execute("aborted", { path: target, content: "after" }, controller.signal, undefined, createContext(cwd))).rejects.toThrow("Operation aborted");
+		expect(await readFile(target, "utf8")).toBe("before");
 	});
 
 	it("adds an optional command and timeout object to edit and write", () => {

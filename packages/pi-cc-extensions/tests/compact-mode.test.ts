@@ -216,6 +216,25 @@ test("config normalize keeps compact, defaults to on, command completions order 
 	assert.equal(normalizeConfig({ expandedOutputMaxLines: 40 }).expandedOutputMaxLines, 40);
 	assert.match(formatConfigStatus(normalizeConfig({})), /expandedInput=5/);
 	assert.match(formatConfigStatus(normalizeConfig({})), /expandedOutput=10/);
+	// issue 46：展开卡背景槽位白名单，默认与旧行为一致。
+	assert.equal(normalizeConfig({}).expandedCardBackground, "userMessageBg");
+	assert.equal(
+		normalizeConfig({ expandedCardBackground: "toolPendingBg" }).expandedCardBackground,
+		"toolPendingBg",
+	);
+	assert.equal(
+		normalizeConfig({ expandedCardBackground: "selectedBg" }).expandedCardBackground,
+		"selectedBg",
+	);
+	// 非背景 token（fg 槽位）与垃圾值都回退默认，theme.bg 不会拿到未知 token。
+	assert.equal(
+		normalizeConfig({ expandedCardBackground: "toolTitle" }).expandedCardBackground,
+		"userMessageBg",
+	);
+	assert.equal(
+		normalizeConfig({ expandedCardBackground: 42 }).expandedCardBackground,
+		"userMessageBg",
+	);
 
 	let completions: Array<{ value: string }> = [];
 	const pi: any = {
@@ -472,7 +491,24 @@ test("consecutive tool-call messages accumulate into one round until the next vi
 			cardLines.every((line: string) => line === "" || visibleWidth(line) === 80),
 			"expanded round is wrapped by one width-safe tool card",
 		);
-		assert.deepEqual([...new Set(backgroundSlots)], ["userMessageBg"]);
+		// 面板铺的就是当前配置的槽位（默认 userMessageBg 由 normalizeConfig 用例守）
+		assert.deepEqual([...new Set(backgroundSlots)], [config.expandedCardBackground]);
+		// issue 46：展开面板背景槽位可配，改配置后重新渲染要跟着换。
+		// 当前值可能已被本机配置设成 toolPendingBg，换个槽位验证跟随。
+		const previousSlot = config.expandedCardBackground;
+		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
+		try {
+			backgroundSlots.length = 0;
+			config.expandedCardBackground = targetSlot;
+			assistant1.render(80);
+			assert.deepEqual(
+				[...new Set(backgroundSlots)],
+				[targetSlot],
+				"expanded round card follows the configured slot",
+			);
+		} finally {
+			config.expandedCardBackground = previousSlot;
+		}
 		setMessageDisplayTheme(previousTheme);
 		assert.deepEqual(renderText(bash), [], "round tools render only inside the summary card");
 		assistant1.setExpanded(false);
@@ -521,6 +557,82 @@ test("consecutive tool-call messages accumulate into one round until the next vi
 		setMessageDisplayTheme(previousTheme);
 		config.mode = previousMode;
 		hooks.shutdown();
+	}
+});
+
+test("expanded round panel repaints when the card background slot changes", () => {
+	const previousMode = config.mode;
+	const previousTheme = getMessageDisplayTheme();
+	config.mode = "compact";
+	// 面板按 patch.toolOriginalRender 取子卡行，且按数组引用判缓存命中。
+	// 装补丁前把原生 render 换成固定引用，模拟真实子卡 paint 复用的情形。
+	const prototype = ToolExecutionComponent.prototype as any;
+	const nativeRender = prototype.render;
+	const stablePaints = new WeakMap<object, string[]>();
+	prototype.render = function (this: any) {
+		let paints = stablePaints.get(this);
+		if (!paints) {
+			paints = [` ✓ ${this.toolName} done`];
+			stablePaints.set(this, paints);
+		}
+		return paints;
+	};
+	const hooks = installCompactMode({ writeMetadata: new WriteExecutionMetadataStore() });
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+				{ type: "toolCall", id: "b2", name: "bash", arguments: { command: "two" } },
+			],
+		};
+		const output = { content: [{ type: "text", text: "line one\nline two" }], isError: false };
+		const first = tool("bash", "b1", { command: "one" });
+		const second = tool("bash", "b2", { command: "two" });
+		first.updateResult(output);
+		second.updateResult(output);
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		anchor.updateContent(message);
+		anchor.setExpanded(true);
+
+		const backgroundSlots: string[] = [];
+		setMessageDisplayTheme(
+			Object.assign(Object.create(previousTheme ?? null), {
+				fg: previousTheme?.fg ?? ((_color: string, text: string) => text),
+				bg(slot: string, text: string) {
+					backgroundSlots.push(slot);
+					return text;
+				},
+			}),
+		);
+		const initialSlot = config.expandedCardBackground;
+		anchor.render(120);
+		assert.ok(backgroundSlots.includes(initialSlot), "panel starts on the configured slot");
+
+		backgroundSlots.length = 0;
+		anchor.render(120);
+		assert.deepEqual(backgroundSlots, [], "identical frame reuses the cached panel rows");
+
+		// issue 46：改槽位后已展开的回合面板必须重画，不能命中旧底色的缓存。
+		const previousSlot = config.expandedCardBackground;
+		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
+		try {
+			config.expandedCardBackground = targetSlot;
+			anchor.render(120);
+			assert.deepEqual(
+				[...new Set(backgroundSlots)],
+				[targetSlot],
+				"panel follows the configured slot",
+			);
+		} finally {
+			config.expandedCardBackground = previousSlot;
+		}
+	} finally {
+		setMessageDisplayTheme(previousTheme);
+		config.mode = previousMode;
+		hooks.shutdown();
+		prototype.render = nativeRender;
 	}
 });
 
@@ -1402,6 +1514,90 @@ test("compact 展开卡：助手文本不进面板，工具卡保留底色", () 
 	}
 });
 
+test("compact 展开面板留在摘要行原位，不跳到 write/edit 上方", () => {
+	const dir = mkdtempSync(join(tmpdir(), "pi-compact-panel-anchor-"));
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	const previousMode = config.mode;
+	config.mode = "compact";
+	const previousTheme = getMessageDisplayTheme();
+	setMessageDisplayTheme({
+		fg: (_color: string, text: string) => text,
+		bold: (text: string) => text,
+		italic: (text: string) => text,
+		bg: (_slot: string, text: string) => text,
+	} as any);
+	const writeMetadata = new WriteExecutionMetadataStore();
+	const { pi, ctx, emit } = extensionRuntime();
+	installCompactThinking(pi, {
+		useSummaryTitlesAsThinkingTitle: false,
+		previewLines: 3,
+		animationIntervalMs: 30,
+	});
+	emit("session_start", {}, ctx);
+	const hooks = installCompactMode({ writeMetadata });
+	const chat = new Container();
+	setToolMouseTui({ children: [chat] });
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "text", text: "先改写入路径" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+				{ type: "toolCall", id: "w1", name: "write", arguments: { path: "src/session.ts" } },
+			],
+		};
+		const bash = tool("bash", "b1", { command: "one" });
+		const write = tool("write", "w1", { path: "src/session.ts", content: "saved" });
+		for (const item of [bash, write]) {
+			item.executionStarted = true;
+			item.updateDisplay?.();
+		}
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		chat.addChild(anchor);
+		anchor.updateContent(message);
+		chat.addChild(write);
+		bash.updateResult({ content: [{ type: "text", text: "line one" }], isError: false });
+		write.updateResult({ content: [], details: { diff: "+saved" }, isError: false });
+
+		const plain = (lines: string[]) =>
+			lines.map((line) =>
+				line.replace(/\x1b\[[0-?]*[ -\/]*[@-~]/g, "").replace(/\x1b\][^\x07]*\x07/g, ""),
+			);
+		const folded = plain(chat.render(120));
+		const summaryAt = folded.findIndex((line) => line.includes("bash×1"));
+		const writeAt = folded.findIndex((line) => line.includes("write src/session.ts"));
+		assert.ok(writeAt >= 0 && summaryAt > writeAt, `折叠摘要应在 write 之后: ${folded.join("\n")}`);
+
+		anchor.setExpanded(true);
+		const expanded = plain(chat.render(120));
+		const textAt = expanded.findIndex((line) => line.includes("先改写入路径"));
+		const writeExpandedAt = expanded.findIndex((line) => line.includes("write src/session.ts"));
+		const bashAt = expanded.findIndex(
+			(line) => line.includes("Bash one") || line.includes("$ one"),
+		);
+		assert.ok(
+			textAt >= 0 && writeExpandedAt > textAt,
+			`正文应仍在 write 之前: ${expanded.join("\n")}`,
+		);
+		assert.ok(bashAt > writeExpandedAt, `面板应留在 write 之后: ${expanded.join("\n")}`);
+		assert.ok(
+			componentAtLocalRow(chat, bashAt, 120)?.component === bash,
+			"面板换到摘要行后仍要能点中卡内工具",
+		);
+	} finally {
+		setToolMouseTui(null);
+		hooks.shutdown();
+		setMessageDisplayTheme(previousTheme);
+		config.mode = previousMode;
+		emit("session_shutdown", {}, ctx);
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("compact 展开卡：助手文本排在 thinking 前面，不被思考块盖住", () => {
 	const dir = mkdtempSync(join(tmpdir(), "pi-compact-text-first-"));
 	const previousDir = process.env.PI_CODING_AGENT_DIR;
@@ -1835,6 +2031,21 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 		assert.match(expanded, /new/);
 		assert.doesNotMatch(expanded, /Input|Output|Details:/);
 		assert.ok(backgroundSlots.includes("userMessageBg"));
+		// issue 46：edit/write 展开卡单独一条取槽位路径，同样跟随配置。
+		const previousSlot = config.expandedCardBackground;
+		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
+		try {
+			backgroundSlots.length = 0;
+			config.expandedCardBackground = targetSlot;
+			edit.render(120);
+			assert.deepEqual(
+				[...new Set(backgroundSlots)],
+				[targetSlot],
+				"expanded edit card follows the configured slot",
+			);
+		} finally {
+			config.expandedCardBackground = previousSlot;
+		}
 		setMessageDisplayTheme(previousTheme);
 
 		// edit 缺 diff 时统计未知，不能伪报 (+0 -0)。

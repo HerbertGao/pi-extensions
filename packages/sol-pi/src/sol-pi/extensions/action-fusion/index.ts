@@ -17,6 +17,7 @@
  * This standalone version composes only Pi's public tool definitions.
  */
 
+import { mkdir, writeFile } from "node:fs/promises";
 import {
 	type BashToolOptions,
 	createEditToolDefinition,
@@ -41,6 +42,10 @@ const EDIT_THEN_RUN_DESCRIPTION =
 	"Command to run next on this file after the edit succeeds — e.g. run, build, start/restart, install, or check it; optional timeout in seconds. Skipped if the edit fails; a non-zero exit is reported but keeps the edit.";
 const WRITE_THEN_RUN_DESCRIPTION =
 	"Command to run next on this file after the write succeeds — e.g. run, build, start/restart, install, or check it; optional timeout in seconds. Skipped if the write fails; a non-zero exit is reported but keeps the write.";
+
+// Runtime-only annotation: Pi preserves symbol keys in getAllTools(), but JSON omits them.
+const WRITE_METADATA_OBSERVER = Symbol.for("herbertgao.pi.writeMetadataObserver");
+type WriteMetadataObserver = (toolCallId: string, path: string, write: () => Promise<void>) => Promise<void>;
 
 export interface ActionFusionOptions {
 	/** Optional programmatic bash overrides, primarily for tests and embedded runtimes. */
@@ -82,6 +87,7 @@ export function createActionFusionExtension(options: ActionFusionOptions = {}): 
 	return (pi: ExtensionAPI) => {
 		const editTemplate = baseEdit(process.cwd());
 		const writeTemplate = baseWrite(process.cwd());
+		let observeWrite: WriteMetadataObserver | undefined;
 
 		const editParameters = Type.Object({
 			...editTemplate.parameters.properties,
@@ -131,6 +137,14 @@ export function createActionFusionExtension(options: ActionFusionOptions = {}): 
 		pi.registerTool<typeof writeParameters, undefined>({
 			...writeTemplate,
 			parameters: writeParameters,
+			annotations: Object.assign({}, writeTemplate.annotations, {
+				[WRITE_METADATA_OBSERVER]: (observer: WriteMetadataObserver) => {
+					// Custom operations may write remotely; local snapshots would be misleading.
+					if (options.writeOptions?.operations) return false;
+					observeWrite = observer;
+					return true;
+				},
+			}),
 			async execute(toolCallId, input, signal, onUpdate, ctx) {
 				const { then_run, ...writeInput } = input as typeof input & { then_run?: ThenRunInput };
 				const result = await executeMutationThenRun({
@@ -140,7 +154,24 @@ export function createActionFusionExtension(options: ActionFusionOptions = {}): 
 					bashOptions: options.bashOptions,
 					signal,
 					ctx,
-					mutate: () => baseWrite(ctx.cwd).execute(toolCallId, writeInput, signal, onUpdate, ctx),
+					mutate: () => {
+						const observer = observeWrite;
+						const write = observer
+							? createWriteToolDefinition(ctx.cwd, {
+								operations: {
+									mkdir: async (dir) => {
+										await mkdir(dir, { recursive: true });
+									},
+									// Pi invokes this inside its mutation queue, so the snapshot is atomic with the write.
+									writeFile: (path, content) => observer(toolCallId, path, () => {
+										if (signal?.aborted) throw new Error("Operation aborted");
+										return writeFile(path, content, "utf8");
+									}),
+								},
+							})
+							: baseWrite(ctx.cwd);
+						return write.execute(toolCallId, writeInput, signal, onUpdate, ctx);
+					},
 				});
 				if (
 					then_run &&

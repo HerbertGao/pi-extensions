@@ -8,7 +8,7 @@ Aggregate installer for HerbertGao-maintained Pi extensions and pinned upstream 
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer and Pi 0.85.1 or newer.
+Requires Node.js 24 or newer and Pi 1.0.4 or newer.
 
 ## Native MCP
 
@@ -18,7 +18,7 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 
 ## Bundled extensions
 
-The package bundles 5 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `resume-from`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
+The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `pi-antigravity@0.8.1`
 - `@dietrichgebert/ponytail@4.10.0`
@@ -34,14 +34,19 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `@tifan/pi-recap@0.4.7`
 - `@tifan/pi-rename@0.6.0`
 - `pi-typesafe@0.8.1`
-- `pi-multi-account@1.23.2`
+- `pi-multi-account@1.24.0`
 - `pi-next-cue@1.0.7`
 - `pi-jev-auto-mode@0.5.0`
 - `pi-lens@4.3.0`
 - `pi-web-access@0.34.0`
 - `remote-pi@0.7.0`
+- `resume-from@0.4.1`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
+
+The local `@herbertgao/resume-from` fork is retired. If it is installed separately, remove that package before upgrading the aggregate to avoid registering `/resume-from` twice. The aggregate now uses upstream `resume-from@0.4.1`; its v0.4.0 start-directory fix supersedes our local patch.
+
+The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@0.9.10` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
 
 ### Bark notifications
 
@@ -51,7 +56,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 `pi-jev-auto-mode@0.5.0` adds fail-closed Jev safety gates for shell commands and file changes. `pi-typesafe@0.8.1` adds the `/typesafe` command and `typesafe_evaluate` tool for explicit structured decisions; both use the TypeSafe API after login.
 
-`@herbertgao/resume-from@0.2.0` keeps Claude Code sessions associated with their original repository when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi@0.1.0` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.3.0` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.34.0` provides configurable web search and fetch tools; its `toolActivation` defaults to `auto`, choosing eager or dynamic tool activation per model. `pi-antigravity@0.8.1` reads Pi 0.86+ transcript system messages, so Antigravity requests carry Pi's system prompt and tools; it also registers `google_search` and `generate_image` tools that use the signed-in Antigravity account. Preferred Thinking 1.0.2 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
+`resume-from@0.4.1` continues sessions across Pi, Claude Code, and Codex; it keeps a Claude Code session matched to its start directory when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.3.0` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.34.0` provides configurable web search and fetch tools; its `toolActivation` defaults to `auto`, choosing eager or dynamic tool activation per model. `pi-antigravity@0.8.1` reads Pi 0.86+ transcript system messages, so Antigravity requests carry Pi's system prompt and tools; it also registers `google_search` and `generate_image` tools that use the signed-in Antigravity account. Preferred Thinking 1.0.2 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 
