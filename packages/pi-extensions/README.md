@@ -20,12 +20,12 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 
 The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
-- `pi-antigravity@0.8.1`
+- `pi-antigravity@0.9.0`
 - `@dietrichgebert/ponytail@4.10.0`
-- `@juicesharp/rpiv-ask-user-question@2.11.0`
+- `@juicesharp/rpiv-ask-user-question@2.12.0`
 - `@narumitw/pi-btw@0.61.1`
 - `@narumitw/pi-caffeinate@0.49.8`
-- `@pi-plugins/fast-mode@0.1.12`
+- `@pi-plugins/fast-mode@0.1.13`
 - `@tifan/pi-copy-response@0.2.7`
 - `@tifan/pi-handoff@2.2.2`
 - `@tifan/pi-inline-skills@1.0.6`
@@ -38,7 +38,7 @@ The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-
 - `pi-next-cue@1.0.7`
 - `pi-jev-auto-mode@0.5.0`
 - `pi-lens@4.3.0`
-- `pi-web-access@0.34.0`
+- `pi-web-access@0.35.0`
 - `remote-pi@0.7.0`
 - `resume-from@0.4.1`
 
@@ -56,7 +56,7 @@ The locally customized CC and SoL-Pi packages now follow complete upstream basel
 
 `pi-jev-auto-mode@0.5.0` adds fail-closed Jev safety gates for shell commands and file changes. `pi-typesafe@0.8.1` adds the `/typesafe` command and `typesafe_evaluate` tool for explicit structured decisions; both use the TypeSafe API after login.
 
-`resume-from@0.4.1` continues sessions across Pi, Claude Code, and Codex; it keeps a Claude Code session matched to its start directory when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.3.0` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.34.0` provides configurable web search and fetch tools; its `toolActivation` defaults to `auto`, choosing eager or dynamic tool activation per model. `pi-antigravity@0.8.1` reads Pi 0.86+ transcript system messages, so Antigravity requests carry Pi's system prompt and tools; it also registers `google_search` and `generate_image` tools that use the signed-in Antigravity account. Preferred Thinking 1.0.2 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
+`resume-from@0.4.1` continues sessions across Pi, Claude Code, and Codex; it keeps a Claude Code session matched to its start directory when the active transcript later moves into a nested cwd. `@herbertgao/sol-pi` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.3.0` expands language routing and bounds retained diagnostic facts across multi-root sessions. `pi-web-access@0.35.0` provides configurable web search and fetch tools; its `toolActivation` defaults to `auto`, choosing eager or dynamic tool activation per model. `pi-antigravity@0.9.0` reads Pi 0.86+ transcript system messages, so Antigravity requests carry Pi's system prompt and tools; it also registers `google_search` and `generate_image` tools that use the signed-in Antigravity account. Preferred Thinking 1.0.2 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 

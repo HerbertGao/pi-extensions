@@ -251,12 +251,12 @@ The aggregate package also pins the following npm packages under their original 
 
 | Package                              | Version  | Upstream                     |
 | ------------------------------------ | -------- | ---------------------------- |
-| `pi-antigravity`                     | `0.8.1`  | `Rahularya01/pi-antigravity` |
+| `pi-antigravity`                     | `0.9.0`  | `Rahularya01/pi-antigravity` |
 | `@dietrichgebert/ponytail`           | `4.10.0` | `DietrichGebert/ponytail`    |
-| `@juicesharp/rpiv-ask-user-question` | `2.11.0` | `juicesharp/rpiv-mono`       |
+| `@juicesharp/rpiv-ask-user-question` | `2.12.0` | `juicesharp/rpiv-mono`       |
 | `@narumitw/pi-btw`                   | `0.61.1` | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.8` | `narumiruna/pi-extensions`   |
-| `@pi-plugins/fast-mode`              | `0.1.12` | `k3dom/pi-plugins`           |
+| `@pi-plugins/fast-mode`              | `0.1.13` | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`  | `tifandotme/pi-extensions`   |
 | `@tifan/pi-inline-skills`            | `1.0.6`  | `tifandotme/pi-extensions`   |
@@ -268,7 +268,7 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-multi-account`                   | `1.24.0` | `Sarrius/pi-multi-account`   |
 | `pi-jev-auto-mode`                   | `0.5.0`  | `jomatsu/pi-jev-auto-mode`   |
 | `pi-lens`                            | `4.3.0`  | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.34.0` | `nicobailon/pi-web-access`   |
+| `pi-web-access`                      | `0.35.0` | `nicobailon/pi-web-access`   |
 | `remote-pi`                          | `0.7.0`  | `jacobaraujo7/remote_pi`     |
 | `resume-from`                        | `0.4.1`  | `alexei-led/resume-from`     |
 
@@ -277,6 +277,8 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
 The `@narumitw/pi-caffeinate@0.49.8` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native` dependency remains an unbundled promoted runtime dependency for Linux support.
+
+The four companion upgrades reviewed for issue #254 in PR #255 are carried into PR #258: `@juicesharp/rpiv-ask-user-question@2.12.0` with `rpiv-config@^2.12.0`, `@pi-plugins/fast-mode@0.1.13`, `pi-antigravity@0.9.0`, and `pi-web-access@0.35.0`. The Antigravity review cursor advances to `a3d8caba1b10263420060406de57112ce16490d0`. PR #255's resume-from review-only metadata is deliberately excluded: `49e077c` is not the v0.3.1 release commit, and upstream `resume-from@0.4.1` now directly supersedes the retired local fork.
 
 The issue #246 upstream review accepted three companion updates and advanced three repository cursors:
 
