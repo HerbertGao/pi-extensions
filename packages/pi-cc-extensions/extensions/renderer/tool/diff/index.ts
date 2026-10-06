@@ -1,5 +1,6 @@
 import { createWriteToolDefinition, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { textFromResult } from "../result.ts";
 import {
 	renderEditDiffResult,
 	renderWriteDiffResult,
@@ -7,7 +8,13 @@ import {
 } from "./diff-renderer.ts";
 import { DEFAULT_TOOL_DISPLAY_CONFIG } from "../../../config/config.ts";
 import { patchRegistry, WRITE_OWNERSHIP_SLOT } from "../../../utils/patch-keys.ts";
-import { executeWriteWithMetadata, WriteExecutionMetadataStore } from "./write-execution.ts";
+import {
+	capturePreviousContent,
+	executeWriteWithMetadata,
+	WriteExecutionMetadataStore,
+} from "./write-execution.ts";
+
+const WRITE_METADATA_OBSERVER = Symbol.for("herbertgao.pi.writeMetadataObserver");
 
 function resultText(result: any): string {
 	const blocks = Array.isArray(result?.content) ? result.content : [];
@@ -45,18 +52,41 @@ export function renderRichToolResult(
 	if (options?.isPartial || options?.isError || context?.isError) return undefined;
 	const expanded = options?.expanded === true || context?.expanded === true;
 	const filePath = context?.args?.file_path ?? context?.args?.path;
-	if (toolName === "edit") {
-		return renderEditDiffResult(
-			result?.details,
-			{
-				expanded,
-				filePath,
-				isHovered: options?.isHovered,
-				invalidate: () => context?.invalidate?.(),
+	const withFollowUp = (component: any) => {
+		if (!expanded || !context?.args?.then_run) return component;
+		const content = Array.isArray(result?.content)
+			? result.content.filter(
+					(block: any) =>
+						block?.type === "text" &&
+						typeof block.text === "string" &&
+						block.text.startsWith("[then_run:succeeded]"),
+				)
+			: [];
+		if (!content.length) return component;
+		const followUp = new Text(theme.fg("toolOutput", textFromResult({ content })), 0, 0);
+		return {
+			...component,
+			render: (width: number) => [...component.render(width), ...followUp.render(width)],
+			invalidate() {
+				component.invalidate?.();
+				followUp.invalidate();
 			},
-			displayConfig,
-			theme,
-			resultText(result),
+		};
+	};
+	if (toolName === "edit") {
+		return withFollowUp(
+			renderEditDiffResult(
+				result?.details,
+				{
+					expanded,
+					filePath,
+					isHovered: options?.isHovered,
+					invalidate: () => context?.invalidate?.(),
+				},
+				displayConfig,
+				theme,
+				resultText(result),
+			),
 		);
 	}
 	if (toolName !== "write") return undefined;
@@ -65,32 +95,38 @@ export function renderRichToolResult(
 
 	const metadata = writeMetadata.get(context?.toolCallId);
 	if (!metadata) {
-		return unavailableComponent("execution metadata is unavailable", theme);
+		return withFollowUp(unavailableComponent("execution metadata is unavailable", theme));
 	}
 	if (metadata.diffUnavailableReason) {
-		return unavailableComponent(metadata.diffUnavailableReason, theme);
+		return withFollowUp(unavailableComponent(metadata.diffUnavailableReason, theme));
 	}
-	return renderWriteDiffResult(
-		typeof context?.args?.content === "string" ? context.args.content : undefined,
-		{
-			expanded,
-			filePath,
-			previousContent: metadata.previousContent,
-			fileExistedBeforeWrite: metadata.fileExistedBeforeWrite,
-			isHovered: options?.isHovered,
-			invalidate: () => context?.invalidate?.(),
-		},
-		displayConfig,
-		theme,
-		resultText(result),
+	return withFollowUp(
+		renderWriteDiffResult(
+			typeof context?.args?.content === "string" ? context.args.content : undefined,
+			{
+				expanded,
+				filePath,
+				previousContent: metadata.previousContent,
+				fileExistedBeforeWrite: metadata.fileExistedBeforeWrite,
+				isHovered: options?.isHovered,
+				invalidate: () => context?.invalidate?.(),
+			},
+			displayConfig,
+			theme,
+			resultText(result),
+		),
 	);
 }
 
-/** write 被其他扩展占用时的来源，用于提示冲突。 */
-export type ExternalWriteOwner = { source: string; path: string };
+/** write 被其他扩展占用时的来源及可选元数据协作入口。 */
+export type ExternalWriteOwner = {
+	source: string;
+	path: string;
+	installMetadataObserver?: unknown;
+};
 
 type WriteOwnershipState = {
-	/** write 是否由本插件执行；undefined 表示尚未确认，按拥有处理以保持既有行为。 */
+	/** write 的执行元数据是否归本插件；undefined 表示尚未确认，按拥有处理。 */
 	owned?: boolean;
 };
 
@@ -99,8 +135,8 @@ function writeOwnership(): WriteOwnershipState {
 }
 
 /**
- * write 是否由本插件执行。只有注册过 write override 才有执行元数据，
- * 否则渲染层要放行给普通结果行，避免每张卡降级成 "diff unavailable"。
+ * write 的执行元数据是否归本插件（自有 write 或协作扩展提供）。
+ * 否则渲染层放行给普通结果行，避免每张卡降级成 "diff unavailable"。
  */
 export function ownsWriteTool(): boolean {
 	return writeOwnership().owned !== false;
@@ -114,7 +150,11 @@ function findExternalWriteOwner(pi: ExtensionAPI): ExternalWriteOwner | undefine
 		const sourceInfo = write?.sourceInfo;
 		const source = sourceInfo?.source;
 		if (!write || typeof source !== "string" || source === "builtin") return undefined;
-		return { source, path: typeof sourceInfo?.path === "string" ? sourceInfo.path : "" };
+		return {
+			source,
+			path: typeof sourceInfo?.path === "string" ? sourceInfo.path : "",
+			installMetadataObserver: write.annotations?.[WRITE_METADATA_OBSERVER],
+		};
 	} catch {
 		// getAllTools 在扩展运行时绑定前不可用。
 		return undefined;
@@ -131,6 +171,20 @@ export function installWriteOverride(
 	const state = writeOwnership();
 	const external = findExternalWriteOwner(pi);
 	if (external) {
+		const installObserver = external.installMetadataObserver;
+		if (
+			typeof installObserver === "function" &&
+			installObserver(async (toolCallId: string, path: string, write: () => Promise<void>) => {
+				store.delete(toolCallId);
+				const metadata = await capturePreviousContent(path);
+				await write();
+				store.set(toolCallId, metadata);
+			}) === true
+		) {
+			// 协作扩展保留工具执行，本插件只接收队列内捕获的写入元数据。
+			state.owned = true;
+			return store;
+		}
 		// 让位：执行与 diff 都归对方，渲染层据 owned=false 走普通结果行。
 		state.owned = false;
 		onExternalOwner?.(external);

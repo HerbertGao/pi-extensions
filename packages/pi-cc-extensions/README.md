@@ -8,7 +8,7 @@
 
 ## 界面预览
 
-<a href="https://github.com/user-attachments/assets/6c858000-fdad-43f9-957f-4d0278648498"><img src="./assets/readme/preview.webp" alt="pi-cc-extensions 界面预览" width="100%"></a>
+<a href="https://github.com/user-attachments/assets/6c858000-fdad-43f9-957f-4d0278648498"><img src="https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-cc-extensions/assets/readme/preview.webp" alt="pi-cc-extensions 界面预览" width="100%"></a>
 
 点击封面播放演示视频
 
@@ -60,6 +60,7 @@ pi install git:github.com/HerbertGao/pi-extensions
   "expandedInputMaxLines": 5,              // 展开工具卡 Input 可见行数，超出在末行显示展开提示
   "expandedOutputMaxLines": 10,            // 展开工具卡 Output 可见行数，超出在末行显示展开提示
   "expandedPreviewMaxLines": 40,           // 展开 TaskList 正文最大行数（展开 diff 始终全量）
+  "expandedCardBackground": "userMessageBg", // 展开卡背景槽位；userMessageBg 与用户消息同色，toolPendingBg 为中性灰
   "inputClip": 0,                          // 工具摘要 path/command 折叠字符数；0 = 按可用宽度
   "showStartupHeader": true,               // 启动头（logo + tips）开关
   "scrollStepLines": 3,                    // fullscreen 滚轮步进
@@ -89,7 +90,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 ```
 
 > [!TIP]
-> **全屏模式**：单击 `click to show more` 展开工具卡、思考、Skill 和 compact 摘要；工具卡展开态 diff 全量显示，Input/Output 超行时末行 `… +N more lines • click to show more` 打开全量预览，单击收起（卡内拖动为选中文本）。
+> **全屏模式**：单击 `click to show more` 展开工具卡、思考、Skill 和 compact 摘要；工具卡展开态 diff 全量显示，Input/Output 超行时末行 `… +N more lines · click to show more` 打开全量预览，单击收起（卡内拖动为选中文本）。
 
 > [!NOTE]
 > **Mermaid 渲染**：建议把 `markdown.mermaid` 设为 `final`（`~/.pi/agent/settings.json` 或 `/settings` 面板的 Mermaid diagrams 选项）。默认 `streaming` 逐帧重绘，`final` 渲染最终版更稳定。
@@ -99,20 +100,19 @@ pi install git:github.com/HerbertGao/pi-extensions
 ```bash
 npm test
 npm run typecheck
-./test.bat # or pi -e .
+./test.sh # macOS/Linux：临时加载本地检出，退出后还原
+test.bat  # Windows：同上（调用 test.ps1）
+# 只想跑一次、不改配置：pi -e .
 ```
 
 ## 兼容性
 
-- Node.js `>=22.19.0`，Pi `^0.84.0`
+- Node.js `>=24`；monorepo 使用 Pi `1.0.4`，发布包的 Pi peer 版本保持 `*`。
 
 ## 推荐搭配
 
 | 扩展                                     | 用途                                             |
 | ---------------------------------------- | ------------------------------------------------ |
-| `npm:@tintinweb/pi-subagents`            | 并行 SubAgent、后台任务与工作树隔离              |
-| `npm:@tintinweb/pi-tasks`                | Claude Code 风格任务跟踪与协调                   |
-| `npm:pi-mcp-adapter`                     | 按需发现 MCP 工具，减少上下文占用                |
 | `npm:@ff-labs/pi-fff`                    | 模糊文件与内容检索（fffind / ffgrep）            |
 | `npm:pi-web-access`                      | 网页搜索、URL 抓取、GitHub 克隆、PDF/视频解析    |
 | `npm:@narumitw/pi-usage`                 | 查看当前账号用量（Codex / Copilot / OpenRouter） |

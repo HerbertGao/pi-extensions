@@ -41,6 +41,8 @@
 	},
 	"scripts": {
 		"test": "node scripts/test.mjs",
+		"coverage": "node scripts/test.mjs --experimental-test-coverage --test-coverage-include=extensions/**/*.ts",
+		"docs:tool-render": "node --experimental-strip-types scripts/generate-tool-render-examples.ts",
 		"typecheck": "tsc --noEmit",
 		"format": "biome format --write .",
 		"format:check": "biome format ."
@@ -69,9 +71,9 @@
 	},
 	"x-upstream": {
 		"package": "pi-cc-extensions",
-		"version": "0.9.9",
-		"reviewedVersion": "0.9.9",
+		"version": "0.9.10",
+		"reviewedVersion": "0.9.10",
 		"repository": "https://github.com/minuque/pi-cc-extensions",
-		"commit": "17d294bcdc5e9a7e68771f0c550440ed22738457"
+		"commit": "2b72669cafefe0771b2e3e63b0db5c478314d2d4"
 	}
 }

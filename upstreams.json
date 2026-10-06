@@ -14,22 +14,17 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "17d294bcdc5e9a7e68771f0c550440ed22738457"
-    },
-    {
-      "name": "resume-from",
-      "repository": "https://github.com/alexei-led/resume-from",
-      "reviewedCommit": "1dfae785f77f3bc1b564b958cfc7ed9078fbe230"
+      "reviewedCommit": "2b72669cafefe0771b2e3e63b0db5c478314d2d4"
     },
     {
       "name": "NVlabs SoL-Pi",
       "repository": "https://github.com/NVlabs/SoL-Pi",
-      "reviewedCommit": "1559b5cb12c72da4a485bc50fe326586b216fb19"
+      "reviewedCommit": "e1a586af0ad8956f42ae5b26bba20e48fbf30e00"
     },
     {
       "name": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity",
-      "reviewedCommit": "b335fae76478b108a6d559d00fe6fb52b5d4bd13"
+      "reviewedCommit": "a3d8caba1b10263420060406de57112ce16490d0"
     }
   ],
   "companions": [
@@ -112,6 +107,10 @@
     {
       "package": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity"
+    },
+    {
+      "package": "resume-from",
+      "repository": "https://github.com/alexei-led/resume-from"
     }
   ]
 }

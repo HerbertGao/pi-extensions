@@ -255,6 +255,9 @@ export function toolCallSummary(
 		const code = typeof args.code === "string" && args.code ? clip(args.code) : "";
 		return code ? { main: title, detail: "", payload: code } : { main: title, detail: "" };
 	}
+	// 内置 codemode：标题只报工具名。脚本很长，塞进行首既挤又读不出重点；
+	// 要看代码展开 Input，要看跑了什么看子调用行。
+	if (name === "codemode") return { main: title, detail: "" };
 
 	const value = (fallback: string, ...keys: string[]) => {
 		const found = keys.map((key) => args[key]).find((item) => typeof item === "string" && item);

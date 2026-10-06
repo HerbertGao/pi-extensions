@@ -338,16 +338,18 @@ function toolCardBgRow(
 	const inset = (n: number) => (outerBg ? `${outerBg}${" ".repeat(n)}\x1b[49m` : " ".repeat(n));
 	return `${inset(leftInset)}${bgAnsi}${stable}\x1b[49m${inset(rightInset)}`;
 }
-/** edit/write 展开卡：保持原样式（userMessageBg Box），不应用工具卡深色/间距改动。 */
+/** edit/write 展开卡：保持原样式（展开卡背景 Box），不应用工具卡深色/间距改动。 */
 function editWriteExpandedCard(theme: any): any {
 	return new Box(
 		1,
 		1,
-		typeof theme.bg === "function" ? (text: string) => theme.bg("userMessageBg", text) : undefined,
+		typeof theme.bg === "function"
+			? (text: string) => theme.bg(config.expandedCardBackground, text)
+			: undefined,
 	);
 }
 
-/** compact 展开面板：外卡片保持 userMessageBg；展开的 thinking 另包一层更深的
+/** compact 展开面板：外卡片保持展开卡背景；展开的 thinking 另包一层更深的
  *  内卡（自身 Box 背景与外卡同色，不区分会糊在一起），工具卡直接铺在外卡背景上。
  *  每个子卡前面补 1 行分隔（上一条已经是空行时不再补），子卡自带的首尾空行会被裁掉，
  *  避免与外卡/内卡 padding 叠出双空行。
@@ -364,7 +366,7 @@ function layoutExpandedToolCard(
 	toolHits = false,
 	live = false,
 ): { lines: string[]; hits: Array<{ child: any; start: number; end: number }> } {
-	const slot = "userMessageBg";
+	const slot = config.expandedCardBackground;
 	const toolBgAnsi = darkenBgAnsi(theme, slot);
 	/** live 每行前面的标记宽度（首行 `↳ `，其余对齐空格）。 */
 	const markerWidth = live ? 2 : 0;
@@ -471,6 +473,8 @@ function compactRoundCard(
 		| {
 				width: number;
 				theme: unknown;
+				/** 背景槽位也是面板行的输入：改配置后不能复用旧底色的整卡。 */
+				bgSlot: string;
 				paints: unknown[];
 				lines: string[];
 				hits: Array<{ child: any; start: number; end: number }>;
@@ -478,6 +482,7 @@ function compactRoundCard(
 		| undefined;
 	const layout = (width: number) => {
 		const theme = themeOf();
+		const bgSlot = config.expandedCardBackground;
 		const innerWidth = contentWidth(width);
 		const paints = children.map((child) => {
 			const lines = child.render?.(innerWidth);
@@ -487,6 +492,7 @@ function compactRoundCard(
 			paint &&
 			paint.width === width &&
 			paint.theme === theme &&
+			paint.bgSlot === bgSlot &&
 			paint.paints.length === paints.length &&
 			paint.paints.every((item, index) => item === paints[index])
 		) {
@@ -496,6 +502,7 @@ function compactRoundCard(
 		paint = {
 			width,
 			theme,
+			bgSlot,
 			paints,
 			lines: laid.lines,
 			hits: laid.hits,
@@ -697,7 +704,7 @@ function compactEditWriteLine(
 	const iconPart = `${options.flushLeft ? "" : " "}${theme.fg(iconColor, icon)} `;
 	const namePart = theme.fg("toolTitle", name);
 	const hintText =
-		options.hint !== false && component.expanded !== true ? ` • ${showMoreHintText()}` : "";
+		options.hint !== false && component.expanded !== true ? ` · ${showMoreHintText()}` : "";
 	const fixedWidth =
 		visibleWidth(iconPart) +
 		visibleWidth(namePart) +
@@ -719,6 +726,8 @@ const compactRichDiffCache = new WeakMap<
 type CompactEditPaintHit = {
 	width: number;
 	theme: unknown;
+	/** 展开卡的背景槽位同样参与命中判断。 */
+	bgSlot: string;
 	expanded: boolean;
 	result: unknown;
 	isPartial: boolean;
@@ -756,6 +765,7 @@ function compactEditWriteLines(
 			hit &&
 			hit.width === width &&
 			hit.theme === theme &&
+			hit.bgSlot === config.expandedCardBackground &&
 			hit.expanded === expanded &&
 			hit.result === component.result &&
 			hit.isPartial === isPartial &&
@@ -771,6 +781,7 @@ function compactEditWriteLines(
 		compactEditPaintCache.set(component, {
 			width,
 			theme,
+			bgSlot: config.expandedCardBackground,
 			expanded,
 			result: component.result,
 			isPartial,
@@ -901,7 +912,7 @@ function compactAssistantLineComponent(
 			const pad = Math.max(0, options.pad ?? (Number(self.outputPad) || 0));
 			const available = Math.max(0, width - pad);
 			const hint = options.hint !== false;
-			const hintText = hint ? ` • ${showMoreHintText()}` : "";
+			const hintText = hint ? ` · ${showMoreHintText()}` : "";
 			const summaryWidth = Math.max(0, available - visibleWidth(hintText));
 			const resolved = typeof summary === "function" ? summary() : summary;
 			const runningActive = resolved.startsWith("Running...");
@@ -975,7 +986,7 @@ function compactStopStatusLine(status: string, pad = 0): any {
 
 /**
  * 槽位卡内的展开入口：卡里是只读围观，展开走摘要行自己的 hint，卡内不再重复提示。
- * 提示有两处来源——我们的 showMoreHintText（`… +N more lines • click to show more`）与
+ * 提示有两处来源——我们的 showMoreHintText（`… +N more lines · click to show more`）与
  * pi 原生工具卡（`… (N earlier lines, ctrl+o to expand)`），所以按渲染结果收尾裁剪。
  * 只去掉动作词，`(N more lines)` 这类计数保留。
  */
@@ -987,7 +998,8 @@ const SLOT_HINT_PATTERNS: RegExp[] = [
 	// 只去掉动作词，收尾括号与计数保留。
 	new RegExp(String.raw`,\s*[^()]*?${EXPAND_ACTION}(?=\))`),
 	// 直接挂在行尾：整段去掉。
-	new RegExp(String.raw`\s*(?:•\s*)?${EXPAND_ACTION}\s*$`),
+	// 尾部分隔点：ccstyle 统一 `·`，同时兼容旧帧与 pi 原生的 `•`
+	new RegExp(String.raw`\s*(?:[•·]\s*)?${EXPAND_ACTION}\s*$`),
 ];
 
 function stripSlotHint(line: string): string {
@@ -1357,7 +1369,20 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		const tail: MountedRoundTail = { host: undefined, container: undefined, parts: [], round };
 		const host: any = {
 			outputPad: Number(round.anchor?.outputPad) || 0,
+			children: [],
 			render: (width: number) => tail.parts.flatMap((part: any) => part?.render?.(width) ?? []),
+			childAtRow(localRow: number, width: number) {
+				let offset = 0;
+				for (const part of tail.parts) {
+					const lines = part?.render?.(width);
+					const count = Array.isArray(lines) ? lines.length : 0;
+					if (localRow < offset + count) {
+						return part?.childAtRow?.(localRow - offset, width) ?? null;
+					}
+					offset += count;
+				}
+				return null;
+			},
 			invalidate: () => {
 				for (const part of tail.parts) part?.invalidate?.();
 			},
@@ -1373,6 +1398,10 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		// 点击/悬停归属与 anchor 同一展开入口；toggle 每次 renderRound 重建，按值转发。
 		// 经 tail.round 动态解引用：重建过户时 anchor 可能换成别的组件。
 		ensureAssistantSetExpanded(host);
+		Object.defineProperty(host, "roundAnchor", {
+			configurable: true,
+			get: () => tail.round?.anchor,
+		});
 		host[ASSISTANT_TOGGLE_ROUND_KEY] = (expanded: boolean) =>
 			tail.round?.anchor?.[ASSISTANT_TOGGLE_ROUND_KEY]?.(expanded);
 		tail.host = host;
@@ -1527,6 +1556,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		}
 		const tail = ensureTailHost(round);
 		tail.parts = makeParts(tail.host);
+		tail.host.children = tail.parts;
 		syncTailPosition(round);
 	};
 
@@ -1679,8 +1709,10 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		}
 
 		if (round.anchor.expanded === true) {
-			// 展开卡自带全部内容，尾行摘下（收起时在折叠分支重新挂载）。
-			unmountRoundTail(round);
+			// 展开内容留在摘要行那个位置：回合最后一个成员（含 write/edit）之后。
+			// 放进 anchor 内部会跳到回合起点，盖到中间的 write/edit 上面。
+			// anchor 未挂进 transcript 时没有这个位置，退回 anchor 内部。
+			const mounted = Boolean(tailContainerOf(round.anchor));
 			const toolsById = new Map<string, any>();
 			for (const tool of trackedToolComponents) {
 				if (typeof tool?.toolCallId === "string") toolsById.set(tool.toolCallId, tool);
@@ -1790,7 +1822,20 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 					!explicitRoundToolIds.has(String(tool.toolCallId ?? "")),
 			);
 			flushPanel();
-			for (const child of anchorChildren) round.anchor.contentContainer.addChild(child);
+			if (mounted) {
+				// 正文留在各自的 assistant 消息上，面板挂回摘要行原位。
+				const outside: any[] = [];
+				const panel: any[] = [];
+				for (const child of anchorChildren) {
+					(typeof child?.childAtRow === "function" ? panel : outside).push(child);
+				}
+				for (const child of outside) round.anchor.contentContainer.addChild(child);
+				if (panel.length > 0) mountRoundTail(round, () => panel);
+				else unmountRoundTail(round);
+			} else {
+				unmountRoundTail(round);
+				for (const child of anchorChildren) round.anchor.contentContainer.addChild(child);
+			}
 			// 展开卡内工具会显示 error，外层仍挂 abort/length，避免只藏在折叠工具里。
 			appendStopStatus(round.anchor, stopStatus);
 			return;

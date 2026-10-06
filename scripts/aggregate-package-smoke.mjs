@@ -1487,21 +1487,15 @@ try {
     }
   }
 
-  const resumeFromRoot = join(
-    packageRoot,
-    "node_modules",
-    "@herbertgao",
-    "resume-from",
-  )
+  const resumeFromRoot = join(packageRoot, "node_modules", "resume-from")
   const resumeFromManifestPath = join(resumeFromRoot, "package.json")
   const resumeFromManifest = parseJson(
     await readFile(resumeFromManifestPath, "utf8"),
     resumeFromManifestPath,
   )
-  const expectedResumeFromVersion =
-    sourceManifest.dependencies["@herbertgao/resume-from"]
+  const expectedResumeFromVersion = sourceManifest.dependencies["resume-from"]
   if (
-    resumeFromManifest.name !== "@herbertgao/resume-from" ||
+    resumeFromManifest.name !== "resume-from" ||
     resumeFromManifest.version !== expectedResumeFromVersion
   ) {
     throw new Error(
@@ -1938,7 +1932,7 @@ try {
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/remote-pi/LICENSE",
-      "node_modules/@herbertgao/resume-from/LICENSE",
+      "node_modules/resume-from/LICENSE",
       "node_modules/@herbertgao/sol-pi/LICENSE",
       "node_modules/remote-pi/service-templates/launchd.plist.template",
       "node_modules/remote-pi/service-templates/systemd.service.template",
@@ -2020,7 +2014,7 @@ try {
     ["@tifan/pi-recap/src/index.ts", "commands", "recap"],
     ["@tifan/pi-rename/src/index.ts", "commands", "rename"],
     [
-      "@herbertgao/resume-from/shims/pi/extensions/resume-from.js",
+      "resume-from/shims/pi/extensions/resume-from.js",
       "commands",
       "resume-from",
     ],

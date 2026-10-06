@@ -1,10 +1,11 @@
 <p align="center">
-  <img src="assets/sol-pi-hero.png" width="100%" alt="SoL-Pi: Scaling Auto-Research Loops for Efficient Agent Harnesses" />
+  <img src="https://raw.githubusercontent.com/HerbertGao/pi-extensions/refs/heads/master/packages/sol-pi/assets/sol-pi-hero.png" width="100%" alt="SoL-Pi: Scaling Auto-Research Loops for Efficient Agent Harnesses" />
 </p>
 
 # ⚡ SoL-Pi: Scaling Auto-Research Loops for Efficient Agent Harnesses
 
 <p align="center">
+  <a href="https://arxiv.org/abs/2609.20519"><img src="https://img.shields.io/badge/arXiv-2609.20519-B31B1B?logo=arxiv&amp;logoColor=white" alt="arXiv: 2609.20519" /></a>
   <a href="#getting-started"><img src="https://img.shields.io/badge/Getting%20Started-Install-76B900" alt="Getting Started" /></a>
   <a href="docs/configuration.md"><img src="https://img.shields.io/badge/Docs-Configuration-555555" alt="Configuration" /></a>
   <a href="https://nvlabs.github.io/SoL-Pi/"><img src="https://img.shields.io/badge/Blog-SoL--Pi-76B900" alt="SoL-Pi Blog" /></a>
@@ -52,32 +53,36 @@ The mechanisms share four rules:
 
 Read the [SoL-Pi blog](https://nvlabs.github.io/SoL-Pi/) for a deeper look at the technical details, design rationale, and core insights behind SoL-Pi, including how auto-research led to the four efficiency mechanisms and how they work.
 
+## Paper
+
+Read our paper: [SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness](https://arxiv.org/abs/2609.20519).
+
 ## Getting Started
 
 ### Requirements
 
 - Node.js 24 or newer
 - npm
-- `@earendil-works/pi-coding-agent` 0.85.1
+- `@earendil-works/pi-coding-agent` 1.0.4 (the monorepo's tested host; runtime peers remain `*`)
 
 ### Install
 
 Install the tested Pi release:
 
 ```bash
-npm install --global @earendil-works/pi-coding-agent@0.85.1
+npm install --global @earendil-works/pi-coding-agent@1.0.4
 ```
 
-Then install SoL-Pi directly from [NVlabs/SoL-Pi](https://github.com/NVlabs/SoL-Pi):
+Install this independently maintained package, or use `@herbertgao/pi-extensions` for the collection:
 
 ```bash
-pi install git:github.com/NVlabs/SoL-Pi
+pi install npm:@herbertgao/sol-pi
 ```
 
 To install it only for the current project, use the project-local scope:
 
 ```bash
-pi install git:github.com/NVlabs/SoL-Pi --local --approve
+pi install npm:@herbertgao/sol-pi --local --approve
 ```
 
 ### Configure
@@ -102,9 +107,9 @@ The following conservative configuration enables only the two local mechanisms t
 }
 ```
 
-Enable additional mechanisms only after reviewing their configuration and security implications. SoL-Pi uses no dedicated environment variables; feature flags, the reducer provider/model route, and the compaction ratio are configured in `sol-pi.json`.
+Enable additional mechanisms only after reviewing their configuration and security implications. SoL-Pi uses no dedicated environment variables; feature flags, the reducer provider/model route, and the compaction ratio are configured in `sol-pi.json`. See [sol-pi.example.json](sol-pi.example.json) for a template listing every key.
 
-For the complete schema, see [Configuration](docs/configuration.md). Coding agents and automated environments should follow the canonical [agent installation and configuration protocol](agents-install.md). Its all-enabled profile is checked with `scripts/check-sol-pi-config.mjs --require-all-enabled`.
+For the complete schema, see [Configuration](docs/configuration.md). Coding agents and automated environments should follow the canonical [agent installation and configuration protocol](agents-install.md), which describes an all-enabled configuration checked with `scripts/check-sol-pi-config.mjs --require-all-enabled`.
 
 ## Storage and Security
 
@@ -118,7 +123,9 @@ ObservationPack and Evidence-Preserving Reducer store session-specific archives 
 
 They archive eligible source material in this directory. The archived copies remain local and are not automatically deleted when the Pi session ends.
 
-Online Context Compact stores its state in Pi's session log. After a successful compaction, it starts a new turn and automatically continues the active task. Cancelling the run or exiting Pi does not trigger automatic continuation.
+With `pi --no-session` or `SessionManager.inMemory()`, Pi provides no session directory. SoL-Pi instead creates a private directory named `sol-pi-<session-id>-<random>/` under the operating system's temporary directory. ObservationPack and Evidence-Preserving Reducer share this directory for the lifetime of the loaded extension. These modes disable Pi's session-log persistence; SoL-Pi still writes archive files for exact recall. Temporary archives are also retained after the session or worker exits so callers can read referenced evidence. Their eventual cleanup follows the host's temporary-file policy or the caller's cleanup, and they are not guaranteed to survive system cleanup or support session recovery.
+
+Online Context Compact stores its state in Pi's session log. After a successful compaction, or a recoverable native refusal (session too small, already compacted, or an incomplete summary at the token cap), it automatically continues the active task. A refused attempt retains the existing context and adds no cache debt; plan-only turns cannot repeatedly retry it. Cancelling the run or exiting Pi does not trigger automatic continuation.
 
 Evidence-Preserving Reducer may send eligible diagnostic-log content to its configured reducer model using Pi-managed authentication. Review [SECURITY.md](SECURITY.md) before enabling it. Do not enable remote reduction for logs that must remain local.
 
@@ -133,22 +140,22 @@ Evidence-Preserving Reducer may send eligible diagnostic-log content to its conf
 
 ## Development
 
-Install from the lockfile and run the complete source checks:
+From the monorepo root, install from its Bun lockfile and run the complete source checks:
 
 ```bash
-npm ci --ignore-scripts
-npm run check
-npm audit --audit-level=high
-node scripts/check-pi-compat.mjs
+bun install --frozen-lockfile
+bun run check
+bun audit
+node packages/sol-pi/scripts/check-pi-compat.mjs
 ```
 
-`npm run check` covers TypeScript, the complete test suite, and package inspection. The development dependency set is pinned to Pi 0.84.2; runtime Pi packages remain peer dependencies so Pi owns their installation and upgrades.
+For package-only checks, run `bun run --cwd packages/sol-pi typecheck` and `bun run --cwd packages/sol-pi test`, then inspect the package with `npm pack --dry-run` from `packages/sol-pi`. Root development dependencies provide Pi 1.0.4; runtime Pi packages remain peer dependencies so Pi owns their installation and upgrades.
 
 ## Project Status
 
-SoL-Pi is developed and maintained by NVIDIA as a standalone extension for Pi.
+The original SoL-Pi project is developed by NVIDIA as a standalone extension for Pi. This package is independently maintained in HerbertGao/pi-extensions.
 
-External code contributions are not accepted at this time. Bug reports and private security reports remain welcome through the channels described in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+For upstream contributions, see [CONTRIBUTING.md](CONTRIBUTING.md). Report collection-specific issues to [HerbertGao/pi-extensions](https://github.com/HerbertGao/pi-extensions/issues); upstream private security channels remain described in [SECURITY.md](SECURITY.md).
 
 ## Acknowledgements
 
@@ -157,3 +164,15 @@ SoL-Pi builds on the public extension interfaces provided by [Pi](https://github
 ## License
 
 SoL-Pi is released under the [MIT License](LICENSE).
+
+## Star History
+
+This chart tracks the original NVIDIA project. Its generator and tests are retained as development-only references; publication stays in the [upstream workflow](docs/star-history.md), not this monorepo.
+
+<a href="https://www.star-history.com/?repos=NVlabs%2FSoL-Pi&amp;type=date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NVlabs/SoL-Pi/star-history/star-history-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/NVlabs/SoL-Pi/star-history/star-history-light.svg" />
+    <img alt="SoL-Pi star history chart" src="https://raw.githubusercontent.com/NVlabs/SoL-Pi/star-history/star-history-light.svg" width="100%" />
+  </picture>
+</a>

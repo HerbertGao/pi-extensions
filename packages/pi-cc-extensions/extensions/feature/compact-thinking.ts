@@ -18,6 +18,8 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Box, Markdown, Spacer, Text, type Component } from "@earendil-works/pi-tui";
+// 展开卡背景是 ccstyle 的渲染约定，不随上游 CompactThinkingConfig 走，直接读全局配置。
+import { config as styleConfig } from "../config/config.ts";
 import { isToolTuiFullscreen } from "../renderer/tool/show-more-hint.ts";
 import {
 	animateCompactThinkingText,
@@ -309,14 +311,15 @@ function hiddenPreviewHint(
 	const action = thinkingExpandAction() ?? "";
 	if (hiddenLines > 0) {
 		const noun = hiddenLines === 1 ? "line" : "lines";
+		// 与其它提示同一套写法：小圆点连接，不用逗号和括号
 		return {
-			prefix: ` • (${hiddenLines} more ${noun}${action ? ", " : ""}`,
+			prefix: ` · ${hiddenLines} more ${noun}${action ? " · " : ""}`,
 			action,
-			suffix: ")",
+			suffix: "",
 		};
 	}
 	if (forceExpandHint && isToolTuiFullscreen()) {
-		return { prefix: " • ", action: "click to show more", suffix: "" };
+		return { prefix: " · ", action: "click to show more", suffix: "" };
 	}
 	return undefined;
 }
@@ -432,7 +435,7 @@ export class ThinkingPreviewBlock implements Component {
 				: heading;
 			const bgFn =
 				this.theme && typeof this.theme.bg === "function"
-					? (text: string) => this.theme!.bg("userMessageBg" as never, text)
+					? (text: string) => this.theme!.bg(styleConfig.expandedCardBackground, text)
 					: undefined;
 			const box = new Box(1, 1, bgFn);
 			box.addChild({

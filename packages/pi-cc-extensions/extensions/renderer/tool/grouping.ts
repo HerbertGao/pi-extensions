@@ -6,7 +6,14 @@ import {
 	visibleWidth,
 	type Component,
 } from "@earendil-works/pi-tui";
+import { config } from "../../config/config.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
+import {
+	CODEMODE_TOOL_NAME,
+	codemodeCalls,
+	codemodeOutputLineCount,
+	codemodeSummaryParts,
+} from "./codemode.ts";
 import { getToolMouseTui } from "../mouse/scroll.ts";
 import { mcpToolTitle } from "./mcp-title.ts";
 import { collapseHintText, isToolTuiFullscreen, showMoreHintText } from "./show-more-hint.ts";
@@ -192,6 +199,20 @@ function toolSummary(tool: any): ToolCallSummary {
 	});
 }
 
+/**
+ * codemode 的折叠行：有结果就报该次调用的统计（与单卡汇总行同一套口径），
+ * 免得一张卡里几行长代码预览互相看不出区别。还没结果时退回代码预览。
+ */
+function codemodeResultSummary(tool: any): ToolCallSummary | undefined {
+	if (toolName(tool) !== CODEMODE_TOOL_NAME || !tool?.result) return undefined;
+	const parts = codemodeSummaryParts(
+		codemodeCalls(tool.result),
+		codemodeOutputLineCount(tool.result),
+		tool?.isPartial === true,
+	);
+	return { main: `${toolTitle(tool)} ${parts.join(" · ")}`, detail: "" };
+}
+
 function toolNameList(tools: any[]): string {
 	const counts = new Map<string, number>();
 	for (const tool of tools) counts.set(toolName(tool), (counts.get(toolName(tool)) ?? 0) + 1);
@@ -216,6 +237,8 @@ type ExpandedGroupCache = {
 	hover: boolean;
 	theme: unknown;
 	fullscreen: boolean;
+	/** 背景槽位参与命中判断：改配置后已展开的分组不能继续用旧底色。 */
+	bgSlot: string;
 	paints: readonly unknown[];
 	lines: string[];
 };
@@ -362,7 +385,7 @@ export class ToolGroupComponent extends Container {
 				const color = key === "pending" ? "accent" : key;
 				return `${fg(color, String(counts[key]))} ${label}`;
 			})
-			.join(` ${fg("dim", "•")} `);
+			.join(` ${fg("dim", "·")} `);
 		const names = new Set(this.children.map(toolName));
 		const label = names.size === 1 ? toolTitle(this.children[0]) : "Multiple Tools";
 		const overall: ToolStatus = counts.error ? "error" : counts.pending ? "pending" : "success";
@@ -371,10 +394,10 @@ export class ToolGroupComponent extends Container {
 		)
 			scheduleGroupAnimation(this.patch);
 		const overallColor = overall === "pending" ? "accent" : overall;
-		const nameList = names.size > 1 ? ` ${fg("dim", `• ${toolNameList(this.children)}`)}` : "";
+		const nameList = names.size > 1 ? ` ${fg("dim", `· ${toolNameList(this.children)}`)}` : "";
 		// 圆点保持 dim；hover 只高亮可点击文字。
 		const hintText = this._expanded ? collapseHintText() : showMoreHintText();
-		const hint = `${fg("dim", "•")} ${fg(this.hintHovered ? "text" : "dim", hintText)}`;
+		const hint = `${fg("dim", "·")} ${fg(this.hintHovered ? "text" : "dim", hintText)}`;
 		// 行尾提示承载折叠分组的可点击区（collapsedHintHitbox 依赖行尾短语）。
 		// 空间不足时先省略工具名列表，再截断计数尾部，提示最后让位；
 		// 极窄视口连“圆点+标题+计数”都放不下时才回退整行截断。
@@ -403,6 +426,7 @@ export class ToolGroupComponent extends Container {
 				expandedHit.hover === this.hintHovered &&
 				expandedHit.theme === this.patch.theme &&
 				expandedHit.fullscreen === isToolTuiFullscreen() &&
+				expandedHit.bgSlot === config.expandedCardBackground &&
 				expandedHit.paints.length === childPaints.length &&
 				expandedHit.paints.every((paint, index) => paint === childPaints[index])
 			) {
@@ -417,7 +441,7 @@ export class ToolGroupComponent extends Container {
 			const branch = index === total - 1 ? "└" : "├";
 			const continuation = index === total - 1 ? "  " : "│ ";
 			if (!this._expanded) {
-				const summary = toolSummary(tool);
+				const summary = codemodeResultSummary(tool) ?? toolSummary(tool);
 				const prefix = ` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `;
 				const detail = fg("dim", summary.detail);
 				// 与单工具卡标题同宽，宽屏右侧留白一致
@@ -451,8 +475,8 @@ export class ToolGroupComponent extends Container {
 			}
 		}
 		if (this._expanded) {
-			// 展开面板统一用 user message 背景色（ccstyle 约定），不按状态区分。
-			const backgroundSlot = "userMessageBg";
+			// 展开面板统一一个背景槽位（ccstyle 约定），不按状态区分。
+			const backgroundSlot = config.expandedCardBackground;
 			for (const line of expandedLines) {
 				lines.push(paddedBackgroundRow(theme, backgroundSlot, line, width));
 			}
@@ -462,6 +486,7 @@ export class ToolGroupComponent extends Container {
 				hover: this.hintHovered,
 				theme: this.patch.theme,
 				fullscreen: isToolTuiFullscreen(),
+				bgSlot: backgroundSlot,
 				paints: childPaints ?? [],
 				lines,
 			};

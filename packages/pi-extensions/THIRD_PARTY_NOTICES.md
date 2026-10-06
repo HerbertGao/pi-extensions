@@ -34,6 +34,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
+## `resume-from`
+
+The aggregate bundles [`resume-from`](https://github.com/alexei-led/resume-from) version 0.4.1 under its original MIT license:
+
+MIT License
+
+Copyright (c) 2026 Alexei Led
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 ## `@narumitw/pi-caffeinate`
 
 The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.7 under its original MIT license:
@@ -62,7 +88,7 @@ SOFTWARE.
 
 ## `@herbertgao/sol-pi`
 
-The aggregate bundles [`@herbertgao/sol-pi`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/sol-pi) version 0.1.0. Its source is republished from [`NVlabs/SoL-Pi`](https://github.com/NVlabs/SoL-Pi) under the MIT license:
+The aggregate bundles [`@herbertgao/sol-pi`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/sol-pi), adapted from [`NVlabs/SoL-Pi`](https://github.com/NVlabs/SoL-Pi) commit `e1a586af0ad8956f42ae5b26bba20e48fbf30e00` under the MIT license:
 
 Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
@@ -86,7 +112,7 @@ THE SOFTWARE.
 
 ## `pi-antigravity`
 
-The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.8.1 under its original attribution:
+The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.9.0 under its original attribution:
 
 MIT License
 
@@ -163,7 +189,7 @@ THE SOFTWARE.
 
 ## `pi-multi-account`
 
-The aggregate bundles the MIT-licensed [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account) package version 1.23.2 under its original attribution:
+The aggregate bundles the MIT-licensed [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account) package version 1.24.0 under its original attribution:
 
 MIT License
 

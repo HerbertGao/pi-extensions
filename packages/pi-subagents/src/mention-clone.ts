@@ -108,7 +108,7 @@ export async function runMentionClone(
   let spawned = false
   const cloneAgentTool: ToolDefinition = {
     ...agentTool,
-    execute: (_cloneToolCallId, params, signal, onUpdate, _cloneCtx) => {
+    execute: (_cloneToolCallId, params, signal, onUpdate, cloneCtx) => {
       // One spawn per mention. The clone has a single tool and every reason to
       // stop after using it, but a model that decides to "also" launch a second
       // agent would do it where nobody can see and nobody asked.
@@ -138,7 +138,8 @@ export async function runMentionClone(
         } as typeof params,
         signal,
         onUpdate,
-        ctx,
+        // Keep Pi's tool-call capabilities, but attribute the spawn to the main session.
+        { ...ctx, tools: cloneCtx.tools, executeTool: cloneCtx.executeTool },
       )
     },
   }
