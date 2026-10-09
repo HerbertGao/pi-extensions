@@ -1,5 +1,18 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.2
+
+### Patch Changes
+
+- [#267](https://github.com/HerbertGao/pi-extensions/pull/267) [`a973a11`](https://github.com/HerbertGao/pi-extensions/commit/a973a1137c68055fdae5f2e41ee37a444c6de588) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle the new `@herbertgao/pi-agency` extension, which searches the local Agency Agents catalog and dispatches its personas to parallel foreground subagents without loading persona text into the main context.
+
+- [#265](https://github.com/HerbertGao/pi-extensions/pull/265) [`852c350`](https://github.com/HerbertGao/pi-extensions/commit/852c350ae6d29eff97d16d72c93010a43ef899f2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Upgrade the reviewed companion pins to Ponytail 5.1.0, Caffeinate 0.49.10, Mermaid Open 0.2.2, Recap 0.4.8, Antigravity 0.10.0, and Pi-Lens 4.4.0. Include Antigravity's separate search/image entries and retain host-provided Pi dependencies. Recap's request budget increases to 30 seconds; no installed configuration or credentials are migrated.
+
+- [#265](https://github.com/HerbertGao/pi-extensions/pull/265) [`852c350`](https://github.com/HerbertGao/pi-extensions/commit/852c350ae6d29eff97d16d72c93010a43ef899f2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively port reviewed upstream renderer fixes for unnamed tool definitions, original renderer receivers, per-run thinking expansion, expanded-tool viewport stability, same-round panel protection, and compact expand-hint hover. Preserve local configuration and footer behavior.
+
+- Updated dependencies [[`852c350`](https://github.com/HerbertGao/pi-extensions/commit/852c350ae6d29eff97d16d72c93010a43ef899f2)]:
+  - @herbertgao/pi-cc-extensions@0.11.1
+
 ## 2026.10.1
 
 ### Minor Changes

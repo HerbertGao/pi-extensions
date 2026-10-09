@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 0.11.1
+
+### Patch Changes
+
+- [#265](https://github.com/HerbertGao/pi-extensions/pull/265) [`852c350`](https://github.com/HerbertGao/pi-extensions/commit/852c350ae6d29eff97d16d72c93010a43ef899f2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Selectively port reviewed upstream renderer fixes for unnamed tool definitions, original renderer receivers, per-run thinking expansion, expanded-tool viewport stability, same-round panel protection, and compact expand-hint hover. Preserve local configuration and footer behavior.
+
 ## 0.11.0
 
 ### Minor Changes
