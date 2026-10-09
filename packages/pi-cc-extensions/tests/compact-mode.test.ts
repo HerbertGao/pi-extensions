@@ -25,8 +25,10 @@ import {
 	isCompactAssistantComponent,
 	markCompactRoundToolExpanded,
 	refreshCompactModeComponents,
+	setHoveredCompactAssistant,
 	styleCompactThinkingText,
 } from "../extensions/renderer/compact-mode.ts";
+import { setHoveredToolCallId } from "../extensions/renderer/mouse/hover.ts";
 import { componentAtLocalRow } from "../extensions/renderer/mouse/layout.ts";
 import { setToolMouseTui } from "../extensions/renderer/mouse/scroll.ts";
 import { refreshMountedTranscript } from "../extensions/renderer/transcript-refresh.ts";
@@ -334,6 +336,33 @@ test("Dim thinking text 开启时摘要行整行走 dim", () => {
 		assert.ok(!dim.includes("<muted>"), `开启时整行不该再有 muted: ${dim}`);
 	} finally {
 		config.dimThinkingText = previousDim;
+		config.mode = previousMode;
+		setMessageDisplayTheme(previousTheme);
+	}
+});
+
+test("摘要行 hover 只高亮展开文字，圆点保持 dim", () => {
+	const previousTheme = getMessageDisplayTheme();
+	const previousMode = config.mode;
+	setMessageDisplayTheme({
+		fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+	} as any);
+	config.mode = "compact";
+	const hooks = installCompactMode({ writeMetadata: new WriteExecutionMetadataStore() });
+	try {
+		const msg = toolCallMessage(1);
+		const assistant = new AssistantMessageComponent(msg, true) as any;
+		assistant.updateContent(msg);
+		const summaryLine = () => {
+			assistant.invalidate?.();
+			return assistant.render(200).find((line: string) => line.includes("click to show more"));
+		};
+		assert.match(summaryLine() ?? "", /<dim> · <\/dim><dim>click to show more<\/dim>/);
+		setHoveredCompactAssistant(assistant);
+		assert.match(summaryLine() ?? "", /<dim> · <\/dim><text>click to show more<\/text>/);
+	} finally {
+		setHoveredCompactAssistant(null);
+		hooks.shutdown();
 		config.mode = previousMode;
 		setMessageDisplayTheme(previousTheme);
 	}
@@ -2159,6 +2188,36 @@ test("compact edit/write summaries preserve filenames for long cwd paths", () =>
 			assert.match(title!, new RegExp(`${name} .*target-file\\.ts`));
 			assert.doesNotMatch(title!, new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 		}
+	} finally {
+		restore();
+	}
+});
+
+test("compact 折叠行 hover 只高亮展开提示：edit 失败单行与 rich diff 兼容", () => {
+	const previousMode = config.mode;
+	const previousTheme = getMessageDisplayTheme();
+	config.mode = "compact";
+	const hooks = installCompactMode({ writeMetadata: new WriteExecutionMetadataStore() });
+	const restore = () => {
+		setHoveredToolCallId(null);
+		setMessageDisplayTheme(previousTheme);
+		hooks.shutdown();
+		config.mode = previousMode;
+	};
+	try {
+		setMessageDisplayTheme({
+			fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+		} as any);
+		// 失败的 edit 没有 rich diff，提示挂在标题行上。
+		const failed = tool("edit", "e-fail", { path: "a.ts" });
+		failed.updateResult({ content: [{ type: "text", text: "boom" }], isError: true });
+		const line = () => failed.render(120).join("\n");
+		assert.match(line(), /<dim> · <\/dim><dim>click to show more<\/dim>/);
+		setHoveredToolCallId("e-fail");
+		assert.match(line(), /<dim> · <\/dim><text>click to show more<\/text>/);
+		assert.doesNotMatch(line(), /<text>[^<]*(?:a\.ts|edit)/, "hover 只改提示，不改标题与路径");
+		setHoveredToolCallId(null);
+		assert.match(line(), /<dim> · <\/dim><dim>click to show more<\/dim>/);
 	} finally {
 		restore();
 	}

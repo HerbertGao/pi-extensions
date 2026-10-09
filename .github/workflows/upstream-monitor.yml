@@ -44,15 +44,15 @@ jobs:
       - name: Check agentic workflow credentials
         if: steps.check.outputs.changed_issue_number != ''
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_AW_CI_TRIGGER_TOKEN: ${{ secrets.GH_AW_CI_TRIGGER_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
         run: |
           set -euo pipefail
           missing=()
-          if [[ -z "$GEMINI_API_KEY" ]]; then
-            missing+=(GEMINI_API_KEY)
+          if [[ -z "$COPILOT_GITHUB_TOKEN" ]]; then
+            missing+=(COPILOT_GITHUB_TOKEN)
           fi
           if [[ -z "$GH_AW_CI_TRIGGER_TOKEN" ]]; then
             missing+=(GH_AW_CI_TRIGGER_TOKEN)

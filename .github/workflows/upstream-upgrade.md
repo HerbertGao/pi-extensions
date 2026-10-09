@@ -15,19 +15,11 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-engine: gemini
-model: gemini-3.8-flash
+engine: copilot
+model: gpt-6.1-sol
 models:
   allowed:
-    - gemini-3.8-flash
-  providers:
-    google:
-      models:
-        gemini-3.8-flash:
-          cost:
-            input: "7.5e-07"
-            output: "3.75e-06"
-            cache_read: "7.5e-08"
+    - gpt-6.1-sol
 strict: true
 sandbox:
   agent:
@@ -41,7 +33,6 @@ network:
     - node
     - github.com
     - api.github.com
-    - play.googleapis.com
 tools:
   timeout: 600
   cli-proxy: true
@@ -52,7 +43,7 @@ tools:
   bash:
     - "*"
 safe-outputs:
-  # Gemini is not supported by gh-aw v0.89.3 threat detection; avoid Copilot fallback.
+  # Keep the existing draft-only review policy; do not add a second inference job.
   threat-detection: false
   mentions:
     allowed: [HerbertGao]
@@ -91,19 +82,6 @@ safe-outputs:
   messages:
     run-failure: "@HerbertGao Reviewed Upstream Upgrade failed: {status}. Inspect {run_url}."
 pre-agent-steps:
-  # Gemini CLI 0.59.0 rejects AWF gateway auth unless this type is explicit.
-  - name: Select Gemini API-key auth
-    run: |
-      set -euo pipefail
-      settings="$HOME/.gemini/settings.json"
-      mkdir -p "$(dirname "$settings")"
-      tmp="$(mktemp)"
-      if [[ -f "$settings" ]]; then
-        jq '.security.auth.selectedType = "gemini-api-key" | .model.skipNextSpeakerCheck = false' "$settings" > "$tmp"
-      else
-        printf '%s\n' '{"security":{"auth":{"selectedType":"gemini-api-key"}},"model":{"skipNextSpeakerCheck":false}}' > "$tmp"
-      fi
-      mv "$tmp" "$settings"
   - name: Configure proxy for agent tools
     run: |
       set -euo pipefail
@@ -134,7 +112,8 @@ steps:
       bun_dir="$RUNNER_TOOL_CACHE/gh-aw-bun/bin"
       mkdir -p "$bun_dir"
       install -m 0755 "$(command -v bun)" "$bun_dir/bun-real"
-      # Gemini CLI strips HTTP(S)_PROXY from shell commands under GITHUB_SHA, and Bun ignores .npmrc proxy settings.
+      # Bun ignores .npmrc proxy settings; keep sandbox installs on the AWF proxy.
+      # shellcheck disable=SC2016
       printf '%s\n' '#!/bin/sh' \
         'export HTTP_PROXY=http://172.30.0.10:3128 HTTPS_PROXY=http://172.30.0.10:3128 NO_PROXY=localhost,127.0.0.1' \
         'exec "$(dirname "$0")/bun-real" "$@"' > "$bun_dir/bun"

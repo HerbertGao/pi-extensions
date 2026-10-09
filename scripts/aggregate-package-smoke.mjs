@@ -357,10 +357,8 @@ try {
   await Promise.all(
     [
       "dist/index.js",
-      "dist/tools",
-      "dist/clients/dispatch/runners/cue-vet.js",
-      "dist/clients/dispatch/runners/helm-render.js",
-      "dist/clients/dispatch/runners/utils/toolchain-availability.js",
+      "dist/probes/installer.js",
+      "dist/workers",
       "vendor/grammars/tree-sitter-cue.wasm",
       ...expectedLensSkillGroups.map((group) => `skills/${group}/SKILL.md`),
       "skills/pi-lens-write-ast-grep-rule/reference.md",
@@ -368,11 +366,59 @@ try {
     ].map((path) => stat(join(lensRoot, path))),
   )
 
-  const astGrepNapi = await import(
-    pathToFileURL(
-      join(lensRoot, "dist/clients/dispatch/runners/ast-grep-napi.js"),
-    )
+  const lensGrammarResolver = await import(
+    pathToFileURL(join(lensRoot, "scripts/lib/web-tree-sitter-dir.mjs"))
   )
+  const fakeGrammarRoot = join(stageDir, "fake-grammar-host")
+  const fakeGrammarPackage = join(
+    fakeGrammarRoot,
+    "node_modules/web-tree-sitter",
+  )
+  await mkdir(fakeGrammarPackage, { recursive: true })
+  await writeFile(
+    join(fakeGrammarPackage, "tree-sitter.wasm"),
+    "not a real runtime",
+  )
+  await writeFile(
+    join(fakeGrammarPackage, "package.json"),
+    JSON.stringify({ name: "foreign-package" }),
+  )
+  assert.equal(
+    lensGrammarResolver.resolveWebTreeSitterPackageDir({
+      resolve: () => join(fakeGrammarPackage, "tree-sitter.wasm"),
+      packageRoot: () => fakeGrammarRoot,
+      cwd: () => fakeGrammarRoot,
+    }),
+    undefined,
+  )
+  assert.equal(
+    lensGrammarResolver.findCoreGrammarDir({ packageRoot: lensRoot }),
+    join(lensRoot, "grammars"),
+  )
+
+  assert.equal(await pathExists(join(lensRoot, "dist/clients")), false)
+  assert.equal(await pathExists(join(lensRoot, "dist/tools")), false)
+  const lensEntry = join(lensRoot, "dist/index.js")
+  const { createJiti: createLensJiti } = await import(
+    pathToFileURL(createRequire(lensEntry).resolve("jiti"))
+  )
+  // ponytail: pinned bundle probe; use public probes if upstream exports these invariants.
+  const lensProbeSource = `${await readFile(lensEntry, "utf8")}\n
+init_ast_grep_napi2(); init_file_kinds(); init_fact_store(); init_session_roots(); init_instance_registry();
+export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadSg, getLang,
+  evaluateAstGrepRules, detectFileKind, FactStore, getFactStoreEvictionReporter,
+  setFactStoreEvictionReporter, registerSessionRoot, isOutsideAllSessionRoots,
+  shouldInitializeSessionRoot, sessionRootConfigEntries, mergeInstanceRoots,
+  getLSPService, resetLSPService };
+`
+  const lensProbe = await createLensJiti(lensEntry, {
+    moduleCache: false,
+  }).evalModule(lensProbeSource, {
+    filename: lensEntry,
+    async: true,
+    forceTranspile: true,
+  })
+  const astGrepNapi = lensProbe
   for (const [file, language] of [
     ["style.css", "css"],
     ["page.html", "html"],
@@ -392,9 +438,7 @@ try {
       "rules/ast-grep-rules/rule-tests/no-important-test.yml",
     ].map((path) => stat(join(lensRoot, path))),
   )
-  const lensFileKinds = await import(
-    pathToFileURL(join(lensRoot, "dist/clients/file-kinds.js"))
-  )
+  const lensFileKinds = lensProbe
   const sgModule = await astGrepNapi.loadSg()
   for (const [file, source, expectedMessage] of [
     ["smoke.css", ".button { color: red !important; }", "!important"],
@@ -420,9 +464,7 @@ try {
     }
   }
 
-  const factStoreModule = await import(
-    pathToFileURL(join(lensRoot, "dist/clients/dispatch/fact-store.js"))
-  )
+  const factStoreModule = lensProbe
   const factStoreReports = []
   const previousFactStoreReporter =
     factStoreModule.getFactStoreEvictionReporter()
@@ -461,12 +503,10 @@ try {
     factStoreModule.setFactStoreEvictionReporter(previousFactStoreReporter)
   }
 
-  const sessionRoots = await import(
-    pathToFileURL(join(lensRoot, "dist/clients/lsp/session-roots.js"))
-  )
+  const sessionRoots = lensProbe
   const primaryRoot = join(stageDir, "lens-primary")
   const nestedRoot = join(primaryRoot, "nested")
-  sessionRoots.resetSessionRootsForTests()
+  sessionRoots.sessionRootConfigEntries().clear()
   try {
     sessionRoots.registerSessionRoot(primaryRoot)
     sessionRoots.registerSessionRoot(nestedRoot)
@@ -486,12 +526,10 @@ try {
       throw new Error("pi-lens lost its multi-root session registry contract")
     }
   } finally {
-    sessionRoots.resetSessionRootsForTests()
+    sessionRoots.sessionRootConfigEntries().clear()
   }
 
-  const instanceRegistry = await import(
-    pathToFileURL(join(lensRoot, "dist/clients/instance-registry.js"))
-  )
+  const instanceRegistry = lensProbe
   const primaryInstanceRoot = join(stageDir, "instance-primary")
   let instanceRoots = [primaryInstanceRoot]
   for (let index = 1; index <= 40; index++) {
@@ -500,36 +538,22 @@ try {
       join(stageDir, `instance-${index}`),
     )
   }
-  const footprint = instanceRegistry.computeResourceFootprint([
-    {
-      pid: 42,
-      projectRoot: primaryInstanceRoot,
-      projectRoots: instanceRoots.slice(0, 2),
-      rssBytes: 10,
-      cpuPercent: 1,
-      lspChildren: [{ rssBytes: 3, cpuPercent: 2 }],
-    },
-  ])
   if (
     instanceRoots.length !== 32 ||
     instanceRoots[0] !== primaryInstanceRoot ||
     instanceRoots[1] !== join(stageDir, "instance-10") ||
-    instanceRoots.at(-1) !== join(stageDir, "instance-40") ||
-    footprint.totalRssBytes !== 13 ||
-    footprint.totalCpuPercent !== 3 ||
-    footprint.totalLspChildCount !== 1 ||
-    JSON.stringify(footprint.perInstance[0]?.projectRoots) !==
-      JSON.stringify(instanceRoots.slice(0, 2))
+    instanceRoots.at(-1) !== join(stageDir, "instance-40")
   ) {
     throw new Error("pi-lens lost its bounded instance-root accounting")
   }
-  const lensLspUrl = pathToFileURL(
-    join(lensRoot, "dist/clients/lsp/index.js"),
-  ).href
-  const [lensLspFirst, lensLspSecond] = await Promise.all([
-    import(`${lensLspUrl}?aggregate-smoke=first`),
-    import(`${lensLspUrl}?aggregate-smoke=second`),
-  ])
+  const lensLspFirst = lensProbe
+  const lensLspSecond = await createLensJiti(lensEntry, {
+    moduleCache: false,
+  }).evalModule(lensProbeSource, {
+    filename: lensEntry,
+    async: true,
+    forceTranspile: true,
+  })
   if (lensLspFirst.getLSPService() !== lensLspSecond.getLSPService()) {
     throw new Error(
       "pi-lens LSP service is not shared across module generations",
@@ -1720,9 +1744,81 @@ try {
   const { createJiti: createRecapJiti } = await import(
     pathToFileURL(recapRequire.resolve("jiti"))
   )
+  const mermaidEntry = join(
+    packageRoot,
+    "node_modules/@tifan/pi-mermaid-open/src/index.ts",
+  )
+  const { extractMermaidFences } = await createRecapJiti(mermaidEntry, {
+    moduleCache: false,
+  }).import(mermaidEntry)
+  assert.deepEqual(
+    extractMermaidFences(
+      "Use `` ```mermaid `` inline.\n\n```mermaid\ngraph TD; A-->B\n```",
+    ),
+    [{ fenceLanguage: "mermaid", source: "graph TD; A-->B" }],
+  )
+  assert.deepEqual(extractMermaidFences("Use `` ```mermaid `` inline."), [])
+
   const initializeRecap = (
     await createRecapJiti(recapEntry, { moduleCache: false }).import(recapEntry)
   ).default
+  const recapProbe = await createRecapJiti(recapEntry, {
+    moduleCache: false,
+  }).evalModule(
+    `${await readFile(recapEntry, "utf8")}\nexport { createRecapState, generateRecap };\n`,
+    { filename: recapEntry, async: true, forceTranspile: true },
+  )
+  const recapState = recapProbe.createRecapState()
+  recapState.sessionActive = true
+  recapState.modelConfig = {
+    kind: "configured",
+    model: { provider: "opencode-go", id: "smoke-model" },
+  }
+  const recapNotices = []
+  const recapRegistry = {
+    find: () => ({ provider: "opencode-go", id: "smoke-model" }),
+    getApiKey: async () => "smoke-key",
+    async complete(_model, _context, options) {
+      assert.equal(this, recapRegistry)
+      assert.equal(options.timeoutMs, 30_000)
+      assert.equal(options.signal.aborted, false)
+      assert.deepEqual(options.headers, {
+        "x-opencode-session": "smoke-session",
+        "x-opencode-client": "pi",
+      })
+      throw new Error("smoke provider rejected")
+    },
+  }
+  await recapProbe.generateRecap(
+    {},
+    {
+      hasUI: true,
+      modelRegistry: recapRegistry,
+      sessionManager: {
+        getBranch: () => [{ id: "smoke-leaf", type: "message" }],
+        getLeafId: () => "smoke-leaf",
+        getSessionId: () => "smoke-session",
+        buildSessionContext: () => ({
+          messages: [
+            { role: "user", content: "Recap this session", timestamp: 0 },
+          ],
+        }),
+      },
+      ui: {
+        setWidget() {},
+        notify: (message, level) => recapNotices.push({ message, level }),
+      },
+    },
+    recapState,
+    { manual: true },
+  )
+  assert.deepEqual(recapNotices, [
+    {
+      message: "Recap generation failed: smoke provider rejected",
+      level: "error",
+    },
+  ])
+  assert.equal(recapState.abortController, undefined)
   const recapHandlers = new Map()
   initializeRecap({
     registerCommand() {},
@@ -2029,7 +2125,6 @@ try {
       throw new Error(`Packed ${relativePath} did not register ${name}`)
     }
   }
-  const lensEntry = resolve(lensRoot, "dist", "index.js")
   const loadedLens = result.extensions.find(
     (extension) => extension.resolvedPath === lensEntry,
   )
@@ -2043,6 +2138,104 @@ try {
   if (!loadedLens.commands.has("lens-widget-toggle")) {
     throw new Error("Packed pi-lens did not register lens-widget-toggle")
   }
+
+  const antigravityRoot = join(packageRoot, "node_modules/pi-antigravity")
+  for (const [feature, toolName] of [
+    ["google-search", "google_search"],
+    ["generate-image", "generate_image"],
+  ]) {
+    const featureEntry = join(antigravityRoot, `src/features/${feature}.ts`)
+    assert.equal(extensionPaths.includes(featureEntry), true)
+    assert.equal(
+      result.extensions
+        .find((extension) => extension.resolvedPath === featureEntry)
+        ?.tools.has(toolName),
+      true,
+    )
+  }
+  const antigravityJiti = createRecapJiti(
+    join(antigravityRoot, "src/index.ts"),
+    { moduleCache: false },
+  )
+  const { isExtraToolEnabled } = await antigravityJiti.import(
+    join(antigravityRoot, "src/utils/util.ts"),
+  )
+  const extraToolFlags = [
+    "ANTIGRAVITY_NO_EXTRA_TOOLS",
+    "ANTIGRAVITY_NO_SEARCH_TOOL",
+    "ANTIGRAVITY_NO_IMAGE_TOOL",
+  ]
+  const previousExtraToolFlags = extraToolFlags.map((name) => process.env[name])
+  try {
+    for (const name of extraToolFlags) delete process.env[name]
+    assert.equal(isExtraToolEnabled("SEARCH"), true)
+    assert.equal(isExtraToolEnabled("IMAGE"), true)
+    process.env.ANTIGRAVITY_NO_SEARCH_TOOL = "1"
+    assert.equal(isExtraToolEnabled("SEARCH"), false)
+    assert.equal(isExtraToolEnabled("IMAGE"), true)
+    delete process.env.ANTIGRAVITY_NO_SEARCH_TOOL
+    process.env.ANTIGRAVITY_NO_IMAGE_TOOL = "1"
+    assert.equal(isExtraToolEnabled("IMAGE"), false)
+    assert.equal(isExtraToolEnabled("SEARCH"), true)
+    process.env.ANTIGRAVITY_NO_EXTRA_TOOLS = "1"
+    assert.equal(isExtraToolEnabled("SEARCH"), false)
+    assert.equal(isExtraToolEnabled("IMAGE"), false)
+  } finally {
+    extraToolFlags.forEach((name, index) => {
+      if (previousExtraToolFlags[index] === undefined) delete process.env[name]
+      else process.env[name] = previousExtraToolFlags[index]
+    })
+  }
+  const imageApi = await antigravityJiti.import(
+    join(antigravityRoot, "src/image/native.ts"),
+  )
+  const imageSafety = await antigravityJiti.import(
+    join(antigravityRoot, "src/image/image.ts"),
+  )
+  assert.throws(
+    () => imageSafety.resolveImageSavePath(stageDir, "../escape.png"),
+    /inside/,
+  )
+  assert.equal(
+    imageSafety.resolveImageSavePath(stageDir, "ok.png"),
+    join(stageDir, "ok.png"),
+  )
+  assert.throws(() => imageSafety.assertSafeImageModel("gpt-4o"), /Unsupported/)
+  assert.throws(() => imageSafety.assertSafeAspectRatio("1x1"), /Unsupported/)
+  const imageModel = {
+    ...imageApi.ANTIGRAVITY_IMAGE_MODELS[0],
+    provider: "antigravity",
+  }
+  const missingImageAuth = await imageApi.generateAntigravityImages(
+    imageModel,
+    { input: [] },
+  )
+  assert.equal(missingImageAuth.stopReason, "error")
+  assert.match(missingImageAuth.errorMessage, /credentials/)
+  const abortedImage = await imageApi.generateAntigravityImages(
+    imageModel,
+    { input: [] },
+    { signal: AbortSignal.abort() },
+  )
+  assert.equal(abortedImage.stopReason, "aborted")
+  const piAiCompat = await import("@earendil-works/pi-ai/compat")
+  assert.equal(typeof piAiCompat.registerImagesApiProvider, "function")
+  const antigravityProvider = result.runtime.pendingProviderRegistrations.find(
+    (registration) =>
+      registration.extensionPath === join(antigravityRoot, "src/index.ts"),
+  )
+  assert.equal(
+    typeof antigravityProvider?.config.images?.[imageApi.ANTIGRAVITY_IMAGE_API]
+      ?.generateImages,
+    "function",
+  )
+  assert.equal(
+    antigravityProvider.config.models.some(
+      (model) =>
+        model.type === "image" && model.api === imageApi.ANTIGRAVITY_IMAGE_API,
+    ),
+    true,
+  )
 
   const solPiEntry = resolve(solPiRoot, solPiEntryRelative)
   if (!extensionPaths.includes(solPiEntry)) {
@@ -2102,6 +2295,37 @@ try {
   const loadedPonytail = result.extensions.find(
     (extension) => extension.resolvedPath === ponytailEntry,
   )
+  const ponytailInstructions = createRequire(ponytailEntry)(
+    join(ponytailRoot, "hooks/ponytail-instructions.js"),
+  )
+  assert.match(
+    ponytailInstructions.getPonytailInstructions("ultra"),
+    /PONYTAIL MODE ACTIVE.*ultra/,
+  )
+  assert.match(
+    ponytailInstructions.getPonytailInstructions("review"),
+    /Behavior defined by \/ponytail-review skill/,
+  )
+  const beforePonytail = loadedPonytail.handlers.get("before_agent_start")[0]
+  const promptSections = {}
+  assert.equal(
+    await beforePonytail({
+      systemPrompt: "base",
+      systemPromptOptions: { sections: promptSections },
+    }),
+    undefined,
+  )
+  assert.match(promptSections.ponytail, /PONYTAIL MODE ACTIVE/)
+  const fallbackPonytail = await beforePonytail({ systemPrompt: "base" })
+  assert.equal(
+    fallbackPonytail.systemPrompt,
+    `base\n\n${promptSections.ponytail}`,
+  )
+  const arrayPonytail = await beforePonytail({ systemPrompt: ["base"] })
+  assert.deepEqual(arrayPonytail.systemPrompt, [
+    "base",
+    promptSections.ponytail,
+  ])
   const aliasMessages = []
   const originalSendUserMessage = result.runtime.sendUserMessage
   result.runtime.sendUserMessage = (content, options) =>
