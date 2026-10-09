@@ -418,11 +418,11 @@ function handleFullscreenToolClick(tui: any, packet: SgrMousePacket): boolean {
 	if (!isTool && !isGroup && !isAssistant && !isThinking && !isMessage) return false;
 	if (!component.expanded) {
 		// collapsed 仅按钮文本可展开，不能把同一行正文/留白变成点击区。
+		// thinking 例外：标题行（标题、隐藏行数与提示同一行）整行都是展开入口。
 		const hint = collapsedHintHitbox(line);
 		const onHint = Boolean(
 			hint &&
-				packet.col >= hint.startCol &&
-				packet.col <= hint.endCol &&
+				(isThinking || (packet.col >= hint.startCol && packet.col <= hint.endCol)) &&
 				isCollapsedHintRow(component, line),
 		);
 		if (!onHint) {
@@ -437,18 +437,16 @@ function handleFullscreenToolClick(tui: any, packet: SgrMousePacket): boolean {
 			if (other !== component && other.expanded) {
 				// 展开 round 卡内 thinking/工具时，外层 compact 卡是它的容器，不能收起。
 				// 面板挂在摘要行时，anchor 与摘要行是同一张外层卡，点内部工具不能收起它。
-				if (
-					(isThinking || isTool) &&
-					isCompactAssistantComponent(other) &&
-					(other === target.owner || other === target.owner?.roundAnchor)
-				)
-					continue;
+				// 同一回合的摘要行、anchor 和其他消息都是外层面板，收起任一个都会关掉整块。
+				if ((isThinking || isTool) && isSameExpandedRound(other, target.owner)) continue;
 				other.setExpanded(false);
 				other.invalidate?.();
 			}
 		}
 		// 展开 round 卡内工具时，让 compact 的强制折叠放行它（非 round 内工具为空操作）。
 		if (isTool) markCompactRoundToolExpanded(component);
+		// compact 摘要行自己记展开前的视口（收起时还原跟随），这里不动它。
+		if (!isAssistant) keepViewportOnExpand(tui);
 		component.setExpanded(true);
 		clearPendingCollapsePress();
 	} else {
@@ -493,6 +491,25 @@ function handleFullscreenToolClick(tui: any, packet: SgrMousePacket): boolean {
  * fullscreen 鼠标悬停：collapsed 卡 [click to show more] hint、
  * expanded 卡截断头 show-more、回到底部按钮。motion 不 consume，官方链照常。
  */
+/** 点到的组件和外层卡是否属于同一张 compact 回合面板。 */
+function isSameExpandedRound(other: any, owner: any): boolean {
+	if (!owner || !isCompactAssistantComponent(other)) return false;
+	const anchor = owner.roundAnchor ?? owner;
+	return other === owner || other === anchor || other.roundAnchor === anchor;
+}
+
+/**
+ * 原地展开时停在当前滚动位置：transcript 跟随底部时，内容变高会把视口拖到底，
+ * 点击的行和它上方的外层面板被顶出屏幕。展开前关掉跟随，点击行留在原位。
+ */
+function keepViewportOnExpand(tui: any): void {
+	const view = tui.getPrimaryScrollView?.();
+	if (typeof view?.scrollTo !== "function" || typeof view.scrollTop !== "number") return;
+	view.scrollTo(view.scrollTop, { disableFollow: true });
+	// 已脱离底部跟随：亮出回到底部按钮，新输出到来时仍有入口。
+	if (view.isFollowingEnd === false) setScrollButtonVisible(true);
+}
+
 function handleFullscreenToolHover(tui: any, packet: SgrMousePacket): void {
 	if (!isSgrIdleMotion(packet)) return;
 	const layout = tui.currentLayout;
@@ -528,7 +545,8 @@ function handleFullscreenToolHover(tui: any, packet: SgrMousePacket): void {
 			if (component instanceof ToolGroupComponent) {
 				if (overHint) target = { kind: "group", component };
 			} else if (component instanceof ThinkingPreviewBlock) {
-				if (component.expanded || overHint) target = { kind: "thinking", component };
+				// thinking 折叠标题行整行可点：整块 hover 都高亮动作词，不只高亮按钮文本。
+				if (component.expanded || Boolean(hintBox)) target = { kind: "thinking", component };
 			} else if (isToolExecutionComponent(component)) {
 				let view: ExpandedToolIoView | null = null;
 				let section: ToolIoSection | null = null;

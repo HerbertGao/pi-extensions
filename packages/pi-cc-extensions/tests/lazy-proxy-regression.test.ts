@@ -17,6 +17,7 @@ import claudeCodeStyleExtension, {
 import { showTextPreview } from "../extensions/feature/context.ts";
 import { config } from "../extensions/config/config.ts";
 import { sharedToolHoverState, isToolCallHovered } from "../extensions/renderer/mouse/hover.ts";
+import { getScrollButtonVisible } from "../extensions/renderer/mouse/scroll.ts";
 import { installCompactMode } from "../extensions/renderer/compact-mode.ts";
 import {
 	getMessageDisplayTheme,
@@ -845,6 +846,20 @@ test("lazy-proxy tui: fullscreen compact expanded round thinking hint expands in
 		tui.handleViewportInput(`\x1b[<0;${hintCol};${hintRow + 1}M`);
 		assert.equal(block!.expanded, true, "thinking hint click expands the preview");
 		assert.equal(assistant.expanded, true, "round stays open");
+
+		// 标题列（非动作词）也是 thinking 的展开入口：完整单击不能收起整块面板。
+		block!.setExpanded(false);
+		const collapsedRow = viewport().findIndex((line: string) => line.includes("to show more"));
+		const officialBefore = renderer.officialInputs.length;
+		tui.handleViewportInput(`\x1b[<0;4;${collapsedRow + 1}M`);
+		tui.handleViewportInput(`\x1b[<0;4;${collapsedRow + 1}m`);
+		assert.equal(block!.expanded, true, "title column expands the thinking");
+		assert.equal(assistant.expanded, true, "round stays open after title click");
+		assert.equal(
+			renderer.officialInputs.slice(officialBefore).some((data) => data.includes("M")),
+			false,
+			"press is consumed by the extension",
+		);
 		const expandedRow = viewport().findIndex((line: string) =>
 			line.includes("plan the click path"),
 		);
@@ -908,9 +923,23 @@ test("lazy-proxy tui: fullscreen compact expanded round tool hint expands in pla
 		const hintCol = plain.indexOf("to show more") + 1;
 		assert.ok(hintRow >= 0 && hintCol > 0, `expected tool hint in round card, got: ${plain}`);
 
+		// 跟随底部时展开：必须先关掉跟随，否则变高的内容把外层面板顶出视口。
+		const scrollCalls: Array<[number, any]> = [];
+		const view = renderer.currentLayout.primaryScrollView;
+		view.isFollowingEnd = true;
+		view.scrollTo = (top: number, options: any) => {
+			scrollCalls.push([top, options]);
+			if (options?.disableFollow) view.isFollowingEnd = false;
+		};
 		tui.handleViewportInput(`\x1b[<0;${hintCol};${hintRow + 1}M`);
 		assert.equal(bash.expanded, true, "tool hint click expands the tool in place");
 		assert.equal(assistant.expanded, true, "round stays open when a nested tool expands");
+		assert.deepEqual(scrollCalls, [[0, { disableFollow: true }]], "expand pins the viewport");
+		assert.equal(
+			getScrollButtonVisible(),
+			true,
+			"back-to-bottom button shows after leaving follow",
+		);
 
 		// 面板内非提示区（工具卡标题行）单击：收起整块面板。
 		const titleRow = viewport().findIndex((line: string) =>
@@ -924,6 +953,82 @@ test("lazy-proxy tui: fullscreen compact expanded round tool hint expands in pla
 		assert.ok(
 			renderer.officialInputs.includes("\x1b[O"),
 			"collapse 后给官方发 FOCUS_OUT，清掉停在旧布局上的选区锚点",
+		);
+	} finally {
+		installToolMouseInteraction({});
+		compact.shutdown();
+		config.mode = previousMode;
+		setMessageDisplayTheme(previousTheme);
+	}
+});
+
+test("lazy-proxy tui: expanding a tool keeps every message of the same round open", () => {
+	const previousMode = config.mode;
+	const previousTheme = getMessageDisplayTheme();
+	config.mode = "compact";
+	setMessageDisplayTheme({ fg: (_color: string, text: string) => text } as any);
+	const compact = installCompactMode({ writeMetadata: new WriteExecutionMetadataStore() });
+	const first = {
+		role: "assistant",
+		timestamp: 1,
+		content: [{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "echo one" } }],
+	};
+	const second = {
+		role: "assistant",
+		timestamp: 2,
+		content: [
+			{ type: "toolCall", id: "b2", name: "bash", arguments: { command: "cat settings.json" } },
+		],
+	};
+	const anchor = new AssistantMessageComponent(first as any, true) as any;
+	const later = new AssistantMessageComponent(second as any, true) as any;
+	const toolOf = (id: string, command: string) => {
+		const tool = new ToolExecutionComponent(
+			"bash",
+			id,
+			{ command },
+			{},
+			undefined,
+			{ theme: theme(), requestRender() {} } as any,
+			process.cwd(),
+		) as any;
+		tool.executionStarted = true;
+		tool.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
+		return tool;
+	};
+	const firstTool = toolOf("b1", "echo one");
+	const secondTool = toolOf("b2", "cat settings.json");
+	const { terminal } = createTerminalFixture();
+	const renderer = new FullscreenRenderer(anchor, null, terminal);
+	(renderer as any).children = [anchor, firstTool, later, secondTool];
+	const tui = createLazyProxy(() => renderer);
+	const ui = createUi(tui);
+	try {
+		installToolMouseInteraction(ui.ctx);
+		ui.widget.render();
+		anchor.updateContent(first);
+		later.updateContent(second);
+		anchor.setExpanded(true);
+		assert.equal(later.expanded, true, "second message joins the expanded round");
+		const viewport = () => {
+			renderer.currentLayout = fullscreenLayout((renderer as any).children, null);
+			return (renderer as any).render(80) as string[];
+		};
+		const rendered = viewport();
+		const hintRow = rendered.findIndex((line: string) => line.includes("cat settings.json"));
+		const row = rendered.findIndex(
+			(line: string, index: number) => index > hintRow && line.includes("to show more"),
+		);
+		const plain = (rendered[row] ?? "").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+		const hintCol = plain.indexOf("to show more") + 1;
+		assert.ok(row >= 0 && hintCol > 0, `expected second tool hint, got: ${plain}`);
+		tui.handleViewportInput(`\x1b[<0;${hintCol};${row + 1}M`);
+		assert.equal(secondTool.expanded, true, "clicked tool expands");
+		assert.equal(anchor.expanded, true, "round anchor stays open");
+		assert.equal(later.expanded, true, "later message in the same round stays open");
+		assert.ok(
+			viewport().some((line: string) => line.includes("echo one")),
+			"outer panel still shows the other tool",
 		);
 	} finally {
 		installToolMouseInteraction({});
