@@ -18,7 +18,7 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 
 ## Bundled extensions
 
-The package bundles 4 active `@herbertgao/*` child packages—`pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
+The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `pi-antigravity@0.10.0`
 - `@dietrichgebert/ponytail@5.1.0`
@@ -47,6 +47,10 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 The local `@herbertgao/resume-from` fork is retired. If it is installed separately, remove that package before upgrading the aggregate to avoid registering `/resume-from` twice. The aggregate now uses upstream `resume-from@0.4.1`; its v0.4.0 start-directory fix supersedes our local patch.
 
 The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@0.9.10` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
+
+### Agency Agents
+
+`@herbertgao/pi-agency` adds `agency_search` and `agency_dispatch` for the [Agency Agents](https://github.com/msitarzewski/agency-agents) catalog cloned at `~/.agency-agents`. Search returns ranked persona cards instead of catalog listings. Dispatch fills persona bodies into subagent prompts outside the main context, runs them as parallel foreground `Agent` calls, and reports each sent prompt's SHA-256. Installing the aggregate does not clone the catalog; see the [package README](../pi-agency/README.md).
 
 ### Bark notifications
 

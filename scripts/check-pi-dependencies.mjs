@@ -12,6 +12,7 @@ const hostPackages = Object.keys(rootManifest.devDependencies).filter(
     name === "@sinclair/typebox",
 )
 const packages = [
+  "pi-agency",
   "pi-bark",
   "pi-cc-extensions",
   "pi-extensions",
