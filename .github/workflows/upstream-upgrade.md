@@ -85,9 +85,12 @@ pre-agent-steps:
   - name: Configure proxy for agent tools
     run: |
       set -euo pipefail
+      # The npm prefix is read-only on hosted runners (it reports /usr/local), so the
+      # global npmrc is best effort; the agent reads the user-level config below.
       prefix="$(npm config get prefix)"
-      mkdir -p "$prefix/etc"
-      printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" > "$prefix/etc/npmrc"
+      if mkdir -p "$prefix/etc" 2>/dev/null && [ -w "$prefix/etc" ]; then
+        printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" > "$prefix/etc/npmrc"
+      fi
       printf '%s\n' "proxy=http://172.30.0.10:3128" "https-proxy=http://172.30.0.10:3128" >> "$HOME/.npmrc"
       git config --system http.proxy http://172.30.0.10:3128 || true
       git config --global http.proxy http://172.30.0.10:3128
