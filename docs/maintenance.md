@@ -273,9 +273,12 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-jev-auto-mode`                   | `0.5.0`   | `jomatsu/pi-jev-auto-mode`   |
 | `pi-lens`                            | `4.4.1`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.38.0`  | `nicobailon/pi-web-access`   |
+| `pi-provider-qoder`                  | `0.5.0`   | `simonsmh/pi-provider-qoder` |
 | `resume-from`                        | `0.4.1`   | `alexei-led/resume-from`     |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
+
+`pi-provider-qoder@0.5.0` is pinned from `simonsmh/pi-provider-qoder` at git `2e29cbbda03862e20f216c5ecbb6c6042a6cabd7`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 

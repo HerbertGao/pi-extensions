@@ -1926,6 +1926,12 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error("Aggregate TypeSafe third-party notices are incomplete")
   }
+  if (
+    !tifanNotices.includes("`pi-provider-qoder`") ||
+    !tifanNotices.includes("simonsmh/pi-provider-qoder")
+  ) {
+    throw new Error("Aggregate Qoder provider notice is incomplete")
+  }
 
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
@@ -1976,7 +1982,28 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   )
   const { loadExtensions } = await import(pathToFileURL(loaderPath))
   beginPhase("extension-registration-and-contracts")
-  const result = await loadExtensions(extensionPaths, installDir)
+  const qoderEnvNames = [
+    "QODER_API_KEY",
+    "QODER_PERSONAL_ACCESS_TOKEN",
+    "QODER_PAT",
+    "QODERCN_API_KEY",
+    "QODERCN_PERSONAL_ACCESS_TOKEN",
+    "QODERCN_PAT",
+  ]
+  const previousQoderEnv = qoderEnvNames.map((name) => [
+    name,
+    process.env[name],
+  ])
+  for (const name of qoderEnvNames) delete process.env[name]
+  let result
+  try {
+    result = await loadExtensions(extensionPaths, installDir)
+  } finally {
+    for (const [name, value] of previousQoderEnv) {
+      if (value === undefined) delete process.env[name]
+      else process.env[name] = value
+    }
+  }
   cleanupLoadedExtensions = async () => {
     const multiAccountEntry = resolve(
       multiAccountRoot,
@@ -2071,6 +2098,27 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       true,
     )
   }
+  const qoderEntry = resolve(
+    packageRoot,
+    "node_modules/pi-provider-qoder/dist/index.js",
+  )
+  assert.equal(extensionPaths.includes(qoderEntry), true)
+  const qoderProviders = result.runtime.pendingProviderRegistrations
+    .filter((registration) => registration.extensionPath === qoderEntry)
+    .map((registration) => registration.name)
+    .sort()
+  assert.deepEqual(qoderProviders, ["qoder", "qoder-cn"])
+  for (const registration of result.runtime.pendingProviderRegistrations) {
+    if (registration.extensionPath !== qoderEntry) continue
+    assert.equal(registration.config.models.length > 0, true)
+    assert.equal(typeof registration.config.streamSimple, "function")
+    assert.equal(typeof registration.config.oauth?.login, "function")
+  }
+  const loadedQoder = result.extensions.find(
+    (extension) => extension.resolvedPath === qoderEntry,
+  )
+  assert.equal(loadedQoder?.commands.has("qoder-usage"), true)
+  assert.equal(loadedQoder.flags.get("qoder-credit-footer")?.default, false)
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),
     { moduleCache: false },
