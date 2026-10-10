@@ -251,7 +251,7 @@ For Subagents, the direct migration is complete. The package retains only reposi
 
 ## Bundled upstream companions
 
-The aggregate package also pins the following npm packages under their original names without modifying their upstream source. The generated bundled `remote-pi` manifest declares its Pi host packages as wildcard peers so it uses the running Pi host:
+The aggregate package also pins the following npm packages under their original names without modifying their upstream source:
 
 | Package                              | Version   | Upstream                     |
 | ------------------------------------ | --------- | ---------------------------- |
@@ -273,7 +273,6 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-jev-auto-mode`                   | `0.5.0`   | `jomatsu/pi-jev-auto-mode`   |
 | `pi-lens`                            | `4.4.0`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.37.0`  | `nicobailon/pi-web-access`   |
-| `remote-pi`                          | `0.7.0`   | `jacobaraujo7/remote_pi`     |
 | `resume-from`                        | `0.4.1`   | `alexei-led/resume-from`     |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
@@ -413,8 +412,6 @@ The earlier issue #122 companion review accepted six released updates:
 - `pi-web-access@0.25.0` adds opt-in proxy and cloud-auth providers, GitHub-aware fetching, and a default Defuddle extraction fallback; its new `defuddle@0.19.3` dependency is MIT-licensed.
 
 These are dependencies, not source imports or `@herbertgao/*` releases. Review their changelogs, licenses, package manifests, and runtime smoke results before changing a pin.
-
-`remote-pi@0.7.0` is accepted for this personal aggregate only with a self-hosted relay restricted by Tailscale or an equivalent private network. Its relay sees routed plaintext, despite transport encryption. Re-audit before every pin change and remove these accepted exceptions when upstream fixes them: pairing URI/token data is currently persisted in Pi session data and can reach model context; local broker/supervisor IPC authenticates only through the OS-user boundary, and its Unix socket may use the process umask's default `0755` mode; cancelling first-time setup can retain the cwd lock until process exit; the setup wizard's “encrypted messages” wording overstates relay confidentiality. Do not test against or recommend the community relay.
 
 ## Remotes
 

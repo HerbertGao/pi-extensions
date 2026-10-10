@@ -101,10 +101,6 @@
       "repository": "https://github.com/nicobailon/pi-web-access"
     },
     {
-      "package": "remote-pi",
-      "repository": "https://github.com/jacobaraujo7/remote_pi"
-    },
-    {
       "package": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity"
     },

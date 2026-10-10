@@ -51,7 +51,6 @@
     "@narumitw/pi-btw": "0.61.1",
     "@narumitw/pi-caffeinate": "0.49.10",
     "@narumitw/pi-tui-kit": "^0.64.0",
-    "@noble/ed25519": "^3.1.0",
     "@pi-plugins/fast-mode": "0.1.13",
     "@shikijs/cli": "^4.0.2",
     "@tifan/pi-copy-response": "0.2.7",
@@ -83,8 +82,6 @@
     "pidusage": "^4.0.1",
     "promise.try": "^2.0.1",
     "proper-lockfile": "4.1.2",
-    "qrcode-terminal": "^0.12.0",
-    "remote-pi": "0.7.0",
     "resume-from": "0.4.1",
     "turndown": "^7.2.0",
     "unbash": "4.0.10",
@@ -131,7 +128,6 @@
     "pi-next-cue",
     "pi-typesafe",
     "pi-web-access",
-    "remote-pi",
     "resume-from"
   ],
   "engines": {
@@ -166,8 +162,7 @@
       "./node_modules/pi-antigravity/src/index.ts",
       "./node_modules/pi-antigravity/src/features/google-search.ts",
       "./node_modules/pi-antigravity/src/features/generate-image.ts",
-      "./node_modules/pi-typesafe/extensions/index.js",
-      "./node_modules/remote-pi/dist/index.js"
+      "./node_modules/pi-typesafe/extensions/index.js"
     ],
     "themes": [
       "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-dark.json",
