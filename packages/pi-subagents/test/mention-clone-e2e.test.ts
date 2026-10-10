@@ -74,7 +74,11 @@ it("the real clone receives the live prompt and restored history, with only its 
       agentTool: tool,
     })
     expect(requests).toHaveLength(1)
-    expect(requests[0].systemPrompt).toBe("LIVE-PROMPT-MARKER")
+    // Pi appends its own structured cwd section to a resource-loader prompt
+    // override, so the live preamble is asserted by containment. Exact equality
+    // only held while the clone wrote agent state directly, which upstream's
+    // public-API rewrite replaced.
+    expect(requests[0].systemPrompt).toContain("LIVE-PROMPT-MARKER")
     expect(requests[0].tools?.map((t) => t.name)).toEqual(["Agent"])
     const text = JSON.stringify(requests[0].messages)
     expect(text).toContain("HISTORY-MARKER")

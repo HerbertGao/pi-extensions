@@ -28,7 +28,12 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { fauxText, fauxToolCall } from "@earendil-works/pi-ai"
+import {
+  fauxText,
+  fauxToolCall,
+  getCurrentSystemPrompt,
+  getCurrentTools,
+} from "@earendil-works/pi-ai"
 import { afterEach, describe, expect, it } from "vitest"
 import { encodeCwd } from "../../src/output-file.js"
 import { readJournal } from "../../src/workflow/journal.js"
@@ -124,12 +129,12 @@ describe("Workflow end to end", () => {
       maxModelCalls: 32,
       live: false, // scripted on purpose: a real model would not emit the tool call
       respond: (context) => {
-        const isParent = (context.tools ?? []).some(
+        const isParent = getCurrentTools(context.messages).some(
           (t) => t.name === "SubagentWorkflow",
         )
         if (!isParent) {
           childPrompts.push(asText(context))
-          childSystemPrompts.push(context.systemPrompt ?? "")
+          childSystemPrompts.push(getCurrentSystemPrompt(context.messages))
           return fauxText("SUBAGENT-DONE")
         }
         return asText(context).includes("Task ID")
@@ -221,7 +226,7 @@ describe("Workflow end to end", () => {
       maxModelCalls: 32,
       live: false, // scripted on purpose: a real model would not emit the tool call
       respond: (context) => {
-        const isParent = (context.tools ?? []).some(
+        const isParent = getCurrentTools(context.messages).some(
           (t) => t.name === "SubagentWorkflow",
         )
         if (!isParent) {
@@ -230,7 +235,8 @@ describe("Workflow end to end", () => {
           // Answer through the injected tool exactly once, then stop — a model
           // that kept calling it every turn would just spin.
           const alreadyAnswered =
-            (context.tools ?? []).length > 0 && /Recorded\./.test(seen)
+            getCurrentTools(context.messages).length > 0 &&
+            /Recorded\./.test(seen)
           return alreadyAnswered
             ? fauxText("done")
             : fauxToolCall(
@@ -284,7 +290,7 @@ describe("Workflow end to end", () => {
       maxModelCalls: 12,
       live: false, // scripted on purpose: a real model would not emit the tool call
       respond: (context) => {
-        const isParent = (context.tools ?? []).some(
+        const isParent = getCurrentTools(context.messages).some(
           (t) => t.name === "SubagentWorkflow",
         )
         if (!isParent) {
