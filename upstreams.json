@@ -105,6 +105,10 @@
       "repository": "https://github.com/Rahularya01/pi-antigravity"
     },
     {
+      "package": "pi-provider-qoder",
+      "repository": "https://github.com/simonsmh/pi-provider-qoder"
+    },
+    {
       "package": "resume-from",
       "repository": "https://github.com/alexei-led/resume-from"
     }

@@ -77,6 +77,7 @@
     "pi-lens": "4.4.1",
     "pi-multi-account": "1.24.0",
     "pi-next-cue": "1.0.7",
+    "pi-provider-qoder": "0.5.0",
     "pi-typesafe": "0.9.1",
     "pi-web-access": "0.38.0",
     "pidusage": "^4.0.1",
@@ -126,6 +127,7 @@
     "pi-lens",
     "pi-multi-account",
     "pi-next-cue",
+    "pi-provider-qoder",
     "pi-typesafe",
     "pi-web-access",
     "resume-from"
@@ -162,6 +164,7 @@
       "./node_modules/pi-antigravity/src/index.ts",
       "./node_modules/pi-antigravity/src/features/google-search.ts",
       "./node_modules/pi-antigravity/src/features/generate-image.ts",
+      "./node_modules/pi-provider-qoder/dist/index.js",
       "./node_modules/pi-typesafe/extensions/index.js"
     ],
     "themes": [
