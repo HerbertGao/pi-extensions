@@ -50,14 +50,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.0`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.37.0`       | Web search and content access.                |
-| [`remote-pi`](https://github.com/jacobaraujo7/remote_pi)                        | `0.7.0`        | Private relay remote control and agent mesh.  |
 | [`resume-from`](https://github.com/alexei-led/resume-from)                      | `0.4.1`        | Continue Pi, Claude Code, and Codex sessions. |
-
-### Remote Pi trust boundary
-
-This aggregate enables Remote Pi's extension and agent-network skill and carries its supervisor CLI/service templates, but it does not bundle the relay, mobile app, or Cockpit and does not install or activate the supervisor service automatically. Set `REMOTE_PI_RELAY` to a self-hosted relay restricted by Tailscale or another private network before first use. The relay can read routed content even over TLS/Tailscale; Remote Pi 0.7.0 is not end-to-end encrypted.
-
-Accepted 0.7.0 limitations are documented in the aggregate package README: short-lived pairing material is persisted in Pi session data and can enter model context, same-user local IPC is unauthenticated, and cancelled first-time setup may hold its cwd lock until Pi exits.
 
 ## Footer
 

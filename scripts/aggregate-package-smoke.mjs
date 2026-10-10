@@ -18,7 +18,6 @@ import {
   parseNpmPackOutput,
 } from "./npm-pack-json.mjs"
 import { runPiWebAccessRealSmoke } from "./pi-web-access-real-smoke.mjs"
-import { runRemotePiRealSmoke } from "./remote-pi-real-smoke.mjs"
 import { run } from "./process.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
@@ -1418,84 +1417,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     )
   }
 
-  const remotePiRoot = join(packageRoot, "node_modules", "remote-pi")
-  const remotePiManifestPath = join(remotePiRoot, "package.json")
-  const remotePiManifest = parseJson(
-    await readFile(remotePiManifestPath, "utf8"),
-    remotePiManifestPath,
-  )
-  const expectedRemotePiVersion = sourceManifest.dependencies["remote-pi"]
-  if (remotePiManifest.version !== expectedRemotePiVersion) {
-    throw new Error(
-      `Expected bundled remote-pi ${expectedRemotePiVersion}, got ${remotePiManifest.version}`,
-    )
-  }
-  if (remotePiManifest.license !== "MIT") {
-    throw new Error(
-      `Expected remote-pi MIT license, got ${remotePiManifest.license}`,
-    )
-  }
-  if (!remotePiManifest.pi?.extensions?.includes("./dist")) {
-    throw new Error("Bundled remote-pi no longer declares its dist Pi entry")
-  }
-  if (
-    remotePiManifest.bin?.["remote-pi"] !== "dist/index.js" ||
-    remotePiManifest.bin?.["pi-supervisord"] !== "dist/bin/supervisord.js"
-  ) {
-    throw new Error("Bundled remote-pi no longer declares its expected CLIs")
-  }
-  const zodManifestPath =
-    createRequire(remotePiManifestPath).resolve("zod/package.json")
-  const zodManifest = parseJson(
-    await readFile(zodManifestPath, "utf8"),
-    zodManifestPath,
-  )
-  const [zodMajor, zodMinor, zodPatch] = zodManifest.version
-    .split(".")
-    .map(Number)
-  if (zodMajor !== 4 || zodMinor < 4 || (zodMinor === 4 && zodPatch < 3)) {
-    throw new Error(
-      `Expected remote-pi-compatible zod 4.4.3+, got ${zodManifest.version}`,
-    )
-  }
-  for (const [dependency, range] of Object.entries(
-    remotePiManifest.dependencies ?? {},
-  )) {
-    if (
-      dependency !== "zod" &&
-      dependency !== "@napi-rs/keyring" &&
-      sourceManifest.dependencies[dependency] !== range
-    ) {
-      throw new Error(
-        `Expected remote-pi dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
-      )
-    }
-  }
-  const hostDependencies = [
-    "@earendil-works/pi-coding-agent",
-    "@earendil-works/pi-tui",
-    "typebox",
-  ]
-  const nestedHosts = await Promise.all(
-    hostDependencies.map((hostDependency) =>
-      pathExists(
-        join(remotePiRoot, "node_modules", ...hostDependency.split("/")),
-      ),
-    ),
-  )
-  for (const [index, hostDependency] of hostDependencies.entries()) {
-    if (
-      remotePiManifest.dependencies?.[hostDependency] ||
-      remotePiManifest.peerDependencies?.[hostDependency] !== "*"
-    ) {
-      throw new Error(
-        `Bundled remote-pi must use the aggregate ${hostDependency} host peer`,
-      )
-    }
-    if (nestedHosts[index]) {
-      throw new Error(`Bundled remote-pi contains a nested ${hostDependency}`)
-    }
-  }
   const installedHosts = await Promise.all(
     hostPeerDependencies.map(async (hostDependency) => ({
       hostDependency,
@@ -2028,13 +1949,8 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
-      "node_modules/remote-pi/LICENSE",
       "node_modules/resume-from/LICENSE",
       "node_modules/@herbertgao/sol-pi/LICENSE",
-      "node_modules/remote-pi/service-templates/launchd.plist.template",
-      "node_modules/remote-pi/service-templates/systemd.service.template",
-      "node_modules/remote-pi/service-templates/task-launcher.vbs.template",
-      "node_modules/remote-pi/service-templates/task-scheduler.xml.template",
     ].map((path) => stat(join(packageRoot, path))),
   )
   await Promise.all(
@@ -2464,7 +2380,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     throw new Error("Bundled pi-typesafe LICENSE is not the expected MIT text")
   }
 
-  const remotePiEntry = resolve(remotePiRoot, "dist/index.js")
   const multiAccountEntry = resolve(multiAccountRoot, multiAccountEntryRelative)
   if (!extensionPaths.includes(multiAccountEntry)) {
     throw new Error(
@@ -2479,29 +2394,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "Packed pi-multi-account did not register its session cleanup handler",
     )
   }
-  if (!extensionPaths.includes(remotePiEntry)) {
-    throw new Error("Packed aggregate is missing the remote-pi extension entry")
-  }
-  const remotePiSkills = resolve(remotePiRoot, "skills")
-  if (skillPaths.includes(remotePiSkills)) {
-    throw new Error(
-      "Packed aggregate must not statically register remote-pi skills; the extension deploys them globally",
-    )
-  }
-  const remotePiLicense = await readFile(join(remotePiRoot, "LICENSE"), "utf8")
-  if (
-    !remotePiLicense.startsWith("MIT License\n\nCopyright (c) 2026 Jacob Moura")
-  ) {
-    throw new Error("Bundled remote-pi LICENSE is not the expected MIT text")
-  }
-  const remotePiSkill = await readFile(
-    join(remotePiSkills, "agent-network", "SKILL.md"),
-    "utf8",
-  )
-  if (!remotePiSkill.startsWith("---\nname: agent-network\n")) {
-    throw new Error("Bundled remote-pi agent-network skill is invalid")
-  }
-  await runRemotePiRealSmoke({ remotePiEntry })
 
   beginPhase("bundle-contracts")
   const bundled = new Set(packed.bundled)

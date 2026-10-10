@@ -39,7 +39,6 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `pi-jev-auto-mode@0.5.0`
 - `pi-lens@4.4.0`
 - `pi-web-access@0.37.0`
-- `remote-pi@0.7.0`
 - `resume-from@0.4.1`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
@@ -84,12 +83,6 @@ For the intended compact status text, merge the optional pi-lens widget setting 
 ```
 
 Pi 0.85.1 or newer should use native `fullscreen` TUI mode.
-
-### Remote Pi trust boundary
-
-Configure `REMOTE_PI_RELAY` to a private relay, preferably reachable only through Tailscale or another private network, **before** first running `/remote-pi`. TLS/Tailscale protects traffic in transit but the relay process can read routed content; `remote-pi@0.7.0` is not end-to-end encrypted.
-
-Known accepted `0.7.0` limitations: pairing URI/token data is persisted in Pi session data and may enter model context during its short validity window; local broker/supervisor IPC trusts processes running as the same OS user; cancelling first-time setup can retain its cwd lock until Pi exits. Do not use the public relay or run untrusted local processes if those boundaries are unacceptable.
 
 See the [repository README](https://github.com/HerbertGao/pi-extensions#readme) for the complete package list and provenance.
 
