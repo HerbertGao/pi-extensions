@@ -1,5 +1,22 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.3
+
+### Minor Changes
+
+- [#271](https://github.com/HerbertGao/pi-extensions/pull/271) [`37e047b`](https://github.com/HerbertGao/pi-extensions/commit/37e047b2c11fef1042b347c5d6788505a1b2ed68) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove `remote-pi` from the aggregate. The package is no longer bundled, registered as a Pi extension, or tracked as an upstream companion; its exclusive dependencies (`qrcode-terminal`, `@noble/ed25519`) and the remote-pi smoke checks are dropped with it. This also retires the documented Remote Pi trust-boundary exceptions (relay plaintext visibility, same-user IPC, pairing material in session data). Existing local installations keep running until the aggregate is upgraded; remove the supervisor service and `~/.pi/remote/` manually to fully uninstall.
+
+### Patch Changes
+
+- [#273](https://github.com/HerbertGao/pi-extensions/pull/273) [`e6ee379`](https://github.com/HerbertGao/pi-extensions/commit/e6ee379393c9f5dde67955d4c28da650835d857f) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Upgrade the reviewed companion pins to Caffeinate 0.49.11, Pi-Lens 4.4.1, and Web Access 0.38.0. Caffeinate only makes the Linux D-Bus import tolerate a default-export namespace, so macOS behavior is untouched. Pi-Lens publishes a public LSP config schema, adds user-level custom rule directories (project before user before built-in), normalizes argv-style server entries, downgrades `throw-new-error` to a warning, and counts Docker, JSON, and Jedi servers in idle eviction. Web Access adds the explicit-only Ceramic provider, defaults OpenAI search to `gpt-6-luna`, allows keyless providers for answers and query rewriting, and scopes results and clone cleanup per extension instance. The promoted `@modelcontextprotocol/sdk` range moves from `^1.29.0` to `^1.32.1`, which also takes the bundle off GHSA-6qxp-vccf-f47h. No installed configuration, credentials, services, or sessions are migrated.
+
+- [#273](https://github.com/HerbertGao/pi-extensions/pull/273) [`e6ee379`](https://github.com/HerbertGao/pi-extensions/commit/e6ee379393c9f5dde67955d4c28da650835d857f) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Rebase `@herbertgao/pi-subagents` onto upstream v0.20.0 (`13106ab`) and adopt upstream's own mention-clone rewrite: the clone takes its history through `SessionManager.inMemory` and receives the live system prompt through a `DefaultResourceLoader` override instead of the previous context-projection path. The local behavior that hands the spawn the main session's context augmented with the clone's `tools` and `executeTool` is retained, so mentioned agents keep Pi 1.x tool-call capabilities while staying attributed to the main session.
+
+  Two local patches remain because their upstream pull requests are still open: preserving a worktree when cleanup fails (`tintinweb/pi-subagents#268`, with the refused `--no-gpg-sign` preservation commit) and retaining unconsumed terminal results past the automatic cleanup timer (`tintinweb/pi-subagents#348`). Upstream now declares `typebox` as a host-provided peer and drops `@sinclair/typebox` from runtime dependencies. No installed configuration, credentials, or sessions are migrated.
+
+- Updated dependencies [[`e6ee379`](https://github.com/HerbertGao/pi-extensions/commit/e6ee379393c9f5dde67955d4c28da650835d857f)]:
+  - @herbertgao/pi-subagents@0.19.0
+
 ## 2026.10.2
 
 ### Patch Changes
