@@ -41,6 +41,8 @@ This personal repository needs two Actions secrets before the workflow can run:
 
 The monitor refuses to dispatch when either secret is missing, comments once on the tracking Issue with `@HerbertGao`, and leaves the findings unacknowledged so a later scheduled or manual monitor run retries after configuration. An agent-created PR is therefore never accepted without the CI-trigger credential.
 
+Dispatching is currently **paused**: the `UPGRADE_DISPATCH: "false"` job env flag in `upstream-monitor.yml` skips the credential gate, the dispatch, and the acknowledgement marker. The daily monitor still checks upstreams and syncs the tracking Issue, and findings stay unacknowledged so the first run after flipping the flag to `"true"` dispatches them. Flip it only after the `GEMINI_API_KEY` project credits are topped up and `Reviewed Upstream Upgrade` is re-enabled.
+
 Install and pin the compiler, then edit the Markdown source and regenerate the lock:
 
 ```bash
