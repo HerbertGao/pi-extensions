@@ -55,7 +55,6 @@
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
-    "@sinclair/typebox": "*",
     "typebox": "*"
   },
   "engines": {
@@ -70,9 +69,9 @@
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.19.0",
-    "reviewedVersion": "0.19.0",
+    "version": "0.20.0",
+    "reviewedVersion": "0.20.0",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "95d10867f391636e6563e3885e972618083f306b"
+    "commit": "13106ab6f608b3acc54185da5299ee7fbaabb6b9"
   }
 }

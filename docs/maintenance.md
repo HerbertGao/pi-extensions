@@ -259,7 +259,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@dietrichgebert/ponytail`           | `5.1.0`   | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.12.0`  | `juicesharp/rpiv-mono`       |
 | `@narumitw/pi-btw`                   | `0.61.1`  | `narumiruna/pi-extensions`   |
-| `@narumitw/pi-caffeinate`            | `0.49.10` | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-caffeinate`            | `0.49.11` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.13`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
@@ -271,8 +271,8 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-typesafe`                        | `0.9.1`   | `DevMortimer/pi-typesafe`    |
 | `pi-multi-account`                   | `1.24.0`  | `Sarrius/pi-multi-account`   |
 | `pi-jev-auto-mode`                   | `0.5.0`   | `jomatsu/pi-jev-auto-mode`   |
-| `pi-lens`                            | `4.4.0`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.37.0`  | `nicobailon/pi-web-access`   |
+| `pi-lens`                            | `4.4.1`   | `apmantza/pi-lens`           |
+| `pi-web-access`                      | `0.38.0`  | `nicobailon/pi-web-access`   |
 | `resume-from`                        | `0.4.1`   | `alexei-led/resume-from`     |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
@@ -280,6 +280,22 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-10 issue #268 selective review
+
+The local `pi-subagents` package is rebased onto upstream v0.20.0 (`13106ab6f608b3acc54185da5299ee7fbaabb6b9`) instead of being patched forward from the v0.19.0 baseline. Upstream's own rewrite of `src/mention-clone.ts` — clone history through `SessionManager.inMemory`, live system prompt through a `DefaultResourceLoader` override — supersedes the local mention-clone patch, so the package now carries upstream's implementation plus the one local behavior it lacked: the spawn receives the main session's context augmented with the clone's `tools` and `executeTool`, keeping Pi 1.x tool-call capabilities while staying attributed to the main session. Two local patches remain because their upstream pull requests are still open: worktree preservation when cleanup fails (`tintinweb/pi-subagents#268`) and retention of unconsumed terminal results past the automatic cleanup timer (`tintinweb/pi-subagents#348`). Upstream declares `typebox` as a host-provided peer and drops `@sinclair/typebox` from runtime dependencies. `x-upstream` records version `0.20.0`, `reviewedVersion` `0.20.0`, and commit `13106ab`; the repository review cursor advances from `e955e29` to `13106ab`. Commits after the v0.20.0 release (`src/agent-manager.ts`, `src/index.ts`, `src/ui/fleet-list.ts`, `src/workflow/host.ts`, including the `SubagentWorkflow` `isolated` fix) are deliberately not imported and are left to the next review. Outside those patches and the repository's own formatting, `src` matches the upstream tree; the local `test` tree additionally carries type-strictness edits — typed mocks instead of `as any`, and usage fixtures that record `cacheRead` — applied to keep the package typechecking against the current Pi host line.
+
+The three companion upgrades for this issue are accepted:
+
+- Caffeinate `0.49.11` changes only the D-Bus import in `defaultDbusScreenSaverFactory`, accepting either the namespace or the default `sessionBus` export and failing with an explicit error when neither exists. `dbus-native@^0.16.1`, the Pi entry, the license, and the host peers are unchanged; runtime impact is confined to the Linux D-Bus inhibitor path, so the change cannot be exercised on macOS.
+- Pi-Lens `4.4.1` (`30f096dc191c52fb10cea034c4767967c02ce573`) publishes a public LSP configuration schema, reads user-level custom rule directories (project before user before built-in), normalizes argv-style server entries, downgrades the `throw-new-error` rule to a warning, and counts Docker, JSON, and Jedi servers in idle eviction. The tarball keeps inlining the former private `dist/clients`/`dist/tools` modules, so smoke continues to assert their absence, and the pinned bundle passes the NAPI routing, FactStore byte-cap, multi-root, instance-limit, and LSP-singleton probes. Reading user-level rule files widens the filesystem scope beyond the project; that is reviewed and accepted as an explicit user-authored directory. `minimatch@^10.2.6`, `jiti@^2.7.0`, and `@ast-grep/cli@0.45.3` are unchanged.
+- Web Access `0.38.0` (`7e6e2386dc9a31d5e2a448172060dd1339c604f7`) adds the explicit-only Ceramic search provider, never selected by `auto`/`all`, and moves the OpenAI search default from `gpt-5.6-terra` to `gpt-6-luna`. It removes `opencode-session-headers.ts`, passes the session id with `cacheRetention: "none"` on answer and summary calls, allows keyless providers for answers and query rewriting, fixes proxied `fetch(new Request())` and keyless Parallel MCP rate limiting, and scopes results, fetches, and clone cleanup per extension instance.
+
+The promoted `@modelcontextprotocol/sdk` range advances from `^1.29.0` to `^1.32.1`. The previous range resolved to `1.30.0`, inside GHSA-6qxp-vccf-f47h (`>= 1.12.0, < 1.31.0`, high): an OAuth client could send credentials to an authorization server chosen by the MCP server. Web Access 0.38.0 declares `1.32.1` and no longer nests the vulnerable `1.27.1`. No installed configuration, credentials, services, or sessions are migrated.
+
+The local-only `test/mention-clone-e2e.test.ts` asserts that the clone's request carries the parent's live prompt by containment rather than exact equality: Pi appends its own structured `cwd` section to a resource-loader prompt override, so exact equality only held while the clone wrote agent state directly.
+
+Validation: frozen Bun install and the complete `bun run check` pass. The `pi-subagents` suite runs 106 files and 2,144 tests with seven existing opt-in skips; the aggregate smoke loads 28 entries with 26 bundled dependencies and passes the real web-access smoke; the host dependency and upstream metadata validators pass. The lockfile resolves a single `@modelcontextprotocol/sdk@1.32.1` with no nested `pi-web-access` copy. No live provider call, Linux D-Bus session, platform language-server installation, or user-level pi-lens rule directory was exercised; those paths remain externally validated only.
 
 ### 2026-10-09 issue #262 selective review
 
