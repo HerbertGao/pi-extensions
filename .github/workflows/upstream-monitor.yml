@@ -19,6 +19,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # Dispatching Reviewed Upstream Upgrade is paused until the GEMINI_API_KEY
+      # prepayment credits are topped up; flip to "true" to resume.
+      UPGRADE_DISPATCH: "false"
     steps:
       - name: Checkout
         # v7.0.0
@@ -42,17 +46,19 @@ jobs:
             tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Check agentic workflow credentials
-        if: steps.check.outputs.changed_issue_number != ''
+        if: >-
+          steps.check.outputs.changed_issue_number != '' &&
+          env.UPGRADE_DISPATCH == 'true'
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_AW_CI_TRIGGER_TOKEN: ${{ secrets.GH_AW_CI_TRIGGER_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
         run: |
           set -euo pipefail
           missing=()
-          if [[ -z "$COPILOT_GITHUB_TOKEN" ]]; then
-            missing+=(COPILOT_GITHUB_TOKEN)
+          if [[ -z "$GEMINI_API_KEY" ]]; then
+            missing+=(GEMINI_API_KEY)
           fi
           if [[ -z "$GH_AW_CI_TRIGGER_TOKEN" ]]; then
             missing+=(GH_AW_CI_TRIGGER_TOKEN)
@@ -84,7 +90,9 @@ jobs:
           exit 1
 
       - name: Start reviewed upstream upgrade
-        if: steps.check.outputs.changed_issue_number != ''
+        if: >-
+          steps.check.outputs.changed_issue_number != '' &&
+          env.UPGRADE_DISPATCH == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
@@ -95,7 +103,9 @@ jobs:
             --field issue_number="$ISSUE_NUMBER"
 
       - name: Acknowledge agentic workflow dispatch
-        if: steps.check.outputs.changed_issue_number != ''
+        if: >-
+          steps.check.outputs.changed_issue_number != '' &&
+          env.UPGRADE_DISPATCH == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.check.outputs.changed_issue_number }}
