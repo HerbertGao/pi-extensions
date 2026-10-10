@@ -15,11 +15,11 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-engine: copilot
-model: gpt-6.1-sol
+engine: agy
+model: gemini-3.8-flash-medium
 models:
   allowed:
-    - gpt-6.1-sol
+    - gemini-3.8-flash-medium
 strict: true
 sandbox:
   agent:
@@ -125,7 +125,6 @@ steps:
     run: bun run test:aggregate
 max-ai-credits: 400
 timeout-minutes: 90
-max-turns: 100
 ---
 
 # Reviewed upstream upgrade
