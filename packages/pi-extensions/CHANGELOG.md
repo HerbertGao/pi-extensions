@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.4
+
+### Minor Changes
+
+- [#275](https://github.com/HerbertGao/pi-extensions/pull/275) [`c3a5e81`](https://github.com/HerbertGao/pi-extensions/commit/c3a5e814ef9929086e2348fb654add29f2a86f8e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `pi-provider-qoder@0.5.0` so the aggregate can use a Qoder account through the `qoder` and `qoder-cn` providers.
+
 ## 2026.10.3
 
 ### Minor Changes
