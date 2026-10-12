@@ -6,6 +6,10 @@
  * renderer）。edit/write 复用 mode=on 的 rich diff
  * 与 `editDiffCollapsedLines` / `writeDiffCollapsedLines` / `expandedPreviewMaxLines`。
  * Agent/Task 族：调用只进摘要计数，tool 卡始终折叠（避免 pending→完成高度闪动）。
+ * edit/write 与 ask_user_question 留在外层：不进摘要计数，折叠态也单独成行。
+ * 用户消息是回合的硬边界：steer 消息插进回合中间、或上一回合没正文就收尾时，回合
+ * 就地收口、后续消息另起一回合，区间里的用户消息不会被当成外来行挪走（摘要行、
+ * 展开面板因此留在自己回合的位置上）。
  * 底部 Agents/Tasks 面板由 pi-subagents/pi-tasks 独立 widget 负责，不经 tool 卡外置。
  *
  * live 围观态（回合进行中 / 收尾静默期）：正文跟折叠态同形；摘要行与单一槽位卡
@@ -26,11 +30,14 @@
  */
 import {
 	AssistantMessageComponent,
+	SkillInvocationMessageComponent,
 	ToolExecutionComponent,
+	UserMessageComponent,
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, Box, Spacer } from "@earendil-works/pi-tui";
 import { config, getToolDisplayConfig } from "../config/config.ts";
+import { ASK_USER_QUESTION_TOOL_NAME } from "./tool/ask-user-question.ts";
 import { toolLoadingIcon } from "../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../utils/tool-result-sanitize.ts";
 import { refreshTranscriptComponent } from "./transcript-refresh.ts";
@@ -42,10 +49,16 @@ import {
 	isRichDiffComponent,
 } from "./tool/diff/diff-renderer.ts";
 import { renderRichToolResult } from "./tool/diff/index.ts";
+import { displayConfigCacheKey } from "./tool/diff/diff-component.ts";
 import type { WriteExecutionMetadataStore } from "./tool/diff/write-execution.ts";
 import { isToolCallHovered } from "./mouse/hover.ts";
 import { getToolMouseTui } from "./mouse/scroll.ts";
-import { insetComponent, renderExpandedToolResult, scheduleAnimation } from "./tool/result.ts";
+import {
+	insetComponent,
+	isLiveToolCall,
+	renderExpandedToolResult,
+	scheduleAnimation,
+} from "./tool/result.ts";
 import { paddedBackgroundRow } from "./tool/grouping.ts";
 import { formatDisplayPath } from "./tool/names.ts";
 import {
@@ -80,6 +93,13 @@ export type CompactThinkingQuery = {
 };
 
 const EDIT_WRITE_TOOLS = new Set(["edit", "write"]);
+
+/**
+ * 留在外层的工具：不进摘要计数，折叠态也单独成行。
+ * edit/write 走 compact 自己的 rich diff；ask_user_question 走 default 模式的专用渲染
+ *（标题 (+N) 加折叠问答树）。
+ */
+const OUTER_TOOLS = new Set([...EDIT_WRITE_TOOLS, ASK_USER_QUESTION_TOOL_NAME]);
 
 /**
  * 回合收尾后延迟收拢的静默期（ms）。正文 token 往往先于 toolCall 到达，
@@ -205,7 +225,7 @@ function buildMessagesSummary(
 		for (const item of content) {
 			if (item?.type !== "toolCall") continue;
 			const rawName = typeof item.name === "string" ? item.name : "tool";
-			if (EDIT_WRITE_TOOLS.has(rawName)) continue;
+			if (OUTER_TOOLS.has(rawName)) continue;
 			const name = sanitizeToolResultText(rawName);
 			if (rawName.split(".").pop() === "read") {
 				const args = item.arguments ?? item.args ?? {};
@@ -674,7 +694,7 @@ function compactEditWriteLine(
 	component: any,
 	width: number,
 	writeMetadata?: WriteExecutionMetadataStore,
-	options: { hint?: boolean; flushLeft?: boolean } = {},
+	options: { hint?: boolean; flushLeft?: boolean; showStats?: boolean } = {},
 ): string[] {
 	const theme = themeOf();
 	const name = String(component.toolName ?? "tool");
@@ -691,7 +711,8 @@ function compactEditWriteLine(
 	const iconColor = isError ? "error" : isPending ? "accent" : "success";
 	let statsText = "";
 	let statsStyled = "";
-	if (!isError && !isPending) {
+	// 统计只显示一处：正文自带 +A -D 时标题不再重复（showStats=false）。
+	if (!isError && !isPending && options.showStats !== false) {
 		const stats =
 			name === "edit"
 				? countEditDiffStats(component.result?.details)
@@ -729,6 +750,12 @@ function compactEditWriteLine(
 	return ["", truncateToWidth(line, width, "")];
 }
 
+/** 正文自带 +A -D 的声明：diff 组件自报，折叠行数/宽度这些细节由它自己判断。 */
+function richDiffBodyShowsStats(component: unknown): boolean {
+	const probe = (component as { bodyShowsStats?: () => boolean } | undefined)?.bodyShowsStats;
+	return typeof probe === "function" && probe.call(component) === true;
+}
+
 /** expanded 写进 rich diff 闭包，折叠/展开分槽缓存，避免每帧 parseDiff。 */
 const compactRichDiffCache = new WeakMap<
 	object,
@@ -740,6 +767,7 @@ type CompactEditPaintHit = {
 	theme: unknown;
 	/** 展开卡的背景槽位同样参与命中判断。 */
 	bgSlot: string;
+	diffConfigKey: string;
 	expanded: boolean;
 	result: unknown;
 	isPartial: boolean;
@@ -771,6 +799,7 @@ function compactEditWriteLines(
 	const hover = isToolCallHovered(component.toolCallId);
 	const ioHover = compactEditIoHover(component);
 	const theme = themeOf();
+	const diffConfigKey = displayConfigCacheKey(getToolDisplayConfig());
 	if (!pending) {
 		const hit = compactEditPaintCache.get(component);
 		if (
@@ -778,6 +807,7 @@ function compactEditWriteLines(
 			hit.width === width &&
 			hit.theme === theme &&
 			hit.bgSlot === config.expandedCardBackground &&
+			hit.diffConfigKey === diffConfigKey &&
 			hit.expanded === expanded &&
 			hit.result === component.result &&
 			hit.isPartial === isPartial &&
@@ -794,6 +824,7 @@ function compactEditWriteLines(
 			width,
 			theme,
 			bgSlot: config.expandedCardBackground,
+			diffConfigKey,
 			expanded,
 			result: component.result,
 			isPartial,
@@ -848,7 +879,12 @@ function paintCompactEditWrite(
 		component.resultRendererComponent = candidate;
 	}
 
-	const title = compactEditWriteLine(component, width, writeMetadata, { hint: !hasRich });
+	// 统计只显示一处：正文里已经有 +A -D（diff 头行/0 行摘要行）时标题不再重复。
+	const showStats = !(hasRich && richDiffBodyShowsStats(candidate));
+	const title = compactEditWriteLine(component, width, writeMetadata, {
+		hint: !hasRich,
+		showStats,
+	});
 	if (!hasRich && !expanded) {
 		return title;
 	}
@@ -888,6 +924,7 @@ function paintCompactEditWrite(
 			return compactEditWriteLine(component, innerWidth, writeMetadata, {
 				hint: false,
 				flushLeft: true,
+				showStats,
 			}).slice(1);
 		},
 		invalidate() {},
@@ -1001,7 +1038,7 @@ function compactStopStatusLine(status: string, pad = 0): any {
 
 /**
  * 槽位卡内的展开入口：卡里是只读围观，展开走摘要行自己的 hint，卡内不再重复提示。
- * 提示有两处来源——我们的 showMoreHintText（`… +N more lines · click to show more`）与
+ * 提示有两处来源——我们的 showMoreHintText（`… N more lines · click to show more`）与
  * pi 原生工具卡（`… (N earlier lines, ctrl+o to expand)`），所以按渲染结果收尾裁剪。
  * 只去掉动作词，`(N more lines)` 这类计数保留。
  */
@@ -1362,6 +1399,54 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		return found;
 	};
 
+	/** 回合成员判定：本回合的 assistant 组件，或归属本回合的工具（含分组容器）。 */
+	const roundMemberMatcher = (round: CompactRound): ((value: any) => boolean) => {
+		const ids = roundToolCallIds(round);
+		const matchesTool = (value: any): boolean =>
+			typeof value?.toolCallId === "string" && ids.has(value.toolCallId);
+		return (value: any): boolean =>
+			round.messages.has(value) ||
+			matchesTool(value) ||
+			(Array.isArray(value?.children) && value.children.some(matchesTool));
+	};
+
+	/** 用户消息（含 skill 调用块）是回合的硬边界。 */
+	const isUserMessageComponent = (value: any): boolean =>
+		value instanceof UserMessageComponent || value instanceof SkillInvocationMessageComponent;
+
+	/**
+	 * 新组件与回合已有成员之间是否隔着一条用户消息。隔着就说明这是下一回合的内容：
+	 * steer 消息插进了回合中间，或上一回合没有正文就收尾、用户又问了新问题。
+	 * 组件还没挂进容器时判断不了，按不隔开处理（会话重放的 refresh 会再求值一次）。
+	 */
+	const crossesUserMessage = (round: CompactRound, component: any): boolean => {
+		const container = tailContainerOf(round.anchor);
+		const children = container?.children;
+		if (!Array.isArray(children)) return false;
+		const index = children.indexOf(component);
+		if (index < 0) return false;
+		const isMember = roundMemberMatcher(round);
+		for (let i = index - 1; i >= 0; i--) {
+			if (isMember(children[i])) return false;
+			if (isUserMessageComponent(children[i])) return true;
+		}
+		return false;
+	};
+
+	/**
+	 * 可以并入的活动回合。被用户消息隔开时返回 undefined，调用方收掉旧回合另起一个，
+	 * 保证回合不跨用户消息——否则区间里的用户消息会被当成外来行挪到回合末尾之后。
+	 */
+	const joinableActiveRound = (component: any): CompactRound | undefined =>
+		activeRound && !crossesUserMessage(activeRound, component) ? activeRound : undefined;
+
+	/** 取并入目标；旧回合被用户消息隔开时先收尾（静默期一转场，新回合立即接手）。 */
+	const joinOrCreateRound = (component: any, message: any): CompactRound => {
+		const joinable = joinableActiveRound(component);
+		if (!joinable && activeRound) finishRound(activeRound);
+		return joinable ?? createRound(component, message);
+	};
+
 	/** 尾行实际所在容器；缓存的 container 过期时按树找回来。 */
 	const tailHostContainer = (tail: MountedRoundTail): any =>
 		containerOfHost(tail.host) ??
@@ -1444,13 +1529,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		const children = container.children as any[];
 		const current = children.indexOf(tail.host);
 		if (current >= 0) children.splice(current, 1);
-		const ids = roundToolCallIds(round);
-		const matchesTool = (value: any): boolean =>
-			typeof value?.toolCallId === "string" && ids.has(value.toolCallId);
-		const isMember = (value: any): boolean =>
-			round.messages.has(value) ||
-			matchesTool(value) ||
-			(Array.isArray(value?.children) && value.children.some(matchesTool));
+		const isMember = roundMemberMatcher(round);
 		let first = -1;
 		let last = -1;
 		for (let i = 0; i < children.length; i++) {
@@ -1461,7 +1540,9 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		const lastMember = last >= 0 ? children[last] : undefined;
 		const intruders: any[] = [];
 		for (let i = last - 1; i > first; i--) {
-			if (!isMember(children[i])) intruders.unshift(children.splice(i, 1)[0]);
+			// 用户消息永远留在原地：挪走会把别人的消息挪到用户消息下面去。
+			if (isMember(children[i]) || isUserMessageComponent(children[i])) continue;
+			intruders.unshift(children.splice(i, 1)[0]);
 		}
 		if (lastMember) last = children.indexOf(lastMember);
 		const insertAt = last < 0 ? children.length : last + 1;
@@ -1643,7 +1724,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 				if (item?.type !== "toolCall" || typeof item.id !== "string") continue;
 				const tool = toolsById.get(item.id);
 				// edit/write 保留自己的 compact 行，不进槽位。
-				if (EDIT_WRITE_TOOLS.has(String(tool?.toolName ?? item.name ?? ""))) continue;
+				if (OUTER_TOOLS.has(String(tool?.toolName ?? item.name ?? ""))) continue;
 				round.liveSlotToolIds.add(item.id);
 				liveSlotToolIds.add(item.id);
 				if (!tool) continue;
@@ -1700,8 +1781,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			for (const id of ids) explicitRoundToolIds.delete(id);
 			collapseTools(
 				(tool) =>
-					ids.has(String(tool.toolCallId ?? "")) &&
-					!EDIT_WRITE_TOOLS.has(String(tool.toolName ?? "")),
+					ids.has(String(tool.toolCallId ?? "")) && !OUTER_TOOLS.has(String(tool.toolName ?? "")),
 			);
 		}
 		for (const id of round.liveSlotToolIds) liveSlotToolIds.delete(id);
@@ -1771,7 +1851,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			const placedToolIds = new Set<string>();
 			const placeTool = (id: string, fallbackName?: string) => {
 				const tool = toolsById.get(id);
-				if (!tool || EDIT_WRITE_TOOLS.has(String(tool.toolName ?? fallbackName ?? ""))) return;
+				if (!tool || OUTER_TOOLS.has(String(tool.toolName ?? fallbackName ?? ""))) return;
 				if (placedToolIds.has(id)) return;
 				placedToolIds.add(id);
 				cardItems.push({ tool });
@@ -1837,7 +1917,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			collapseTools(
 				(tool) =>
 					ids.has(String(tool.toolCallId ?? "")) &&
-					!EDIT_WRITE_TOOLS.has(String(tool.toolName ?? "")) &&
+					!OUTER_TOOLS.has(String(tool.toolName ?? "")) &&
 					!explicitRoundToolIds.has(String(tool.toolCallId ?? "")),
 			);
 			flushPanel();
@@ -1973,7 +2053,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 				round = createRound(this, message);
 				roundByComponent.set(this, round);
 			} else if (!round) {
-				round = activeRound ?? createRound(this, message);
+				// 中间隔着用户消息就另起一回合，不并进上一个回合。
+				round = joinOrCreateRound(this, message);
 				roundByComponent.set(this, round);
 			}
 			round.messages.set(this, message);
@@ -2009,7 +2090,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		if (hasThinking) {
 			let round = roundByComponent.get(this);
 			if (!round) {
-				round = activeRound ?? createRound(this, message);
+				round = joinOrCreateRound(this, message);
 				roundByComponent.set(this, round);
 			}
 			round.messages.set(this, message);
@@ -2035,10 +2116,17 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			return patch.toolOriginalRender.call(this, width);
 		}
 		const name = String(this.toolName ?? "");
-		if (EDIT_WRITE_TOOLS.has(name)) {
-			if (this.executionStarted && (!this.result || this.isPartial === true))
-				scheduleAnimation(this);
-			return compactEditWriteLines(this, width, deps.writeMetadata);
+		if (OUTER_TOOLS.has(name)) {
+			// edit/write 走 compact 自己的 rich diff；ask_user_question 走 default 模式的专用渲染。
+			// 两者都留在外层，不进摘要、不进展开面板。
+			if (EDIT_WRITE_TOOLS.has(name)) {
+				const pending = !this.result || this.isPartial === true;
+				// 等待窗口（声明流式中或等待派发）也要转，否则这一行冻在第一帧。
+				if (pending && (this.executionStarted || isLiveToolCall(this.toolCallId)))
+					scheduleAnimation(this);
+				return compactEditWriteLines(this, width, deps.writeMetadata);
+			}
+			return patch.toolOriginalRender.call(this, width);
 		}
 		// Agent/Task 等同普通工具：折叠不外置（live 面板走独立 widget）。
 		if (expandedRoundToolIds.has(String(this.toolCallId ?? ""))) return [];

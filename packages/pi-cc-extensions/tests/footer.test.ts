@@ -12,8 +12,10 @@ import {
 	FOOTER_NERD_ICON_MCP,
 	applyCustomFooter,
 	clearCustomFooter,
+	colorGitStatus,
 	footerGlyphs,
 	formatXaiFooterChip,
+	modelChip,
 	parseGitStats,
 } from "../extensions/feature/shell/footer.ts";
 import {
@@ -44,6 +46,50 @@ test("normalizeConfig defaults enableCustomFooter on and honors explicit off", (
 		formatConfigStatus(normalizeConfig({ footerNerdIcons: false })),
 		/footerIcons=plain/,
 	);
+	assert.equal(normalizeConfig({}).footerTokenRate, true);
+	assert.equal(normalizeConfig({ footerTokenRate: false }).footerTokenRate, false);
+	assert.equal(normalizeConfig({}).footerTokenRateMode, "average");
+	assert.equal(normalizeConfig({ footerTokenRateMode: "live" }).footerTokenRateMode, "live");
+	assert.equal(normalizeConfig({ footerTokenRateMode: "instant" }).footerTokenRateMode, "average");
+	assert.match(formatConfigStatus(normalizeConfig({})), /footerTokenRate=on/);
+	assert.match(formatConfigStatus(normalizeConfig({})), /footerTokenRateMode=average/);
+});
+
+test("footerGitStatsMode defaults to working and accepts only known modes", () => {
+	assert.equal(normalizeConfig({}).footerGitStatsMode, "working");
+	assert.equal(normalizeConfig({ footerGitStatsMode: "working" }).footerGitStatsMode, "working");
+	assert.equal(normalizeConfig({ footerGitStatsMode: "branch" }).footerGitStatsMode, "branch");
+	for (const value of ["invalid", "", true, 42, null]) {
+		assert.equal(normalizeConfig({ footerGitStatsMode: value }).footerGitStatsMode, "working");
+	}
+	assert.match(formatConfigStatus(normalizeConfig({})), /footerGitStats=working/);
+	assert.match(
+		formatConfigStatus(normalizeConfig({ footerGitStatsMode: "branch" })),
+		/footerGitStats=branch/,
+	);
+});
+
+test("model chip joins effort with a circle instead of a separator dot", () => {
+	const theme = {
+		fg: (color: string, text: string) => `{${color}}${text}{/}`,
+	};
+	const color = (text: string) => `{think}${text}{/}`;
+	assert.equal(
+		modelChip(theme, "claude-sonnet", "high", color),
+		"{accent}claude-sonnet{/} {think}\u25d1{/} {dim}high{/}",
+	);
+	assert.equal(modelChip(theme, "claude-sonnet", "off", color), "{accent}claude-sonnet{/}");
+});
+
+test("git status symbols take a color by role", () => {
+	const theme = {
+		fg: (color: string, text: string) => `{${color}}${text}{/}`,
+	};
+	assert.equal(
+		colorGitStatus(theme, "=!\u21e12\u21e33"),
+		"{error}={/}{warning}!{/}{success}\u21e1{/}{success}2{/}{error}\u21e3{/}{error}3{/}",
+	);
+	assert.equal(colorGitStatus(theme, "?"), "{muted}?{/}");
 });
 
 test("footerGlyphs drops Nerd Font icons when disabled", () => {
@@ -251,4 +297,8 @@ test("formatXaiFooterChip prefers included percent then prepaid dollars", () => 
 test("parseGitStats sums numstat add/delete columns", () => {
 	assert.deepEqual(parseGitStats("10\t2\ta.ts\n3\t1\tb.ts\n"), { add: 13, del: 3 });
 	assert.deepEqual(parseGitStats(""), { add: 0, del: 0 });
+	assert.deepEqual(parseGitStats("-\t-\timage.png\n15\t9\tsource.ts\n60\t0\tnew-test.ts\n"), {
+		add: 75,
+		del: 9,
+	});
 });

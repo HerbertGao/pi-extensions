@@ -114,7 +114,7 @@ test("token count accumulates across deltas and resets on the next turn", async 
 	);
 	assert.match(messages.at(-1) ?? "", /↓ 4 tokens/);
 
-	// Provider usage replaces the live chars/4 estimate when available.
+	// Provider usage replaces the live estimate when available.
 	await events.get("message_update")?.(
 		{
 			assistantMessageEvent: {
@@ -132,7 +132,7 @@ test("token count accumulates across deltas and resets on the next turn", async 
 	);
 	assert.match(messages.at(-1) ?? "", /↓ 37 tokens/);
 
-	// A provider error event's usage.output must not become the token count.
+	// provider 错误事件的 usage.output 不可信，不得替换已记录的 token。
 	await events.get("message_update")?.(
 		{
 			assistantMessageEvent: {
@@ -142,16 +142,12 @@ test("token count accumulates across deltas and resets on the next turn", async 
 		},
 		ctx,
 	);
-	await events.get("message_update")?.(
-		{ assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "abcd" } },
-		ctx,
-	);
-	assert.match(messages.at(-1) ?? "", /↓ 1 tokens/);
+	assert.match(messages.at(-1) ?? "", /↓ 37 tokens/);
 
-	// A new turn resets both estimated and provider counts.
+	// 同一条用户指令的下一段 turn 不清 token：工具后继续累计。
 	await events.get("turn_end")?.({}, ctx);
 	await events.get("turn_start")?.({}, ctx);
-	assert.equal(messages.at(-1), undefined);
+	assert.match(messages.at(-1) ?? "", /↓ 37 tokens/);
 });
 
 // 摘要行会被外层消息顶出视口：fullscreen 离开底部时才镜像摘要文案。

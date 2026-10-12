@@ -7,6 +7,7 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import {
 	AssistantMessageComponent,
 	ToolExecutionComponent,
+	UserMessageComponent,
 	createBashToolDefinition,
 	createEditToolDefinition,
 	createGrepToolDefinition,
@@ -206,12 +207,14 @@ test("config normalize keeps compact, defaults to on, command completions order 
 	assert.equal(normalizeConfig({}).dimThinkingText, false);
 	assert.equal(normalizeConfig({ dimThinkingText: true }).dimThinkingText, true);
 	assert.match(formatConfigStatus(normalizeConfig({})), /thinkingDim=off/);
-	assert.equal(normalizeConfig({}).inputClip, 0);
-	assert.equal(normalizeConfig({ inputClip: 40 }).inputClip, 40);
-	assert.equal(normalizeConfig({ inputClip: "0" }).inputClip, 0);
-	assert.equal(normalizeConfig({ inputClip: 3 }).inputClip, 8);
-	assert.equal(normalizeConfig({ inputClip: 9999 }).inputClip, 500);
-	assert.match(formatConfigStatus(normalizeConfig({})), /inputClip=0/);
+	assert.equal(normalizeConfig({}).toolLabelClip, 0);
+	assert.equal(normalizeConfig({ toolLabelClip: 40 }).toolLabelClip, 40);
+	assert.equal(normalizeConfig({ toolLabelClip: "0" }).toolLabelClip, 0);
+	assert.equal(normalizeConfig({ toolLabelClip: 3 }).toolLabelClip, 8);
+	assert.equal(normalizeConfig({ toolLabelClip: 9999 }).toolLabelClip, 500);
+	// 旧配置键 inputClip 自动迁移
+	assert.equal(normalizeConfig({ inputClip: 60 }).toolLabelClip, 60);
+	assert.match(formatConfigStatus(normalizeConfig({})), /toolLabelClip=0/);
 	assert.equal(normalizeConfig({}).expandedInputMaxLines, 5);
 	assert.equal(normalizeConfig({}).expandedOutputMaxLines, 10);
 	assert.equal(normalizeConfig({ expandedInputMaxLines: 20 }).expandedInputMaxLines, 20);
@@ -259,7 +262,7 @@ test("config normalize keeps compact, defaults to on, command completions order 
 });
 
 test("tool path summaries relativize cwd paths and preserve filenames when clipped", () => {
-	const previous = config.inputClip;
+	const previous = config.toolLabelClip;
 	const args = {
 		path: join(
 			process.cwd(),
@@ -271,7 +274,7 @@ test("tool path summaries relativize cwd paths and preserve filenames when clipp
 	};
 	const original = { ...args };
 	try {
-		config.inputClip = 40;
+		config.toolLabelClip = 40;
 		for (const variant of ["default", "grouping"] as const) {
 			const summary = toolCallSummary("read", args, { variant, cwd: process.cwd() });
 			assert.match(summary.main, /^Read extensions/);
@@ -281,7 +284,7 @@ test("tool path summaries relativize cwd paths and preserve filenames when clipp
 				new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
 			);
 		}
-		config.inputClip = 200;
+		config.toolLabelClip = 200;
 		const outside = join(process.cwd(), "..", "outside-project", "target-file.ts");
 		assert.equal(
 			toolCallSummary("write", { path: outside }, { cwd: process.cwd() }).main,
@@ -290,7 +293,7 @@ test("tool path summaries relativize cwd paths and preserve filenames when clipp
 		);
 		assert.deepEqual(args, original, "display formatting does not mutate tool arguments");
 	} finally {
-		config.inputClip = previous;
+		config.toolLabelClip = previous;
 	}
 });
 
@@ -1207,6 +1210,122 @@ test("compact 尾行：运行中外来提示行压在计数行之上，收尾后
 	}
 });
 
+test("compact 回合不跨用户消息：steer 留在原位，前后各一条摘要", () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	const first = {
+		role: "assistant",
+		timestamp: 1,
+		content: [
+			{ type: "text", text: "好的，我先跑一下 bash。" },
+			{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+		],
+	};
+	const second = {
+		role: "assistant",
+		timestamp: 2,
+		content: [{ type: "toolCall", id: "g1", name: "grep", arguments: { pattern: "Y" } }],
+	};
+	const third = {
+		role: "assistant",
+		timestamp: 3,
+		content: [{ type: "toolCall", id: "r1", name: "read", arguments: { path: "src/z.ts" } }],
+	};
+	// 直播顺序：pi 先 addChild 再 updateContent（message_start → 挂载 → 流式）。
+	try {
+		const anchor = new AssistantMessageComponent(undefined, true) as any;
+		const bash = tool("bash", "b1", { command: "one" });
+		chat.addChild(anchor);
+		chat.addChild(bash);
+		anchor.updateContent(first);
+
+		// 回合进行中插入 steer 用户消息。
+		const steer = new UserMessageComponent("顺便也看看 Y") as any;
+		chat.addChild(steer);
+
+		// steer 之后模型接着跑 grep：这条 assistant 消息没有正文。
+		const next = new AssistantMessageComponent(undefined, true) as any;
+		const grep = tool("grep", "g1", { pattern: "Y" });
+		chat.addChild(next);
+		chat.addChild(grep);
+		next.updateContent(second);
+		grep.updateDisplay?.();
+
+		// steer 排在旧回合之后、新回合之前：没被当成外来行挪到回合末尾。
+		const order = chat.children as any[];
+		assert.ok(order.indexOf(steer) > order.indexOf(bash), "steer 在旧回合之后");
+		assert.ok(order.indexOf(steer) < order.indexOf(next), "steer 在新回合之前");
+
+		const summaries = renderText(chat).filter((line) => /Ran for|Running\.\.\./.test(line));
+		assert.equal(summaries.length, 2, `两个回合各一条摘要: ${renderText(chat).join(" | ")}`);
+		assert.match(summaries[0]!, /Ran for .+bash×1/);
+		assert.doesNotMatch(summaries[0]!, /grep/);
+		assert.match(summaries[1]!, /Running\.\.\..*grep×1/);
+		assert.doesNotMatch(summaries[1]!, /bash/);
+
+		// 回合 2 还在跑时用户又提了新问题：新回合同样不把这条消息卷进来。
+		const prompt = new UserMessageComponent("再看看 Z") as any;
+		chat.addChild(prompt);
+		const later = new AssistantMessageComponent(undefined, true) as any;
+		const read = tool("read", "r1", { path: "src/z.ts" });
+		chat.addChild(later);
+		chat.addChild(read);
+		later.updateContent(third);
+
+		const after = chat.children as any[];
+		assert.ok(after.indexOf(prompt) > after.indexOf(grep), "新问题排在上一段工具之后");
+		assert.ok(after.indexOf(prompt) < after.indexOf(later), "新问题排在下一回合之前");
+		assert.ok(after.indexOf(steer) < after.indexOf(later), "steer 没被后一轮挪走");
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact 回合不跨用户消息：重放后 refresh 重新分组，边界同样成立", () => {
+	const { hooks, restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const first = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "text", text: "好的，我先跑一下 bash。" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+			],
+		};
+		const second = {
+			role: "assistant",
+			timestamp: 2,
+			content: [{ type: "toolCall", id: "g1", name: "grep", arguments: { pattern: "Y" } }],
+		};
+		// 会话重放顺序：组件构造时就带消息（updateContent 发生在挂载之前），
+		// 那一刻看不到容器里的用户消息，边界由 refresh 重新分组时补上。
+		const prompt = new UserMessageComponent("把 X 改一下") as any;
+		const anchor = new AssistantMessageComponent(first as any, true) as any;
+		const bash = tool("bash", "b1", { command: "one" });
+		const steer = new UserMessageComponent("顺便也看看 Y") as any;
+		const next = new AssistantMessageComponent(second as any, true) as any;
+		const grep = tool("grep", "g1", { pattern: "Y" });
+		for (const child of [prompt, anchor, bash, steer, next, grep]) chat.addChild(child);
+
+		hooks.refresh();
+
+		const order = chat.children as any[];
+		assert.ok(order.indexOf(steer) > order.indexOf(bash), "steer 在旧回合之后");
+		assert.ok(order.indexOf(steer) < order.indexOf(next), "steer 在新回合之前");
+		const summaries = renderText(chat).filter((line) => /Ran for|Running\.\.\./.test(line));
+		assert.equal(summaries.length, 2, `两个回合各一条摘要: ${renderText(chat).join(" | ")}`);
+		assert.match(summaries[0]!, /Ran for .+bash×1/);
+		assert.match(summaries[1]!, /Running\.\.\..*grep×1/);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
 test("compact 尾行：refresh 重建保留挂钟与收尾态，不回摆 Running", async () => {
 	const { hooks, restore } = installHooks();
 	const chat = new Container() as any;
@@ -1941,6 +2060,62 @@ test("compact folds Agent/Task tools always; no pending outer flash", () => {
 	}
 });
 
+test("compact：ask_user_question 留在外层，不进摘要，复用默认问答树", () => {
+	const previousMode = config.mode;
+	config.mode = "compact";
+	const writeMetadata = new WriteExecutionMetadataStore();
+	// default 先装，compact 才能把它的 renderPaint 当作 toolOriginalRender。
+	const defaultMode = installDefaultMode(writeMetadata);
+	const hooks = installCompactMode({ writeMetadata });
+	try {
+		const msg = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "ls" } },
+				{
+					type: "toolCall",
+					id: "ask-1",
+					name: "ask_user_question",
+					arguments: { questions: [{ question: "Which library?", header: "Library" }] },
+				},
+			],
+		} as unknown as AssistantMessage;
+		const assistant = new AssistantMessageComponent(msg, true) as any;
+		assistant.updateContent(msg);
+		const bash = tool("bash", "b1", { command: "ls" });
+		const ask = tool("ask_user_question", "ask-1", {
+			questions: [{ question: "Which library?", header: "Library" }],
+		});
+		ask.markExecutionStarted();
+		ask.updateResult({
+			content: [{ type: "text", text: "User answered" }],
+			details: {
+				cancelled: false,
+				answers: [{ questionIndex: 0, question: "Which library?", kind: "option", answer: "Read" }],
+			},
+		});
+
+		// 摘要只计 bash，ask_user_question 不进计数。
+		const summary = renderText(assistant).join("\n");
+		assert.match(summary, /bash×1/);
+		assert.doesNotMatch(summary, /ask_user_question/);
+
+		// bash 折叠进摘要，ask_user_question 留在外层，复用默认模式的问答树。
+		assert.deepEqual(renderText(bash), []);
+		const askLines = renderText(ask);
+		assert.match(askLines[0]!, /Ask User Question \(\+1\)/);
+		assert.ok(
+			askLines.some((line) => / -> Read/.test(line)),
+			`外层应渲染问答树: ${askLines.join(" | ")}`,
+		);
+	} finally {
+		hooks.shutdown();
+		defaultMode.shutdown();
+		config.mode = previousMode;
+	}
+});
+
 test("compact surfaces abort outside folded tools", () => {
 	const previousMode = config.mode;
 	config.mode = "compact";
@@ -1992,22 +2167,23 @@ test("compact surfaces abort outside folded tools", () => {
 	}
 });
 
-test("compact edit/write keeps the stats header and inherits on-mode diff limits", () => {
+test("compact edit/write：计数只在正文显示一处，0 行预览带颜色", () => {
 	const metadata = new WriteExecutionMetadataStore();
 	const previousMode = config.mode;
 	const previousTheme = getMessageDisplayTheme();
+	const previousEditCollapsed = config.editDiffCollapsedLines;
 	const previousWriteCollapsed = config.writeDiffCollapsedLines;
 	config.mode = "compact";
 	const hooks = installCompactMode({ writeMetadata: metadata });
+	const strip = (lines: string[]) =>
+		lines.map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""));
+	const EDIT_DIFF =
+		"diff --git a/a.ts b/a.ts\nindex 1..2 100644\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-old\n+new\n";
 	try {
+		// 折叠 edit：标题不带计数，0 行预览的摘要行自带 +1 -1。
+		config.editDiffCollapsedLines = 0;
 		const edit = tool("edit", "e1", { path: "a.ts" });
-		edit.updateResult({
-			content: [],
-			details: {
-				diff: "diff --git a/a.ts b/a.ts\nindex 1..2 100644\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-old\n+new\n",
-			},
-			isError: false,
-		});
+		edit.updateResult({ content: [], details: { diff: EDIT_DIFF }, isError: false });
 		assert.equal(edit.render(120)[0], "", "compact file rows keep one leading blank row");
 		const collapsedRich = edit.resultRendererComponent;
 		edit.render(120);
@@ -2016,22 +2192,37 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 			collapsedRich,
 			"collapsed rich diff is reused across frames",
 		);
-		const collapsed = renderText(edit).join("\n");
-		assert.match(collapsed, /edit a\.ts \(\+1 -1\)/);
-		assert.match(collapsed, /old/, "collapsed compact edit inherits the on-mode preview");
-		assert.match(collapsed, /new/);
+		const collapsedRaw = strip(edit.render(120));
+		const collapsed = collapsedRaw.join("\n");
+		assert.match(collapsed, /edit a\.ts/);
+		assert.doesNotMatch(collapsed, /edit a\.ts.*\(\+\d+ -\d+\)/, "标题不再重复计数");
+		assert.match(collapsed, /↳ diff \+1 -1 · .*to show more/);
 		assert.doesNotMatch(collapsed, /Input|Output|Details:/);
 
+		// 计数上色：+ 绿、- 红，其余保持 muted。
 		setMessageDisplayTheme({
-			fg: (color: string, text: string) =>
-				color === "success" || color === "error" ? `<${color}>${text}</${color}>` : text,
+			fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
 		} as any);
-		const coloredStats = edit.render(120).join("\n");
-		assert.match(coloredStats, /<success>\+1<\/success>/);
-		assert.match(coloredStats, /<error>-1<\/error>/);
+		// 主题在组件构造时固化，换主题要重新 updateResult 重建 rich diff。
+		edit.updateResult({ content: [], details: { diff: EDIT_DIFF }, isError: false });
+		const colored = edit.render(120).join("\n");
+		assert.match(colored, /<toolDiffAdded>\+1<\/toolDiffAdded>/);
+		assert.match(colored, /<toolDiffRemoved>-1<\/toolDiffRemoved>/);
 		setMessageDisplayTheme(previousTheme);
 
-		// expanded：保留标题/统计行，并复用 mode=on 的 rich diff 和展开卡背景。
+		// 多行预览同样只显示一处计数：标题无括号，diff 头行有。
+		config.editDiffCollapsedLines = 24;
+		const previewRaw = strip(edit.render(120));
+		assert.doesNotMatch(previewRaw.join("\n"), /edit a\.ts.*\(\+\d+ -\d+\)/);
+		assert.ok(
+			previewRaw.some((line) => line.includes("+1") && line.includes("-1")),
+			`多行预览的 diff 头行带计数: ${previewRaw.join(" | ")}`,
+		);
+		assert.ok(previewRaw.some((line) => line.includes("old")));
+		assert.ok(previewRaw.some((line) => line.includes("new")));
+		config.editDiffCollapsedLines = 0;
+
+		// expanded：保留标题，复用 mode=on 的 rich diff 和展开卡背景，计数仍只在正文。
 		const backgroundSlots: string[] = [];
 		const cardTheme = Object.assign(Object.create(previousTheme ?? null), {
 			fg: previousTheme?.fg ?? ((_color: string, text: string) => text),
@@ -2049,13 +2240,11 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 		assert.equal(edit.resultRendererComponent, expandedRich, "expanded rich diff is reused");
 		const expandedRaw = edit.render(120);
 		assert.equal(expandedRaw[0], "", "expanded edit keeps the gap from previous tool");
-		const titlePlain =
-			expandedRaw
-				.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
-				.find((line: string) => line.includes("edit a.ts")) ?? "";
+		const expandedPlain = strip(expandedRaw);
+		const titlePlain = expandedPlain.find((line) => line.includes("edit a.ts")) ?? "";
 		assert.match(titlePlain, /^ ✓ edit a\.ts/, "expanded title uses Box pad only");
-		const expanded = renderText(edit).join("\n");
-		assert.match(expanded, /edit a\.ts \(\+1 -1\)/);
+		assert.doesNotMatch(titlePlain, /\(\+\d+ -\d+\)/);
+		const expanded = expandedPlain.join("\n");
 		assert.match(expanded, /old/);
 		assert.match(expanded, /new/);
 		assert.doesNotMatch(expanded, /Input|Output|Details:/);
@@ -2077,7 +2266,7 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 		}
 		setMessageDisplayTheme(previousTheme);
 
-		// edit 缺 diff 时统计未知，不能伪报 (+0 -0)。
+		// edit 缺 diff 时统计未知，不能伪报 (+0 -0)，退回 Input/Output。
 		const unknownEdit = tool("edit", "e2", { path: "unknown.ts" });
 		unknownEdit.updateResult({
 			content: [{ type: "text", text: "fallback output" }],
@@ -2095,11 +2284,14 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 			"fallback IO hover keeps ToolExecutionComponent.invalidate bound",
 		);
 
-		// write 无变更成功：标题仍显示 (+0 -0)。
+		// write 折叠 0 行预览：计数在摘要行，标题不带括号。
+		config.writeDiffCollapsedLines = 0;
 		const write = tool("write", "w1", { path: "b.ts", content: "" });
 		metadata.set("w1", { fileExistedBeforeWrite: true, previousContent: "" });
 		write.updateResult({ content: [], isError: false });
-		assert.match(renderText(write).join("\n"), /write b\.ts \(\+0 -0\)/);
+		const writeCollapsed = renderText(write).join("\n");
+		assert.match(writeCollapsed, /↳ diff \+0 -0 · overwritten · .*to show more/);
+		assert.doesNotMatch(writeCollapsed, /write b\.ts.*\(\+\d+ -\d+\)/);
 
 		// write 折叠预览跟 mode=on 共用 writeDiffCollapsedLines。
 		const longWriteContent = Array.from(
@@ -2109,14 +2301,13 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 		const longWrite = tool("write", "w-limit", { path: "long.ts", content: longWriteContent });
 		metadata.set("w-limit", { fileExistedBeforeWrite: false });
 		longWrite.updateResult({ content: [], isError: false });
-		config.writeDiffCollapsedLines = 0;
 		const statsOnly = renderText(longWrite).join("\n");
-		assert.match(statsOnly, /write long\.ts \(\+40 -0\)/);
-		assert.match(statsOnly, /created/);
-		assert.match(statsOnly, /more/);
+		assert.match(statsOnly, /↳ diff \+40 -0 · created · .*to show more/);
+		assert.doesNotMatch(statsOnly, /write long\.ts.*\(\+\d+ -\d+\)/);
 		assert.doesNotMatch(statsOnly, /const value10 = 10/);
 		config.writeDiffCollapsedLines = 4;
 		const preview = renderText(longWrite).join("\n");
+		assert.match(preview, /write long\.ts \(\+40 -0\)/, "多行预览时计数回到标题");
 		assert.match(preview, /const value0 = 0/);
 		assert.doesNotMatch(preview, /const value10 = 10/);
 		config.writeDiffCollapsedLines = previousWriteCollapsed;
@@ -2163,6 +2354,7 @@ test("compact edit/write keeps the stats header and inherits on-mode diff limits
 	} finally {
 		setMessageDisplayTheme(previousTheme);
 		config.mode = previousMode;
+		config.editDiffCollapsedLines = previousEditCollapsed;
 		config.writeDiffCollapsedLines = previousWriteCollapsed;
 		hooks.shutdown();
 	}

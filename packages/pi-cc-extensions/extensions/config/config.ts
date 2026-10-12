@@ -13,11 +13,14 @@ export type CompactStyleMode = "on" | "compact" | "off";
 
 export type DiffViewMode = "auto" | "split" | "unified";
 export type DiffIndicatorMode = "bars" | "classic" | "none";
+export type FooterGitStatsMode = "working" | "branch";
+export type FooterTokenRateMode = "average" | "live";
 
 export interface ToolDisplayConfig {
 	diffViewMode: DiffViewMode;
 	diffIndicatorMode: DiffIndicatorMode;
 	diffSplitMinWidth: number;
+	/** Edit-only collapsed body lines. 0 = change counts and an expand hint. */
 	editDiffCollapsedLines: number;
 	/** Write-only collapsed body lines. 0 = `↳ created · click to show more`. */
 	writeDiffCollapsedLines: number;
@@ -57,13 +60,14 @@ export type Config = {
 	expandedCardBackground: ThemeBg;
 	expandedInputMaxLines: number;
 	expandedOutputMaxLines: number;
-	inputClip: number;
+	toolLabelClip: number;
 	useSummaryTitlesAsThinkingTitle: boolean;
 	previewLines: number;
 	animationIntervalMs: number;
 	dimThinkingText: boolean;
 	showStartupHeader: boolean;
-	scrollStepLines: number;
+	/** fullscreen：userMessage 正文首行滚出视口上沿后钉住，直到下一条指令接手。 */
+	stickyUserMessage: boolean;
 	enableSessionReference: boolean;
 	enableSubagentAutocomplete: boolean;
 	enableContextCommand: boolean;
@@ -71,7 +75,16 @@ export type Config = {
 	enableWorkingMessage: boolean;
 	enableAliases: boolean;
 	enableCustomFooter: boolean;
+	/** footer 输出速率芯片。关则不显示。 */
+	footerTokenRate: boolean;
+	/** average：整段指令墙钟平均；live：最近 1 秒瞬时速率，空档回退平均。 */
+	footerTokenRateMode: FooterTokenRateMode;
+	/** ISO 4217 显示币种。USD 时不换算。 */
+	footerCurrency: string;
+	/** 1 单位费用对应的显示币种数量。null 只换符号、不乘倍率。 */
+	footerCurrencyRate: number | null;
 	footerNerdIcons: boolean;
+	footerGitStatsMode: FooterGitStatsMode;
 	footerHiddenKeys: string[];
 	footerLine1Keys: string[];
 	footerLine2Keys: string[];
@@ -84,8 +97,10 @@ const LEGACY_CONFIG_PATH = join(AGENT_DIR, "claude-code-style.json");
 
 export const DIFF_VIEW_MODES: DiffViewMode[] = ["auto", "split", "unified"];
 export const DIFF_INDICATOR_MODES: DiffIndicatorMode[] = ["bars", "classic", "none"];
+export const FOOTER_GIT_STATS_MODES: FooterGitStatsMode[] = ["working", "branch"];
+export const FOOTER_TOKEN_RATE_MODES: FooterTokenRateMode[] = ["average", "live"];
 export const DIFF_SPLIT_MIN_WIDTH_VALUES = ["80", "100", "120", "140", "160", "180"];
-export const DIFF_COLLAPSED_LINES_VALUES = ["12", "24", "36", "48", "80", "120"];
+export const DIFF_COLLAPSED_LINES_VALUES = ["0", "12", "24", "36", "48", "80", "120"];
 /** Write collapsed presets. 0 = stats only (`+N -0` + expand hint). */
 export const WRITE_DIFF_COLLAPSED_LINES_VALUES = ["0", "4", "8", "12", "24", "36"];
 /** Presets for expanded body height — keep low options first so cycling stays TUI-friendly. */
@@ -109,11 +124,9 @@ export const EXPANDED_INPUT_MAX_LINES_VALUES = ["5", "10", "20", "40", "80"];
 /** 展开工具卡 Output 可见行数预设。 */
 export const EXPANDED_OUTPUT_MAX_LINES_VALUES = ["10", "20", "40", "80", "120"];
 /** 工具摘要里 path/command 等输入的折叠字符数；0 = 只按可用宽度截断。 */
-export const INPUT_CLIP_VALUES = ["0", "40", "60", "80", "100", "120", "160"];
+export const TOOL_LABEL_CLIP_VALUES = ["0", "40", "60", "80", "100", "120", "160"];
 export const THINKING_PREVIEW_LINES_VALUES = ["0", "1", "3", "5", "10"];
 export const THINKING_ANIMATION_INTERVAL_VALUES = ["40", "60", "90", "120", "180"];
-/** fullscreen 滚轮步进行数预设。 */
-export const SCROLL_STEP_LINES_VALUES = ["1", "2", "3", "5", "10"];
 /** Tools commonly toggled in excludeRenderers via the settings panel. */
 export const EXCLUDE_RENDERER_CANDIDATES = [
 	"bash",
@@ -142,13 +155,13 @@ export const DEFAULT_CONFIG: Config = {
 	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
-	inputClip: 0,
+	toolLabelClip: 0,
 	useSummaryTitlesAsThinkingTitle: true,
 	previewLines: 3,
 	animationIntervalMs: 90,
 	dimThinkingText: false,
 	showStartupHeader: true,
-	scrollStepLines: 3,
+	stickyUserMessage: true,
 	enableSessionReference: true,
 	enableSubagentAutocomplete: true,
 	enableContextCommand: true,
@@ -156,7 +169,12 @@ export const DEFAULT_CONFIG: Config = {
 	enableWorkingMessage: true,
 	enableAliases: true,
 	enableCustomFooter: true,
+	footerTokenRate: true,
+	footerTokenRateMode: "average",
+	footerCurrency: "USD",
+	footerCurrencyRate: null,
 	footerNerdIcons: true,
+	footerGitStatsMode: "working",
 	...DEFAULT_FOOTER_CHIP_LAYOUT,
 };
 
@@ -172,15 +190,28 @@ export function pickPositiveInt(value: unknown, fallback: number, min = 1, max =
 	return Math.min(max, Math.max(min, Math.floor(n)));
 }
 
-/** inputClip：0 表示按宽度自适应，其余夹到 8..500。 */
-export function pickInputClip(value: unknown): number {
+/** toolLabelClip：0 表示按宽度自适应，其余夹到 8..500。 */
+export function pickToolLabelClip(value: unknown): number {
 	const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-	return n === 0 ? 0 : pickPositiveInt(value, DEFAULT_CONFIG.inputClip, 8, 500);
+	return n === 0 ? 0 : pickPositiveInt(value, DEFAULT_CONFIG.toolLabelClip, 8, 500);
 }
 
 export function pickPositiveNumber(value: unknown, fallback: number, min = 1): number {
 	const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
 	return Number.isFinite(n) ? Math.max(min, n) : fallback;
+}
+
+function normalizeCurrency(value: unknown): string {
+	return typeof value === "string" && /^[A-Za-z]{3}$/.test(value.trim())
+		? value.trim().toUpperCase()
+		: "USD";
+}
+
+/** 缺失、空串、非正数都视为不换算。 */
+function normalizeFooterCurrencyRate(value: unknown): number | null {
+	if (value === undefined || value === null || value === "") return null;
+	const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+	return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 export function normalizeConfig(input: unknown): Config {
@@ -213,7 +244,7 @@ export function normalizeConfig(input: unknown): Config {
 		editDiffCollapsedLines: pickPositiveInt(
 			source.editDiffCollapsedLines,
 			DEFAULT_CONFIG.editDiffCollapsedLines,
-			1,
+			0,
 			500,
 		),
 		writeDiffCollapsedLines: pickPositiveInt(
@@ -246,7 +277,9 @@ export function normalizeConfig(input: unknown): Config {
 			1,
 			5_000,
 		),
-		inputClip: pickInputClip(source.inputClip),
+		toolLabelClip: pickToolLabelClip(
+			source.toolLabelClip ?? source.inputClip, // 兼容旧配置键
+		),
 		useSummaryTitlesAsThinkingTitle: source.useSummaryTitlesAsThinkingTitle !== false,
 		previewLines: pickPositiveInt(
 			source.previewLines,
@@ -260,7 +293,7 @@ export function normalizeConfig(input: unknown): Config {
 		),
 		dimThinkingText: source.dimThinkingText === true,
 		showStartupHeader: source.showStartupHeader !== false,
-		scrollStepLines: pickPositiveInt(source.scrollStepLines, DEFAULT_CONFIG.scrollStepLines, 1, 50),
+		stickyUserMessage: source.stickyUserMessage !== false,
 		enableSessionReference: source.enableSessionReference !== false,
 		enableSubagentAutocomplete: source.enableSubagentAutocomplete !== false,
 		enableContextCommand: source.enableContextCommand !== false,
@@ -268,7 +301,20 @@ export function normalizeConfig(input: unknown): Config {
 		enableWorkingMessage: source.enableWorkingMessage !== false,
 		enableAliases: source.enableAliases !== false,
 		enableCustomFooter: source.enableCustomFooter !== false,
+		footerTokenRate: source.footerTokenRate !== false,
+		footerTokenRateMode: pickEnum(
+			source.footerTokenRateMode,
+			FOOTER_TOKEN_RATE_MODES,
+			DEFAULT_CONFIG.footerTokenRateMode,
+		),
+		footerCurrency: normalizeCurrency(source.footerCurrency),
+		footerCurrencyRate: normalizeFooterCurrencyRate(source.footerCurrencyRate),
 		footerNerdIcons: source.footerNerdIcons !== false,
+		footerGitStatsMode: pickEnum(
+			source.footerGitStatsMode,
+			FOOTER_GIT_STATS_MODES,
+			DEFAULT_CONFIG.footerGitStatsMode,
+		),
 		...normalizeFooterChipLayout(source),
 	};
 }
@@ -310,13 +356,13 @@ export function formatConfigStatus(source: Config = config): string {
 		`expandedMax=${source.expandedPreviewMaxLines}`,
 		`expandedInput=${source.expandedInputMaxLines}`,
 		`expandedOutput=${source.expandedOutputMaxLines}`,
-		`inputClip=${source.inputClip}`,
+		`toolLabelClip=${source.toolLabelClip}`,
 		`thinkingTitle=${source.useSummaryTitlesAsThinkingTitle ? "summary" : "default"}`,
 		`thinkingPreview=${source.previewLines}`,
 		`thinkingAnimation=${source.animationIntervalMs}ms`,
 		`thinkingDim=${source.dimThinkingText ? "on" : "off"}`,
 		`startupHeader=${source.showStartupHeader ? "on" : "off"}`,
-		`scrollStep=${source.scrollStepLines}`,
+		`stickyUserMessage=${source.stickyUserMessage ? "on" : "off"}`,
 		`sessionRef=${source.enableSessionReference ? "on" : "off"}`,
 		`subagentAuto=${source.enableSubagentAutocomplete ? "on" : "off"}`,
 		`context=${source.enableContextCommand ? "on" : "off"}`,
@@ -324,7 +370,12 @@ export function formatConfigStatus(source: Config = config): string {
 		`workingMsg=${source.enableWorkingMessage ? "on" : "off"}`,
 		`aliases=${source.enableAliases ? "on" : "off"}`,
 		`footer=${source.enableCustomFooter ? "on" : "off"}`,
+		`footerTokenRate=${source.footerTokenRate ? "on" : "off"}`,
+		`footerTokenRateMode=${source.footerTokenRateMode}`,
+		`footerCurrency=${source.footerCurrency}`,
+		`footerRate=${source.footerCurrencyRate ?? "-"}`,
 		`footerIcons=${source.footerNerdIcons ? "nerd" : "plain"}`,
+		`footerGitStats=${source.footerGitStatsMode}`,
 		formatFooterChipSummary(source),
 	].join(" · ");
 }

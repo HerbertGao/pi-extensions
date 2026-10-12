@@ -20,14 +20,14 @@ import {
 	toolCallSummary,
 } from "./names.ts";
 import { showMoreHintText } from "./show-more-hint.ts";
-import { headTruncateToWidth, toolViewportWidth } from "./result.ts";
+import { formatToolDuration, headTruncateToWidth, toolViewportWidth } from "./result.ts";
 
 export const CODEMODE_TOOL_NAME = "codemode";
 
 /** 折叠态最多列几条子调用（与 pi 原生一致，更早的折叠成一行）。 */
 const COLLAPSED_CALL_LIMIT = 8;
-/** 折叠态正文缩进，与 `   ↳ …` 对齐。 */
-const INDENT = "   ";
+/** 折叠态正文缩进：1 格，让 ├/└ 落在标题行勾号（" ✓"）的正下方。 */
+const INDENT = " ";
 
 /** 脚本结果头；只有整块正文恰好等于它时才算头。 */
 const SCRIPT_HEADER = /^Script (completed|failed)\nWall time [\d.]+ seconds\nOutput:\n$/;
@@ -94,10 +94,6 @@ function fitSummaryParts(parts: readonly string[], width: number): string {
 	return visibleWidth(text) <= width ? text : headTruncateToWidth(text, width);
 }
 
-function formatDuration(ms: number): string {
-	return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
-}
-
 /** 与 pi 原生一致：不到 1 分显示两位有效数字。 */
 function formatCost(cost: number): string {
 	return `$${cost >= 0.01 ? cost.toFixed(2) : cost.toPrecision(2)}`;
@@ -108,7 +104,7 @@ function callMeta(call: CodemodeNestedCall): string[] {
 	const out: string[] = [];
 	const duration = call?.durationMs;
 	if (typeof duration === "number" && Number.isFinite(duration) && duration >= 0) {
-		out.push(formatDuration(duration));
+		out.push(formatToolDuration(duration));
 	}
 	const cost = call?.cost;
 	if (typeof cost === "number" && Number.isFinite(cost) && cost > 0) out.push(formatCost(cost));

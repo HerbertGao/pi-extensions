@@ -1,17 +1,12 @@
 #!/bin/sh
-# 本地开发运行器（macOS/Linux）：临时用当前检出的目录替换 npm 安装的扩展，
-# 退出后还原成进入前的状态。Windows 用 test.bat；只想跑一次且不改配置用 pi -e .。
-# 用法：./test.sh [pi 的参数...]
 set -u
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 npm_source='npm:@herbertgao/pi-cc-extensions'
 
-# pi 用 PI_CODING_AGENT_DIR 覆盖配置目录，默认 ~/.pi/agent
 agent_dir=${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}
 settings=$agent_dir/settings.json
 
-# 配置里的包来源，一行一条；字符串项直接取，对象项取 source。
 sources_script='
 	const fs = require("node:fs");
 	let raw = {};
@@ -30,21 +25,24 @@ configured_sources() {
 	node -e "$sources_script" "$settings"
 }
 
-# 进入前的状态，输出 "hadNpm hadLocal"。本地配置以相对 agentDir 的路径存储，
-# 按词法绝对化比较（不解析符号链接），与 test.ps1 的 GetFullPath 口径一致。
 detect_script='
 	const fs = require("node:fs");
 	const path = require("node:path");
 	const [settings, agentDir, repoDir, npmSource] = process.argv.slice(1);
-	let sources = [];
-	try {
-		const raw = JSON.parse(fs.readFileSync(settings, "utf8")) ?? {};
-		sources = (Array.isArray(raw.packages) ? raw.packages : [])
-			.map((item) => (typeof item === "string" ? item : item?.source))
-			.filter((source) => typeof source === "string");
-	} catch {
-		sources = [];
+	if (!fs.existsSync(settings)) {
+		console.log("0 0");
+		process.exit(0);
 	}
+	let raw;
+	try {
+		raw = JSON.parse(fs.readFileSync(settings, "utf8"));
+	} catch {
+		console.error("invalid settings: " + settings);
+		process.exit(1);
+	}
+	const sources = (Array.isArray(raw?.packages) ? raw.packages : [])
+		.map((item) => (typeof item === "string" ? item : item?.source))
+		.filter((source) => typeof source === "string");
 	const isLocal = (source) => {
 		if (source.startsWith("npm:")) return false;
 		const candidate = path.resolve(agentDir, source);
@@ -62,7 +60,7 @@ command -v pi >/dev/null 2>&1 || {
 	exit 127
 }
 
-state=$(node -e "$detect_script" "$settings" "$agent_dir" "$repo_dir" "$npm_source")
+state=$(node -e "$detect_script" "$settings" "$agent_dir" "$repo_dir" "$npm_source") || exit 1
 had_npm=${state%% *}
 had_local=${state##* }
 

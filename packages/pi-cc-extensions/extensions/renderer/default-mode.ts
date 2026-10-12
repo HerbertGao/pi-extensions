@@ -15,11 +15,13 @@ import {
 } from "../utils/patch-keys.ts";
 import { isToolCallHovered } from "./mouse/hover.ts";
 import {
-	countLines,
+	collapsedResultSummary,
+	formatToolDuration,
 	hasExpandableDetail,
 	insetComponent,
+	isExpandedToolIoView,
+	isLiveToolCall,
 	isToolExpanded,
-	outputLineCount,
 	pendingIcon,
 	renderCollapsedToolResultToWidth,
 	renderExpandedToolResult,
@@ -31,20 +33,26 @@ import {
 	toolIconColor,
 	toolViewportWidth,
 } from "./tool/result.ts";
-import { oneLine } from "../utils/format.ts";
 import { showMoreHintText } from "./tool/show-more-hint.ts";
+import {
+	ASK_USER_QUESTION_TOOL_NAME,
+	askUserExpandedBody,
+	askUserQuestionCount,
+	createAskUserResultComponent,
+} from "./tool/ask-user-question.ts";
 import {
 	CODEMODE_TOOL_NAME,
 	codemodeExpandedBody,
 	createCodemodeResultComponent,
 } from "./tool/codemode.ts";
-import { countWriteDiffStats } from "./tool/diff/diff-renderer.ts";
+import { countWriteDiffStats, writeStatsInCollapsedBody } from "./tool/diff/diff-renderer.ts";
 import { renderRichToolResult, type WriteExecutionMetadataStore } from "./tool/diff/index.ts";
 import { getMessageDisplayTheme } from "./tool/message-display.ts";
 import { mcpToolTitle } from "./tool/mcp-title.ts";
 import {
 	fitToolCallSummary,
 	humanizeToolLabel,
+	SHELL_TOOL_NAMES,
 	renderToolSummary,
 	toolCallSummary,
 } from "./tool/names.ts";
@@ -95,6 +103,9 @@ type GlobalToolRenderPatch = {
 	renderPaint?: (width: number) => string[];
 	invalidatePaint?: () => void;
 	paintCache?: WeakMap<object, ToolPaintHit>;
+	/** 给渲染上下文补 result；卸下时还原。 */
+	originalGetRenderContext?: (...args: any[]) => any;
+	getRenderContext?: (this: any, ...args: any[]) => any;
 };
 
 type ToolExpandedBackgroundPatch = {
@@ -213,6 +224,35 @@ function renderExpandedTaskResult(
 	return formatted ? new Text(`↳ ${formatted}`, 0, 0) : undefined;
 }
 
+/**
+ * shell 的耗时文本。Pi 原生 shell 渲染器会在结果底部报一行，ccstyle 的通用折叠行把它盖掉了。
+ *
+ * 两条路都要：新 Pi 在渲染上下文里给 `durationMs`（单调，restore 出来的行也带得到），优先用它；
+ * 当前宿主只把它留在工具结果上，渲染上下文补丁会把整份结果挂到 `context.result`。
+ * 都拿不到再退回自己的时钟——开始时间在 renderCall 记，结束时间在结果定型时定一次。
+ * 运行中的实时计时也只能走时钟。
+ */
+function recordedShellDurationMs(context: any): number | undefined {
+	for (const value of [context?.durationMs, context?.result?.durationMs]) {
+		if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
+	}
+	return undefined;
+}
+
+function shellDurationText(toolName: string, context: any, isPartial: boolean): string {
+	if (!SHELL_TOOL_NAMES.has(toolName)) return "";
+	const recorded = recordedShellDurationMs(context);
+	if (!isPartial && recorded !== undefined) {
+		return formatToolDuration(recorded);
+	}
+	const startedAt = context?.state?.ccstyleShellStartedAt;
+	if (typeof startedAt !== "number") return "";
+	const endedAt = context?.state?.ccstyleShellEndedAt;
+	const end = typeof endedAt === "number" ? endedAt : Date.now();
+	// 时钟回拨时别吐负数；快照固定时钟也会走到这。
+	return formatToolDuration(Math.max(0, end - startedAt));
+}
+
 /** 用 ccstyle call/result 包装任意工具定义。 */
 function createCcstyleTool(
 	originalTool: any,
@@ -232,11 +272,24 @@ function createCcstyleTool(
 				return renderDefault(originalTool, "renderCall", [args, theme, context], String(toolName));
 			}
 
+			// shell 的耗时从执行开始算；restore 出来的行没有 executionStarted，不参与。
+			if (
+				SHELL_TOOL_NAMES.has(toolName) &&
+				context?.executionStarted &&
+				context.state &&
+				context.state.ccstyleShellStartedAt === undefined
+			) {
+				context.state.ccstyleShellStartedAt = Date.now();
+			}
+
 			const visualState = resolveToolVisualState(context);
 			const isPending =
 				visualState === "pending" ||
 				(!visualState && (context?.isPartial || context?.executionStarted));
-			const animating = isPending && Boolean(context?.executionStarted);
+			// 等待窗口（声明流式中或等待派发）也要转：Pi 要到 assistant 消息结束
+			// 才派发执行，这段只靠 executionStarted 会一直冻在第一帧。
+			const animating =
+				isPending && (Boolean(context?.executionStarted) || isLiveToolCall(context?.toolCallId));
 			if (animating) scheduleAnimation(context, { light: true });
 			const settledRawIcon = isPending ? "" : settledIcon(toolName, visualState);
 			const settledIconStyled =
@@ -251,9 +304,23 @@ function createCcstyleTool(
 				variant: "default",
 				cwd: context?.cwd,
 			});
+			// ask_user_question：问题原文在折叠结果树里逐条列出，标题只留工具名和问题数，
+			// 否则第一个问题会在标题和树里各出现一次。
+			if (toolName === ASK_USER_QUESTION_TOOL_NAME) {
+				// Pi 的渲染上下文不带 result，问题数从这里取。
+				const questionCount = askUserQuestionCount(context?.result, args);
+				summary.main = title;
+				summary.detail = questionCount === undefined ? "" : ` (+${questionCount})`;
+				summary.payload = undefined;
+			}
 			let writeStatsText = "";
 			let writeStatsStyled = "";
-			if (toolName === "write" && visualState === "success") {
+			// 折叠 0 行预览时计数由正文那行（↳ diff +A -D · created …）显示，标题不重复。
+			const statsInBody = writeStatsInCollapsedBody(
+				Boolean(context?.expanded),
+				getToolDisplayConfig(),
+			);
+			if (toolName === "write" && visualState === "success" && !statsInBody) {
 				const meta = writeExecutionMetadata.get(context?.toolCallId);
 				const stats = countWriteDiffStats(
 					typeof args?.content === "string" ? args.content : undefined,
@@ -336,11 +403,62 @@ function createCcstyleTool(
 					isHovered: () => isToolCallHovered(toolCallId),
 				});
 			}
-			if (options?.isPartial) {
-				// 展开态贴左（Box 提供 1 格 pad）；折叠态保持 3 格对齐标题
-				const pending = expanded ? "↳ Pending…" : "   ↳ Pending…";
-				return new Text(theme.fg("muted", pending), 0, 0);
+			// ask_user_question：折叠态摊成问答树，展开态按问题逐条列出选择。
+			if (toolName === ASK_USER_QUESTION_TOOL_NAME) {
+				if (!options?.isPartial) setToolVisualState(context, isError ? "error" : "success");
+				if (options?.isPartial) {
+					// 折叠态 1 格缩进：与完成后的 ├/└ 对齐标题行的勾。
+					const pending = expanded ? "↳ Pending…" : " ↳ Pending…";
+					return new Text(theme.fg("muted", pending), 0, 0);
+				}
+				if (expanded) {
+					return renderExpandedToolResult(
+						askUserExpandedBody(result),
+						theme,
+						isError,
+						context?.lastComponent,
+						context?.args,
+						context,
+						true,
+					);
+				}
+				if (context?.state) context.state.ccstyleIoView = undefined;
+				const toolCallId = context?.toolCallId;
+				return createAskUserResultComponent({
+					result,
+					theme,
+					isError,
+					isHovered: () => isToolCallHovered(toolCallId),
+				});
 			}
+			if (options?.isPartial) {
+				// 折叠态保持 3 格：与完成后的 `   ↳ …` 同列，工具跑完那行不横跳。
+				// 展开态贴左（Box 提供 1 格 pad）。
+				const pending = expanded ? "↳ Pending…" : "   ↳ Pending…";
+				if (!SHELL_TOOL_NAMES.has(toolName)) {
+					return new Text(theme.fg("muted", pending), 0, 0);
+				}
+				// shell 运行中报已用时间：数字在 render() 内取，动画 tick 才能带上新值。
+				return {
+					render(width: number) {
+						const elapsed = shellDurationText(toolName, context, true);
+						const suffix = elapsed ? theme.fg("dim", ` · ${elapsed}`) : "";
+						return [truncateToWidth(theme.fg("muted", pending) + suffix, width, "")];
+					},
+					invalidate(): void {},
+				};
+			}
+
+			// shell：结果定型时定一次结束时间，这一行之后不再变。
+			if (
+				SHELL_TOOL_NAMES.has(toolName) &&
+				context?.state &&
+				context.state.ccstyleShellEndedAt === undefined
+			) {
+				context.state.ccstyleShellEndedAt = Date.now();
+			}
+			// 折叠行接在摘要后，展开态接在 Output 正文后（原生也是在结果底部报一行）。
+			const duration = shellDurationText(toolName, context, false);
 
 			setToolVisualState(context, isError ? "error" : "success");
 			const toolCallId = context?.toolCallId;
@@ -371,26 +489,16 @@ function createCcstyleTool(
 				if (taskResult) return taskResult;
 			}
 			const tasks = !isError && toolName === "TaskList" ? parseTaskList(text) : [];
-			const outputLines = outputLineCount(result) || countLines(text);
-			const lineWord = outputLines === 1 ? "line" : "lines";
-			const action = toolName === "read" ? "loaded" : "returned";
 			const rendered = tasks.length
 				? taskListSummary(tasks)
-				: isError
-					? text
-						? // 72 与原 result.ts 默认一致，保持错误摘要截断宽度。
-							oneLine(text, 72)
-						: "Failed"
-					: outputLines
-						? `${outputLines} ${lineWord} ${action}`
-						: "Done";
+				: collapsedResultSummary({ result, toolName, text, isError });
 			const expandable = !expanded && (tasks.length > 0 || hasExpandableDetail(text, args));
 			const hintText = showMoreHintText();
 			const hintPrefix = expandable ? theme.fg("dim", " · ") : "";
 			const hint = expandable ? hintPrefix + theme.fg("dim", hintText) : "";
 			const hoveredHint = expandable ? hintPrefix + theme.fg("text", hintText) : "";
 			if (expanded) {
-				return renderExpandedToolResult(
+				const view = renderExpandedToolResult(
 					text || "",
 					theme,
 					Boolean(isError),
@@ -399,8 +507,14 @@ function createCcstyleTool(
 					context,
 					true, // mode=on：贴左，由外层 Box(1,1) 提供 1 格 padding
 				);
+				// 尾部附注只能挂在 IoView 上：鼠标层按对象识别它，包一层会断掉命中。
+				// 与折叠态保持同一写法：裸值，不写 Took。
+				if (isExpandedToolIoView(view)) view.setFooter(duration || undefined);
+				return view;
 			}
 			if (context?.state) context.state.ccstyleIoView = undefined;
+			// 折叠态的耗时接在摘要后、展开提示前（提示必须留在行尾供鼠标层识别）。
+			const body = duration ? `${rendered}${theme.fg("dim", ` · ${duration}`)}` : rendered;
 			let cachedWidth: number | undefined;
 			let cachedLine: string | undefined;
 			let cachedHoveredLine: string | undefined;
@@ -410,11 +524,11 @@ function createCcstyleTool(
 						cachedWidth = width;
 						cachedLine = theme.fg(
 							isError ? "error" : "muted",
-							renderCollapsedToolResultToWidth(rendered, hint, width),
+							renderCollapsedToolResultToWidth(body, hint, width),
 						);
 						cachedHoveredLine = theme.fg(
 							isError ? "error" : "muted",
-							renderCollapsedToolResultToWidth(rendered, hoveredHint, width),
+							renderCollapsedToolResultToWidth(body, hoveredHint, width),
 						);
 					}
 					return [isToolCallHovered(toolCallId) ? cachedHoveredLine! : cachedLine];
@@ -566,6 +680,10 @@ function installGlobalToolRendering(
 		previous?.originalInvalidate && prototype.invalidate === previous.invalidatePaint
 			? previous.originalInvalidate
 			: prototype.invalidate;
+	const originalGetRenderContext =
+		previous?.originalGetRenderContext && prototype.getRenderContext === previous.getRenderContext
+			? previous.originalGetRenderContext
+			: prototype.getRenderContext;
 	if (isOwnershipAwarePatch(previous)) disconnectGlobalToolRenderPatch(previous);
 
 	const patch: GlobalToolRenderPatch = {
@@ -581,6 +699,7 @@ function installGlobalToolRendering(
 		installed: undefined as any,
 		originalRender,
 		originalInvalidate,
+		originalGetRenderContext,
 		paintCache: new WeakMap(),
 	};
 
@@ -618,6 +737,13 @@ function installGlobalToolRendering(
 	prototype.getRenderShell = patch.installed.getRenderShell;
 	prototype.getCallRenderer = patch.installed.getCallRenderer;
 	prototype.getResultRenderer = patch.installed.getResultRenderer;
+	// 渲染上下文没有 result。ask_user_question 的标题要报问题数，只能从这里补。
+	patch.getRenderContext = function (this: any, ...args: any[]) {
+		const context = originalGetRenderContext.apply(this, args);
+		if (context && typeof context === "object") context.result = this.result;
+		return context;
+	};
+	prototype.getRenderContext = patch.getRenderContext;
 	// fullscreen 滚动/选区每帧整树 render；内容未变时复用上一帧行，避免重做 diff/Box。
 	patch.renderPaint = function (this: any, width: number): string[] {
 		if (!patch.active || patch.mode() === "off") {
@@ -626,8 +752,11 @@ function installGlobalToolRendering(
 		const cache = patch.paintCache;
 		// A running partial tool owns a time-varying spinner. Light animation ticks
 		// request a repaint without invalidating the component, so settled-content
-		// caching must not intercept those paints.
-		const cacheable = !(this.executionStarted && this.isPartial);
+		// caching must not intercept those paints. The waiting window before the
+		// tool is dispatched animates too, so it must bypass the cache as well.
+		const animatingRow =
+			this.isPartial && (this.executionStarted || isLiveToolCall(this.toolCallId));
+		const cacheable = !animatingRow;
 		const hit = cacheable ? cache?.get(this) : undefined;
 		if (hit && toolPaintMatches(hit, this, width)) return hit.lines;
 		const lines = originalRender.call(this, width);
@@ -682,6 +811,13 @@ function deactivateGlobalToolRendering(patch: GlobalToolRenderPatch): void {
 		patch.originalInvalidate
 	) {
 		prototype.invalidate = patch.originalInvalidate;
+	}
+	if (
+		patch.getRenderContext &&
+		prototype.getRenderContext === patch.getRenderContext &&
+		patch.originalGetRenderContext
+	) {
+		prototype.getRenderContext = patch.originalGetRenderContext;
 	}
 }
 

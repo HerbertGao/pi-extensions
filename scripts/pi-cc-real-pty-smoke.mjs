@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { parseNpmPackOutput } from "./npm-pack-json.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const aggregateDir = join(root, "packages", "pi-extensions")
@@ -1287,7 +1288,6 @@ async function main() {
             excludeRenderers: [],
             previewLines: 3,
             showStartupHeader: false,
-            scrollStepLines: 3,
           },
           null,
           2,
@@ -1345,12 +1345,8 @@ async function main() {
       "npm pack reported TAR_ENTRY_ERROR",
       packResult.stderr,
     )
-    const packJson = JSON.parse(packResult.stdout)
-    assert(
-      Array.isArray(packJson) && packJson[0]?.filename,
-      "Invalid npm pack --json output",
-    )
-    const tarballPath = join(stageDir, packJson[0].filename)
+    const packed = parseNpmPackOutput(packResult.stdout, "npm pack output")
+    const tarballPath = join(stageDir, packed.filename)
     await access(tarballPath)
 
     const installOne = join(stageDir, "install-1")

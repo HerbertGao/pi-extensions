@@ -5,9 +5,9 @@ import { config } from "../../config/config.ts";
 import { oneLine } from "../../utils/format.ts";
 import { headTruncateToWidth } from "./result.ts";
 
-/** inputClip=0 时不设字符上限，交给渲染时的实际宽度截断。 */
+/** toolLabelClip=0 时不设字符上限，交给渲染时的实际宽度截断。 */
 function clipLimit(): number {
-	return config.inputClip > 0 ? config.inputClip : Number.POSITIVE_INFINITY;
+	return config.toolLabelClip > 0 ? config.toolLabelClip : Number.POSITIVE_INFINITY;
 }
 
 function clip(value: unknown): string {
@@ -157,7 +157,7 @@ function pathSummary(
 }
 
 /** 入参是 shell 命令的工具。 */
-const SHELL_TOOL_NAMES = new Set(["bash", "powershell", "pwsh", "sh", "zsh", "cmd"]);
+export const SHELL_TOOL_NAMES = new Set(["bash", "powershell", "pwsh", "sh", "zsh", "cmd"]);
 
 /** 内置检索工具：pattern 缺失（无效调用）时保留 "…" 占位。 */
 const SEARCH_TOOL_NAMES = new Set(["grep", "find"]);

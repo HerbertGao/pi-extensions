@@ -11,7 +11,12 @@ import {
 	applyCustomFooter,
 	clearCustomFooter,
 	getFooterStatusSnapshot,
+	refreshFooterGitStats,
 } from "../feature/shell/footer.ts";
+import {
+	FOOTER_CURRENCY_PRESETS,
+	presetFooterCurrencyRate,
+} from "../feature/shell/footer-currency.ts";
 import {
 	footerChipDescription,
 	footerLineOfKey,
@@ -37,21 +42,24 @@ import {
 	EXPANDED_INPUT_MAX_LINES_VALUES,
 	EXPANDED_OUTPUT_MAX_LINES_VALUES,
 	EXPANDED_PREVIEW_MAX_LINES_VALUES,
+	FOOTER_GIT_STATS_MODES,
+	FOOTER_TOKEN_RATE_MODES,
 	formatExcludeRenderers,
 	getCompactThinkingConfig,
-	pickInputClip,
 	pickPositiveInt,
 	pickPositiveNumber,
-	SCROLL_STEP_LINES_VALUES,
+	pickToolLabelClip,
 	THINKING_ANIMATION_INTERVAL_VALUES,
 	THINKING_PREVIEW_LINES_VALUES,
-	INPUT_CLIP_VALUES,
+	TOOL_LABEL_CLIP_VALUES,
 	WRITE_DIFF_COLLAPSED_LINES_VALUES,
 	updateConfig,
 	type CompactStyleMode,
 	type Config,
 	type DiffIndicatorMode,
 	type DiffViewMode,
+	type FooterGitStatsMode,
+	type FooterTokenRateMode,
 } from "./config.ts";
 
 /** renderer 注入的渲染副作用，面板自身不触碰渲染状态。 */
@@ -62,7 +70,7 @@ export type CcstylePanelHooks = {
 
 function modeSettingDescription(mode: CompactStyleMode): string {
 	if (mode === "compact") {
-		return "(Experimental) One summary line per assistant round; edit/write reuse the same Diff preview settings as on.";
+		return "One summary line per assistant round; edit/write reuse the same Diff preview settings as on.";
 	}
 	if (mode === "off") {
 		return "Pi native tool rendering. Diff options below still apply independently.";
@@ -79,6 +87,24 @@ function excludeRenderersDescription(names: readonly string[]): string {
 function customFooterDescription(enabled: boolean): string {
 	if (!enabled) return "Pi native footer restored. Chip layout below still applies when turned on.";
 	return "Custom status bar with model, context, cache, cost, git, and plugin chips.";
+}
+
+function footerTokenRateDescription(enabled: boolean): string {
+	return enabled
+		? "Output rate chip after the cache hit rate. Turn off to hide it."
+		: "Output rate chip hidden.";
+}
+
+function footerTokenRateModeDescription(mode: FooterTokenRateMode): string {
+	return mode === "live"
+		? "Sliding 1s rate while generating (live). Tool waits are excluded. Falls back to the run average between chunks and after the prompt."
+		: "Average over the whole user prompt (avg), including tool waits. Stays until the next prompt.";
+}
+
+function footerGitStatsDescription(mode: FooterGitStatsMode): string {
+	return mode === "branch"
+		? "Net changes since the merge base, including uncommitted edits. Base: origin/HEAD, then local main/master. Untracked files excluded; unavailable stats hidden."
+		: "Uncommitted net changes relative to HEAD (default). Includes staged and unstaged edits; excludes untracked files.";
 }
 
 function pluginChipsDescription(): string {
@@ -281,10 +307,22 @@ function buildExcludeRenderersSubmenu(
 	};
 }
 
-/** 数值项手动输入子面板：预填当前值，Space 循环预设，输入数字自定义，Enter 应用，Esc 取消。 */
-function buildNumberInputSubmenu(
+function footerCurrencyRateLabel(rate: number | null): string {
+	return rate === null ? "-" : String(rate);
+}
+
+/**
+ * 手动输入子面板。accept 返回字符串则提交，undefined 取消，null 用 invalid 提示。
+ */
+function buildValueInputSubmenu(
 	theme: any,
-	setting: { label: string; values: readonly string[]; currentValue: string },
+	options: {
+		prompt: string;
+		initial: string;
+		hint: string;
+		accept: (raw: string) => string | null | undefined;
+		invalid?: (raw: string) => string;
+	},
 	closeSubmenu: (selected?: string) => void,
 ): {
 	render: (width: number) => string[];
@@ -293,27 +331,28 @@ function buildNumberInputSubmenu(
 } {
 	const input = new Input();
 	let error = "";
-	input.setValue(setting.currentValue);
+	input.setValue(options.initial);
 	input.onSubmit = (value: string) => {
 		const raw = value.trim();
-		if (raw === "") {
-			closeSubmenu(); // 空输入 = 取消
+		const next = options.accept(raw);
+		if (next === undefined) {
+			closeSubmenu();
 			return;
 		}
-		if (!Number.isFinite(Number(raw))) {
-			error = `Invalid number: "${raw}"`;
+		if (next === null) {
+			error = options.invalid?.(raw) ?? "Invalid value";
 			return;
 		}
-		closeSubmenu(raw);
+		closeSubmenu(next);
 	};
 	input.onEscape = () => closeSubmenu();
 	return {
 		render: (width: number) => {
 			const safe = Math.max(0, Math.floor(width));
 			const lines = [
-				theme.fg("dim", `  ${setting.label} — custom value:`),
+				theme.fg("dim", options.prompt),
 				...input.render(safe),
-				truncateToWidth(theme.fg("dim", "  Enter to apply · Esc to go back"), safe),
+				truncateToWidth(theme.fg("dim", options.hint), safe),
 			];
 			if (error !== "") lines.push(theme.fg("dim", `  ${error}`));
 			return lines;
@@ -321,6 +360,25 @@ function buildNumberInputSubmenu(
 		invalidate: () => {},
 		handleInput: (data: string) => input.handleInput(data),
 	};
+}
+
+/** 数值项：预填当前值，空输入取消，非数字留下错误。 */
+function buildNumberInputSubmenu(
+	theme: any,
+	setting: { label: string; currentValue: string },
+	closeSubmenu: (selected?: string) => void,
+) {
+	return buildValueInputSubmenu(
+		theme,
+		{
+			prompt: `  ${setting.label} — custom value:`,
+			initial: setting.currentValue,
+			hint: "  Enter to apply · Esc to go back",
+			accept: (raw) => (raw === "" ? undefined : Number.isFinite(Number(raw)) ? raw : null),
+			invalid: (raw) => `Invalid number: "${raw}"`,
+		},
+		closeSubmenu,
+	);
 }
 
 /** Section tabs for /ccstyle — matches Zentui-style "A / B / C" headers. */
@@ -378,8 +436,8 @@ export async function showCcstylePanel(
 			id: "mode",
 			label: "Mode",
 			description: modeSettingDescription(config.mode),
-			currentValue: config.mode === "compact" ? "compact (Experimental)" : config.mode,
-			values: ["on", "compact (Experimental)", "off"],
+			currentValue: config.mode,
+			values: ["on", "compact", "off"],
 		};
 		// Tracks whether a nested submenu is open so Tab switches sections
 		// only at the top level (mirrors Zentui settings: Tab = switch sections).
@@ -409,15 +467,15 @@ export async function showCcstylePanel(
 				);
 			},
 		};
-		const inputClipSetting = {
-			id: "inputClip",
-			label: "Input clip",
+		const toolLabelClipSetting = {
+			id: "toolLabelClip",
+			label: "Tool label clip",
 			description:
 				"Max characters for path/command/name in single and grouped tool summaries; 0 fits available width. Enter to type a custom value.",
-			currentValue: String(config.inputClip),
-			values: [...INPUT_CLIP_VALUES],
+			currentValue: String(config.toolLabelClip),
+			values: [...TOOL_LABEL_CLIP_VALUES],
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
-				buildNumberInputSubmenu(theme, inputClipSetting, closeSubmenu),
+				buildNumberInputSubmenu(theme, toolLabelClipSetting, closeSubmenu),
 		};
 		const diffViewSetting = {
 			id: "diffViewMode",
@@ -447,7 +505,7 @@ export async function showCcstylePanel(
 			id: "editDiffCollapsedLines",
 			label: "Edit collapsed lines",
 			description:
-				"How many edit/diff body lines to show before the expand hint (Ctrl+O / click). Write uses its own setting below.",
+				"Edit diff body lines before the expand hint (Ctrl+O / click). 0 shows only change counts and the hint.",
 			currentValue: String(config.editDiffCollapsedLines),
 			values: [...DIFF_COLLAPSED_LINES_VALUES],
 			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
@@ -551,14 +609,14 @@ export async function showCcstylePanel(
 			currentValue: config.showStartupHeader ? "on" : "off",
 			values: ["on", "off"],
 		};
-		const scrollStepSetting = {
-			id: "scrollStepLines",
-			label: "Scroll step",
-			description: "Mouse wheel scroll lines in fullscreen mode.",
-			currentValue: String(config.scrollStepLines),
-			values: [...SCROLL_STEP_LINES_VALUES],
-			submenu: (_current: string, closeSubmenu: (selected?: string) => void) =>
-				buildNumberInputSubmenu(theme, scrollStepSetting, closeSubmenu),
+		const stickyUserMessageSetting = {
+			id: "stickyUserMessage",
+			label: "Sticky user message",
+			description: config.stickyUserMessage
+				? "Fullscreen: pin a user message's first line once it scrolls off the top edge, until the next one takes over."
+				: "User messages scroll normally.",
+			currentValue: config.stickyUserMessage ? "on" : "off",
+			values: ["on", "off"],
 		};
 
 		// 额外功能开关：注册于扩展加载期，切换后需重启（/reload）生效。
@@ -604,6 +662,65 @@ export async function showCcstylePanel(
 			"Aliases disabled.",
 			config.enableAliases,
 		);
+		const footerCurrencySetting = {
+			id: "footerCurrency",
+			label: "Cost currency",
+			description:
+				"ISO code for the status-bar cost. Switching currency fills its preset rate. USD clears the rate.",
+			currentValue: config.footerCurrency,
+			values: [...FOOTER_CURRENCY_PRESETS],
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) => {
+				nestedSubmenuOpen = true;
+				nestedHint = "  Enter to apply · Esc back to Footer";
+				return buildValueInputSubmenu(
+					theme,
+					{
+						prompt: "  Cost currency — ISO code:",
+						initial: footerCurrencySetting.currentValue,
+						hint: "  Enter to apply · Esc to go back",
+						accept: (raw) => (raw === "" ? undefined : raw),
+					},
+					(selected) => {
+						nestedSubmenuOpen = false;
+						nestedHint = "";
+						closeSubmenu(selected);
+					},
+				);
+			},
+		};
+		const footerCurrencyRateSetting = {
+			id: "footerCurrencyRate",
+			label: "Cost rate",
+			description:
+				"Display units per 1 USD of cost. Switching currency replaces this. Empty keeps the number and only changes the symbol.",
+			currentValue: footerCurrencyRateLabel(config.footerCurrencyRate),
+			submenu: (_current: string, closeSubmenu: (selected?: string) => void) => {
+				nestedSubmenuOpen = true;
+				nestedHint = "  Enter to apply · empty clears · Esc back to Footer";
+				return buildValueInputSubmenu(
+					theme,
+					{
+						prompt: "  Cost rate — display units per 1 cost unit:",
+						initial:
+							footerCurrencyRateSetting.currentValue === "-"
+								? ""
+								: footerCurrencyRateSetting.currentValue,
+						hint: "  Enter to apply · empty clears conversion · Esc to go back",
+						accept: (raw) => {
+							if (raw === "" || raw === "-") return "-";
+							const n = Number(raw);
+							return Number.isFinite(n) && n > 0 ? raw : null;
+						},
+						invalid: () => "Rate must be a positive number",
+					},
+					(selected) => {
+						nestedSubmenuOpen = false;
+						nestedHint = "";
+						closeSubmenu(selected);
+					},
+				);
+			},
+		};
 		const footerNerdIconsSetting = {
 			id: "footerNerdIcons",
 			label: "Nerd Font icons",
@@ -619,6 +736,27 @@ export async function showCcstylePanel(
 			description: customFooterDescription(config.enableCustomFooter),
 			currentValue: config.enableCustomFooter ? "on" : "off",
 			values: ["on", "off"],
+		};
+		const footerGitStatsSetting = {
+			id: "footerGitStatsMode",
+			label: "Git changes",
+			description: footerGitStatsDescription(config.footerGitStatsMode),
+			currentValue: config.footerGitStatsMode,
+			values: FOOTER_GIT_STATS_MODES,
+		};
+		const footerTokenRateSetting = {
+			id: "footerTokenRate",
+			label: "Token rate",
+			description: footerTokenRateDescription(config.footerTokenRate),
+			currentValue: config.footerTokenRate ? "on" : "off",
+			values: ["on", "off"],
+		};
+		const footerTokenRateModeSetting = {
+			id: "footerTokenRateMode",
+			label: "Token rate mode",
+			description: footerTokenRateModeDescription(config.footerTokenRateMode),
+			currentValue: config.footerTokenRateMode,
+			values: FOOTER_TOKEN_RATE_MODES,
 		};
 		const pluginChipsSetting = {
 			id: "footerPluginChips",
@@ -663,6 +801,52 @@ export async function showCcstylePanel(
 				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
 				return;
 			}
+			if (id === "footerCurrency") {
+				updateConfig({
+					footerCurrency: value,
+					footerCurrencyRate: presetFooterCurrencyRate(value),
+				});
+				footerCurrencySetting.currentValue = config.footerCurrency;
+				footerCurrencyRateSetting.currentValue = footerCurrencyRateLabel(config.footerCurrencyRate);
+				if (config.enableCustomFooter) applyCustomFooter(ctx);
+				ctx.ui.notify(
+					`Updated ${id}: ${config.footerCurrency} · ${footerCurrencyRateSetting.currentValue}`,
+					"info",
+				);
+				return;
+			}
+			if (id === "footerCurrencyRate") {
+				updateConfig({ footerCurrencyRate: value === "-" ? null : Number(value) });
+				footerCurrencyRateSetting.currentValue = footerCurrencyRateLabel(config.footerCurrencyRate);
+				if (config.enableCustomFooter) applyCustomFooter(ctx);
+				ctx.ui.notify(`Updated ${id}: ${footerCurrencyRateSetting.currentValue}`, "info");
+				return;
+			}
+			if (id === "footerGitStatsMode") {
+				updateConfig({ footerGitStatsMode: value as FooterGitStatsMode });
+				footerGitStatsSetting.currentValue = config.footerGitStatsMode;
+				footerGitStatsSetting.description = footerGitStatsDescription(config.footerGitStatsMode);
+				refreshFooterGitStats();
+				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
+				return;
+			}
+			if (id === "footerTokenRate") {
+				const enabled = value === "on";
+				updateConfig({ footerTokenRate: enabled });
+				footerTokenRateSetting.currentValue = enabled ? "on" : "off";
+				footerTokenRateSetting.description = footerTokenRateDescription(enabled);
+				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
+				return;
+			}
+			if (id === "footerTokenRateMode") {
+				updateConfig({ footerTokenRateMode: value as FooterTokenRateMode });
+				footerTokenRateModeSetting.currentValue = config.footerTokenRateMode;
+				footerTokenRateModeSetting.description = footerTokenRateModeDescription(
+					config.footerTokenRateMode,
+				);
+				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
+				return;
+			}
 			if (id === "footerNerdIcons") {
 				const enabled = value === "on";
 				updateConfig({ footerNerdIcons: enabled });
@@ -682,16 +866,14 @@ export async function showCcstylePanel(
 				return;
 			}
 			switch (id) {
-				case "inputClip":
+				case "toolLabelClip":
 					updateConfig({
-						inputClip: pickInputClip(value),
+						toolLabelClip: pickToolLabelClip(value),
 					});
-					inputClipSetting.currentValue = String(config.inputClip);
+					toolLabelClipSetting.currentValue = String(config.toolLabelClip);
 					break;
 				case "mode": {
-					// 选项值带 Experimental 标记，选择后还原为真实 mode 值。
-					const mode: CompactStyleMode =
-						value === "compact (Experimental)" ? "compact" : (value as CompactStyleMode);
+					const mode = value as CompactStyleMode;
 					modeSetting.description = modeSettingDescription(mode);
 					hooks.applyStyleMode(mode, ctx, toolGrouping);
 					return;
@@ -719,7 +901,7 @@ export async function showCcstylePanel(
 						editDiffCollapsedLines: pickPositiveInt(
 							value,
 							DEFAULT_CONFIG.editDiffCollapsedLines,
-							1,
+							0,
 							500,
 						),
 					});
@@ -800,6 +982,13 @@ export async function showCcstylePanel(
 						? "Thinking text uses the theme's dim color."
 						: "Keep the default thinking text color.";
 					break;
+				case "stickyUserMessage": {
+					updateConfig({ stickyUserMessage: value === "on" });
+					stickyUserMessageSetting.description = config.stickyUserMessage
+						? "Fullscreen: pin a user message's first line once it scrolls off the top edge, until the next one takes over."
+						: "User messages scroll normally.";
+					break;
+				}
 				case "showStartupHeader": {
 					const enabled = value === "on";
 					updateConfig({ showStartupHeader: enabled });
@@ -810,12 +999,6 @@ export async function showCcstylePanel(
 					else clearStartupHeader(ctx);
 					break;
 				}
-				case "scrollStepLines":
-					updateConfig({
-						scrollStepLines: pickPositiveInt(value, DEFAULT_CONFIG.scrollStepLines, 1, 50),
-					});
-					scrollStepSetting.currentValue = String(config.scrollStepLines);
-					break;
 				default:
 					return;
 			}
@@ -850,9 +1033,9 @@ export async function showCcstylePanel(
 					expandedOutputSetting,
 					expandedMaxSetting,
 					expandedCardBgSetting,
-					inputClipSetting,
+					toolLabelClipSetting,
+					stickyUserMessageSetting,
 					startupHeaderSetting,
-					scrollStepSetting,
 				],
 			},
 			{
@@ -880,7 +1063,16 @@ export async function showCcstylePanel(
 			{
 				id: "footer",
 				label: "Footer",
-				items: [customFooterSetting, footerNerdIconsSetting, pluginChipsSetting],
+				items: [
+					customFooterSetting,
+					footerTokenRateSetting,
+					footerTokenRateModeSetting,
+					footerCurrencySetting,
+					footerCurrencyRateSetting,
+					footerNerdIconsSetting,
+					footerGitStatsSetting,
+					pluginChipsSetting,
+				],
 			},
 		];
 

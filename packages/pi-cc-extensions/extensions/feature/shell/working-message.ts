@@ -5,42 +5,27 @@ import {
 	getToolMouseTui,
 	isFullscreenAtBottom,
 } from "../../renderer/mouse/scroll.ts";
-import { formatDuration } from "../../utils/format.ts";
+import { formatDuration, formatTokenCount } from "../../utils/format.ts";
+import {
+	resetTokenRate,
+	carryTokenRate,
+	pauseTokenRate,
+	resumeTokenRate,
+	markFirstToken,
+	sampleTokenDelta,
+	recordProviderUsage,
+	startMessageSegment,
+	totalTokens,
+} from "./token-rate.ts";
 
 const REFRESH_INTERVAL_MS = 1_000;
 /** Elapsed time is only shown once the turn has run this long. */
 const SHOW_TIMER_AFTER_MS = 3_000;
 
-function formatCount(value: number): string {
-	return new Intl.NumberFormat("en-US").format(value);
-}
-
-type ContentBlock = {
-	type?: unknown;
-	text?: unknown;
-	thinkingSignature?: { body?: unknown };
-};
-
 type StreamMessage = {
 	content?: unknown;
 	usage?: { output?: unknown };
 };
-
-/** 每个 content index 的可见文本/思考长度；无对应块的 index 保持稀疏洞。 */
-function textBlockLengths(message: StreamMessage): number[] {
-	const content = message.content;
-	if (!Array.isArray(content)) return [];
-	const lengths: number[] = [];
-	for (let index = 0; index < content.length; index++) {
-		const block = content[index] as ContentBlock;
-		if (block?.type === "text" && typeof block.text === "string") {
-			lengths[index] = block.text.length;
-		} else if (block?.type === "thinking" && block.thinkingSignature?.body) {
-			lengths[index] = (block.thinkingSignature.body as string).length;
-		}
-	}
-	return lengths;
-}
 
 function outputUsage(message: StreamMessage): number {
 	const value = Number(message?.usage?.output);
@@ -55,39 +40,24 @@ type WorkingUi = {
  * Extend Pi's footer working row while preserving its spinner and "Working...":
  * `⠋ Working... (↓ 1,234 tokens · 12s)`
  *
- * Live tokens use the same chars/4 estimate as pi-claude-code-ui, then switch to
- * provider `usage.output` whenever the stream exposes an actual count.
- */
+ * token 数直接读 token-rate 的累计（估算 → provider usage 同源），不再本地重数。 */
 export default function (pi: ExtensionAPI): void {
 	let turnActive = false;
 	let agentStartTime = 0;
 	let turnStartTime = 0;
-	let responseLength = 0;
-	let responseTextBlockLengths: number[] = [];
-	let providerOutputTokens = 0;
+	/** 当前用户指令的起点；工具调用后的 turn 复用它，直到下一条指令。 */
+	let rateRunStartTime = 0;
 	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastMessage: string | null = null;
 	let activeCtx: { ui: WorkingUi | undefined; hasUI: boolean } | null = null;
 
 	function tokenCount(): number {
-		return providerOutputTokens || Math.max(0, Math.round(responseLength / 4));
-	}
-
-	function setTextBlockLength(index: number, length: number): void {
-		const previous = responseTextBlockLengths[index] ?? 0;
-		responseTextBlockLengths[index] = Math.max(0, length);
-		responseLength = Math.max(0, responseLength + responseTextBlockLengths[index] - previous);
-	}
-
-	function resetResponseTracking(message?: StreamMessage): void {
-		responseTextBlockLengths = message ? textBlockLengths(message) : [];
-		responseLength = responseTextBlockLengths.reduce((sum, length) => sum + length, 0);
-		providerOutputTokens = message ? outputUsage(message) : 0;
+		return totalTokens();
 	}
 
 	function updateProviderUsage(message: StreamMessage): void {
 		const output = outputUsage(message);
-		if (output > 0) providerOutputTokens = output;
+		if (output > 0) recordProviderUsage(output);
 	}
 
 	/**
@@ -105,7 +75,7 @@ export default function (pi: ExtensionAPI): void {
 		if (!turnActive) return "";
 		const parts: string[] = [];
 		const tokens = tokenCount();
-		if (tokens > 0) parts.push(`↓ ${formatCount(tokens)} tokens`);
+		if (tokens > 0) parts.push(`↓ ${formatTokenCount(tokens)} tokens`);
 		// compact 活动回合且已滚出摘要行：直接用摘要行文案（自带回合时长，不叠 agent 计时）。
 		const compactStatus = compactMirrorText();
 		if (compactStatus) return [compactStatus, ...parts].join(" · ");
@@ -181,7 +151,7 @@ export default function (pi: ExtensionAPI): void {
 		stopRefreshLoop();
 		agentStartTime = 0;
 		turnStartTime = 0;
-		resetResponseTracking();
+		// 不重置 token-rate：footer 定格显示上一回合速率
 		restoreDefaultWorkingMessage();
 	}
 
@@ -189,12 +159,19 @@ export default function (pi: ExtensionAPI): void {
 		if (!agentStartTime) agentStartTime = Date.now();
 	});
 
-	pi.on("turn_start", async (_event, ctx) => {
+	pi.on("turn_start", async (event, ctx) => {
 		turnActive = true;
 		activeCtx = ctx;
-		turnStartTime = Date.now();
+		// 事件时间戳在 handler 之前产生；用 Date.now() 会和紧随的采样落在同一毫秒，分母变成 0。
+		turnStartTime = event?.timestamp || Date.now();
 		if (!agentStartTime) agentStartTime = turnStartTime;
-		resetResponseTracking();
+		// 工具调用后的 turn 属于同一条用户指令：计时、TTFT 与累计 token 保持到下一条指令。
+		// 速率起点用本指令第一个 turn 的时间戳；before_agent_start 只当指令 id。
+		if (rateRunStartTime !== agentStartTime) {
+			rateRunStartTime = agentStartTime;
+			resetTokenRate(turnStartTime);
+		}
+		startMessageSegment(turnStartTime);
 		syncWorkingMessage(true);
 		scheduleRefreshTick();
 	});
@@ -205,25 +182,25 @@ export default function (pi: ExtensionAPI): void {
 		if (!evt) return;
 
 		if (evt.type === "start") {
-			resetResponseTracking(evt.partial);
-		} else if (evt.type === "thinking_start" || evt.type === "text_start") {
-			setTextBlockLength(evt.contentIndex, 0);
+			// 新 assistant 消息起点：速率分段已在 turn_start 处理。
+		} else if (
+			evt.type === "thinking_start" ||
+			evt.type === "text_start" ||
+			evt.type === "toolcall_start"
+		) {
+			// TTFT 的首块含 toolcall_start：模型直接发起 tool call（thinking/text 省略）时也算首 token
+			markFirstToken();
+			startMessageSegment();
 			updateProviderUsage(evt.partial);
 		} else if (evt.type === "thinking_delta" || evt.type === "text_delta") {
-			const add = typeof evt.delta === "string" ? evt.delta.length : 0;
-			setTextBlockLength(evt.contentIndex, (responseTextBlockLengths[evt.contentIndex] ?? 0) + add);
+			if (typeof evt.delta === "string") sampleTokenDelta(evt.delta);
 			updateProviderUsage(evt.partial);
-		} else if (evt.type === "text_end") {
-			setTextBlockLength(
-				evt.contentIndex,
-				typeof evt.content === "string" ? evt.content.length : 0,
-			);
+		} else if (evt.type === "text_end" || evt.type === "thinking_end") {
 			updateProviderUsage(evt.partial);
 		} else if (evt.type === "done") {
-			resetResponseTracking(evt.message);
+			updateProviderUsage(evt.message);
 		} else if (evt.type === "error") {
 			// provider 错误事件的 usage.output 不可信，不得计入 token 统计。
-			resetResponseTracking();
 		} else {
 			updateProviderUsage(evt.partial);
 		}
@@ -232,11 +209,20 @@ export default function (pi: ExtensionAPI): void {
 		scheduleRefreshTick();
 	});
 
+	pi.on("tool_execution_start", async () => {
+		pauseTokenRate();
+	});
+
+	pi.on("tool_execution_end", async () => {
+		resumeTokenRate();
+	});
+
 	pi.on("turn_end", async (_event, ctx) => {
 		turnActive = false;
 		activeCtx = ctx;
 		stopRefreshLoop();
-		resetResponseTracking();
+		// 本段 token 结转进累计，下一段 turn 继续累加；此处不清速率。
+		carryTokenRate();
 		// No completion message: return immediately to Pi's default idle state.
 		restoreDefaultWorkingMessage();
 	});

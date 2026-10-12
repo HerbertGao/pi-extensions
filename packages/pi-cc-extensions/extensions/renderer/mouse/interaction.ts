@@ -13,7 +13,6 @@ import {
 	setHoveredCompactAssistant,
 } from "../compact-mode.ts";
 import { isMessageDisplayComponent } from "../tool/message-display.ts";
-import { config } from "../../config/config.ts";
 import { isLazyProxyTui } from "../../utils/fullscreen-detect.ts";
 import { setToolTuiFullscreen, isCollapseHintLine } from "../tool/show-more-hint.ts";
 import {
@@ -76,6 +75,11 @@ import {
 	setHoveredToolIo,
 	type FullscreenHoverTarget,
 } from "./hover.ts";
+import {
+	handleStickyPromptClick,
+	resetStickyPromptState,
+	updateStickyPromptHover,
+} from "./sticky-prompt.ts";
 
 type FrameToolRender = {
 	component: any;
@@ -308,10 +312,6 @@ function ensureFullscreenToolMouseMotion(tui: any): void {
 		releaseFullscreenToolMouseMotion(tui);
 		return;
 	}
-	// 面板改 scrollStepLines 后，下一帧渲染即同步（restore 仍按 original 恢复）。
-	if (typeof tui.wheelScrollLines === "number" && tui.wheelScrollLines !== config.scrollStepLines) {
-		tui.wheelScrollLines = config.scrollStepLines;
-	}
 	if (
 		!toolMouseInteractionActive() ||
 		tui.mouseEnabled === false ||
@@ -348,7 +348,6 @@ function releaseFullscreenToolMouseMotion(tui?: any): void {
 }
 
 const FULLSCREEN_VIEWPORT_PATCH = Symbol("ccstyle.fullscreen-viewport-patch");
-const FULLSCREEN_WHEEL_SCROLL_ORIGINAL = Symbol("ccstyle.fullscreen-wheel-scroll-original");
 
 /**
  * diff 结果组件自带 remainder 行：声明存在时只有那一行是展开入口（正文里的同名字样不算）；
@@ -445,9 +444,15 @@ function handleFullscreenToolClick(tui: any, packet: SgrMousePacket): boolean {
 		}
 		// 展开 round 卡内工具时，让 compact 的强制折叠放行它（非 round 内工具为空操作）。
 		if (isTool) markCompactRoundToolExpanded(component);
-		// compact 摘要行自己记展开前的视口（收起时还原跟随），这里不动它。
-		if (!isAssistant) keepViewportOnExpand(tui);
-		component.setExpanded(true);
+		if (isAssistant) {
+			// compact 摘要行自己记展开前的视口（收起时还原跟随），所以它先展开再停跟随：
+			// 顺序反了快照会记下「未跟随」，收起时就交不回官方 follow。
+			component.setExpanded(true);
+			keepViewportOnExpand(tui);
+		} else {
+			keepViewportOnExpand(tui);
+			component.setExpanded(true);
+		}
 		clearPendingCollapsePress();
 	} else {
 		// 普通工具截断头 show-more：打开全量预览（不收起）。
@@ -487,10 +492,6 @@ function handleFullscreenToolClick(tui: any, packet: SgrMousePacket): boolean {
 	return true;
 }
 
-/**
- * fullscreen 鼠标悬停：collapsed 卡 [click to show more] hint、
- * expanded 卡截断头 show-more、回到底部按钮。motion 不 consume，官方链照常。
- */
 /** 点到的组件和外层卡是否属于同一张 compact 回合面板。 */
 function isSameExpandedRound(other: any, owner: any): boolean {
 	if (!owner || !isCompactAssistantComponent(other)) return false;
@@ -501,6 +502,7 @@ function isSameExpandedRound(other: any, owner: any): boolean {
 /**
  * 原地展开时停在当前滚动位置：transcript 跟随底部时，内容变高会把视口拖到底，
  * 点击的行和它上方的外层面板被顶出屏幕。展开前关掉跟随，点击行留在原位。
+ * compact 摘要行同样适用：它的展开入口在 setExpanded 之后调用本函数（见调用点）。
  */
 function keepViewportOnExpand(tui: any): void {
 	const view = tui.getPrimaryScrollView?.();
@@ -510,6 +512,10 @@ function keepViewportOnExpand(tui: any): void {
 	if (view.isFollowingEnd === false) setScrollButtonVisible(true);
 }
 
+/**
+ * fullscreen 鼠标悬停：collapsed 卡 [click to show more] hint、
+ * expanded 卡截断头 show-more、回到底部按钮。motion 不 consume，官方链照常。
+ */
 function handleFullscreenToolHover(tui: any, packet: SgrMousePacket): void {
 	if (!isSgrIdleMotion(packet)) return;
 	const layout = tui.currentLayout;
@@ -589,11 +595,6 @@ function patchFullscreenViewportInput(tui: any): void {
 	const proto = Object.getPrototypeOf(tui);
 	const original = proto?.handleViewportInput;
 	if (typeof original !== "function") return;
-	// 官方原生 routeWheel 已完整处理嵌套 ScrollView；只调整默认步进（config.scrollStepLines）。
-	if (typeof tui.wheelScrollLines === "number") {
-		tui[FULLSCREEN_WHEEL_SCROLL_ORIGINAL] = tui.wheelScrollLines;
-		tui.wheelScrollLines = config.scrollStepLines;
-	}
 	tui[FULLSCREEN_VIEWPORT_PATCH] = true;
 	tui.handleViewportInput = function (this: any, data: string) {
 		if (toolMouseInteractionActive() && tui.mode === "fullscreen") {
@@ -622,12 +623,17 @@ function patchFullscreenViewportInput(tui: any): void {
 						}
 					} else if (!isSgrLeftPress(packet) && !isSgrIdleMotion(packet))
 						clearPendingCollapsePressOnMove(packet);
+					if (isSgrLeftPress(packet) && handleStickyPromptClick(tui, packet)) {
+						return { consume: true };
+					}
 					if (isSgrLeftPress(packet) && handleFullscreenToolClick(tui, packet)) {
 						return { consume: true };
 					}
 					// 仅无按键移动走 hover；左键拖动（文本多选）放行官方选区，避免每像素命中+重绘。
 					if (isSgrIdleMotion(packet)) {
-						handleFullscreenToolHover(tui, packet);
+						// 粘性行命中时不进工具 hover：同一行只能有一个高亮。
+						if (updateStickyPromptHover(tui, packet)) applyFullscreenHover(tui, null);
+						else handleFullscreenToolHover(tui, packet);
 					}
 				}
 			}
@@ -641,11 +647,6 @@ function restoreFullscreenViewportInput(tui: any): void {
 	const proto = Object.getPrototypeOf(tui);
 	if (typeof proto?.handleViewportInput === "function") {
 		tui.handleViewportInput = proto.handleViewportInput;
-	}
-	const originalWheelScrollLines = tui[FULLSCREEN_WHEEL_SCROLL_ORIGINAL];
-	if (typeof originalWheelScrollLines === "number") {
-		tui.wheelScrollLines = originalWheelScrollLines;
-		tui[FULLSCREEN_WHEEL_SCROLL_ORIGINAL] = undefined;
 	}
 	tui[FULLSCREEN_VIEWPORT_PATCH] = false;
 }
@@ -1037,6 +1038,7 @@ export function resetToolHoverState(): void {
 	setHoveredCompactAssistant(null);
 	setScrollButtonVisible(false);
 	setScrollButtonHovered(false);
+	resetStickyPromptState();
 	restoreOfficialScrollToEnd(getToolMouseTui());
 	releaseFullscreenToolMouseMotion(getToolMouseTui());
 }

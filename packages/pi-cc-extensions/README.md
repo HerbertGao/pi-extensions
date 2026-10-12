@@ -61,15 +61,15 @@ pi install git:github.com/HerbertGao/pi-extensions
   "expandedOutputMaxLines": 10,            // 展开工具卡 Output 可见行数，超出在末行显示展开提示
   "expandedPreviewMaxLines": 40,           // 展开 TaskList 正文最大行数（展开 diff 始终全量）
   "expandedCardBackground": "userMessageBg", // 展开卡背景槽位；userMessageBg 与用户消息同色，toolPendingBg 为中性灰
-  "inputClip": 0,                          // 工具摘要 path/command 折叠字符数；0 = 按可用宽度
+  "toolLabelClip": 0,                      // 工具摘要 path/command 折叠字符数；0 = 按可用宽度
   "showStartupHeader": true,               // 启动头（logo + tips）开关
-  "scrollStepLines": 3,                    // fullscreen 滚轮步进
+  "stickyUserMessage": true,               // fullscreen：userMessage 正文首行滚出视口上沿后钉住，直到下一条指令接手
 
   // diff
   "diffViewMode": "auto",                  // 布局：auto / split / unified
   "diffIndicatorMode": "bars",             // 变更指示：bars / classic / none
   "diffSplitMinWidth": 120,                // 左右分栏的最小终端宽度
-  "editDiffCollapsedLines": 24,            // Edit 折叠行数，超出显示展开提示
+  "editDiffCollapsedLines": 24,            // edit 折叠行数；0 仅显示变更统计摘要
   "writeDiffCollapsedLines": 0,            // write 折叠行数，0 仅显示创建摘要
   "diffWordWrap": true,                    // 长 diff 行换行
 
@@ -81,7 +81,12 @@ pi install git:github.com/HerbertGao/pi-extensions
 
   // footer
   "enableCustomFooter": true,              // 自定义状态栏
+  "footerTokenRate": true,                  // 输出速率芯片；false 隐藏
+  "footerTokenRateMode": "average",         // average：整段指令平均（avg）；live：最近 1 秒瞬时（live）
+  "footerCurrency": "USD",                 // 底栏费用的显示币种
+  "footerCurrencyRate": null,              // 1 单位费用换成多少显示币种；null 只换符号、不乘倍率
   "footerNerdIcons": true,                 // git/缓存用 Nerd Font 图标；false 为纯文本
+  "footerGitStatsMode": "working",         // working（默认）：未提交改动；branch：分支累计净改动
   "footerHiddenKeys": [],                  // 隐藏的插件芯片 key
   "footerLine1Keys": ["pi-usage"],         // line1 插件芯片顺序；pi-usage 默认显示，数据来自 @narumitw/pi-usage
   "footerLine2Keys": [],                   // line2 插件芯片顺序（接在 cwd/git 后）
@@ -90,7 +95,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 ```
 
 > [!TIP]
-> **全屏模式**：单击 `click to show more` 展开工具卡、思考、Skill 和 compact 摘要；工具卡展开态 diff 全量显示，Input/Output 超行时末行 `… +N more lines · click to show more` 打开全量预览，单击收起（卡内拖动为选中文本）。
+> **全屏模式**：单击 `click to show more` 展开工具卡、思考、Skill 和 compact 摘要；工具卡展开态 diff 全量显示，Input/Output 超行时末行 `… +N more lines · click to show more` 打开全量预览，单击收起。
 
 > [!NOTE]
 > **Mermaid 渲染**：建议把 `markdown.mermaid` 设为 `final`（`~/.pi/agent/settings.json` 或 `/settings` 面板的 Mermaid diagrams 选项）。默认 `streaming` 逐帧重绘，`final` 渲染最终版更稳定。
@@ -100,9 +105,9 @@ pi install git:github.com/HerbertGao/pi-extensions
 ```bash
 npm test
 npm run typecheck
-./test.sh # macOS/Linux：临时加载本地检出，退出后还原
-test.bat  # Windows：同上（调用 test.ps1）
-# 只想跑一次、不改配置：pi -e .
+./test.sh            # macOS/Linux：临时加载本地检出，退出后还原
+./test.bat           # Windows：经 Git Bash 运行 test.sh
+pi -e .              # 只跑一次，不改 settings.json
 ```
 
 ## 兼容性

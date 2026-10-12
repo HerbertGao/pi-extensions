@@ -559,7 +559,7 @@ test("write collapsed preview uses writeDiffCollapsedLines independently of edit
 			writeDiffCollapsedLines: 4,
 		},
 	);
-	const writeText = output(write).join("\n");
+	const writeText = output(write).map(stripVTControlCharacters).join("\n");
 	assert.match(writeText, /created/);
 	assert.match(writeText, /more/);
 	assert.match(writeText, /const value0 = 0/);
@@ -582,7 +582,7 @@ test("write collapsed preview uses writeDiffCollapsedLines independently of edit
 			writeDiffCollapsedLines: 0,
 		},
 	);
-	const editText = output(edit).join("\n");
+	const editText = output(edit).map(stripVTControlCharacters).join("\n");
 	assert.match(editText, /value 1/);
 	assert.match(editText, /more/);
 	assert.doesNotMatch(editText, /\+40 -0/, "edit must not use write stats-only collapse");
@@ -607,11 +607,11 @@ test("writeDiffCollapsedLines 0 shows stats only until expanded", () => {
 		store,
 		() => display,
 	);
-	const collapsedText = output(collapsed).join("\n");
+	const collapsedText = output(collapsed).map(stripVTControlCharacters).join("\n");
 	assert.match(collapsedText, /created/);
 	assert.match(collapsedText, /more/);
 	assert.doesNotMatch(collapsedText, /const value/);
-	assert.doesNotMatch(collapsedText, /\+40 -0/, "stats stay on the title, not the result line");
+	assert.match(collapsedText, /↳ diff \+40 -0 · created · .*to show more/);
 
 	const expanded = renderRichToolResult(
 		"write",
@@ -622,7 +622,7 @@ test("writeDiffCollapsedLines 0 shows stats only until expanded", () => {
 		store,
 		() => display,
 	);
-	const expandedText = output(expanded).join("\n");
+	const expandedText = output(expanded).map(stripVTControlCharacters).join("\n");
 	assert.match(expandedText, /const value0 = 0/);
 	assert.match(expandedText, /const value1 = 1/);
 });
@@ -647,8 +647,9 @@ test("default-mode write collapsed uses title stats and created hint", () => {
 		const text = output(write, 120)
 			.join("\n")
 			.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
-		assert.match(text, /Write out\.ts \(\+1 -0\)/);
-		assert.match(text, /created · click to show more/);
+		// 折叠 0 行预览时计数在正文那行，标题不重复。
+		assert.doesNotMatch(text, /Write out\.ts \(\+\d+ -\d+\)/);
+		assert.match(text, /↳ diff \+1 -0 · created · click to show more/);
 		assert.doesNotMatch(text, /▌/);
 	} finally {
 		config.mode = previousMode;

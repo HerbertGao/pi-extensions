@@ -65,7 +65,7 @@ test("mixed tools group across three empty separators while edit/write and conte
 			.filter((line: string) => line.trim());
 		assert.match(
 			collapsed[0],
-			/^ ● Multiple Tools: 3 running .*read, bash, grep.*click to show more/,
+			/^ ● Multiple Tools: 3 running · Read×1, Bash×1, Grep×1 · click to show more$/,
 		);
 		assert.equal(collapsed.filter((line: string) => line.trim()).length, 4);
 		assert.match(collapsed[1], /^ ├ [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Read /);
@@ -275,7 +275,7 @@ test("external task, skill, and plan tools keep reference summaries in groups", 
 			.filter((line: string) => line.trim());
 		assert.match(
 			agentLines[0],
-			/^ ● Multiple Tools: 2 done · Agent, get_subagent_result · click to show more$/,
+			/^ ● Multiple Tools: 2 done · Agent×1, Get Subagent Result×1 · click to show more$/,
 		);
 		assert.equal(agentLines[1], " ├ ✓ Agent 再次测试 tool 调用");
 		assert.equal(agentLines[2], " └ ✓ Get Subagent Result 6a559462-95d0-40b");
@@ -577,8 +577,8 @@ test("collapsed group rows share the single-card viewport width", async () => {
 	const { config } = await import("../extensions/config/config.ts");
 	const { toolViewportWidth } = await import("../extensions/renderer/tool/result.ts");
 	const { visibleWidth } = await import("@earendil-works/pi-tui");
-	const previousInputClip = config.inputClip;
-	config.inputClip = 0;
+	const previousToolLabelClip = config.toolLabelClip;
+	config.toolLabelClip = 0;
 	const hooks = installToolGrouping(() => true);
 	try {
 		const parent = new Container() as any;
@@ -594,7 +594,7 @@ test("collapsed group rows share the single-card viewport width", async () => {
 		assert.equal(rows.length, 2);
 		for (const row of rows) assert.equal(visibleWidth(row), toolViewportWidth(200));
 	} finally {
-		config.inputClip = previousInputClip;
+		config.toolLabelClip = previousToolLabelClip;
 		hooks.shutdown();
 	}
 });
@@ -631,26 +631,61 @@ test("group headers share the single-card viewport limit without stretching shor
 	}
 });
 
-// collapsedHintHitbox 依赖行尾完整提示短语判定可点击区；窄视口下若提示被截断，
-// 折叠分组将不可点击。主体优先让位，行尾提示必须完整。
-test("collapsed groups keep the full trailing hint at narrow viewports", () => {
+test("组头列表用人性化名并恒带次数；组内 shell 行只报耗时", () => {
 	const hooks = installToolGrouping(() => true);
-	hooks.setTheme({ fg: (_color: string, text: string) => text });
+	const plain = (lines: string[]) =>
+		lines.map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")).filter((line) => line.trim());
 	try {
 		const parent = new Container() as any;
-		const read = tool("read", "hint-read", {
-			path: "very-long-directory-name/nested/target-file.ts",
+		const bash = started("bash", "sh-bash", { command: "npm test" });
+		bash.updateResult({
+			content: [{ type: "text", text: "ok" }],
+			isError: false,
+			durationMs: 12_400,
 		});
-		const bash = tool("bash", "hint-bash", { command: "printf ok" });
-		read.updateResult({ content: [], isError: false });
-		bash.updateResult({ content: [], isError: false });
-		parent.addChild(read);
+		const ps = started("powershell", "sh-ps", { command: "Get-ChildItem" });
+		ps.updateResult({ content: [], isError: false, durationMs: 300 });
 		parent.addChild(bash);
-		const group = parent.children[0] as ToolGroupComponent;
-		const title = group.render(80).find((line: string) => line.includes("Multiple Tools"))!;
-		const plain = title.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
-		assert.match(plain, /click to show more\s*$/);
-		assert.match(plain, /Multiple Tools: 2 done/);
+		parent.addChild(ps);
+		const rows = plain((parent.children[0] as ToolGroupComponent).render(140));
+		// 单组标题用 toolTitle，列表跟子行同一套写法；各跑一次也报 ×1。
+		assert.equal(rows[0], " ● Multiple Tools: 2 done · Bash×1, PowerShell×1 · click to show more");
+		// 只报耗时：行数在折叠卡里冗余，展开就能看到。
+		assert.equal(rows[1], " ├ ✓ Bash npm test · 12.4s");
+		assert.equal(rows[2], " └ ✓ PowerShell Get-ChildItem · 300ms");
+
+		// 失败也不带输出：错误正文在展开后看，行上只留 ✗ 和耗时。
+		const parent3 = new Container() as any;
+		const bad = started("bash", "sh-bad", { command: "false" });
+		bad.updateResult({
+			content: [{ type: "text", text: "ENOENT: no such file\nsecond line" }],
+			isError: true,
+			durationMs: 20,
+		});
+		const ok = started("bash", "sh-ok", { command: "true" });
+		ok.updateResult({ content: [{ type: "text", text: "ok" }], isError: false, durationMs: 5 });
+		parent3.addChild(bad);
+		parent3.addChild(ok);
+		const rows3 = plain((parent3.children[0] as ToolGroupComponent).render(140));
+		assert.equal(rows3[1], " ├ ✗ Bash false · 20ms");
+		assert.equal(rows3[2], " └ ✓ Bash true · 5ms");
+
+		// 非 shell 工具不补尾巴。
+		const parent2 = new Container() as any;
+		const read = started("read", "sh-read", { path: "a.ts" });
+		read.updateResult({ content: [{ type: "text", text: "x" }], isError: false, durationMs: 5 });
+		const grep = started("grep", "sh-grep", { pattern: "x" });
+		grep.updateResult({ content: [{ type: "text", text: "y" }], isError: false });
+		parent2.addChild(read);
+		parent2.addChild(grep);
+		const rows2 = plain((parent2.children[0] as ToolGroupComponent).render(140));
+		assert.equal(rows2[1], " ├ ✓ Read a.ts");
+		assert.equal(rows2[2], ' └ ✓ Grep "x"');
+
+		// 窄宽度下先让出工具列表，保住行尾展开提示（鼠标层的命中锚点）。
+		const narrow = plain((parent.children[0] as ToolGroupComponent).render(72));
+		assert.match(narrow[0]!, /· click to show more$/);
+		assert.ok(narrow[0]!.length <= Math.floor(72 * 0.8));
 	} finally {
 		hooks.shutdown();
 	}
