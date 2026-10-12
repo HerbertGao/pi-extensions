@@ -61,15 +61,15 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "expandedOutputMaxLines": 10, // expanded tool Output lines; overflow shows a footer hint
   "expandedPreviewMaxLines": 40, // max lines for expanded TaskList bodies (expanded diffs always show all)
   "expandedCardBackground": "userMessageBg", // expanded card background slot: userMessageBg (same as user prompts) / toolPendingBg (neutral) etc.
-  "inputClip": 0, // tool summary path/command clip length; 0 = fit width
+  "toolLabelClip": 0, // tool summary path/command clip length; 0 = fit width
   "showStartupHeader": true, // startup header (logo + tips) toggle
-  "scrollStepLines": 3, // fullscreen wheel scroll step
+  "stickyUserMessage": true, // fullscreen: pin a user message's first line once it scrolls off the top edge, until the next one takes over
 
   // diff
   "diffViewMode": "auto", // layout: auto / split / unified
   "diffIndicatorMode": "bars", // change indicators: bars / classic / none
   "diffSplitMinWidth": 120, // min terminal width for side-by-side columns
-  "editDiffCollapsedLines": 24, // Edit collapse lines; beyond that shows the expand hint
+  "editDiffCollapsedLines": 24, // edit collapse lines; 0 = change-count summary only
   "writeDiffCollapsedLines": 0, // write collapse lines; 0 = creation summary only
   "diffWordWrap": true, // wrap long diff lines
 
@@ -81,7 +81,12 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 
   // footer
   "enableCustomFooter": true, // custom status bar
+  "footerTokenRate": true, // output rate chip; false hides it
+  "footerTokenRateMode": "average", // average: whole-prompt avg; live: trailing 1s rate
+  "footerCurrency": "USD", // display currency for the footer cost
+  "footerCurrencyRate": null, // display units per 1 cost unit; null changes the symbol only
   "footerNerdIcons": true, // Nerd Font glyphs for git/cache; false = plain text
+  "footerGitStatsMode": "working", // working (default): uncommitted; branch: cumulative net changes
   "footerHiddenKeys": [], // hidden plugin chip keys
   "footerLine1Keys": ["pi-usage"], // line1 plugin chip order; pi-usage is shown by default, data from @narumitw/pi-usage
   "footerLine2Keys": [], // line2 plugin chip order (after cwd/git)
@@ -90,7 +95,7 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 ```
 
 > [!TIP]
-> **Fullscreen**: click `click to show more` to expand tool cards, thinking, Skill, and compact summaries. An expanded diff always shows every line; when expanded Input/Output exceeds the line cap, the footer `… +N more lines · click to show more` opens a full preview. Click to collapse (dragging inside the card selects text).
+> **Fullscreen**: click `click to show more` to expand tool cards, thinking, Skill, and compact summaries. An expanded diff always shows every line; when expanded Input/Output exceeds the line cap, the footer `… +N more lines · click to show more` opens a full preview. Click to collapse.
 
 > [!NOTE]
 > **Mermaid rendering**: set `markdown.mermaid` to `final` via `~/.pi/agent/settings.json` or the Mermaid diagrams option in `/settings`. Default `streaming` redraws per frame; `final` renders once at completion.
@@ -100,9 +105,9 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 ```bash
 npm test
 npm run typecheck
-./test.sh # macOS/Linux: load the local checkout for one run, then restore
-test.bat  # Windows: same (calls test.ps1)
-# one-off run without touching settings: pi -e .
+./test.sh            # macOS/Linux: load the local checkout for one run, then restore
+./test.bat           # Windows: runs test.sh through Git Bash
+pi -e .              # one run, does not edit settings.json
 ```
 
 ## Compatibility

@@ -6,6 +6,7 @@ import { showMoreHintText } from "./show-more-hint.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { getToolMouseTui } from "../mouse/scroll.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
+import { oneLine } from "../../utils/format.ts";
 
 const TOOL_VIEWPORT_WIDTH_RATIO = 0.8;
 /** 宽屏右侧留白上限：比例留白超过这么多列时改用固定留白。 */
@@ -75,8 +76,44 @@ export function countLines(text: string): number {
 		.filter((line) => line.trim().length > 0).length;
 }
 
+/**
+ * 折叠行的结果文案：`N lines returned`（read 说 loaded）、`Done`、失败时首行错误。
+ * 单卡折叠行与工具组的子行共用这一处口径；TaskList 的树形摘要不走这里，由调用方先判。
+ */
+export function collapsedResultSummary(options: {
+	result: any;
+	toolName: string;
+	text: string;
+	isError: boolean;
+}): string {
+	const { result, toolName, text, isError } = options;
+	if (isError) {
+		// 72 与原 result.ts 默认一致，保持错误摘要截断宽度。
+		return text ? oneLine(text, 72) : "Failed";
+	}
+	const outputLines = outputLineCount(result) || countLines(text);
+	if (!outputLines) return "Done";
+	const action = toolName === "read" ? "loaded" : "returned";
+	return `${outputLines} ${outputLines === 1 ? "line" : "lines"} ${action}`;
+}
+
 function hasExpandableResult(text: string): boolean {
 	return countLines(text) > 1;
+}
+
+/**
+ * 工具耗时：不到 1 秒报毫秒，分钟级起带上分/时。
+ * 只报到秒的话，几分钟的长命令会显示成 `300.0s`。
+ */
+export function formatToolDuration(ms: number): string {
+	const seconds = ms / 1000;
+	if (seconds < 1) return `${Math.round(ms)}ms`;
+	if (seconds < 60) return `${seconds.toFixed(1)}s`;
+	const totalSeconds = Math.floor(seconds);
+	const minutes = Math.floor(totalSeconds / 60);
+	const remainder = totalSeconds % 60;
+	if (minutes < 60) return `${minutes}m ${remainder}s`;
+	return `${Math.floor(minutes / 60)}h ${minutes % 60}m ${remainder}s`;
 }
 
 const activeAnimationContexts = new Set<any>();
@@ -133,6 +170,36 @@ export function scheduleAnimation(
 			if (lightFrames) tui.requestRender();
 		}, options.intervalMs ?? TOOL_LOADING_INTERVAL_MS);
 	}
+}
+
+/**
+ * 本回合流式消息里出现过的工具调用。Pi 要等整条 assistant 消息结束才派发执行，
+ * 这段窗口工具行已经在等启动，spinner 该逐帧转。
+ * 恢复或翻历史重建的旧行不在这个集合里，保持静止。
+ */
+const liveToolCalls = new Set<string>();
+
+/** 收下当前流式 assistant 消息里的工具调用 id。 */
+export function noteStreamingToolCalls(message: any): void {
+	const content = Array.isArray(message?.content) ? message.content : [];
+	for (const block of content) {
+		const id = block?.type === "toolCall" ? block.id : undefined;
+		if (typeof id === "string" && id) liveToolCalls.add(id);
+	}
+}
+
+/** 工具收尾后移出等待窗口。 */
+export function retireLiveToolCall(toolCallId: unknown): void {
+	if (typeof toolCallId === "string") liveToolCalls.delete(toolCallId);
+}
+
+export function clearLiveToolCalls(): void {
+	liveToolCalls.clear();
+}
+
+/** 工具行是否处于等待窗口（流式声明中或等待派发）。 */
+export function isLiveToolCall(toolCallId: unknown): boolean {
+	return typeof toolCallId === "string" && liveToolCalls.has(toolCallId);
 }
 
 export function pendingIcon(_name: string): string {
@@ -231,7 +298,7 @@ export class ExpandedToolResultText {
 	}
 }
 
-/** 截断体末行 `… +N more lines` 旁的展开提示，点击打开全量预览。 */
+/** 截断体末行 `… N more lines` 旁的展开提示，点击打开全量预览。 */
 export const SHOW_MORE_LABEL = "· click to show more";
 
 export type ToolIoSection = "input" | "output";
@@ -243,14 +310,12 @@ const EXPANDED_TOOL_IO_VIEW_GENERATION = Symbol("ccstyle-expanded-tool-io-view")
 /**
  * Expanded tool body with clear Input / Output sections (Grok Build–style).
  *
- * Visual frame:
- *   ├ Input  click to show more
- *   │ path: src/a.ts
- *   │
- *   └ Output  click to show more
- *     result line…
- *
- * flushLeft=true（仅 mode=on 展开卡）：去掉树线前导空格，由外层 Box(1,1) 提供 1 格 padding。
+ * Visual frame（flushLeft=true：树线的前导空格交给外层 Box(1,1)，├/└ 与标题行的勾同列）：
+ * ├ Input  click to show more
+ * │ path: src/a.ts
+ * │
+ * └ Output  click to show more
+ *   result line…
  *
  * Reused across re-renders via context.lastComponent when possible.
  */
@@ -281,8 +346,10 @@ export class ExpandedToolIoView {
 		  }
 		| undefined;
 
-	/** flushLeft：贴左渲染（mode=on 展开卡）；默认 false 保留前导空格（compact 等共用路径）。 */
+	/** flushLeft：贴左渲染（外层 Box 负责 1 格 pad）；默认 false 保留 1 格前导空格。 */
 	private flushLeft: boolean;
+	/** 尾部附注（shell 的耗时）。挂到 Output 的 show-more 行上，没有那一行时单独成行。 */
+	private footer: string | undefined;
 
 	constructor(
 		theme: any,
@@ -398,6 +465,13 @@ export class ExpandedToolIoView {
 		this.invalidate();
 	}
 
+	/** 尾部附注（耗时等）。挂在 show-more 行上；无 show-more 行时单独成行。 */
+	setFooter(text: string | undefined): void {
+		if (this.footer === text) return;
+		this.footer = text;
+		this.invalidate();
+	}
+
 	getHoveredSection(): ToolIoSection | null {
 		return this.hoveredSection;
 	}
@@ -405,7 +479,7 @@ export class ExpandedToolIoView {
 	/** True when the plain truncation footer carries show-more. Input 续行带 │，Output 不带。 */
 	matchShowMoreLine(plainLine: string): ToolIoSection | null {
 		const line = plainLine.replace(/\x1b\[[0-9;]*m/g, "");
-		if (!line.includes(` · ${showMoreHintText()}`) || !/\+\d+ more lines/.test(line)) return null;
+		if (!line.includes(` · ${showMoreHintText()}`) || !/\d+ more lines/.test(line)) return null;
 		if (this.truncated.input && line.includes("│")) return "input";
 		if (this.truncated.output) return "output";
 		return null;
@@ -442,7 +516,7 @@ export class ExpandedToolIoView {
 
 		const theme = this.theme;
 		const safeWidth = Math.max(1, Math.floor(width));
-		// flushLeft：贴左（外层 Box 负责 1 格 pad）；否则保留 1 格前导空格（compact 共用）
+		// flushLeft：贴左（外层 Box 负责 1 格 pad）；否则保留 1 格前导空格
 		const lead = this.flushLeft ? "" : " ";
 		const rail = `${lead}│ `;
 		const railWidth = visibleWidth(rail);
@@ -474,7 +548,14 @@ export class ExpandedToolIoView {
 
 		const pushBody = (
 			body: string,
-			opts: { input?: boolean; limit: number; continued?: boolean; section: ToolIoSection },
+			opts: {
+				input?: boolean;
+				limit: number;
+				continued?: boolean;
+				section: ToolIoSection;
+				/** 挂在 show-more 行上的附注（shell 耗时），插在展开提示前。 */
+				footerNote?: string;
+			},
 		): boolean /* truncated */ => {
 			const raw = body.replace(/\t/g, "   ").replace(/\n+$/, "");
 			if (!raw.trim()) {
@@ -502,6 +583,8 @@ export class ExpandedToolIoView {
 			if (truncated) {
 				const hidden = Math.max(0, wrapped.length - visible.length);
 				if (hidden > 0) {
+					// 省略号已经表达了「还有」，计数前不再加 +。
+					const note = opts.footerNote ? theme.fg("dim", ` · ${opts.footerNote}`) : "";
 					// hover 只高亮文字，圆点保持 dim（与 group hint 一致）。
 					const more =
 						theme.fg("dim", " ·") +
@@ -509,7 +592,7 @@ export class ExpandedToolIoView {
 							this.hoveredSection === opts.section ? "text" : "dim",
 							` ${showMoreHintText()}`,
 						);
-					pushRailLine(theme.fg("dim", `… +${hidden} more lines`) + more, opts.continued);
+					pushRailLine(theme.fg("dim", `… ${hidden} more lines`) + note + more, opts.continued);
 					this.showMoreHeaderRows[opts.section] = lines.length - 1;
 				}
 			}
@@ -556,6 +639,7 @@ export class ExpandedToolIoView {
 				limit: this.maxOutputLines,
 				continued: false,
 				section: "output",
+				footerNote: this.footer,
 			});
 		} else {
 			this.truncated.output = outputWouldTruncate;
@@ -564,7 +648,14 @@ export class ExpandedToolIoView {
 				limit: this.maxOutputLines,
 				continued: false,
 				section: "output",
+				footerNote: this.footer,
 			});
+		}
+
+		// 耗时挂在 Output 的 show-more 行上（与折叠态一样，提示留在行尾）；
+		// 没截断就没有那一行，才单独成行。放在最后追加，前面记下的行号不受影响。
+		if (this.footer && this.showMoreHeaderRows.output === undefined) {
+			pushRailLine(theme.fg("muted", this.footer), false);
 		}
 
 		this.cachedWidth = width;
@@ -830,7 +921,7 @@ export function renderExpandedToolResult(
 	lastComponent?: unknown,
 	args?: unknown,
 	context?: any,
-	/** mode=on 展开卡贴左；compact 等保持默认前导空格 */
+	/** 贴左渲染：树线的前导空格交给外层 Box(1,1) */
 	flushLeft = false,
 ): ExpandedToolIoView | ExpandedToolResultText | Text {
 	const { text: inputBody, codeBlock } = formatToolInputBody(args);
