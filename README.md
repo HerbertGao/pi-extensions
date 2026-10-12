@@ -50,6 +50,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.1`        | Code diagnostics and skills.                  |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.38.0`       | Web search and content access.                |
+| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.5.0`        | Qoder account models for global and China.    |
 | [`resume-from`](https://github.com/alexei-led/resume-from)                      | `0.4.1`        | Continue Pi, Claude Code, and Codex sessions. |
 
 ## Footer
