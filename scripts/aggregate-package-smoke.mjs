@@ -2106,7 +2106,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const qoderProviders = result.runtime.pendingProviderRegistrations
     .filter((registration) => registration.extensionPath === qoderEntry)
     .map((registration) => registration.name)
-    .sort()
+    .toSorted()
   assert.deepEqual(qoderProviders, ["qoder", "qoder-cn"])
   for (const registration of result.runtime.pendingProviderRegistrations) {
     if (registration.extensionPath !== qoderEntry) continue
