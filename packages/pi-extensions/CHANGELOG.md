@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.5
+
+### Patch Changes
+
+- [#277](https://github.com/HerbertGao/pi-extensions/pull/277) [`bee6343`](https://github.com/HerbertGao/pi-extensions/commit/bee63433d16f32fb54b6c045ef95b9362712c9b8) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay `@herbertgao/pi-cc-extensions` onto upstream v1.0.1 (`0188b76`). Bring in footer currency and Git status, token rate and TTFT, sticky user prompts, ask-user-question rendering, summary-only edit previews, and shell durations. Existing `inputClip` settings are still read as `toolLabelClip`; `scrollStepLines` is removed. Keep the scoped package identity, Action Fusion write-diff cooperation, and the guard that ignores provider error usage. A later content block no longer recounts cumulative usage into the live token rate, and sticky-prompt clicks stay inside the bar so the scrollbar column still scrolls. No installed configuration, credentials, or sessions are migrated.
+
+- Updated dependencies [[`bee6343`](https://github.com/HerbertGao/pi-extensions/commit/bee63433d16f32fb54b6c045ef95b9362712c9b8)]:
+  - @herbertgao/pi-cc-extensions@0.12.0
+
 ## 2026.10.4
 
 ### Minor Changes
