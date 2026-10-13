@@ -439,6 +439,7 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
+		if (event.messageType !== "user") return;
 		const referenceIds = extractSessionReferenceIds(event.prompt);
 		if (referenceIds.length === 0) return;
 

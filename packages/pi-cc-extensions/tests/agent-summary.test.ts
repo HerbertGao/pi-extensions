@@ -44,14 +44,6 @@ test("AgentRunSummary：bash/powershell 计数；read/edit/write 按路径去重
 
 	assert.equal(summary.toolCount, 10);
 	const data = summary.snapshot(61_000);
-
-	// 空字符串 path 回退 file_path 别名，避免该文件不被计入。
-	test("toolPath 在 path 为空字符串时回退 file_path", () => {
-		const summary = new AgentRunSummary(1_000);
-		summary.recordToolStart("edit", { path: "", file_path: "fallback.ts" });
-		const data = summary.snapshot(2_000);
-		assert.equal(data.edits, 1);
-	});
 	assert.deepEqual(data, {
 		commands: 3,
 		reads: 2,

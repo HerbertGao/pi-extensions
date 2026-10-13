@@ -161,17 +161,10 @@ function renderExpandedTaskResult(
  * 拿不到（旧 Pi、无耗时的结果）再退回自己的时钟——开始时间在 renderCall 记，结束时间在结果定型时定一次。
  * 运行中的实时计时也只能走时钟。
  */
-function recordedShellDurationMs(context: any): number | undefined {
-	for (const value of [context?.durationMs, context?.result?.durationMs]) {
-		if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
-	}
-	return undefined;
-}
-
 function shellDurationText(toolName: string, context: any, isPartial: boolean): string {
 	if (!SHELL_TOOL_NAMES.has(toolName)) return "";
-	const recorded = recordedShellDurationMs(context);
-	if (!isPartial && recorded !== undefined) {
+	const recorded = context?.durationMs;
+	if (!isPartial && typeof recorded === "number" && Number.isFinite(recorded) && recorded >= 0) {
 		return formatToolDuration(recorded);
 	}
 	const startedAt = context?.state?.ccstyleShellStartedAt;

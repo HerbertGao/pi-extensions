@@ -39,9 +39,8 @@ function nonEmptyString(value: unknown): value is string {
 }
 
 function toolPath(args?: Record<string, unknown> | null): string | undefined {
-	// path 为空字符串时回退 file_path 别名，避免该文件不被计入去重集合。
-	if (nonEmptyString(args?.path)) return args.path;
-	return nonEmptyString(args?.file_path) ? args.file_path : undefined;
+	const path = args?.path ?? args?.file_path;
+	return nonEmptyString(path) ? path : undefined;
 }
 
 /** 累积一次 agent 回合的工具统计；agent_start 时新建实例。 */

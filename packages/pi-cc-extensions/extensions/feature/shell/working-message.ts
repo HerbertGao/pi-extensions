@@ -71,8 +71,6 @@ export default function (pi: ExtensionAPI): void {
 	}
 
 	function buildWorkingMessage(): string {
-		// turn_end 后迟到的事件不得再驱动 footer。
-		if (!turnActive) return "";
 		const parts: string[] = [];
 		const tokens = tokenCount();
 		if (tokens > 0) parts.push(`↓ ${formatTokenCount(tokens)} tokens`);
@@ -200,7 +198,7 @@ export default function (pi: ExtensionAPI): void {
 		} else if (evt.type === "done") {
 			updateProviderUsage(evt.message);
 		} else if (evt.type === "error") {
-			// provider 错误事件的 usage.output 不可信，不得计入 token 统计。
+			updateProviderUsage(evt.error);
 		} else {
 			updateProviderUsage(evt.partial);
 		}

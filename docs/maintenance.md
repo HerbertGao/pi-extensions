@@ -417,7 +417,7 @@ The issue #134 companion review accepted six independent releases:
 - `pi-mcp-adapter@2.31.0` adds full-URL manual completion for pre-registered HTTPS OAuth redirects and advertises MCP Apps UI support. Aggregate smoke verifies callback state validation, manual completion, and the UI capability declaration; runtime dependencies and MIT terms are unchanged.
 - `pi-web-access@0.27.0` adds configurable fetch deadlines and default answer models, suppresses Defuddle's relative-canonical noise, and isolates GitHub clone work beneath per-process runtime directories. The real Pi smoke covers config/override precedence, canonical handling, and clone cleanup.
 
-The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline tracks the latest Pi release, tested with Pi 1.0.4. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
+The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline tracks the latest Pi release, tested with Pi 1.2.0. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
 
 The issue #131 companion review accepted four released updates:
 
