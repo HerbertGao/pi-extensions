@@ -439,7 +439,8 @@ export default function sessionReferenceExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
-		if (event.messageType !== "user") return;
+		// Pi 1.2.0 custom events have no prompt. Older hosts omit messageType.
+		if (!("prompt" in event)) return;
 		const referenceIds = extractSessionReferenceIds(event.prompt);
 		if (referenceIds.length === 0) return;
 

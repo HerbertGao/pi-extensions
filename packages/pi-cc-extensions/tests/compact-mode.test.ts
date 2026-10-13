@@ -534,11 +534,18 @@ test("consecutive tool-call messages accumulate into one round until the next vi
 			/^Running\.\.\. · 2s, bash×2, fffind×1, read×1/,
 		);
 
+		// 消息先到、组件后到：pi 的 message_update 就是这个顺序。
+		// 组件一 updateDisplay 就进 live 槽位，槽位接管期间强制折叠，不能再单独展开。
 		const bash = tool("bash", "b1", { command: "one" });
 		const longOutput = Array.from({ length: 500 }, (_, index) => `tool output ${index}`).join("\n");
 		bash.updateResult({ content: [{ type: "text", text: longOutput }], isError: false });
+		const afterTool = renderText(assistant1);
+		assert.ok(
+			afterTool.some((line) => line.includes("↳") && line.includes("$ one")),
+			`组件后到应补进槽位: ${afterTool.join(" | ")}`,
+		);
 		bash.setExpanded(true);
-		assert.equal(bash.expanded, true, "precondition: child can be expanded before its round");
+		assert.equal(bash.expanded, false, "live 槽位接管的工具不能单独展开");
 		const edit = tool("edit", "e1", { path: "a.ts" });
 		edit.updateResult({ content: [], isError: false });
 		const backgroundSlots: string[] = [];
@@ -1031,6 +1038,43 @@ test("compact live: one thinking preview, one tool slot, folds after the settle 
 	}
 });
 
+test("compact live: 工具组件晚于消息到达时补画槽位，参数更新时刷新", () => {
+	const { restore } = installHooks();
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "text", text: "looking" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "echo-early" } },
+			],
+		};
+		const assistant = new AssistantMessageComponent(message as any, true) as any;
+		// pi 的 message_update：先 updateContent（计数 +1），工具组件还没构造。
+		assistant.updateContent(message);
+		const before = renderText(assistant);
+		assert.match(before.join("\n"), /bash×1/, `计数应先涨: ${before}`);
+		assert.ok(!before.some((line) => line.startsWith("↳")), `组件未到不该有槽位卡: ${before}`);
+
+		const bash = tool("bash", "b1", { command: "echo-early" });
+		bash.updateDisplay?.();
+		const after = renderText(assistant);
+		const slot = after.find((line) => line.startsWith("↳"));
+		assert.ok(slot?.includes("echo-early"), `组件到达后要补画槽位: ${after}`);
+		assert.deepEqual(renderText(bash), [], "槽位接管后外层不再单独成行");
+
+		bash.args = { command: "echo-late" };
+		bash.updateDisplay?.();
+		const updated = renderText(assistant);
+		assert.ok(
+			updated.some((line) => line.startsWith("↳") && line.includes("echo-late")),
+			`参数更新后槽位要跟着换: ${updated}`,
+		);
+	} finally {
+		restore();
+	}
+});
+
 test("compact live: a superseding round folds the previous one immediately", () => {
 	const dir = mkdtempSync(join(tmpdir(), "pi-compact-live-supersede-"));
 	const previousDir = process.env.PI_CODING_AGENT_DIR;
@@ -1167,6 +1211,148 @@ test("compact 尾行：摘要行挂 transcript 容器回合末尾，新工具追
 			c === tail ? "tail" : c === anchor ? "anchor" : c === final ? "final" : "tool",
 		);
 		assert.deepEqual(order, ["anchor", "tool", "tool", "tail", "final"]);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact 尾行：只有 edit/write 的回合不挂摘要行", async () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "thinking", thinking: "" },
+				{ type: "toolCall", id: "e1", name: "edit", arguments: { path: "a.ts" } },
+				{ type: "toolCall", id: "e2", name: "edit", arguments: { path: "b.ts" } },
+			],
+		};
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		const editA = tool("edit", "e1", { path: "a.ts" });
+		const editB = tool("edit", "e2", { path: "b.ts" });
+		chat.addChild(anchor);
+		chat.addChild(editA);
+		chat.addChild(editB);
+		anchor.updateContent(message);
+
+		// 运行中摘要行仍在：它承载 Running... 状态。
+		assert.ok(
+			chat.children.some((child: any) => /Running\.\.\./.test(renderText(child).join("\n"))),
+			"运行中应挂摘要行",
+		);
+
+		// steering / 下一条消息把回合收尾：没有普通工具也没有思考，摘要行撤掉。
+		const next = {
+			role: "assistant",
+			timestamp: 2,
+			content: [{ type: "text", text: "next" }],
+		};
+		const follow = new AssistantMessageComponent(next as any, true) as any;
+		chat.addChild(follow);
+		follow.updateContent(next);
+		await settleFold();
+		const summaries = renderText(chat).filter((line) => /Ran for/.test(line));
+		assert.deepEqual(summaries, [], `只剩外层卡的回合不应有摘要行: ${summaries}`);
+		assert.equal(chat.children.includes(editA), true);
+		assert.equal(chat.children.includes(editB), true);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact resume：重放已结束的回合直接落成 Ran for，不停留在 Running", () => {
+	const { hooks, restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			stopReason: "toolUse",
+			content: [
+				{ type: "text", text: "checking" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "ls" } },
+			],
+		};
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		const bash = tool("bash", "b1", { command: "ls" });
+		chat.addChild(anchor);
+		chat.addChild(bash);
+		// resume 重放：构造时 updateContent 不带 isStreaming，消息已是终态。
+		anchor.updateContent(message);
+		// 回放进行中不收尾：还有后续消息要并进同一回合。
+		assert.match(renderText(chat).join("\n"), /Running\.\.\..*bash×1/);
+		// 回放结束（session_start 延迟一拍）才收尾最后一条。
+		hooks.settleReplayedRound();
+		const rendered = renderText(chat).join("\n");
+		assert.doesNotMatch(rendered, /Running\.\.\./, `重放不该停在进行中: ${rendered}`);
+		assert.match(rendered, /Ran for .+bash×1/, `重放应直接落成已结束: ${rendered}`);
+
+		// 流式中的消息（pending）不受影响，仍显示 Running。
+		const live = {
+			role: "assistant",
+			timestamp: 2,
+			stopReason: "pending",
+			content: [
+				{ type: "text", text: "next" },
+				{ type: "toolCall", id: "b2", name: "bash", arguments: { command: "pwd" } },
+			],
+		};
+		const liveAnchor = new AssistantMessageComponent(live as any, true) as any;
+		chat.addChild(liveAnchor);
+		liveAnchor.updateContent(live);
+		assert.match(renderText(chat).join("\n"), /Running\.\.\..*bash×1/);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact：带正文的工具消息各起回合，无正文续接才并入上一回合", () => {
+	const { hooks, restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const first = {
+			role: "assistant",
+			timestamp: 1,
+			stopReason: "toolUse",
+			content: [
+				{ type: "text", text: "one" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "ls" } },
+			],
+		};
+		const second = {
+			role: "assistant",
+			timestamp: 2,
+			stopReason: "toolUse",
+			content: [
+				{ type: "text", text: "two" },
+				{ type: "toolCall", id: "b2", name: "bash", arguments: { command: "pwd" } },
+			],
+		};
+		const anchor = new AssistantMessageComponent(first as any, true) as any;
+		const follow = new AssistantMessageComponent(second as any, true) as any;
+		chat.addChild(anchor);
+		chat.addChild(tool("bash", "b1", { command: "ls" }));
+		anchor.updateContent(first);
+		chat.addChild(follow);
+		chat.addChild(tool("bash", "b2", { command: "pwd" }));
+		follow.updateContent(second);
+
+		hooks.settleReplayedRound();
+		const summaries = renderText(chat).filter((line) => /Ran for/.test(line));
+		// 每条消息都带可见正文 → 各自是自己的 anchor，两个 bash 各成一行（截图语义）。
+		assert.deepEqual(summaries.length, 2, `两条带正文的消息应各起一行: ${summaries}`);
+		assert.ok(
+			summaries.every((line) => /bash×1/.test(line)),
+			`每行各记一次 bash: ${summaries}`,
+		);
 	} finally {
 		setToolMouseTui(null);
 		restore();

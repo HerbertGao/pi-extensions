@@ -46,7 +46,7 @@ Pi loads their extensions and skills through `node_modules/` paths inside one pa
 
 The local `@herbertgao/resume-from` fork is retired. If it is installed separately, remove that package before upgrading the aggregate to avoid registering `/resume-from` twice. The aggregate now uses upstream `resume-from@0.4.1`; its v0.4.0 start-directory fix supersedes our local patch.
 
-The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@1.0.2` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
+The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@1.0.3` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
 
 ### Agency Agents
 
