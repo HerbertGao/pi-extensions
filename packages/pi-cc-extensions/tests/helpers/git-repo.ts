@@ -59,6 +59,10 @@ export function repository(t: test.TestContext, initialBranch = "main") {
 	});
 	const git = (...args: string[]) =>
 		execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+	// clone 不复制 local config，CI 没有全局作者时 commit 会失败。
+	git("config", "user.name", "Footer Test");
+	git("config", "user.email", "footer@example.invalid");
+	git("config", "commit.gpgsign", "false");
 	// clone 会加 origin 和 branch tracking；测试要自己控制 remote，先删 remote 顺便清 tracking。
 	if (initialBranch !== "main") {
 		git("branch", "-m", "main", initialBranch);
