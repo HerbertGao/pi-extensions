@@ -6,9 +6,15 @@ export function prepareCall(state, questions) {
     throw new Error("state must be non-empty text")
   }
   if (state.length > MAX_STATE_CHARS) {
-    throw new Error(`state is ${state.length} characters; keep it under ${MAX_STATE_CHARS}`)
+    throw new Error(
+      `state is ${state.length} characters; keep it under ${MAX_STATE_CHARS}`,
+    )
   }
-  if (!Array.isArray(questions) || questions.length < 1 || questions.length > MAX_QUESTIONS) {
+  if (
+    !Array.isArray(questions) ||
+    questions.length < 1 ||
+    questions.length > MAX_QUESTIONS
+  ) {
     throw new Error(`ask 1 to ${MAX_QUESTIONS} questions`)
   }
   const seen = new Set()
@@ -37,8 +43,14 @@ function toQuestion(question) {
     }
   }
   const options = question.options
-  if (!Array.isArray(options) || options.length < 2 || options.some((option) => typeof option !== "string" || !option)) {
-    throw new Error(`${question.id}: ${question.type} needs at least two options`)
+  if (
+    !Array.isArray(options) ||
+    options.length < 2 ||
+    options.some((option) => typeof option !== "string" || !option)
+  ) {
+    throw new Error(
+      `${question.id}: ${question.type} needs at least two options`,
+    )
   }
   if (question.type === "choice") {
     return {
@@ -56,7 +68,9 @@ function toQuestion(question) {
 export function formatCall(questions) {
   return questions
     .map((question) => {
-      const options = question.options?.length ? ` [${question.options.join(" | ")}]` : ""
+      const options = question.options?.length
+        ? ` [${question.options.join(" | ")}]`
+        : ""
       return `${question.id} (${question.type})${options}\n  ${question.instructions}`
     })
     .join("\n")
@@ -66,14 +80,18 @@ export function formatAnswers(questions, answers) {
   return questions
     .map((question) => {
       const answer = answers?.[question.id]
-      if (!answer) return `${question.id}: no answer\n  ${question.instructions}`
+      if (!answer)
+        return `${question.id}: no answer\n  ${question.instructions}`
       if (answer.type === "bool") {
         const yes = answer.probability >= 0.5
         return `${question.id}: ${yes ? "yes" : "no"}  P(yes)=${Number(answer.probability).toFixed(3)}\n  ${question.instructions}`
       }
       if (answer.type === "choice") {
         const probs = Object.entries(answer.probabilities)
-          .map(([label, probability]) => `${label} ${Number(probability).toFixed(3)}`)
+          .map(
+            ([label, probability]) =>
+              `${label} ${Number(probability).toFixed(3)}`,
+          )
           .join("  ")
         return `${question.id}: ${answer.choice}\n  ${probs}\n  ${question.instructions}`
       }
