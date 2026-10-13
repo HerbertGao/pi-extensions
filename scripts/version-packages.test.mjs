@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   nextAggregateCalver,
   nextTrackedUpstreamVersion,
+  replacePackageVersion,
 } from "./version-packages.mjs"
 
 test("increments the aggregate patch within the same UTC month", () => {
@@ -47,6 +48,22 @@ test("tracks the imported upstream version without taking its next number", () =
     () => nextTrackedUpstreamVersion("0.12.0", "1.0"),
     /Invalid upstream version/,
   )
+})
+
+test("replaces only the package version field", () => {
+  const source = [
+    "{",
+    '  "version": "1.0.2",',
+    '  "x-upstream": {',
+    '    "version": "1.0.2",',
+    '    "reviewedVersion": "1.0.2"',
+    "  }",
+    "}",
+  ].join("\n")
+  const replaced = replacePackageVersion(source, "1.0.2", "1.0.2-local.2")
+  assert.match(replaced, /"version": "1.0.2-local.2"/)
+  assert.match(replaced, /"version": "1.0.2"/)
+  assert.match(replaced, /"reviewedVersion": "1.0.2"/)
 })
 
 test("rejects invalid aggregate versions and dates", () => {

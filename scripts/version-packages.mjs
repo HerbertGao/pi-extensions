@@ -156,13 +156,22 @@ function trackedPackages() {
     .filter(Boolean)
 }
 
+export function replacePackageVersion(source, fromVersion, toVersion) {
+  const field = `"version": "${fromVersion}"`
+  const at = source.indexOf(field)
+  if (at < 0) {
+    throw new Error(`manifest does not contain version ${fromVersion}`)
+  }
+  return (
+    source.slice(0, at) +
+    `"version": "${toVersion}"` +
+    source.slice(at + field.length)
+  )
+}
+
 function replaceExactVersion(path, fromVersion, toVersion) {
   const raw = readFileSync(path, "utf8")
-  const from = `"${fromVersion}"`
-  if (!raw.includes(from)) {
-    throw new Error(`${path} does not contain version ${fromVersion}`)
-  }
-  writeFileSync(path, raw.replaceAll(from, `"${toVersion}"`))
+  writeFileSync(path, replacePackageVersion(raw, fromVersion, toVersion))
 }
 
 function applyTrackedUpstreamVersions(before) {
