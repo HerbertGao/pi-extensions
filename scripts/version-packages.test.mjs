@@ -1,7 +1,10 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { nextAggregateCalver } from "./version-packages.mjs"
+import {
+  nextAggregateCalver,
+  nextTrackedUpstreamVersion,
+} from "./version-packages.mjs"
 
 test("increments the aggregate patch within the same UTC month", () => {
   assert.equal(
@@ -22,6 +25,27 @@ test("resets the aggregate patch when the UTC month changes", () => {
   assert.equal(
     nextAggregateCalver("2026.12.3", new Date("2027-01-01T00:00:00Z")),
     "2027.1.0",
+  )
+})
+
+test("tracks the imported upstream version without taking its next number", () => {
+  assert.equal(nextTrackedUpstreamVersion("0.12.0", "1.0.2"), "1.0.2-local.1")
+  assert.equal(
+    nextTrackedUpstreamVersion("1.0.2-local.1", "1.0.2"),
+    "1.0.2-local.2",
+  )
+  assert.equal(
+    nextTrackedUpstreamVersion("1.0.2-local.2", "1.0.3"),
+    "1.0.3-local.1",
+  )
+  assert.equal(nextTrackedUpstreamVersion("0.19.0", "0.20.0"), "0.20.0-local.1")
+  assert.throws(
+    () => nextTrackedUpstreamVersion("1.0.2", "1.0.2"),
+    /already published/,
+  )
+  assert.throws(
+    () => nextTrackedUpstreamVersion("0.12.0", "1.0"),
+    /Invalid upstream version/,
   )
 })
 
