@@ -1,5 +1,5 @@
 {
-	"$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+	"$schema": "https://pi.dev/schemas/theme.schema.json",
 	"name": "cc-light",
 	"vars": {
 		"bg": "#f7f7f8",
@@ -79,7 +79,7 @@
 		"thinkingLow": "blue",
 		"thinkingMedium": "accent",
 		"thinkingHigh": "accentBright",
-		"thinkingXhigh": "#4a8fa3",
+		"thinkingXhigh": "#0e7490",
 		"thinkingMax": "cyan",
 		"bashMode": "green"
 	},

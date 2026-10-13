@@ -11,14 +11,14 @@
 | Local package set  | Upstream                   | Imported baseline              | Notes                                                                                                                                                                                                        |
 | ------------------ | -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `95d1086` (`0.19.0` + PR #268) | Imported upstream v0.19.0 and PR #268. The local package keeps its `@herbertgao/*` identity, release metadata, and UI branding while retaining the upstream workflow, mention, and worktree-safety behavior. |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `0188b76` (`1.0.1`)            | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation and the provider-error token guard. See "2026-10-12 pi-cc-extensions 1.0.1 replay".                |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `3c9ec53` (`1.0.2`)            | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation and the provider-error token guard. See "2026-10-12 pi-cc-extensions 1.0.2 replay".                |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source)     | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained.       |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.1`          | `1.0.1`          | `0188b76f2597`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.2`          | `1.0.2`          | `3c9ec533b3f8`  |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
@@ -284,6 +284,10 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
 
+### 2026-10-12 pi-cc-extensions 1.0.2 replay
+
+The imported baseline advances from v1.0.1 `0188b76` to v1.0.2 `3c9ec533b3f8ab9efa19a821587732be96bb592f`. Upstream absorbed the agent-directory path fix (`37d96f6`) and the quoted/longer fence fix (`f4f21e3`) as maintainer commits, and merged the live-rate and sticky-click fixes. The replay takes those upstream texts, including the scrollbar-track guard and the exact `80` live-rate assertion. It also takes the tool-renderer split (`ccstyle-tool.ts`, `tool-io.ts`, `tool-state.ts`). Local package identity, Action Fusion write cooperation, the provider-error token guard, and the Pi 1.0.4 shell-duration fallback remain.
+
 ### 2026-10-12 pi-cc-extensions 1.0.1 replay
 
 `@herbertgao/pi-cc-extensions` is replayed onto `minuque/pi-cc-extensions` v1.0.1 (`0188b76f2597772bea3b42075857e030d9a89666`). The package has no merge-base with upstream, so this is a filewise three-way replay from the imported `0.9.10` tree `2b72669`, not a Git rebase. `x-upstream` records version `1.0.1`, `reviewedVersion` `1.0.1`, and that commit. The repository review cursor advances from `e580f739` to `0188b76`.
@@ -413,7 +417,7 @@ The issue #134 companion review accepted six independent releases:
 - `pi-mcp-adapter@2.31.0` adds full-URL manual completion for pre-registered HTTPS OAuth redirects and advertises MCP Apps UI support. Aggregate smoke verifies callback state validation, manual completion, and the UI capability declaration; runtime dependencies and MIT terms are unchanged.
 - `pi-web-access@0.27.0` adds configurable fetch deadlines and default answer models, suppresses Defuddle's relative-canonical noise, and isolates GitHub clone work beneath per-process runtime directories. The real Pi smoke covers config/override precedence, canonical handling, and clone cleanup.
 
-The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline tracks the latest Pi release, tested with Pi 1.0.4. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
+The historical review paths above used the aggregate's Pi 0.84.4 host; the current aggregate baseline tracks the latest Pi release, tested with Pi 1.2.0. Deprecated Titlebar Spinner removal and the released Handoff/Recap/Rename updates are recorded in the Tifan review above.
 
 The issue #131 companion review accepted four released updates:
 

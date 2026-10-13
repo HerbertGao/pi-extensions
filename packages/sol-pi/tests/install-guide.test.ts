@@ -34,7 +34,7 @@ describe("agent installation instructions", () => {
 		const guide = rootFile("agents-install.md");
 		const requiredText = [
 			"Node.js 24",
-			"@earendil-works/pi-coding-agent@1.0.4",
+			"@earendil-works/pi-coding-agent@1.2.0",
 			"bun install --frozen-lockfile",
 			"bun run check",
 			"bun audit",

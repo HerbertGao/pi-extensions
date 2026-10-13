@@ -141,14 +141,14 @@ function linkifyUrls(markdown: string): string {
 // Nerd Font 补丁字形（U+2460-U+2473）ink 超界，DirectWrite 下渲染会压住相邻字符；
 // 转成 ASCII "(n)" 后任何字体下宽度一致。U+2460-U+2473 连续，差值即序号。
 const CIRCLED_RE = /[①-⑳]/g;
+
 const BLOCKQUOTE_PREFIX = /^ {0,3}>[ \t]?/;
 const CODE_FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
 const CODE_FENCE_CLOSE = /^ {0,3}(`+|~+)[ \t]*$/;
 
-type FenceLine = { blockquoteDepth: number; content: string };
 type MarkdownFence = { marker: string; blockquoteDepth: number };
 
-function parseFenceLine(line: string): FenceLine {
+function parseFenceLine(line: string): { blockquoteDepth: number; content: string } {
 	let content = line;
 	let blockquoteDepth = 0;
 	while (BLOCKQUOTE_PREFIX.test(content)) {
@@ -178,83 +178,17 @@ function scanMarkdownFence(
 	};
 }
 
-function replaceCircled(text: string): string {
-	return text.replace(CIRCLED_RE, (ch) => `(${ch.codePointAt(0)! - 0x2460 + 1})`);
-}
-
-function backtickRunAt(
-	text: string,
-	start: number,
-	skipEscaped: boolean,
-): { start: number; end: number } | null {
-	let index = text.indexOf("`", start);
-	while (index >= 0) {
-		let backslashes = 0;
-		for (let cursor = index - 1; cursor >= 0 && text[cursor] === "\\"; cursor--) backslashes++;
-		if (!skipEscaped || backslashes % 2 === 0) {
-			let end = index + 1;
-			while (text[end] === "`") end++;
-			return { start: index, end };
-		}
-		index = text.indexOf("`", index + 1);
-	}
-	return null;
-}
-
-/** 转换连续 prose（可跨行），但保留有效 inline code spans。 */
-function deCircledProse(prose: string): string {
-	let cursor = 0;
-	let transformed = "";
-	while (cursor < prose.length) {
-		const opening = backtickRunAt(prose, cursor, true);
-		if (!opening) {
-			transformed += replaceCircled(prose.slice(cursor));
-			break;
-		}
-		let closing = backtickRunAt(prose, opening.end, false);
-		while (closing && closing.end - closing.start !== opening.end - opening.start) {
-			closing = backtickRunAt(prose, closing.end, false);
-		}
-		if (!closing) {
-			transformed += replaceCircled(prose.slice(cursor, opening.end));
-			cursor = opening.end;
-			continue;
-		}
-		transformed += replaceCircled(prose.slice(cursor, opening.start));
-		transformed += prose.slice(opening.start, closing.end);
-		cursor = closing.end;
-	}
-	return transformed;
-}
-
-/** 转换普通 Markdown 文本，但保留匹配 container 的 fenced blocks 与 inline code spans。 */
 function deCircled(markdown: string): string {
-	const output: string[] = [];
-	let prose: string[] = [];
 	let fence: MarkdownFence | undefined;
-	const flushProse = () => {
-		if (prose.length === 0) return;
-		output.push(deCircledProse(prose.join("\n")));
-		prose = [];
-	};
-
-	for (const line of markdown.split("\n")) {
-		const scanned = scanMarkdownFence(line, fence);
-		fence = scanned.fence;
-		if (scanned.protected) {
-			flushProse();
-			output.push(line);
-			continue;
-		}
-		if (parseFenceLine(line).content.trim() === "") {
-			flushProse();
-			output.push(line);
-			continue;
-		}
-		prose.push(line);
-	}
-	flushProse();
-	return output.join("\n");
+	return markdown
+		.split("\n")
+		.map((line) => {
+			const scanned = scanMarkdownFence(line, fence);
+			fence = scanned.fence;
+			if (scanned.protected) return line;
+			return line.replace(CIRCLED_RE, (ch) => `(${ch.codePointAt(0)! - 0x2460 + 1})`);
+		})
+		.join("\n");
 }
 
 // ============================================================================
@@ -280,13 +214,12 @@ function normalizeMultilineLinks(markdown: string): string {
 	};
 	for (const line of markdown.split("\n")) {
 		const scanned = scanMarkdownFence(line, fence);
+		const opening = !fence && scanned.fence;
+		const closing = fence && !scanned.fence;
 		fence = scanned.fence;
-		if (scanned.protected) {
-			flush();
-			out.push(line);
-		} else {
-			prose.push(line);
-		}
+		if (opening || closing) flush();
+		if (scanned.protected) out.push(line);
+		else prose.push(line);
 	}
 	flush();
 	return out.join("\n");

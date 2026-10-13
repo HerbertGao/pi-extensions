@@ -42,7 +42,7 @@ import { toolLoadingIcon } from "../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../utils/tool-result-sanitize.ts";
 import { refreshTranscriptComponent } from "./transcript-refresh.ts";
 import { getMessageDisplayTheme } from "./tool/message-display.ts";
-import { showMoreHintText } from "./tool/show-more-hint.ts";
+import { showMoreHintText } from "./tool/names.ts";
 import {
 	countEditDiffStats,
 	countWriteDiffStats,
@@ -53,13 +53,11 @@ import { displayConfigCacheKey } from "./tool/diff/diff-component.ts";
 import type { WriteExecutionMetadataStore } from "./tool/diff/write-execution.ts";
 import { isToolCallHovered } from "./mouse/hover.ts";
 import { getToolMouseTui } from "./mouse/scroll.ts";
-import {
-	insetComponent,
-	isLiveToolCall,
-	renderExpandedToolResult,
-	scheduleAnimation,
-} from "./tool/result.ts";
+import { insetComponent } from "./tool/result.ts";
+import { isLiveToolCall, scheduleAnimation } from "./tool/tool-state.ts";
+import { renderExpandedToolResult } from "./tool/tool-io.ts";
 import { paddedBackgroundRow } from "./tool/grouping.ts";
+import { styleChangeCounts } from "./tool/ccstyle-tool.ts";
 import { formatDisplayPath } from "./tool/names.ts";
 import {
 	hasVisibleText,
@@ -663,31 +661,37 @@ export function markCompactRoundToolExpanded(tool: any): void {
 	roundToolExpansion?.markUserExpanded(tool);
 }
 
-/** 面板展开前的视口位置：收起时还原，避免面板撑高后收起导致视口错位。 */
-const panelViewportBeforeExpand = new WeakMap<
-	object,
-	{ scrollTop: number; followingEnd: boolean }
->();
+/**
+ * 展开面板前的分隔空行与面板绑成一体：挂在同一尾行上，才不会被拆到
+ * anchor 正文之后（面板挂回合尾行，空行却留在消息里）。
+ * 带 childAtRow 返回 null：拆分判据认它为面板成员，行命中落空时归外层面板。
+ */
+function panelBoundSpacer(): any {
+	return {
+		render: () => [""],
+		childAtRow: () => null,
+		invalidate() {},
+	};
+}
+
+/** 面板展开前的视口标记：收起时需要重钉视口的卡。 */
+const panelViewportBeforeExpand = new WeakSet<object>();
 
 function capturePanelViewport(card: any): void {
-	if (!card || panelViewportBeforeExpand.has(card)) return;
-	const view = getToolMouseTui()?.getPrimaryScrollView?.();
-	if (!view || typeof view.scrollTop !== "number" || typeof view.scrollTo !== "function") return;
-	panelViewportBeforeExpand.set(card, {
-		scrollTop: view.scrollTop,
-		followingEnd: view.isFollowingEnd !== false,
-	});
+	if (!card) return;
+	panelViewportBeforeExpand.add(card);
 }
 
 function restorePanelViewport(card: any): void {
-	const snapshot = panelViewportBeforeExpand.get(card);
-	if (!snapshot) return;
-	panelViewportBeforeExpand.delete(card);
+	if (!panelViewportBeforeExpand.delete(card)) return;
 	const view = getToolMouseTui()?.getPrimaryScrollView?.();
 	if (!view) return;
-	// 展开前就在底部：交回官方 follow；否则回到展开前的滚动偏移。
-	if (snapshot.followingEnd && typeof view.scrollToEnd === "function") view.scrollToEnd();
-	else if (typeof view.scrollTo === "function") view.scrollTo(snapshot.scrollTop);
+	// 不用展开前的快照：展开期间用户可能滚进面板里，回跳旧位置才是"跳"。
+	// 面板在摘要行之下，收起只删它以下的行，保持当前 scrollTop 摘要行原地不动；
+	// clamp 后落在新底时 scrollTo 会自动恢复 followingEnd（并清 followSuppressedAtEnd）。
+	if (typeof view.scrollTo === "function" && typeof view.scrollTop === "number") {
+		view.scrollTo(view.scrollTop);
+	}
 }
 
 function compactEditWriteLine(
@@ -724,8 +728,13 @@ function compactEditWriteLine(
 						)
 					: undefined;
 		if (stats) {
-			statsText = ` (+${stats.added} -${stats.removed})`;
-			statsStyled = ` ${theme.fg("dim", "(")}${theme.fg("success", `+${stats.added}`)} ${theme.fg("error", `-${stats.removed}`)}${theme.fg("dim", ")")}`;
+			const counts = styleChangeCounts(
+				(color, text) => theme.fg(color, text),
+				stats.added,
+				stats.removed,
+			);
+			statsText = counts.text;
+			statsStyled = counts.styled;
 		}
 	}
 	// 展开卡 Box(1,1) 已 pad；折叠行自己留 1 格前导空格
@@ -1828,7 +1837,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 				} else {
 					// 面板上沿留 1 行卡外空行：面板底色与 userMessage 同色，
 					// 贴在一起会看成一个块；卡内顶部再加 1 行 padding 保持上下对称。
-					anchorChildren.push(new Spacer(1));
+					// 空行必须与面板同进退（childAtRow 参与面板拆分），用 panelBoundSpacer。
+					anchorChildren.push(panelBoundSpacer());
 					anchorChildren.push(
 						compactRoundCard(
 							cardItems,

@@ -112,13 +112,12 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 兼容性
 
-- Node.js `>=24`；monorepo 使用 Pi `1.0.4`，发布包的 Pi peer 版本保持 `*`。
+- Node.js `>=24`；monorepo 使用 Pi `1.2.0`，发布包的 Pi peer 版本保持 `*`。
 
 ## 推荐搭配
 
 | 扩展                                     | 用途                                             |
 | ---------------------------------------- | ------------------------------------------------ |
-| `npm:@ff-labs/pi-fff`                    | 模糊文件与内容检索（fffind / ffgrep）            |
 | `npm:pi-web-access`                      | 网页搜索、URL 抓取、GitHub 克隆、PDF/视频解析    |
 | `npm:@narumitw/pi-usage`                 | 查看当前账号用量（Codex / Copilot / OpenRouter） |
 

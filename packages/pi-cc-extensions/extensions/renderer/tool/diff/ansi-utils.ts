@@ -1,4 +1,4 @@
-const ANSI_SGR_PATTERN = /\x1b\[([0-9;:]*)m/g;
+const ANSI_SGR_PATTERN = /\x1b\[([0-9;]*)m/g;
 const STYLE_RESET_PARAMS = [39, 22, 23, 24, 25, 27, 28, 29, 59] as const;
 
 export { ANSI_SGR_PATTERN, STYLE_RESET_PARAMS };
@@ -88,35 +88,12 @@ export function stripBackgroundSgrParams(params: readonly number[]): number[] {
 	return sanitized;
 }
 
-function isKeptColonSgr(token: string): boolean {
-	const parts = token.split(":");
-	if (parts[0] === "48") return false;
-	if (parts[0] !== "38") return true;
-	const channels =
-		parts[1] === "5" && parts.length === 3
-			? parts.slice(2)
-			: parts[1] === "2" && (parts.length === 5 || parts.length === 6)
-				? parts.slice(-3)
-				: undefined;
-	return !!channels?.every((c) => /^\d+$/.test(c) && Number(c) <= 255);
-}
-
 export function filterSgrSequences(text: string, filter: (params: number[]) => number[]): string {
 	if (!text || !text.includes("\x1b[")) {
 		return text;
 	}
 
 	return text.replace(ANSI_SGR_PATTERN, (_sequence, rawParams: string) => {
-		if (rawParams.includes(":")) {
-			// 冒号形式 (ISO 8613-6)：逐段处理；去掉 48:*，校验 38:*，其余原样保留
-			const kept = rawParams.split(";").flatMap((token) => {
-				if (!token.includes(":")) {
-					return token ? filter(toSgrParams(token)).map(String) : [];
-				}
-				return isKeptColonSgr(token) ? [token] : [];
-			});
-			return kept.length > 0 ? `\x1b[${kept.join(";")}m` : "";
-		}
 		const parsed = toSgrParams(rawParams);
 		if (parsed.length === 0) {
 			return "";

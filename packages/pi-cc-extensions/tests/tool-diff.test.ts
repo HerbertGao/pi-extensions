@@ -37,9 +37,6 @@ import {
 	MAX_COMPARABLE_WRITE_BYTES,
 	MAX_WRITE_METADATA_ENTRIES,
 } from "../extensions/renderer/tool/diff/write-execution.ts";
-import { sanitizeAnsiForThemedOutput } from "../extensions/renderer/tool/diff/ansi-utils.ts";
-import { splitWriteContentLines } from "../extensions/renderer/tool/diff/diff-text.ts";
-
 const theme = {
 	fg(_color: string, text: string) {
 		return text;
@@ -880,28 +877,6 @@ test("external write owner disables rich diff instead of degrading every card", 
 			store,
 		),
 		undefined,
-	);
-});
-
-test("diff helpers preserve line boundaries and strip colon-form backgrounds", () => {
-	assert.deepEqual(splitWriteContentLines("first\r\nsecond\rthird\n"), [
-		"first",
-		"second",
-		"third",
-	]);
-	assert.equal(
-		sanitizeAnsiForThemedOutput("\x1b[38:2::1:2:3mfg\x1b[48:2::4:5:6mbg\x1b[0m"),
-		"\x1b[38:2::1:2:3mfgbg\x1b[39;22;23;24;25;27;28;29;59m",
-	);
-	assert.equal(
-		sanitizeAnsiForThemedOutput("\x1b[4:3mcurly\x1b[58:2::1:2:3munderline"),
-		"\x1b[4:3mcurly\x1b[58:2::1:2:3munderline",
-	);
-	assert.equal(
-		sanitizeAnsiForThemedOutput(
-			"\x1b[38:5:123mvalid\x1b[38:5:mmissing\x1b[38:5:256mwide\x1b[38:2::1:2mshort",
-		),
-		"\x1b[38:5:123mvalidmissingwideshort",
 	);
 });
 

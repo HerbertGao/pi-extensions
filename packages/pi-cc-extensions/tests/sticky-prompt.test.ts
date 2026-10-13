@@ -13,7 +13,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { createJiti } from "jiti";
 import { config, formatConfigStatus, normalizeConfig } from "../extensions/config/config.ts";
-import { setToolTuiFullscreen } from "../extensions/renderer/tool/show-more-hint.ts";
+import { setToolTuiFullscreen } from "../extensions/renderer/tool/names.ts";
 import {
 	computeStickyPrompt,
 	disposeStickyPromptPatches,
@@ -54,7 +54,7 @@ function plain(line: string): string {
 }
 
 /** 伪造 fullscreen 布局帧：主滚动盒 + 视口高度 + 内容行。 */
-function makeFrame(content: string[], scrollTop: number, viewportHeight: number) {
+function makeFrame(content: string[], scrollTop: number, viewportHeight: number, clipX = 0) {
 	let renders = 0;
 	const scrollView: any = {
 		scrollTop,
@@ -70,13 +70,13 @@ function makeFrame(content: string[], scrollTop: number, viewportHeight: number)
 	const contentBox: any = {
 		component: { render: () => content },
 		rect: { x: 0, y: -scrollTop, width: VIEWPORT_WIDTH, height: content.length },
-		clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: viewportHeight },
+		clip: { x: clipX, y: 0, width: VIEWPORT_WIDTH, height: viewportHeight },
 		children: [],
 	};
 	const scrollBox: any = {
 		component: {},
 		rect: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: viewportHeight },
-		clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: viewportHeight },
+		clip: { x: clipX, y: 0, width: VIEWPORT_WIDTH, height: viewportHeight },
 		children: [contentBox],
 		scrollView,
 		scrollContentLines: content,
@@ -282,7 +282,7 @@ test("sticky prompt: hover marks the row and keeps one highlight", () => {
 test("sticky prompt: scrollbar column is not part of the bar", () => {
 	withSticky(() => {
 		const content = [...messageLines("tall message", 40), ...assistantLines(10)];
-		const frame = makeFrame(content, 25, 10);
+		const frame = makeFrame(content, 2, 10);
 		frame.scrollView.isScrollbarVisible = true;
 		renderStickyPromptScreen(frame.tui, frame.screen, frame.layout, VIEWPORT_WIDTH);
 
@@ -291,6 +291,31 @@ test("sticky prompt: scrollbar column is not part of the bar", () => {
 		assert.equal(handleStickyPromptClick(frame.tui, { row: 1, col: scrollbarCol } as any), false);
 		assert.equal(frame.scrollView.lastScroll, null);
 		assert.equal(handleStickyPromptClick(frame.tui, { row: 1, col: 5 } as any), true);
+	});
+});
+
+test("sticky prompt: the full row stays clickable when no scrollbar is drawn", () => {
+	withSticky(() => {
+		const content = [...messageLines("tall message", 40), ...assistantLines(10)];
+		const frame = makeFrame(content, 25, 10);
+		renderStickyPromptScreen(frame.tui, frame.screen, frame.layout, VIEWPORT_WIDTH);
+
+		assert.equal(handleStickyPromptClick(frame.tui, { row: 1, col: VIEWPORT_WIDTH } as any), true);
+		assert.deepEqual(frame.scrollView.lastScroll, { row: 0, options: { disableFollow: true } });
+	});
+});
+
+test("sticky prompt: a click left of the bar misses", () => {
+	withSticky(() => {
+		const content = [...messageLines("tall message", 40), ...assistantLines(10)];
+		const frame = makeFrame(content, 25, 10, 8);
+		frame.scrollView.isScrollbarVisible = true;
+		renderStickyPromptScreen(frame.tui, frame.screen, frame.layout, VIEWPORT_WIDTH);
+
+		assert.equal(updateStickyPromptHover(frame.tui, { row: 1, col: 8 } as any), false);
+		assert.equal(handleStickyPromptClick(frame.tui, { row: 1, col: 8 } as any), false);
+		assert.equal(frame.scrollView.lastScroll, null);
+		assert.equal(updateStickyPromptHover(frame.tui, { row: 1, col: 9 } as any), true);
 	});
 });
 
@@ -491,6 +516,66 @@ test("sticky prompt: real alt-screen frame pins the row and strips markers", () 
 		assert.equal(frame.scroll.scrollTop, 0, "跳转目标是消息首行");
 		frame.tui.doRender();
 		assert.doesNotMatch(firstRow(), /\[click to jump\]/, "指令可见后粘性行收走");
+	});
+});
+
+test("sticky prompt: the scrollbar track on the pinned row does not jump to the top", () => {
+	withSticky(() => {
+		setToolTuiFullscreen(true);
+		installStickyPromptPatches();
+		const terminal: any = {
+			columns: 100,
+			rows: 20,
+			isTTY: true,
+			write() {},
+			onData: () => () => {},
+			setRawMode() {},
+			getColorMode: () => "truecolor",
+			start() {},
+			stop() {},
+		};
+		const messages = new Container();
+		const prompt = ["pinned prompt", ...Array.from({ length: 40 }, (_, i) => `log ${i}`)];
+		messages.addChild(new UserMessageComponent(prompt.join("\n")));
+		for (let i = 0; i < 300; i++) messages.addChild(new Text(`assistant line ${i}`));
+		const scroll = new ScrollView(messages, { follow: "none", primary: true, scrollbar: "always" });
+		const tui: any = new TuiAltScreen(terminal, false, undefined, { mouse: true });
+		tui.altScreenActive = true;
+		tui.setLayoutRoot(
+			new VStack([
+				{ component: scroll, basis: 0, grow: 1, shrink: 1, minSize: 1 },
+				{ component: new Text("> "), basis: "auto", grow: 0, shrink: 1, minSize: 1 },
+			]),
+		);
+		const trackPress = { code: 0, row: 1, col: 100, final: "M" } as any;
+		// 先渲染一帧让 ScrollView 算出 maxScrollTop，scrollTo 才拿得到目标位置。
+		tui.doRender();
+		const at = (top: number) => {
+			scroll.scrollTo(top, { disableFollow: true });
+			tui.doRender();
+		};
+
+		// 粘性条显示、滑块在下方：顶端那格是轨道，按下被吞掉，阅读位置不动。
+		at(300);
+		assert.match(stripTerminalSequences(tui.getScreenLines()[0] ?? ""), /pinned prompt/);
+		assert.equal(handleStickyPromptClick(tui, trackPress), true);
+		assert.equal(scroll.scrollTop, 300, "轨道顶端按下不跳到会话开头");
+
+		// 粘性条还在、滑块也在顶端：不拦，交给 Pi 拖动。
+		at(30);
+		assert.match(stripTerminalSequences(tui.getScreenLines()[0] ?? ""), /pinned prompt/);
+		assert.equal(handleStickyPromptClick(tui, trackPress), false, "滑块在顶端照常拖动");
+		assert.equal(scroll.scrollTop, 30);
+
+		// 粘性条不显示：顶端那格照旧交给滚动条，行为不变。
+		at(0);
+		assert.doesNotMatch(
+			stripTerminalSequences(tui.getScreenLines()[0] ?? ""),
+			/pinned prompt/,
+			"粘性条消失后第 1 行只剩滚动条",
+		);
+		assert.equal(handleStickyPromptClick(tui, trackPress), false, "无粘性条时不拦");
+		assert.equal(scroll.scrollTop, 0, "无粘性条时轨道顶端照常跳到开头");
 	});
 });
 

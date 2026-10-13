@@ -65,10 +65,15 @@ test("agent discovery honors PI_CODING_AGENT_DIR and skips unreadable entries", 
 			},
 		} as any);
 		const result = await events.get("before_agent_start")?.(
-			{ prompt: "please ask @subagent:[coder]", systemPrompt: "base" },
+			{ messageType: "user", prompt: "please ask @subagent:[coder]", systemPrompt: "base" },
 			{},
 		);
 		assert.match(result?.message?.content ?? "", /"coder" \(Coder\)/);
+		const custom = await events.get("before_agent_start")?.(
+			{ messageType: "custom", message: { content: "@subagent:[coder]" } },
+			{},
+		);
+		assert.equal(custom, undefined);
 		assert.doesNotMatch(result?.message?.content ?? "", /broken/);
 	} finally {
 		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;

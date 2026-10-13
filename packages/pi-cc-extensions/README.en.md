@@ -112,13 +112,12 @@ pi -e .              # one run, does not edit settings.json
 
 ## Compatibility
 
-- Node.js `>=24`; the monorepo uses Pi `1.0.4`, with published Pi peer versions kept at `*`.
+- Node.js `>=24`; the monorepo uses Pi `1.2.0`, with published Pi peer versions kept at `*`.
 
 ## Recommended companions
 
 | Extension                | Purpose                                                     |
 | ------------------------ | ----------------------------------------------------------- |
-| `npm:@ff-labs/pi-fff`    | FFF-powered fuzzy file and content search (fffind / ffgrep) |
 | `npm:pi-web-access`      | Web search, URL fetching, GitHub cloning, PDF/video parsing |
 | `npm:@narumitw/pi-usage` | Current-account usage for Codex / Copilot / OpenRouter      |
 

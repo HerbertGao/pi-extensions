@@ -71,8 +71,6 @@ export default function (pi: ExtensionAPI): void {
 	}
 
 	function buildWorkingMessage(): string {
-		// turn_end 后迟到的 provider 事件不得再驱动 footer（否则渲染出 epoch 级计时）。
-		if (!turnActive) return "";
 		const parts: string[] = [];
 		const tokens = tokenCount();
 		if (tokens > 0) parts.push(`↓ ${formatTokenCount(tokens)} tokens`);
@@ -189,7 +187,7 @@ export default function (pi: ExtensionAPI): void {
 			evt.type === "toolcall_start"
 		) {
 			// TTFT 的首块含 toolcall_start：模型直接发起 tool call（thinking/text 省略）时也算首 token。
-			// 分段锚点只在 turn_start 重置。这里再重置会把本段累计 usage.output 当成新的首报，live 速率翻倍。
+			// 分段锚点只在 turn_start 重置。这里再重置会把累计 usage.output 当成新的首报。
 			markFirstToken();
 			updateProviderUsage(evt.partial);
 		} else if (evt.type === "thinking_delta" || evt.type === "text_delta") {
@@ -200,7 +198,7 @@ export default function (pi: ExtensionAPI): void {
 		} else if (evt.type === "done") {
 			updateProviderUsage(evt.message);
 		} else if (evt.type === "error") {
-			// provider 错误事件的 usage.output 不可信，不得计入 token 统计。
+			updateProviderUsage(evt.error);
 		} else {
 			updateProviderUsage(evt.partial);
 		}

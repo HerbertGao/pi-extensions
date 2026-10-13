@@ -8,7 +8,7 @@ A collection of HerbertGao-maintained and pinned upstream extensions for the [Pi
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer and Pi 1.0.4 or newer.
+Requires Node.js 24 or newer and Pi 1.2.0 or newer.
 
 The aggregate package bundles the active maintained packages below plus the pinned upstream companions listed afterward, so Pi loads them from one isolated package root. Individual maintained packages can also be installed separately.
 

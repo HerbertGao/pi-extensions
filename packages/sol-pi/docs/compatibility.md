@@ -1,6 +1,6 @@
 # Pi Compatibility
 
-This monorepo tests `@herbertgao/sol-pi` against the root development host Pi 1.0.4. Pi runtime peers remain `*`, so Pi owns installation and upgrades; that range is not a guarantee for every host. Upstream reports a 19-file/140-test suite and offline startup passing on 0.85.1 and 0.84.2, with earlier public-API checks on the 0.81.1 fork. Those are historical upstream results, not results for the locally adapted package. Its tests use Pi 1.x `ExtensionToolContext` for tool execution.
+This monorepo tests `@herbertgao/sol-pi` against the root development host Pi 1.2.0. Pi runtime peers remain `*`, so Pi owns installation and upgrades; that range is not a guarantee for every host. Upstream reports a 19-file/140-test suite and offline startup passing on 0.85.1 and 0.84.2, with earlier public-API checks on the 0.81.1 fork. Those are historical upstream results, not results for the locally adapted package. Its tests use Pi 1.x `ExtensionToolContext` for tool execution.
 
 SoL-Pi imports only public package exports:
 
