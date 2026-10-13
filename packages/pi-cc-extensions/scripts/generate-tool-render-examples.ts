@@ -28,7 +28,7 @@ import {
 	setMessageDisplayTheme,
 } from "../extensions/renderer/tool/message-display.ts";
 import { setToolMouseTui } from "../extensions/renderer/mouse/scroll.ts";
-import { setToolTuiFullscreen } from "../extensions/renderer/tool/show-more-hint.ts";
+import { setToolTuiFullscreen } from "../extensions/renderer/tool/names.ts";
 import {
 	DEFAULT_TOOL_DISPLAY_CONFIG,
 	renderRichToolResult,
@@ -761,6 +761,17 @@ async function generateCompact() {
 			} as unknown as AssistantMessage;
 
 			thinkingActive = true;
+			for (const component of [
+				tool("bash", "b1", { command: "npm test" }),
+				tool("read", "r1", { path: "a.ts" }),
+				tool("read", "r2", { path: "a.ts" }),
+				tool("read", "r3", { path: "b.ts" }),
+				tool("grep", "g1", { pattern: "x" }),
+			]) {
+				succeed(component, "ok");
+				component.executionStarted = true;
+				component.updateDisplay?.();
+			}
 			const active = new AssistantMessageComponent(msg, true) as any;
 			active.updateContent(msg);
 			const activeLines = renderLines(active);
@@ -814,7 +825,7 @@ async function generateCompact() {
 				section(
 					"1. 消息折叠摘要行",
 					[
-						"含 toolCall 的 assistant 折叠为单行摘要（运行时长 + 工具计数）。独立渲染下摘要跟在正文后（如下）；挂进 transcript 容器后，摘要行是回合末尾的独立尾行组件：",
+						"含 toolCall 的 assistant 折叠为一行摘要（运行时长 + 工具计数）。普通工具不单独成行。独立渲染下摘要跟在正文后（如下）；挂进 transcript 容器后，摘要行是回合末尾的独立尾行组件：",
 						fence([...activeLines, ...doneLines]),
 						"展开（Ctrl+O / 点击摘要行）后助手文本按原生渲染，thinking 与工具卡装进展开卡背景面板（`expandedCardBackground`，默认 userMessageBg）：",
 						fence(expandedLines),
@@ -874,7 +885,7 @@ async function generateCompact() {
 				section(
 					"2. 普通工具行隐藏",
 					[
-						"折叠时普通工具 **不渲染独立行**（摘要已统计）：",
+						"折叠时普通工具卡 **不渲染独立行**（卡自身已被摘要统计）：",
 						fence([
 							`read 折叠行数: ${renderLines(read).filter((l) => l.trim()).length}`,
 							`bash 折叠行数: ${renderLines(bash).filter((l) => l.trim()).length}`,

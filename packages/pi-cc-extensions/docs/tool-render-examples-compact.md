@@ -2,15 +2,17 @@
 
 > 由真实 renderer 驱动生成的示例快照，已剥离 ANSI。
 > 实际 TUI 中包含状态色、背景色和 hover 高亮；Braille loading 帧与耗时快照取固定时钟。
-> 当前版本：ccstyle 1.0.0 · mode=`compact`。
+> 当前版本：ccstyle 1.0.1 · mode=`compact`。
 > renderer 变更后请运行 `npm run docs:tool-render` 同步本文件。
 
 ## 1. 消息折叠摘要行
 
-含 toolCall 的 assistant 折叠为单行摘要（运行时长 + 工具计数）。独立渲染下摘要跟在正文后（如下）；挂进 transcript 容器后，摘要行是回合末尾的独立尾行组件：
+含 toolCall 的 assistant 折叠为一行摘要（运行时长 + 工具计数）。普通工具不单独成行。独立渲染下摘要跟在正文后（如下）；挂进 transcript 容器后，摘要行是回合末尾的独立尾行组件：
 
 ```text
  Running... · 9s, bash×1, read×2, grep×1 · click to show more
+ ↳ ✓ Grep "x"
+     ↳ 1 line returned
 ```
 
 展开（Ctrl+O / 点击摘要行）后助手文本按原生渲染，thinking 与工具卡装进展开卡背景面板（`expandedCardBackground`，默认 userMessageBg）：
@@ -47,7 +49,7 @@ Running... · 9s, bash×1, read×1
 
 ## 2. 普通工具行隐藏
 
-折叠时普通工具 **不渲染独立行**（摘要已统计）：
+折叠时普通工具卡 **不渲染独立行**（卡自身已被摘要统计）：
 
 ```text
 read 折叠行数: 0

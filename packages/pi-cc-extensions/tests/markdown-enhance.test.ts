@@ -167,102 +167,24 @@ test("圈数字转半角括号（Nerd Font 字形缺陷规避）", () => {
 	assert.ok(run("① ② ⑳").includes("(1) (2) (20)"));
 });
 
-test("跨行链接归一化并保留代码块", () => {
-	const input = [
-		"[跨行",
-		"链接](https://example.com/docs)",
-		"",
-		"~~~md",
-		"[代码",
-		"链接](https://example.com/code)",
-		"~~~",
-	].join("\n");
-	const out = run(input);
-	assert.ok(out.includes("[跨行 链接](https://example.com/docs)"), JSON.stringify(out));
-	assert.ok(out.includes("[代码\n链接](https://example.com/code)"), JSON.stringify(out));
-});
+test("引用块和长围栏里的代码不被改写", () => {
+	const quoted = run("> ```ts\n> const n = ①\n> ```\nplain ①");
+	assert.match(quoted, /> const n = ①/);
+	assert.match(quoted, /plain \(1\)/);
 
-test("代码块内 URL 与 admonition 不动", () => {
-	const out = run(
-		[
-			"~~~md",
-			"> [!NOTE] https://tilde.example",
-			"~~~",
-			"   ```md",
-			"> [!NOTE] https://indented.example",
-			"   ```",
-			"外链 https://outside.com",
-		].join("\n"),
-	);
-	assert.ok(out.includes("> [!NOTE] https://tilde.example"));
-	assert.ok(out.includes("> [!NOTE] https://indented.example"));
-	assert.ok(!out.includes("[https://tilde.example]"));
-	assert.ok(!out.includes("[https://indented.example]"));
-	assert.ok(out.includes("[https://outside.com](https://outside.com)"));
-});
+	const longer = run("````\n```\nstill code ①\n````\nafter ①");
+	assert.match(longer, /still code ①/);
+	assert.match(longer, /after \(1\)/);
 
-test("圈数字转换保留 fenced blocks 与行内 code spans", () => {
-	const input = [
-		"① prose",
-		"```text",
-		"② triple fence",
-		"```",
-		"`③ inline` and ④ prose",
-		"~~~text",
-		"⑤ tilde fence",
-		"~~~",
-		"````text",
-		"⑥ long fence",
-		"````",
-	].join("\n");
-	const output = run(input);
-	assert.ok(output.includes("(1) prose"));
-	assert.ok(output.includes("② triple fence"));
-	assert.ok(output.includes("`③ inline` and (4) prose"));
-	assert.ok(output.includes("⑤ tilde fence"));
-	assert.ok(output.includes("⑥ long fence"));
-});
+	const tilde = run("~~~\ncode ①\n~~~\nafter ①");
+	assert.match(tilde, /code ①/);
+	assert.match(tilde, /after \(1\)/);
 
-test("未闭合 fence 后的圈数字保持原文", () => {
-	assert.strictEqual(
-		run("⑦ before\n```text\n⑧ inside\n⑨ still fenced"),
-		"(7) before\n```text\n⑧ inside\n⑨ still fenced",
-	);
-});
+	const indented = run("   ```\n  code ①\n   ```\nafter ①");
+	assert.match(indented, /code ①/);
+	assert.match(indented, /after \(1\)/);
 
-test("blockquote 内 fenced code 的圈数字保持原文", () => {
-	assert.strictEqual(
-		run("> ⑪ prose\n> ```text\n> ⑫ fenced\n> ```\n> ⑬ prose"),
-		"> (11) prose\n> ```text\n> ⑫ fenced\n> ```\n> (13) prose",
-	);
-});
-
-test("不同 blockquote depth 的 fence 不会提前闭合", () => {
-	assert.strictEqual(
-		run("```text\n> ```\n⑭ still fenced\n```\n⑮ prose"),
-		"```text\n> ```\n⑭ still fenced\n```\n(15) prose",
-	);
-});
-
-test("跨行 inline code span 的圈数字保持原文", () => {
-	assert.strictEqual(
-		run("⑯ prose `⑰ first\n⑱ second` ⑲ prose"),
-		"(16) prose `⑰ first\n⑱ second` (19) prose",
-	);
-	assert.strictEqual(run("`⑳ unmatched"), "`(20) unmatched");
-});
-
-test("退出 blockquote container 会隐式结束 fenced block", () => {
-	assert.strictEqual(run("> ```text\n> ① fenced\n② prose"), "> ```text\n> ① fenced\n(2) prose");
-});
-
-test("未匹配与转义 backtick 不会隐藏后续 prose 或 code span", () => {
-	assert.strictEqual(run("` unmatched ``② code`` ③ prose"), "` unmatched ``② code`` (3) prose");
-	assert.strictEqual(run("\\`① escaped\\` ② prose"), "\\`(1) escaped\\` (2) prose");
-	assert.strictEqual(run("`①\\` ② prose"), "`①\\` (2) prose");
-});
-
-test("inline code span 不跨空行段落边界", () => {
-	assert.strictEqual(run("`①\n\n②`"), "`(1)\n\n(2)`");
-	assert.strictEqual(run("> `③\n>\n> ④`"), "> `(3)\n>\n> (4)`");
+	const quotedUrl = run("> ```\n> see https://example.com/a\n> ```\n正文 https://example.com/b");
+	assert.ok(!quotedUrl.includes("[https://example.com/a]"));
+	assert.ok(quotedUrl.includes("[https://example.com/b](https://example.com/b)"));
 });

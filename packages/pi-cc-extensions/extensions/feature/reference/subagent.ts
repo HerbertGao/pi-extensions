@@ -26,6 +26,7 @@ const MENTION_PATTERN = /(?:^|[\t ])@([^\s@]*)$/;
 const SUBAGENT_REFERENCE_PATTERN = /(?:^|\s)@subagent:\[([^\]]+)](?![\w-])/g;
 
 function getAgentDir(): string {
+	// PI_CODING_AGENT_DIR 本身就是 agent 目录（默认 ~/.pi/agent），不是家目录。
 	const override = process.env.PI_CODING_AGENT_DIR;
 	return join(override ? override : join(homedir(), ".pi", "agent"), "agents");
 }
