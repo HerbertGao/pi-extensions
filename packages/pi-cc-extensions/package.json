@@ -74,6 +74,7 @@
 		"version": "1.0.2",
 		"reviewedVersion": "1.0.2",
 		"repository": "https://github.com/minuque/pi-cc-extensions",
-		"commit": "3c9ec533b3f8ab9efa19a821587732be96bb592f"
+		"commit": "3c9ec533b3f8ab9efa19a821587732be96bb592f",
+		"trackVersion": true
 	}
 }

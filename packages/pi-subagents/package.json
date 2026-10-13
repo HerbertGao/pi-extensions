@@ -72,6 +72,7 @@
     "version": "0.20.0",
     "reviewedVersion": "0.20.0",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "13106ab6f608b3acc54185da5299ee7fbaabb6b9"
+    "commit": "13106ab6f608b3acc54185da5299ee7fbaabb6b9",
+    "trackVersion": true
   }
 }
