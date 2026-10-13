@@ -113,14 +113,21 @@ export function nextTrackedUpstreamVersion(currentVersion, upstreamVersion) {
   return next
 }
 
-function replaceGeneratedChangelogVersion(changelogPath, fromVersion, toVersion) {
+function replaceGeneratedChangelogVersion(
+  changelogPath,
+  fromVersion,
+  toVersion,
+) {
   if (!existsSync(changelogPath) || fromVersion === toVersion) return
 
   const changelog = readFileSync(changelogPath, "utf8")
   const fromHeading = `## ${fromVersion}`
   if (!changelog.includes(fromHeading)) return
 
-  writeFileSync(changelogPath, changelog.replace(fromHeading, `## ${toVersion}`))
+  writeFileSync(
+    changelogPath,
+    changelog.replace(fromHeading, `## ${toVersion}`),
+  )
 }
 
 function readJson(path) {
@@ -170,16 +177,25 @@ function applyTrackedUpstreamVersions(before) {
       manifest["x-upstream"].version,
     )
     replaceExactVersion(entry.manifestPath, manifest.version, next)
-    replaceGeneratedChangelogVersion(entry.changelogPath, manifest.version, next)
+    replaceGeneratedChangelogVersion(
+      entry.changelogPath,
+      manifest.version,
+      next,
+    )
     if (aggregate.dependencies?.[entry.name]) {
       aggregate.dependencies[entry.name] = next
       aggregateChanged = true
     }
-    process.stdout.write(`Tracked upstream version: ${entry.name} ${entry.version} -> ${next}\n`)
+    process.stdout.write(
+      `Tracked upstream version: ${entry.name} ${entry.version} -> ${next}\n`,
+    )
   }
 
   if (aggregateChanged) {
-    writeFileSync(aggregateManifestPath, `${JSON.stringify(aggregate, null, 2)}\n`)
+    writeFileSync(
+      aggregateManifestPath,
+      `${JSON.stringify(aggregate, null, 2)}\n`,
+    )
   }
 }
 
