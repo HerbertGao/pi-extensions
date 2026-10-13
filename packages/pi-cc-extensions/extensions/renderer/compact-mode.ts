@@ -592,6 +592,11 @@ export type CompactModeHooks = {
 	assertOwnership(): void;
 	/** 重新渲染包含指定 toolCallId 的 assistant 消息（思考收尾时刷新）。 */
 	refreshToolCallMessage(toolCallId: string | undefined): void;
+	/**
+	 * 收尾 resume 重放留下的活动回合。重放是同步的，回合之间靠下一条消息收口，
+	 * 只有最后一条没有后续消息，会停在 Running。
+	 */
+	settleReplayedRound(): void;
 	shutdown(): void;
 };
 
@@ -617,17 +622,6 @@ type CompactModePatch = {
 const trackedAssistantComponents = new Set<any>();
 const trackedToolComponents = new Set<any>();
 let hoveredAssistantComponent: any;
-
-/**
- * 活动回合摘要 getter：常驻状态行（pi working row）镜像用。
- * installCompactMode 注册、卸载时清空，直接读 activeRound，不持有回合闭包。
- */
-let compactRunStatusGetter: (() => string | undefined) | undefined;
-
-/** 活动回合的摘要文本（`Running... · 9s, bash×1`）；无活动回合返回 undefined。 */
-export function getCompactRunStatusText(): string | undefined {
-	return compactRunStatusGetter?.();
-}
 
 /**
  * 回合尾行记录：摘要行（live 时连槽位卡）挂成 transcript 容器里回合末尾的
@@ -1196,6 +1190,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		liveSlotToolIds: Set<string>;
 		/** 收尾后的静默期截止时间戳；期间仍按围观态渲染，到点才收拢。 */
 		settleUntil?: number;
+		/** 消息已有 toolCall、工具组件还没到：等它一 updateDisplay 就重画槽位。 */
+		pendingLiveTool?: boolean;
 		foldTimer?: ReturnType<typeof setTimeout>;
 		/** 回合挂钟起点，保证 Running 时长连续递增。 */
 		startedAt: number;
@@ -1357,12 +1353,6 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		...round.detachedMessages,
 	];
 
-	/** 镜像给常驻状态行的文案：只认当前活动回合（摘要行被顶出视口时由 working-message 取用）。 */
-	compactRunStatusGetter = () => {
-		const round = activeRound;
-		return round?.active ? summarize(roundMessages(round), true, round) || undefined : undefined;
-	};
-
 	const roundToolCallIds = (round: CompactRound): Set<string> => {
 		const ids = new Set<string>();
 		for (const message of roundMessages(round)) {
@@ -1371,6 +1361,26 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			}
 		}
 		return ids;
+	};
+
+	/**
+	 * 摘要行有东西可汇总才挂：普通工具（edit/write/ask 之外）或非空思考。
+	 * 只剩外层卡的回合不挂——那些卡各自能展开，空摘要点开只会跳位。
+	 */
+	const roundHasSummaryContent = (round: CompactRound): boolean => {
+		for (const message of roundMessages(round)) {
+			for (const item of Array.isArray(message?.content) ? message.content : []) {
+				if (item?.type === "thinking" && String(item.thinking ?? "").trim()) return true;
+				if (
+					item?.type === "toolCall" &&
+					typeof item.name === "string" &&
+					!OUTER_TOOLS.has(item.name)
+				) {
+					return true;
+				}
+			}
+		}
+		return false;
 	};
 
 	/**
@@ -1581,10 +1591,12 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	const syncTailForTool = (toolCallId: string): void => {
 		if (!toolCallId) return;
 		for (const round of [activeRound, ...pendingFoldRounds]) {
-			if (round?.tail && roundToolCallIds(round).has(toolCallId)) {
-				syncTailPosition(round);
-				return;
-			}
+			if (!round || !roundToolCallIds(round).has(toolCallId)) continue;
+			// 槽位是在消息更新时画的，当时工具组件还不存在：组件到了就补上。
+			// 参数流式更新也走这里，槽位卡跟着换内容。
+			if (round.pendingLiveTool || roundLive(round)) renderRound(round);
+			else if (round.tail) syncTailPosition(round);
+			return;
 		}
 	};
 
@@ -1728,6 +1740,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		}
 		let runningTool: any;
 		let lastTool: any;
+		let missingTool = false;
 		for (const [, message] of round.messages) {
 			for (const item of Array.isArray(message?.content) ? message.content : []) {
 				if (item?.type !== "toolCall" || typeof item.id !== "string") continue;
@@ -1736,11 +1749,17 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 				if (OUTER_TOOLS.has(String(tool?.toolName ?? item.name ?? ""))) continue;
 				round.liveSlotToolIds.add(item.id);
 				liveSlotToolIds.add(item.id);
-				if (!tool) continue;
+				// pi 的 message_update 先 updateContent 再建工具组件：这一帧计数已经算上，
+				// 组件要等 updateDisplay 才能进槽位。记下来，组件一到就补画。
+				if (!tool) {
+					missingTool = true;
+					continue;
+				}
 				lastTool = tool;
 				if (isRunningTool(tool)) runningTool = tool;
 			}
 		}
+		round.pendingLiveTool = missingTool;
 		// 槽位单块：活动思考最新；否则本回合最近的工具（运行中原位增长，完成也留着）。
 		const slotTool = thinkingKids.length > 0 ? undefined : (runningTool ?? lastTool);
 		const cardItems: Array<{ child?: any; tool?: any }> = slotTool
@@ -1795,6 +1814,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		}
 		for (const id of round.liveSlotToolIds) liveSlotToolIds.delete(id);
 		round.liveSlotToolIds.clear();
+		// pendingLiveTool 留给 renderRoundLive 重算：这里清掉的话，组件刚到的那次
+		// 补画会把自己的触发条件抹掉，槽位仍是空的。
 
 		for (const [component, message] of round.messages) {
 			component.lastMessage = message;
@@ -1816,6 +1837,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			};
 		}
 
+		if (round.anchor.expanded === true) {
+			// 没有可汇总内容的回合不进展开态：摘要行不存在，展开只会把正文搬回回合开头。
+			if (!roundHasSummaryContent(round)) {
+				for (const member of round.messages.keys()) member.expanded = false;
+				round.anchor.expanded = false;
+			}
+		}
 		if (round.anchor.expanded === true) {
 			// 展开内容留在摘要行那个位置：回合最后一个成员（含 write/edit）之后。
 			// 放进 anchor 内部会跳到回合起点，盖到中间的 write/edit 上面。
@@ -1959,8 +1987,9 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		for (const [component, message] of round.messages) {
 			if (component === round.anchor) {
 				renderAssistantWithoutThinking(component, message);
-				// 空摘要不挂行（getter 在 Running 启动瞬间也可能短暂为空）
-				if (summary || round.active) {
+				// 空摘要不挂行（getter 在 Running 启动瞬间也可能短暂为空）。
+				// 只剩外层卡的回合同样不挂：摘要行没有可汇总的内容。
+				if ((summary || round.active) && (round.active || roundHasSummaryContent(round))) {
 					mountRoundTail(round, (identity) => [
 						compactAssistantLineComponent(identity, getSummary, deps.query),
 					]);
@@ -2152,8 +2181,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 
 	patch.toolInstalledUpdateDisplay = function (this: any) {
 		const id = String(this.toolCallId ?? "");
-		if (patch.active && config.mode === "compact" && expandedRoundToolIds.has(id)) {
-			// 用户点开的保留展开；其余（含全局展开被收回的）继续强制折叠。
+		if (
+			patch.active &&
+			config.mode === "compact" &&
+			(expandedRoundToolIds.has(id) || liveSlotToolIds.has(id))
+		) {
+			// 用户点开的保留展开；其余（含全局展开、live 槽位接管的）继续强制折叠。
+			// 槽位卡在消息更新时就接管了 id，组件后到时 setExpanded 会把它翻开，外层多出一张卡。
 			if (this.expanded !== true) explicitRoundToolIds.delete(id);
 			else if (!explicitRoundToolIds.has(id)) this.expanded = false;
 		}
@@ -2202,7 +2236,6 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		trackedToolComponents.clear();
 		hoveredAssistantComponent = undefined;
 		resetRounds();
-		compactRunStatusGetter = undefined;
 	};
 
 	assistantPrototype.updateContent = patch.assistantInstalled;
@@ -2258,6 +2291,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 					trackedAssistantComponents.delete(component);
 				}
 			}
+		},
+		settleReplayedRound() {
+			if (!patch.active || config.mode !== "compact") return;
+			const round = activeRound;
+			if (!round) return;
+			finalizeRound(round); // clears activeRound — capture it first
+			renderRound(round);
 		},
 		shutdown() {
 			patch.dispose();

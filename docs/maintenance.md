@@ -11,14 +11,14 @@
 | Local package set  | Upstream                   | Imported baseline              | Notes                                                                                                                                                                                                        |
 | ------------------ | -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `95d1086` (`0.19.0` + PR #268) | Imported upstream v0.19.0 and PR #268. The local package keeps its `@herbertgao/*` identity, release metadata, and UI branding while retaining the upstream workflow, mention, and worktree-safety behavior. |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `3c9ec53` (`1.0.2`)            | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation and the provider-error token guard. See "2026-10-12 pi-cc-extensions 1.0.2 replay".                |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `281d23fa` (`1.0.3`)           | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation. See "2026-10-13 pi-cc-extensions 1.0.3 replay".                                                   |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source)     | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained.       |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.2`          | `1.0.2`          | `3c9ec533b3f8`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.3`          | `1.0.3`          | `281d23faa156`  |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
@@ -283,6 +283,10 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-13 pi-cc-extensions 1.0.3 replay
+
+The imported baseline advances from v1.0.2 `3c9ec53` to v1.0.3 `281d23faa1567713ce43469b99e499ff7da31b74`. Upstream absorbed the custom `before_agent_start` prompt guard and the write-byte/abort honesty fix, and also shipped configurable TTFT display, real `/context` accounting, compact resume settlement, and removal of the compact footer mirror. The replay takes those upstream texts. Local package identity, Action Fusion write cooperation, and the session-switch guards remain. The published package version stays `0.12.0` until the changeset is consumed; the version script will then publish `1.0.3-local.1`.
 
 ### 2026-10-12 pi-cc-extensions 1.0.2 replay
 
