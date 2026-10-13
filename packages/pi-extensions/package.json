@@ -22,7 +22,8 @@
   "files": [
     "README.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "extensions"
   ],
   "type": "module",
   "publishConfig": {
@@ -165,7 +166,8 @@
       "./node_modules/pi-antigravity/src/features/google-search.ts",
       "./node_modules/pi-antigravity/src/features/generate-image.ts",
       "./node_modules/pi-provider-qoder/dist/index.js",
-      "./node_modules/pi-typesafe/extensions/index.js"
+      "./node_modules/pi-typesafe/extensions/index.js",
+      "./extensions/clef.mjs"
     ],
     "themes": [
       "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-dark.json",
