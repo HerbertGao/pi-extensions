@@ -1897,9 +1897,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   }
   if (
     !tifanNotices.includes("`pi-typesafe`") ||
-    !tifanNotices.includes("Copyright (c) 2026 Ryan Gapac") ||
-    !tifanNotices.includes("`pi-jev-auto-mode`") ||
-    !tifanNotices.includes("Copyright (c) 2026 jomatsu")
+    !tifanNotices.includes("Copyright (c) 2026 Ryan Gapac")
   ) {
     throw new Error("Aggregate TypeSafe third-party notices are incomplete")
   }
@@ -1926,7 +1924,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "node_modules/@narumitw/pi-btw/LICENSE",
       "node_modules/@narumitw/pi-caffeinate/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
-      "node_modules/pi-jev-auto-mode/LICENSE",
       "node_modules/pi-lens/LICENSE",
       "node_modules/pi-typesafe/LICENSE",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
@@ -2299,27 +2296,14 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     throw new Error("Packed fast-mode extension did not load")
   }
 
-  const jevAutoRoot = join(packageRoot, "node_modules", "pi-jev-auto-mode")
-  const jevAutoEntry = resolve(jevAutoRoot, "index.ts")
-  if (!extensionPaths.includes(jevAutoEntry)) {
-    throw new Error(
-      "Packed aggregate is missing the pi-jev-auto-mode extension entry",
+  if (
+    sourceManifest.dependencies["pi-jev-auto-mode"] ||
+    sourceManifest.bundledDependencies?.includes("pi-jev-auto-mode") ||
+    sourceManifest.pi?.extensions?.some((entry) =>
+      entry.includes("pi-jev-auto-mode"),
     )
-  }
-  const loadedJevAuto = result.extensions.find(
-    (extension) => extension.resolvedPath === jevAutoEntry,
-  )
-  if (!loadedJevAuto?.commands.has("jev-auto-mode")) {
-    throw new Error("Packed pi-jev-auto-mode did not register /jev-auto-mode")
-  }
-  if (!loadedJevAuto.handlers.has("tool_call")) {
-    throw new Error("Packed pi-jev-auto-mode did not register its tool gate")
-  }
-  const jevAutoLicense = await readFile(join(jevAutoRoot, "LICENSE"), "utf8")
-  if (!jevAutoLicense.startsWith("MIT License\n\nCopyright (c) 2026 jomatsu")) {
-    throw new Error(
-      "Bundled pi-jev-auto-mode LICENSE is not the expected MIT text",
-    )
+  ) {
+    throw new Error("pi-jev-auto-mode is no longer bundled")
   }
 
   const typesafeRoot = join(packageRoot, "node_modules", "pi-typesafe")

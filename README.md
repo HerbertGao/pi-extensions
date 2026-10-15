@@ -45,7 +45,6 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.            |
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.8`        | Generate one-line session recaps.             |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
-| [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.5.0`        | Fail-closed Jev safety gates for tool calls.  |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.9.1`        | Structured TypeSafe/Jev decisions.            |
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.3`        | Code diagnostics and skills.                  |

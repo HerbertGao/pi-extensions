@@ -304,6 +304,16 @@ function textPreviewHarness(
 	};
 }
 
+test("showTextPreview closes from a regular-mode SGR click without overlay layout", async () => {
+	const tui = { terminal: { columns: 80, rows: 24 }, requestRender() {} };
+	const ui = textPreviewHarness(undefined, (c) => c.render(64), tui);
+	const preview = showTextPreview({ ui } as any, "Output", "hello");
+	// margin 2、80x24、宽 64、高 19：起点 col=8 row=2。局部 [esc] (60,1) → 屏幕 69,4。
+	ui.component.handleInput("\x1b[<0;69;4M");
+	await preview;
+	assert.equal(hasActiveTextPreview(), false);
+});
+
 test("showTextPreview closes from a regular-mode SGR click on [esc]", async () => {
 	const tui = {
 		terminal: { columns: 80, rows: 24 },

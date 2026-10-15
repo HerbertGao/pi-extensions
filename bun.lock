@@ -105,7 +105,6 @@
         "nanoid": "^5.0.0",
         "p-limit": "^6.1.0",
         "pi-antigravity": "0.10.0",
-        "pi-jev-auto-mode": "0.5.0",
         "pi-lens": "4.4.3",
         "pi-multi-account": "1.24.0",
         "pi-next-cue": "1.0.7",
@@ -1254,8 +1253,6 @@
     "pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
 
     "pi-antigravity": ["pi-antigravity@0.10.0", "", { "dependencies": { "undici": "^8.11.2" }, "peerDependencies": { "@earendil-works/pi-ai": ">=0.80.0", "@earendil-works/pi-coding-agent": ">=0.80.0" } }, "sha512-tY8NFT38Iq7KtNnfFEoI34+y7tW1BZRk+LxqGEeAYsINmaVrXRub9GgcZV8EMbK5xBALCCoLNDq775yi4uCtQA=="],
-
-    "pi-jev-auto-mode": ["pi-jev-auto-mode@0.5.0", "", { "dependencies": { "@typesafe-ai/sdk": "^0.6.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"] }, "sha512-uLdDsmfsZ//lqHYtTcCXoeX1D2qF5nFWuvb86t2ZZwPcX0pHFCyK4lekAZiDo1zcDGrbQSqh8K59wWzyzyoJrw=="],
 
     "pi-lens": ["pi-lens@4.4.3", "", { "dependencies": { "@ast-grep/cli": "0.45.3", "@ast-grep/napi": "^0.45.0", "js-yaml": "^5.2.2", "minimatch": "^10.2.6", "pidusage": "^4.0.1", "vscode-jsonrpc": "^9.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-huULHQMTx00rS9E+wdIli1o7dZx1EP5GVu4L2XC+21ifky/xxLz+GJQg1kZqOigfMs0H65TbmZgqA06zMjERVA=="],
 
