@@ -270,7 +270,6 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
 | `pi-typesafe`                        | `0.9.1`   | `DevMortimer/pi-typesafe`    |
 | `pi-multi-account`                   | `1.24.0`  | `Sarrius/pi-multi-account`   |
-| `pi-jev-auto-mode`                   | `0.5.0`   | `jomatsu/pi-jev-auto-mode`   |
 | `pi-lens`                            | `4.4.1`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.38.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.5.0`   | `simonsmh/pi-provider-qoder` |
@@ -504,7 +503,7 @@ Maintained child packages use SemVer. A package with `x-upstream.trackVersion` f
 
 Recommended configuration files may be shipped under `packages/pi-extensions/examples/`, but package installation must not write into `~/.pi` or replace existing user configuration. Keep examples valid against the pinned companion version and assert their presence and parsing in the aggregate smoke test.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 26 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 25 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 

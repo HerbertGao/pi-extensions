@@ -89,10 +89,6 @@
       "repository": "https://github.com/ouzhenkun/pi-next-cue"
     },
     {
-      "package": "pi-jev-auto-mode",
-      "repository": "https://github.com/jomatsu/pi-jev-auto-mode"
-    },
-    {
       "package": "pi-lens",
       "repository": "https://github.com/apmantza/pi-lens"
     },
