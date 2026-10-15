@@ -1,5 +1,24 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.7
+
+### Patch Changes
+
+- [#283](https://github.com/HerbertGao/pi-extensions/pull/283) [`5d1f77e`](https://github.com/HerbertGao/pi-extensions/commit/5d1f77e83e30e3df2964c8add48a746a883306da) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Add an on-demand `clef` tool that asks Cloudflare Clef-flash a typed judgment and shows the questions and answers in the transcript. It does not gate tool calls.
+
+- [#289](https://github.com/HerbertGao/pi-extensions/pull/289) [`947c29a`](https://github.com/HerbertGao/pi-extensions/commit/947c29a155875b3b41a03fbfa0b1da134db0f283) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Stop bundling pi-jev-auto-mode. Install it separately if the fail-closed tool gate is still needed.
+
+- [#287](https://github.com/HerbertGao/pi-extensions/pull/287) [`3a0deb9`](https://github.com/HerbertGao/pi-extensions/commit/3a0deb96297aa6da94fe40724a3945ef16c34497) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Stop bundling resume-from and lower the Node engines floor to `>=22.19.0`, matching Pi. Node 24 was copied from resume-from's engines field; these packages do not use a Node 24-only API. Pi's bundled Node 22 can install the current release instead of silently selecting an older one.
+
+- [#288](https://github.com/HerbertGao/pi-extensions/pull/288) [`ec336b0`](https://github.com/HerbertGao/pi-extensions/commit/ec336b0ec89b9bd46dfc321703de432d22811615) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay pi-cc-extensions onto upstream 1.0.4 and pi-subagents onto upstream 0.22.0, keeping local patches. Advance companion pins through ponytail 5.2.0, ask-user-question 2.13.8, fast-mode 0.1.14, pi-lens 4.4.3, pi-provider-qoder 0.5.1, and pi-web-access 0.40.0.
+
+- Updated dependencies [[`3a0deb9`](https://github.com/HerbertGao/pi-extensions/commit/3a0deb96297aa6da94fe40724a3945ef16c34497), [`ec336b0`](https://github.com/HerbertGao/pi-extensions/commit/ec336b0ec89b9bd46dfc321703de432d22811615)]:
+  - @herbertgao/pi-cc-extensions@1.0.3
+  - @herbertgao/pi-agency@0.1.1
+  - @herbertgao/pi-bark@0.2.1
+  - @herbertgao/pi-subagents@0.19.1
+  - @herbertgao/sol-pi@0.4.1
+
 ## 2026.10.6
 
 ### Patch Changes

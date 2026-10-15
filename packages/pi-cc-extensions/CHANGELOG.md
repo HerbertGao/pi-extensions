@@ -1,5 +1,13 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.4-local.1
+
+### Patch Changes
+
+- [#287](https://github.com/HerbertGao/pi-extensions/pull/287) [`3a0deb9`](https://github.com/HerbertGao/pi-extensions/commit/3a0deb96297aa6da94fe40724a3945ef16c34497) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Stop bundling resume-from and lower the Node engines floor to `>=22.19.0`, matching Pi. Node 24 was copied from resume-from's engines field; these packages do not use a Node 24-only API. Pi's bundled Node 22 can install the current release instead of silently selecting an older one.
+
+- [#288](https://github.com/HerbertGao/pi-extensions/pull/288) [`ec336b0`](https://github.com/HerbertGao/pi-extensions/commit/ec336b0ec89b9bd46dfc321703de432d22811615) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay pi-cc-extensions onto upstream 1.0.4 and pi-subagents onto upstream 0.22.0, keeping local patches. Advance companion pins through ponytail 5.2.0, ask-user-question 2.13.8, fast-mode 0.1.14, pi-lens 4.4.3, pi-provider-qoder 0.5.1, and pi-web-access 0.40.0.
+
 ## 1.0.3-local.1
 
 ### Patch Changes
