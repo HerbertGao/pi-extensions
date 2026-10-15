@@ -304,6 +304,20 @@ function textPreviewHarness(
 	};
 }
 
+test("showTextPreview closes from a regular-mode SGR click on [esc]", async () => {
+	const tui = {
+		terminal: { columns: 80, rows: 24 },
+		requestRender() {},
+		renderedOverlayLayouts: [{ col: 0, row: 0, width: 64, height: 20 }],
+	};
+	const ui = textPreviewHarness(undefined, (c) => c.render(64), tui);
+	const preview = showTextPreview({ ui } as any, "Output", "hello");
+	// 局部 x=60 是 [esc]；SGR 是 1-based 屏幕坐标，overlay 在 0,0 时 col=61 row=2。
+	ui.component.handleInput("\x1b[<0;61;2M");
+	await preview;
+	assert.equal(hasActiveTextPreview(), false);
+});
+
 test("showTextPreview highlights and closes from the [esc] mouse hitbox", async () => {
 	let escColor = "";
 	const ui = textPreviewHarness(

@@ -11,6 +11,7 @@ import {
 import { Key, Markdown, matchesKey, visibleWidth } from "@earendil-works/pi-tui";
 import { type Color, rgbColor } from "@earendil-works/pi-tui";
 import { padLine } from "../utils/format.ts";
+import { mouseBaseButton, parseSgrMousePacket } from "../utils/sgr-mouse.ts";
 
 export type ContextPart = {
 	label: string;
@@ -33,6 +34,21 @@ type ContextPreview = {
 	title: string;
 	content: string;
 };
+
+/** Regular 主屏 SGR 是 1-based 屏幕坐标；hitbox 是弹框局部 0-based。 */
+function localMouseFromSgr(
+	tui: any,
+	mouse: { code: number; col: number; row: number; final: "M" | "m" },
+) {
+	const layout = tui.renderedOverlayLayouts?.at(-1);
+	return {
+		col: layout ? mouse.col - 1 - layout.col : mouse.col,
+		row: layout ? mouse.row - 1 - layout.row : mouse.row,
+		release: mouse.final === "m",
+		motion: (mouse.code & 32) !== 0,
+		baseButton: mouseBaseButton(mouse.code),
+	};
+}
 
 function normalizePreviewText(text: string): string {
 	return text
@@ -277,6 +293,11 @@ export async function showTextPreview(
 						else if (matchesKey(data, "pageDown")) scrollTo(scrollOffset + pageSize);
 						else if (matchesKey(data, Key.home)) scrollTo(0);
 						else if (matchesKey(data, Key.end)) scrollTo(totalLines - pageSize);
+						else {
+							const mouse = parseSgrMousePacket(data);
+							if (!mouse) return;
+							handlePreviewMouse(localMouseFromSgr(tui, mouse));
+						}
 					},
 					// overlay 事件对象路径：官方 dispatchMouseToOverlay 把鼠标派到
 					// handleMouse，event.x/y 是相对弹框左上角的 0-based 局部坐标，
@@ -784,6 +805,9 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 										done(visiblePreviews[selectedPreviewIndex]?.key);
 										return;
 									}
+									const mouse = parseSgrMousePacket(data);
+									if (!mouse) return;
+									handleDialogMouse(localMouseFromSgr(tui, mouse));
 								},
 								// overlay 事件对象路径：event.x/y 是弹框局部 0-based 坐标，
 								// 与 hitbox 同基准。click 是 press+release 的合成，动作已在
