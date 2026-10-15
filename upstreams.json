@@ -107,10 +107,6 @@
     {
       "package": "pi-provider-qoder",
       "repository": "https://github.com/simonsmh/pi-provider-qoder"
-    },
-    {
-      "package": "resume-from",
-      "repository": "https://github.com/alexei-led/resume-from"
     }
   ]
 }

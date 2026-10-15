@@ -1433,47 +1433,15 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     }
   }
 
-  const resumeFromRoot = join(packageRoot, "node_modules", "resume-from")
-  const resumeFromManifestPath = join(resumeFromRoot, "package.json")
-  const resumeFromManifest = parseJson(
-    await readFile(resumeFromManifestPath, "utf8"),
-    resumeFromManifestPath,
-  )
-  const expectedResumeFromVersion = sourceManifest.dependencies["resume-from"]
-  if (
-    resumeFromManifest.name !== "resume-from" ||
-    resumeFromManifest.version !== expectedResumeFromVersion
-  ) {
-    throw new Error(
-      `Expected bundled resume-from ${expectedResumeFromVersion}, got ${resumeFromManifest.version}`,
-    )
-  }
-  if (resumeFromManifest.license !== "MIT") {
-    throw new Error(
-      `Expected resume-from MIT license, got ${resumeFromManifest.license}`,
-    )
-  }
-  const resumeFromEntryRelative = "./shims/pi/extensions/resume-from.js"
-  if (!resumeFromManifest.pi?.extensions?.includes(resumeFromEntryRelative)) {
-    throw new Error(
-      "Bundled resume-from no longer declares its expected Pi entry",
-    )
+  if (sourceManifest.engines?.node !== ">=22.19.0") {
+    throw new Error("Aggregate Node baseline must stay at Pi's >=22.19.0")
   }
   if (
-    resumeFromManifest.engines?.node !== ">=24" ||
-    sourceManifest.engines?.node !== ">=24"
+    sourceManifest.dependencies["resume-from"] ||
+    sourceManifest.bundledDependencies?.includes("resume-from") ||
+    sourceManifest.dependencies["gpt-tokenizer"]
   ) {
-    throw new Error("Aggregate must preserve resume-from's Node 24 baseline")
-  }
-  const expectedTokenizerRange =
-    resumeFromManifest.dependencies?.["gpt-tokenizer"]
-  if (
-    !expectedTokenizerRange ||
-    manifest.dependencies["gpt-tokenizer"] !== expectedTokenizerRange
-  ) {
-    throw new Error(
-      `Expected promoted gpt-tokenizer ${expectedTokenizerRange}, got ${manifest.dependencies["gpt-tokenizer"]}`,
-    )
+    throw new Error("resume-from is no longer bundled")
   }
 
   const solPiRoot = join(packageRoot, "node_modules", "@herbertgao", "sol-pi")
@@ -1955,7 +1923,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
-      "node_modules/resume-from/LICENSE",
       "node_modules/@herbertgao/sol-pi/LICENSE",
     ].map((path) => stat(join(packageRoot, path))),
   )
@@ -2055,11 +2022,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ],
     ["@tifan/pi-recap/src/index.ts", "commands", "recap"],
     ["@tifan/pi-rename/src/index.ts", "commands", "rename"],
-    [
-      "resume-from/shims/pi/extensions/resume-from.js",
-      "commands",
-      "resume-from",
-    ],
   ]
   for (const [relativePath, registry, name] of requiredChildRegistrations) {
     const entry = resolve(packageRoot, "node_modules", relativePath)

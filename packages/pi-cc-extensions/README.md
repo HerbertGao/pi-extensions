@@ -112,7 +112,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 兼容性
 
-- Node.js `>=24`；monorepo 使用 Pi `1.2.0`，发布包的 Pi peer 版本保持 `*`。
+- Node.js `>=22.19.0`；monorepo 使用 Pi `1.2.0`，发布包的 Pi peer 版本保持 `*`。
 
 ## 推荐搭配
 
