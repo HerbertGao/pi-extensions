@@ -55,10 +55,7 @@ function centeredOverlayOrigin(
 	return {
 		col: Math.max(
 			margin,
-			Math.min(
-				margin + Math.floor((availWidth - width) / 2),
-				termWidth - margin - width,
-			),
+			Math.min(margin + Math.floor((availWidth - width) / 2), termWidth - margin - width),
 		),
 		row: Math.max(
 			margin,
@@ -936,13 +933,7 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 												]
 											: [];
 									});
-									screenOrigin = centeredOverlayOrigin(
-										tui,
-										1,
-										90,
-										width,
-										visibleHeight,
-									);
+									screenOrigin = centeredOverlayOrigin(tui, 1, 90, width, visibleHeight);
 
 									return lines;
 								},
