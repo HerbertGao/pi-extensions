@@ -553,7 +553,16 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     async: true,
     forceTranspile: true,
   })
-  if (lensLspFirst.getLSPService() !== lensLspSecond.getLSPService()) {
+  // 4.4.3 wraps the process singleton in a per-evaluation adapter proxy.
+  const lensSingletonKey = Symbol.for("pi-lens.process-singletons.v1")
+  const lensServiceCell = () => {
+    const cells = globalThis[lensSingletonKey]
+    return cells instanceof Map ? cells.get("lsp.service") : undefined
+  }
+  lensLspFirst.getLSPService()
+  const shared = lensServiceCell()
+  lensLspSecond.getLSPService()
+  if (!shared?.value?.service || lensServiceCell() !== shared) {
     throw new Error(
       "pi-lens LSP service is not shared across module generations",
     )

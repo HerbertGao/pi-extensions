@@ -1149,6 +1149,65 @@ test("compact live: a superseding round folds the previous one immediately", () 
 	}
 });
 
+test("compact 尾行：展开的活回合不随新工具推到容器末尾，摘要行钉在回合原位", async () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "text", text: "hello" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+			],
+		};
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		const bash = tool("bash", "b1", { command: "one" });
+		chat.addChild(anchor);
+		chat.addChild(bash);
+		anchor.updateContent(message);
+		const tail = chat.children.at(-1) as any;
+		assert.ok(isCompactAssistantComponent(tail), "尾行应已挂载");
+
+		// 展开回合：面板仍顶替摘要行那一格，但摘要行的容器坐标不该变。
+		anchor.setExpanded(true);
+		assert.equal(chat.children.indexOf(tail), 2, "展开不动摘要行位置");
+
+		// 展开的活回合又来一条消息/新工具：pi 把它 append 在容器最末（尾行之后）。
+		// 归位只该把尾行留在回合末位，不能把它推到容器末尾、插到后面消息之间。
+		const message2 = {
+			role: "assistant",
+			timestamp: 2,
+			content: [
+				{ type: "text", text: "more" },
+				{ type: "toolCall", id: "g1", name: "grep", arguments: { pattern: "x" } },
+			],
+		};
+		const second = new AssistantMessageComponent(message2 as any, true) as any;
+		const grep = tool("grep", "g1", { pattern: "x" });
+		chat.addChild(second);
+		chat.addChild(grep);
+		grep.updateDisplay?.();
+
+		// 展开的回合不抢容器最末：tail 停留在 round 的最后成员之后，
+		// 不越过后面挂进来的 second。second 自己起了活回合，容器最末是它的尾行。
+		const tailIdx = chat.children.indexOf(tail);
+		const secondIdx = chat.children.indexOf(second);
+		assert.ok(tailIdx >= 0, "尾行仍在容器里");
+		assert.ok(secondIdx >= 0, "second 仍在容器里");
+		assert.ok(
+			tailIdx < secondIdx,
+			`展开的摘要行不该越过后续消息 (tail=${tailIdx}, second=${secondIdx})`,
+		);
+		assert.notEqual(chat.children.at(-1), tail, "容器最末不是被篡位的第一回合摘要行");
+		assert.ok(isCompactAssistantComponent(chat.children.at(-1)), "最末是第二回合的尾行");
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
 test("compact 尾行：摘要行挂 transcript 容器回合末尾，新工具追加后归位", async () => {
 	const { restore } = installHooks();
 	// anchor 挂进容器时（等价于 pi chatContainer），摘要行挂到容器里回合末尾的
@@ -1549,6 +1608,72 @@ test("compact 回合不跨用户消息：重放后 refresh 重新分组，边界
 		assert.match(summaries[0]!, /Ran for .+bash×1/);
 		assert.match(summaries[1]!, /Running\.\.\..*grep×1/);
 	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact 尾行：同一条消息的 timestamp 不前进时，活回合仍用挂钟", async () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	const realNow = Date.now;
+	const t0 = 1_700_000_000_000;
+	let now = t0;
+	Date.now = () => now;
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: t0,
+			content: [{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } }],
+		};
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		chat.addChild(anchor);
+		chat.addChild(tool("bash", "b1", { command: "one" }));
+		anchor.updateContent(message);
+		now += 5_000;
+		anchor.updateContent({
+			role: "assistant",
+			timestamp: t0,
+			content: [{ type: "text", text: "done" }],
+		});
+		await settleFold();
+		assert.match(renderText(chat).join("\n"), /Ran for 5s/);
+	} finally {
+		Date.now = realNow;
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact 尾行：回放同一毫秒收尾，不用现在减历史 timestamp", async () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	const realNow = Date.now;
+	const t0 = 1_700_000_000_000;
+	Date.now = () => t0 + 60_000;
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: t0,
+			content: [{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } }],
+		};
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		chat.addChild(anchor);
+		chat.addChild(tool("bash", "b1", { command: "one" }));
+		anchor.updateContent(message);
+		anchor.updateContent({
+			role: "assistant",
+			timestamp: t0,
+			content: [{ type: "text", text: "done" }],
+		});
+		await settleFold();
+		const text = renderText(chat).join("\n");
+		assert.match(text, /Ran for 1ms/);
+		assert.doesNotMatch(text, /Ran for 60s|Ran for 1m(?!s)/);
+	} finally {
+		Date.now = realNow;
 		setToolMouseTui(null);
 		restore();
 	}

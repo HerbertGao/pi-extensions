@@ -1344,7 +1344,7 @@ describe("SubagentWorkflow tool — script vs scriptPath vs name", () => {
       String(c[0]?.content).includes(taskId!),
     )!
     expect(sent[0].customType).toBe("subagent-notification")
-    expect(sent[1]).toMatchObject({ deliverAs: "followUp", triggerTurn: true })
+    expect(sent[1]).toMatchObject({ deliverAs: "steer", triggerTurn: true })
     expect(String(sent[0].content)).toContain("<result>done here</result>")
 
     // …and the inline card follows the background run rather than freezing at

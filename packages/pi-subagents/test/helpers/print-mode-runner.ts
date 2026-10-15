@@ -139,6 +139,13 @@ export interface RunPrintModeOptions {
   timeoutMs?: number
   /** Abort the parent (and forwarded children) externally. */
   signal?: AbortSignal
+  /** Additional extension paths loaded only for this test run. */
+  extensionPaths?: string[]
+  /** Called once after the real parent session is created and extensions are bound. */
+  onParentSession?: (
+    session: AgentSession,
+    manager: ManagerHandle | undefined,
+  ) => void
   /**
    * Force live mode against a specific provider/model (overrides PI_E2E_LIVE).
    * When omitted, live mode is on iff `PI_E2E_LIVE` is truthy. In live mode, if
@@ -378,7 +385,10 @@ export async function runPrintMode(
   const loader = new DefaultResourceLoader({
     cwd,
     agentDir,
-    additionalExtensionPaths: [EXTENSION_PATH],
+    additionalExtensionPaths: [
+      EXTENSION_PATH,
+      ...(options.extensionPaths ?? []),
+    ],
     systemPromptOverride: () => options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
     appendSystemPromptOverride: () => [],
     noPromptTemplates: true,
@@ -419,6 +429,7 @@ export async function runPrintMode(
   const manager = (globalThis as Record<symbol, unknown>)[MANAGER_KEY] as
     | ManagerHandle
     | undefined
+  options.onParentSession?.(session, manager)
 
   // --- subagent hold condition (the pi-chonky-step monkey-patch) ---
   // Block the parent agent loop while background subagents are still running, so
