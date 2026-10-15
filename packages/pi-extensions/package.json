@@ -65,7 +65,6 @@
     "croner": "^10.0.1",
     "dbus-native": "^0.16.1",
     "defuddle": "0.19.3",
-    "gpt-tokenizer": "^4.0.0",
     "grok-mermaid": "0.2.3",
     "jiti": "^2.7.0",
     "js-yaml": "^5.2.2",
@@ -84,7 +83,6 @@
     "pidusage": "^4.0.1",
     "promise.try": "^2.0.1",
     "proper-lockfile": "4.1.2",
-    "resume-from": "0.4.1",
     "turndown": "^7.2.0",
     "unbash": "4.0.10",
     "undici": "^8.11.2",
@@ -130,11 +128,10 @@
     "pi-next-cue",
     "pi-provider-qoder",
     "pi-typesafe",
-    "pi-web-access",
-    "resume-from"
+    "pi-web-access"
   ],
   "engines": {
-    "node": ">=24"
+    "node": ">=22.19.0"
   },
   "pi": {
     "extensions": [
@@ -142,7 +139,6 @@
       "./node_modules/@herbertgao/pi-cc-extensions/extensions/index.ts",
       "./node_modules/@herbertgao/sol-pi/src/sol-pi/index.ts",
       "./node_modules/@tifan/pi-copy-response/src/index.ts",
-      "./node_modules/resume-from/shims/pi/extensions/resume-from.js",
       "./node_modules/@tifan/pi-handoff/src/index.ts",
       "./node_modules/@tifan/pi-handoff/src/session-query.ts",
       "./node_modules/@tifan/pi-inline-skills/src/index.ts",

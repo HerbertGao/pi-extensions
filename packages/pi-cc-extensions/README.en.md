@@ -112,7 +112,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Compatibility
 
-- Node.js `>=24`; the monorepo uses Pi `1.2.0`, with published Pi peer versions kept at `*`.
+- Node.js `>=22.19.0`; the monorepo uses Pi `1.2.0`, with published Pi peer versions kept at `*`.
 
 ## Recommended companions
 

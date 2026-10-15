@@ -222,9 +222,9 @@ Those selective ports remain present in the imported source or are superseded by
 
 The earlier review also accepted the viewer Ctrl+C behavior, settled RPC consumption, FleetView selection, worktree isolation controls, background defaults, usage/cost reporting, child-session shutdown, and nested print-mode coverage. The former decision to defer mentions and workflow orchestration is superseded by the v0.19.0 import above.
 
-### resume-from 0.4.1 direct upstream migration
+### resume-from
 
-The local `@herbertgao/resume-from` fork is retired. The aggregate bundles upstream `resume-from@0.4.1` under its original name. Upstream v0.4.0 records `SessionDescriptor.startDirectory` and uses it only when no recorded directory matched and none conflicts, which supersedes the local earliest-main-session repository patch from issue #5 / PR #6. v0.4.1 targets Pi 1.0.2+, so the workspace now tracks the latest Pi 1.x host packages.
+No longer bundled. Install upstream `resume-from` separately if cross-agent session import is needed. Its published engines field still says `>=24`; that declaration is not this repository's runtime floor.
 
 ### SoL-Pi 0.1.0 import
 
@@ -234,12 +234,12 @@ The earlier Action Fusion file-URL sync used `22277b7`; through `bd00588`, later
 
 ## Fork retirement review after PR #125
 
-| Package            | Direct upstream reference | Remaining requirement                                                                                                                                                                                                                                           |
-| ------------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pi-stash`         | Removed in issue #131     | None. `/btw` preserves the main draft for side questions; the same-thread interruption workflow did not justify a dedicated Fork.                                                                                                                               |
-| `resume-from`      | Migrated directly         | The aggregate bundles upstream `resume-from@0.4.1`; upstream v0.4.0 supersedes the local repository-ownership patch.                                                                                                                                            |
-| `pi-subagents`     | Migrated in this sync     | v0.19.0 plus PR #268 is imported; cleanup failures preserve the worktree and expose a recovery path, while the local package identity and compatibility floor remain explicit.                                                                                  |
-| `pi-cc-extensions` | Migrated in this sync     | Upstream `0.9.10` is imported completely with local behavior replayed, including renderer/session safeguards, terminal sanitization, width budgets, and Action Fusion write-diff cooperation. Drop each carried patch as upstream accepts an equivalent change. |
+| Package            | Direct upstream reference  | Remaining requirement                                                                                                                                                                                                                                           |
+| ------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pi-stash`         | Removed in issue #131      | None. `/btw` preserves the main draft for side questions; the same-thread interruption workflow did not justify a dedicated Fork.                                                                                                                               |
+| `resume-from`      | Removed from the aggregate | None. Install upstream separately if needed.                                                                                                                                                                                                                    |
+| `pi-subagents`     | Migrated in this sync      | v0.19.0 plus PR #268 is imported; cleanup failures preserve the worktree and expose a recovery path, while the local package identity and compatibility floor remain explicit.                                                                                  |
+| `pi-cc-extensions` | Migrated in this sync      | Upstream `0.9.10` is imported completely with local behavior replayed, including renderer/session safeguards, terminal sanitization, width budgets, and Action Fusion write-diff cooperation. Drop each carried patch as upstream accepts an equivalent change. |
 
 For Subagents, the direct migration is complete. The package retains only repository-level branding and packaging metadata locally; runtime workflow, mention, structured-output, and worktree behavior follow the reviewed upstream source. Future syncs should compare observable core behavior and explicit product defaults against the imported PR head.
 
@@ -274,7 +274,6 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-lens`                            | `4.4.1`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.38.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.5.0`   | `simonsmh/pi-provider-qoder` |
-| `resume-from`                        | `0.4.1`   | `alexei-led/resume-from`     |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
@@ -453,7 +452,6 @@ origin               HerbertGao/pi-extensions
 tifan-upstream       tifandotme/pi-extensions
 tintinweb-upstream   tintinweb/pi-subagents
 minuque-upstream     minuque/pi-cc-extensions
-alexei-upstream      alexei-led/resume-from
 ```
 
 Treat every `*-upstream` remote as fetch-only even though Git records a push URL.
@@ -506,11 +504,11 @@ Maintained child packages use SemVer. A package with `x-upstream.trackVersion` f
 
 Recommended configuration files may be shipped under `packages/pi-extensions/examples/`, but package installation must not write into `~/.pi` or replace existing user configuration. Keep examples valid against the pinned companion version and assert their presence and parsing in the aggregate smoke test.
 
-`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 27 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
+`packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 26 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
 ## npm and Trusted Publishing bootstrap
 
-The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 24 or newer plus npm 12 or newer for the `npm trust` command:
+The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 22.22.2 or newer plus npm 12 or newer for the `npm trust` command:
 
 ```bash
 npm install --global npm@12.0.2
