@@ -127,6 +127,7 @@ describe("ext: / tools: scoping — template-driven e2e (real pi-mono, headless)
     const ctx: any = {
       cwd: FIXTURES_DIR,
       getSystemPrompt: () => PARENT_PROMPT,
+      isProjectTrusted: () => true,
       model,
       modelRegistry,
     }

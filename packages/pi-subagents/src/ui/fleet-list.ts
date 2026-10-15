@@ -12,10 +12,10 @@
  */
 
 import {
-  Editor,
   isKeyRelease,
   Key,
   matchesKey,
+  type ScrollViewScrollbar,
   truncateToWidth,
   visibleWidth,
 } from "@earendil-works/pi-tui"
@@ -26,7 +26,8 @@ import { getLifetimeCost, getLifetimeTotal } from "../usage.js"
 import { type AgentActivity, formatCost, type Theme } from "./agent-widget.js"
 import {
   ConversationViewer,
-  VIEWPORT_HEIGHT_PCT,
+  getConversationOverlayOptions,
+  type ViewerBackgroundAction,
 } from "./conversation-viewer.js"
 
 /** Widget key for the below-editor fleet list. */
@@ -178,6 +179,16 @@ export class FleetList {
      * point. Omitted → `m` still cycles, viewer-locally.
      */
     private onViewerMarkdown?: (mode: ViewerMarkdownMode) => void,
+    private scrollbarMode: () => ScrollViewScrollbar = () => "auto",
+    /**
+     * The viewer's `b` for this row's run, supplied by the extension: only it
+     * knows which runs have a tool call waiting to be released, and it owns the
+     * widget this list shares with. Omitted → no `b` affordance.
+     */
+    private backgroundAction?: (
+      record: AgentRecord,
+      notify: (message: string) => void,
+    ) => ViewerBackgroundAction,
   ) {}
 
   // ---- Lifecycle ----
@@ -439,17 +450,20 @@ export class FleetList {
   }
 
   /**
-   * True when pi's prompt editor owns the keyboard. pi's editor is an `Editor`
-   * subclass (CustomEditor) while every dialog/selector is not, and the loader
-   * aliases pi-tui to pi's own copy, so `instanceof` is a reliable identity
-   * check. `focusedComponent` is TUI-private (no public accessor), hence the
-   * best-effort peek: unknowable focus (no tui seen yet, nothing focused)
-   * counts as the editor so activation keeps working.
+   * True when pi's prompt editor owns the keyboard. The editor is pluggable
+   * (ui.setEditorComponent) and need not extend `Editor` (#374), so match pi-tui's
+   * `EditorComponent` contract instead: `getText` + `setText`, which pi calls on
+   * every editor and none of pi's dialogs, selectors or overlays implement.
+   * `focusedComponent` is TUI-private (no public accessor), hence the best-effort
+   * peek: unknowable focus (no tui seen yet, nothing focused) counts as the
+   * editor so activation keeps working.
    */
-  private editorHasFocus(): boolean {
+  editorHasFocus(): boolean {
     const focused = (this.tui as { focusedComponent?: unknown } | undefined)
       ?.focusedComponent
-    return focused == null || focused instanceof Editor
+    if (focused == null) return true
+    const c = focused as { getText?: unknown; setText?: unknown }
+    return typeof c.getText === "function" && typeof c.setText === "function"
   }
 
   private deactivate(): void {
@@ -488,10 +502,12 @@ export class FleetList {
     const session = record.session
     const activity = this.agentActivity.get(record.id)
     this.viewingAgentId = record.id
+    let overlayOptions = getConversationOverlayOptions({ mode: "regular" })
 
     void this.ui
       .custom<undefined>(
         (tui, theme, keybindings, done) => {
+          overlayOptions = getConversationOverlayOptions(tui)
           this.viewerClose = () => done(undefined)
           return new ConversationViewer(
             tui,
@@ -509,15 +525,15 @@ export class FleetList {
             this.showCost(),
             this.viewerMarkdown,
             this.onViewerMarkdown,
+            this.scrollbarMode(),
+            this.backgroundAction?.(record, (message) =>
+              this.ui?.notify(message, "info"),
+            ),
           )
         },
         {
           overlay: true,
-          overlayOptions: {
-            anchor: "center",
-            width: "90%",
-            maxHeight: `${VIEWPORT_HEIGHT_PCT}%`,
-          },
+          overlayOptions: () => overlayOptions,
         },
       )
       .then(
@@ -586,6 +602,8 @@ export class FleetList {
       lines.push(
         rightAlign("", theme.fg("dim", `↓ ${hiddenBelow} more`), width),
       )
+    // pi stacks below-editor widgets directly on its footer with no spacer (#351).
+    lines.push("")
 
     return lines
   }

@@ -70,21 +70,21 @@
         "@ast-grep/cli": "0.45.3",
         "@ast-grep/napi": "^0.45.0",
         "@bufbuild/protobuf": "^2.15.0",
-        "@dietrichgebert/ponytail": "5.1.0",
+        "@dietrichgebert/ponytail": "5.2.0",
         "@herbertgao/pi-agency": "0.1.0",
         "@herbertgao/pi-bark": "0.2.0",
         "@herbertgao/pi-cc-extensions": "1.0.3-local.1",
         "@herbertgao/pi-subagents": "0.19.0",
         "@herbertgao/sol-pi": "0.4.0",
-        "@juicesharp/rpiv-ask-user-question": "2.12.0",
-        "@juicesharp/rpiv-config": "^2.12.0",
+        "@juicesharp/rpiv-ask-user-question": "2.13.8",
+        "@juicesharp/rpiv-config": "^2.13.8",
         "@modelcontextprotocol/sdk": "^1.32.1",
         "@mozilla/readability": "^0.6.0",
         "@napi-rs/keyring": "^2.1.0",
         "@narumitw/pi-btw": "0.61.1",
         "@narumitw/pi-caffeinate": "0.49.11",
         "@narumitw/pi-tui-kit": "^0.64.0",
-        "@pi-plugins/fast-mode": "0.1.13",
+        "@pi-plugins/fast-mode": "0.1.14",
         "@shikijs/cli": "^4.0.2",
         "@tifan/pi-copy-response": "0.2.7",
         "@tifan/pi-handoff": "2.2.2",
@@ -106,12 +106,12 @@
         "p-limit": "^6.1.0",
         "pi-antigravity": "0.10.0",
         "pi-jev-auto-mode": "0.5.0",
-        "pi-lens": "4.4.1",
+        "pi-lens": "4.4.3",
         "pi-multi-account": "1.24.0",
         "pi-next-cue": "1.0.7",
-        "pi-provider-qoder": "0.5.0",
+        "pi-provider-qoder": "0.5.1",
         "pi-typesafe": "0.9.1",
-        "pi-web-access": "0.38.0",
+        "pi-web-access": "0.40.0",
         "pidusage": "^4.0.1",
         "promise.try": "^2.0.1",
         "proper-lockfile": "4.1.2",
@@ -341,7 +341,7 @@
 
     "@changesets/write": ["@changesets/write@0.4.0", "", { "dependencies": { "@changesets/types": "^6.1.0", "fs-extra": "^7.0.1", "human-id": "^4.1.1", "prettier": "^2.7.1" } }, "sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q=="],
 
-    "@dietrichgebert/ponytail": ["@dietrichgebert/ponytail@5.1.0", "", {}, "sha512-6JQpUc3DwNV2xMPxUuMfRroxYkwj593hM12t1an6xUo5nhTTgpBow1GQzcmVy1PvFocQQN/6A5hq6DahI1UKgQ=="],
+    "@dietrichgebert/ponytail": ["@dietrichgebert/ponytail@5.2.0", "", {}, "sha512-7jhVaF8PjQux0NCDLRfWMm49lp332FxlkgUGMUwt4+VvJHiJeBgEsdBFuwPXxxTIerBv4pEa390eeQ88C8DMxQ=="],
 
     "@earendil-works/pi-agent-core": ["@earendil-works/pi-agent-core@1.2.0", "", { "dependencies": { "@earendil-works/pi-ai": "^1.2.0", "typebox": "1.3.27" } }, "sha512-pUR0vYmGhHkBQGeCeWjwVIA+l1+MrDu6m6VGuysjh6KBzBpovTV/MlcVrEIOaM8jv/slpAyUmuCEQl1jOBqHJQ=="],
 
@@ -387,9 +387,9 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@juicesharp/rpiv-ask-user-question": ["@juicesharp/rpiv-ask-user-question@2.12.0", "", { "dependencies": { "@juicesharp/rpiv-config": "^2.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "@juicesharp/rpiv-i18n": "*", "typebox": "*" }, "optionalPeers": ["@juicesharp/rpiv-i18n"] }, "sha512-DilWc7u25SwnK6ytuAWOTerP0AmOEfK4HXpgS1oEzkgv9d5g5T+PbLG+zcLn18M3B/J3poMG14iydG5O6iBsnw=="],
+    "@juicesharp/rpiv-ask-user-question": ["@juicesharp/rpiv-ask-user-question@2.13.8", "", { "dependencies": { "@juicesharp/rpiv-config": "^2.13.8" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "@juicesharp/rpiv-i18n": "*", "typebox": "*" }, "optionalPeers": ["@juicesharp/rpiv-i18n"] }, "sha512-Uu2jpn5Tf0lo47izmPU7+xbUIuxE9HdmmZ6XjVzBSm8zIvnJ5Hoj/XhfuG0qC0DuCOwIkE0oNRsNsLp1js7/2g=="],
 
-    "@juicesharp/rpiv-config": ["@juicesharp/rpiv-config@2.12.0", "", { "peerDependencies": { "typebox": "*" } }, "sha512-eGjoCDCKz2JtKIUIpZ2y8CAVjxZYXCKa2D64ByozhkAWVblXsgyFLrQMk5k5Bv5RXRrA3GY66XNG5ExtEuGASA=="],
+    "@juicesharp/rpiv-config": ["@juicesharp/rpiv-config@2.13.8", "", { "peerDependencies": { "typebox": "*" } }, "sha512-fNzUmtGHRYbPQ3PWnfwyk0ukBxUgIwFLUhzRQV8U47IMhSZAEfoutqOZ31UCPPEpCgWgF+WATJ3+jn7NwJUotg=="],
 
     "@manypkg/find-root": ["@manypkg/find-root@1.1.0", "", { "dependencies": { "@babel/runtime": "^7.5.5", "@types/node": "^12.7.1", "find-up": "^4.1.0", "fs-extra": "^8.1.0" } }, "sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA=="],
 
@@ -517,7 +517,7 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.77.0", "", { "os": "win32", "cpu": "x64" }, "sha512-+teyvPDZ2RjUvo+SuCqS/UhaJl1QtdW5fWT5NJTV61V5MIuIS90Db9LixmtEGvXixyttiK62P96MSu3UlpviBw=="],
 
-    "@pi-plugins/fast-mode": ["@pi-plugins/fast-mode@0.1.13", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-xmLxRcMxujqzbBhafX7UP0CcL7s18SFj6Ai7pfl8rmlVLTrpvgab5cWhPQlTsGSYDVOr2SMqFM5aHNbGaddyzg=="],
+    "@pi-plugins/fast-mode": ["@pi-plugins/fast-mode@0.1.14", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-RtS/PExU37TD86PM5nfFsKZVBCrkUdDwhAR4hpnfc4VWZnyJ+eND6svaM9jF1YgquPWEHKBNrJWgcUSkc5IqYw=="],
 
     "@protobufjs/aspromise": ["@protobufjs/aspromise@1.1.2", "", {}, "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="],
 
@@ -1257,17 +1257,17 @@
 
     "pi-jev-auto-mode": ["pi-jev-auto-mode@0.5.0", "", { "dependencies": { "@typesafe-ai/sdk": "^0.6.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"] }, "sha512-uLdDsmfsZ//lqHYtTcCXoeX1D2qF5nFWuvb86t2ZZwPcX0pHFCyK4lekAZiDo1zcDGrbQSqh8K59wWzyzyoJrw=="],
 
-    "pi-lens": ["pi-lens@4.4.1", "", { "dependencies": { "@ast-grep/cli": "0.45.3", "@ast-grep/napi": "^0.45.0", "js-yaml": "^5.2.2", "minimatch": "^10.2.6", "pidusage": "^4.0.1", "vscode-jsonrpc": "^9.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-alld0nTHLIPswgplVEXQu9RLNqoeK6kLxbITVbQ4JD0ELMplQOxDMxEqTyGho0KybmvXIGocdYc/cL7VAxlLPw=="],
+    "pi-lens": ["pi-lens@4.4.3", "", { "dependencies": { "@ast-grep/cli": "0.45.3", "@ast-grep/napi": "^0.45.0", "js-yaml": "^5.2.2", "minimatch": "^10.2.6", "pidusage": "^4.0.1", "vscode-jsonrpc": "^9.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-huULHQMTx00rS9E+wdIli1o7dZx1EP5GVu4L2XC+21ifky/xxLz+GJQg1kZqOigfMs0H65TbmZgqA06zMjERVA=="],
 
     "pi-multi-account": ["pi-multi-account@1.24.0", "", { "dependencies": { "@bufbuild/protobuf": "^2.15.0", "proper-lockfile": "4.1.2" }, "peerDependencies": { "@earendil-works/pi-ai": ">=0.85.1 <0.88.0 || >=0.99.0 <0.100.0 || >=1.0.0 <2.0.0", "@earendil-works/pi-coding-agent": ">=0.85.1 <0.88.0 || >=0.99.0 <0.100.0 || >=1.0.0 <2.0.0" } }, "sha512-tDYNpK7IvCprOUlyCyl9t3R8DDQ0gkB3A5CT7Mln6vuzxHaMWd+1wfmIlZ2EAI4Iz2Zev7gQvz3E7FXHxQhiXA=="],
 
     "pi-next-cue": ["pi-next-cue@1.0.7", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-X9p3B+RpUW3uBmRWWySIcB7PeHCxaZsOzZhroojjDdKv0NcTILs2FigHvHUqVxszPYuZ9wjabRyqIz/enKP4lg=="],
 
-    "pi-provider-qoder": ["pi-provider-qoder@0.5.0", "", {}, "sha512-GOvS9WnZ/0Bu6xoo47TnEBroYyjwNkQ6T/oC2MOPC/4aTjy3RqcG+kLS/YXIYYwzWkQvfOkSHJxi8sCCVQD08A=="],
+    "pi-provider-qoder": ["pi-provider-qoder@0.5.1", "", {}, "sha512-8dkcExWDImBmWr+W2buEqeuu9Swvs6cNJZ0/zeAYvWr9dlbx0zO4P7ByF0fmfeGwATYgJ4uSnPaBURsx7ofL7w=="],
 
     "pi-typesafe": ["pi-typesafe@0.9.1", "", { "dependencies": { "@typesafe-ai/sdk": "^0.6.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.85.1 <1", "@earendil-works/pi-tui": ">=0.85.1 <1", "typebox": "*" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"] }, "sha512-3DSxuW0YnEawMSZS/piaTzmBnERexvMWgBd7aS0DR9k9yjla3fvo1h890tJ0+kQ8T8g2aEwQVj8d4gvDDrG/eg=="],
 
-    "pi-web-access": ["pi-web-access@0.38.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.32.1", "@mozilla/readability": "^0.6.0", "defuddle": "0.19.3", "linkedom": "^0.16.0", "p-limit": "^6.1.0", "promise.try": "^2.0.1", "turndown": "^7.2.0", "undici": "^8.11.2", "unpdf": "^1.6.2" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"], "bin": { "pi-web-access-mcp": "dist/mcp-cli.js" } }, "sha512-8AHja5tlOoGlrtmOsB+zy/MpMeE/fdXQd4UDDs7yg6viaElmNOyNJjNUj+LrgMgMA78ct8xLEKlAI7l9rC8DIw=="],
+    "pi-web-access": ["pi-web-access@0.40.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.32.1", "@mozilla/readability": "^0.6.0", "defuddle": "0.19.3", "linkedom": "^0.16.0", "p-limit": "^6.1.0", "promise.try": "^2.0.1", "turndown": "^7.2.0", "undici": "^8.11.2", "unpdf": "^1.6.2" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"], "bin": { "pi-web-access-mcp": "dist/mcp-cli.js" } }, "sha512-eybqc4Agn1QZIFggtW0YMIma9K/Jqa6WFPnBQ854yi7GrISs9Lt2kRQmv402CYWaAdSPS8MbMB3kX2d3lZ7KAQ=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 

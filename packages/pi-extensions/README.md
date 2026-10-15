@@ -21,12 +21,12 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `pi-antigravity@0.10.0`
-- `pi-provider-qoder@0.5.0`
-- `@dietrichgebert/ponytail@5.1.0`
-- `@juicesharp/rpiv-ask-user-question@2.12.0`
+- `pi-provider-qoder@0.5.1`
+- `@dietrichgebert/ponytail@5.2.0`
+- `@juicesharp/rpiv-ask-user-question@2.13.8`
 - `@narumitw/pi-btw@0.61.1`
 - `@narumitw/pi-caffeinate@0.49.11`
-- `@pi-plugins/fast-mode@0.1.13`
+- `@pi-plugins/fast-mode@0.1.14`
 - `@tifan/pi-copy-response@0.2.7`
 - `@tifan/pi-handoff@2.2.2`
 - `@tifan/pi-inline-skills@1.0.6`
@@ -38,12 +38,12 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `pi-multi-account@1.24.0`
 - `pi-next-cue@1.0.7`
 - `pi-jev-auto-mode@0.5.0`
-- `pi-lens@4.4.1`
-- `pi-web-access@0.38.0`
+- `pi-lens@4.4.3`
+- `pi-web-access@0.40.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
-The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@1.0.3` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
+The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@1.0.4` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
 
 ### Agency Agents
 
@@ -57,7 +57,7 @@ The locally customized CC and SoL-Pi packages now follow complete upstream basel
 
 `clef` asks Cloudflare Clef-flash an on-demand yes/no, choice, or score and prints the questions and answers in the transcript, plus a one-line notice. It is not a permission gate. `pi-jev-auto-mode@0.5.0` adds fail-closed Jev safety gates for shell commands and file changes. `pi-typesafe@0.9.1` provides `/typesafe` and `typesafe_evaluate` for explicit structured decisions; `/typesafe enable` or `PI_TYPESAFE_ENABLED=1` is still required for agent tool calls. The Pi extension continues to use the TypeSafe API, not Liquid. The package's programmatic client additionally supports Liquid with its own API key and free or paid models; existing usage accounting now merges writes under a short-lived file lock (up to 200ms synchronous wait under contention).
 
-`@herbertgao/sol-pi` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.4.1` publishes a public LSP config schema, reads user-level custom rule directories (project before user before built-in), normalizes argv-style server entries, downgrades `throw-new-error` to a warning, and counts Docker, JSON, and Jedi servers in idle eviction; language routing and the retained multi-root diagnostic facts are unchanged. `pi-web-access@0.38.0` provides configurable web search and fetch tools; its `toolActivation` defaults to `auto`, choosing eager or dynamic tool activation per model. It adds structured search/fetch data for codemode and an optional, manually started `pi-web-access-mcp` stdio CLI; installing the aggregate does not start that server. Degoog, Keenable, and the new Ceramic provider are explicit-only, excluded from automatic and `all` selection. OpenAI search now defaults to `gpt-6-luna`, results and clone cleanup are scoped per extension instance, and the promoted `@modelcontextprotocol/sdk@^1.32.1` moves the bundle off GHSA-6qxp-vccf-f47h. Perplexity search now uses the Search API's ranked pages and snippets rather than a Sonar-generated answer; requests requiring prose still use Sonar. `pi-antigravity@0.10.0` reads Pi 0.86+ transcript system messages, so Antigravity requests carry Pi's system prompt and tools; it also registers `google_search` and `generate_image` tools that use the signed-in Antigravity account. `pi-provider-qoder@0.5.0` registers the `qoder` and `qoder-cn` model providers. Sign in with `/login qoder` (browser or a personal access token from [qoder.com/account/integrations](https://qoder.com/account/integrations)) or `/login qoder-cn` (token from [qoder.com.cn/account/integrations](https://qoder.com.cn/account/integrations)). `QODER_PERSONAL_ACCESS_TOKEN` and `QODERCN_PERSONAL_ACCESS_TOKEN` log those providers in at startup. `/qoder-usage footer on` replaces the status-bar footer for that session, so leave it off while the pi-cc footer is in use. Preferred Thinking 1.0.2 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
+`@herbertgao/sol-pi` adds opt-in Action Fusion, ObservationPack, Evidence-Preserving Reducer, and Online Context Compact; see its [configuration guide](../sol-pi/docs/configuration.md). `pi-lens@4.4.3` publishes a public LSP config schema, reads user-level custom rule directories (project before user before built-in), normalizes argv-style server entries, downgrades `throw-new-error` to a warning, and counts Docker, JSON, and Jedi servers in idle eviction; language routing and the retained multi-root diagnostic facts are unchanged. `pi-web-access@0.40.0` provides configurable web search and fetch tools; its `toolActivation` defaults to `auto`, choosing eager or dynamic tool activation per model. It adds structured search/fetch data for codemode and an optional, manually started `pi-web-access-mcp` stdio CLI; installing the aggregate does not start that server. Degoog, Keenable, and the new Ceramic provider are explicit-only, excluded from automatic and `all` selection. OpenAI search now defaults to `gpt-6-luna`, results and clone cleanup are scoped per extension instance, and the promoted `@modelcontextprotocol/sdk@^1.32.1` moves the bundle off GHSA-6qxp-vccf-f47h. Perplexity search now uses the Search API's ranked pages and snippets rather than a Sonar-generated answer; requests requiring prose still use Sonar. `pi-antigravity@0.10.0` reads Pi 0.86+ transcript system messages, so Antigravity requests carry Pi's system prompt and tools; it also registers `google_search` and `generate_image` tools that use the signed-in Antigravity account. `pi-provider-qoder@0.5.1` registers the `qoder` and `qoder-cn` model providers. Sign in with `/login qoder` (browser or a personal access token from [qoder.com/account/integrations](https://qoder.com/account/integrations)) or `/login qoder-cn` (token from [qoder.com.cn/account/integrations](https://qoder.com.cn/account/integrations)). `QODER_PERSONAL_ACCESS_TOKEN` and `QODERCN_PERSONAL_ACCESS_TOKEN` log those providers in at startup. `/qoder-usage footer on` replaces the status-bar footer for that session, so leave it off while the pi-cc footer is in use. Preferred Thinking 1.0.2 preserves an explicit subagent `--thinking` choice. Deprecated `@tifan/pi-titlebar-spinner` is no longer bundled; Rename remains the single owner of Herdr tab naming.
 
 `pi-stash` is no longer bundled: `/btw` already preserves the main editor draft while handling side questions outside the main conversation. Prior `@herbertgao/pi-stash` releases remain available but are no longer maintained here.
 

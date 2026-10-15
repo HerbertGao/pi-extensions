@@ -33,11 +33,11 @@ These packages retain their original names and upstream maintainers. The aggrega
 
 | Package                                                                         | Pinned version | Purpose                                       |
 | ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
-| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `5.1.0`        | Minimal coding mode and maintenance skills.   |
-| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.12.0`       | Structured user questionnaires.               |
+| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `5.2.0`        | Minimal coding mode and maintenance skills.   |
+| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.13.8`       | Structured user questionnaires.               |
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.61.1`       | Parallel side questions outside main history. |
 | [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.11`      | Keep the computer awake during Pi agent runs. |
-| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.13`       | Priority service tier for selected models.    |
+| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.14`       | Priority service tier for selected models.    |
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.          |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                 |
 | [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.6`        | Inline `/skill` autocomplete.                 |
@@ -48,9 +48,9 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-jev-auto-mode`](https://github.com/jomatsu/pi-jev-auto-mode)               | `0.5.0`        | Fail-closed Jev safety gates for tool calls.  |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.9.1`        | Structured TypeSafe/Jev decisions.            |
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.1`        | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.38.0`       | Web search and content access.                |
-| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.5.0`        | Qoder account models for global and China.    |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.3`        | Code diagnostics and skills.                  |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.40.0`       | Web search and content access.                |
+| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.5.1`        | Qoder account models for global and China.    |
 
 ## Footer
 

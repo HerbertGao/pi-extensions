@@ -8,18 +8,18 @@
 
 ## Source baselines
 
-| Local package set  | Upstream                   | Imported baseline              | Notes                                                                                                                                                                                                        |
-| ------------------ | -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pi-subagents`     | `tintinweb/pi-subagents`   | `95d1086` (`0.19.0` + PR #268) | Imported upstream v0.19.0 and PR #268. The local package keeps its `@herbertgao/*` identity, release metadata, and UI branding while retaining the upstream workflow, mention, and worktree-safety behavior. |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `281d23fa` (`1.0.3`)           | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation. See "2026-10-13 pi-cc-extensions 1.0.3 replay".                                                   |
-| `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source)     | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained.       |
+| Local package set  | Upstream                   | Imported baseline          | Notes                                                                                                                                                                                                  |
+| ------------------ | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                 |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `184fa852` (`1.0.4`)       | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation. See "2026-10-15 issue #286 review".                                                         |
+| `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.3`          | `1.0.3`          | `281d23faa156`  |
-| `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.19.0`         | `0.19.0`         | `95d1086`       |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.4`          | `1.0.4`          | `184fa852e4d4`  |
+| `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.22.0`         | `0.22.0`         | `85a704cb8f35`  |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
@@ -256,11 +256,11 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version   | Upstream                     |
 | ------------------------------------ | --------- | ---------------------------- |
 | `pi-antigravity`                     | `0.10.0`  | `Rahularya01/pi-antigravity` |
-| `@dietrichgebert/ponytail`           | `5.1.0`   | `DietrichGebert/ponytail`    |
-| `@juicesharp/rpiv-ask-user-question` | `2.12.0`  | `juicesharp/rpiv-mono`       |
+| `@dietrichgebert/ponytail`           | `5.2.0`   | `DietrichGebert/ponytail`    |
+| `@juicesharp/rpiv-ask-user-question` | `2.13.8`  | `juicesharp/rpiv-mono`       |
 | `@narumitw/pi-btw`                   | `0.61.1`  | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.11` | `narumiruna/pi-extensions`   |
-| `@pi-plugins/fast-mode`              | `0.1.13`  | `k3dom/pi-plugins`           |
+| `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-inline-skills`            | `1.0.6`   | `tifandotme/pi-extensions`   |
@@ -271,17 +271,34 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-typesafe`                        | `0.9.1`   | `DevMortimer/pi-typesafe`    |
 | `pi-multi-account`                   | `1.24.0`  | `Sarrius/pi-multi-account`   |
 | `pi-jev-auto-mode`                   | `0.5.0`   | `jomatsu/pi-jev-auto-mode`   |
-| `pi-lens`                            | `4.4.1`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.38.0`  | `nicobailon/pi-web-access`   |
-| `pi-provider-qoder`                  | `0.5.0`   | `simonsmh/pi-provider-qoder` |
+| `pi-lens`                            | `4.4.3`   | `apmantza/pi-lens`           |
+| `pi-web-access`                      | `0.40.0`  | `nicobailon/pi-web-access`   |
+| `pi-provider-qoder`                  | `0.5.1`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
-`pi-provider-qoder@0.5.0` is pinned from `simonsmh/pi-provider-qoder` at git `2e29cbbda03862e20f216c5ecbb6c6042a6cabd7`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
+`pi-provider-qoder@0.5.1` is pinned from `simonsmh/pi-provider-qoder` at git `613cbc6fc3f289360e20e550b21388b86ce2d315`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-15 issue #286 review
+
+`@herbertgao/pi-cc-extensions` is replayed onto upstream v1.0.4 (`184fa852e4d4b141e6732817a542f41509bcef9e`). The eight commits after v1.0.3 are renderer and context fixes. Files unchanged since v1.0.3 keep their local text. Files that matched v1.0.3 take the v1.0.4 text. `tests/compact-mode.test.ts` merged cleanly. Local package identity, Action Fusion write cooperation, and the session-switch guards remain. The published version stays `1.0.3-local.1` until the changeset is consumed; the version script then publishes `1.0.4-local.1`.
+
+`@herbertgao/pi-subagents` is replayed onto upstream v0.22.0 (`85a704cb8f35c96c0cabfa665b572bab296942e5`). New upstream files are added. Files whose only local difference was formatting take the formatted v0.22.0 text. Semantic local patches are replayed onto that text, including the mention-clone tool context and the still-open worktree cleanup (`tintinweb/pi-subagents#268`) and unconsumed-result (`#348`) patches. Host peers stay `*`. `docs/rpc.md` takes the v0.22.0 text because the local difference was formatting and stale line numbers. Commits after the v0.22.0 release are not imported. The published version stays `0.19.0` until the changeset is consumed.
+
+Companion pins advance. Licenses stay MIT and Pi entry paths are unchanged.
+
+- Ponytail `5.2.0` keeps `./pi-extension/index.js`.
+- Ask-user-question `2.13.8` opens the questionnaire inline under the transcript, capped at 70% of the terminal, and fixes multi-select, saved notes, and RPC custom answers. Its `@juicesharp/rpiv-config` range is `^2.13.8`, so the aggregate range moves with it.
+- Fast-mode `0.1.14` keeps `./dist/index.mjs`.
+- Pi-Lens `4.4.3` adds Lean 4 LSP support, scopes the `@ast-grep/cli` npm fallback, and gates duplicate `session_start`. Dependency pins and `./dist/index.js` are unchanged.
+- Qoder `0.5.1` changes tool-call id assignment and request transform. Entry stays `./dist/index.js`.
+- Web Access `0.40.0` adds an opt-in same-origin redirect policy, a self-hosted PDF parser with fallback, and fixes Gemini video uploads, multi-URL answers, and stalled providers. Promoted dependencies stay on the existing ranges, including `@modelcontextprotocol/sdk@1.32.1`.
+
+SoL-Pi commits `03529c71..41fa7e0e` are examples and README only. The imported runtime stays `e1a586af`. The repository cursor advances as reviewed-without-import.
 
 ### 2026-10-13 pi-cc-extensions 1.0.3 replay
 
