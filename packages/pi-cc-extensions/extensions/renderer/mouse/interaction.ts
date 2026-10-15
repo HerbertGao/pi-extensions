@@ -579,10 +579,6 @@ function handleFullscreenToolHover(tui: any, packet: SgrMousePacket): void {
 	applyFullscreenHover(tui, target);
 }
 
-/**
- * 鼠标包（1-based 屏幕坐标）是否落在某个已渲染 overlay 的矩形内。
- * renderedOverlayLayouts 与官方 dispatchMouseToOverlay 同源：只含上一帧画出的可见 overlay。
- */
 /** 布局缺失，或焦点 overlay 还不在上一帧列表里：这份矩形不能拿来判点击。 */
 function overlayLayoutsCurrent(tui: any): boolean {
 	const layouts = tui?.renderedOverlayLayouts;
@@ -595,6 +591,10 @@ function overlayLayoutsCurrent(tui: any): boolean {
 	return true;
 }
 
+/**
+ * 鼠标包（1-based 屏幕坐标）是否落在某个已渲染 overlay 的矩形内。
+ * renderedOverlayLayouts 与官方 dispatchMouseToOverlay 同源：只含上一帧画出的可见 overlay。
+ */
 function packetInsideOverlay(tui: any, packet: SgrMousePacket): boolean {
 	const layouts = tui?.renderedOverlayLayouts;
 	if (!Array.isArray(layouts)) return false;
