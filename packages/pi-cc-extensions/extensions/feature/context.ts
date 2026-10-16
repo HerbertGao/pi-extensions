@@ -362,8 +362,7 @@ export async function showTextPreview(
 						const start = totalLines === 0 ? 0 : scrollOffset + 1;
 						const end = Math.min(totalLines, scrollOffset + pageSize);
 						const status = `${start}-${end} / ${totalLines} lines · ↑↓ PgUp/PgDn Home/End`;
-
-						return [
+						const lines = [
 							border(`╭${"─".repeat(inner)}╮`),
 							`${border("│")}${padLine(` ${theme.bold(theme.fg("accent", title))}`, inner - actionsWidth)}${theme.fg(copyHovered ? "text" : "muted", COPY_LABEL)} ${theme.fg(escHovered ? "text" : "muted", ESC_LABEL)}${border("│")}`,
 							`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
@@ -372,6 +371,7 @@ export async function showTextPreview(
 							`${border("│")}${padLine(theme.fg("dim", ` ${status}`), inner)}${border("│")}`,
 							border(`╰${"─".repeat(inner)}╯`),
 						];
+						return lines;
 					},
 				};
 			},

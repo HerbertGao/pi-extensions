@@ -40,16 +40,16 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.14`       | Priority service tier for selected models.    |
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.          |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                 |
-| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.6`        | Inline `/skill` autocomplete.                 |
+| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.7`        | Inline `/skill` autocomplete.                 |
 | [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.2`        | Extract and open Mermaid diagrams.            |
 | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.            |
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.8`        | Generate one-line session recaps.             |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
-| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.9.1`        | Structured TypeSafe/Jev decisions.            |
+| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.10.0`       | Structured TypeSafe/Jev decisions.            |
 | [`pi-multi-account`](https://github.com/Sarrius/pi-multi-account)               | `1.24.0`       | Multi-account failover and rotation.          |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.3`        | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.40.0`       | Web search and content access.                |
-| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.5.1`        | Qoder account models for global and China.    |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.41.0`       | Web search and content access.                |
+| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.1`        | Qoder account models for global and China.    |
 
 ## Footer
 

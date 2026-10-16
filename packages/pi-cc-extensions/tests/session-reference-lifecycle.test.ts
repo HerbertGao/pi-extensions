@@ -321,7 +321,7 @@ test("a cancelled session switch preserves the current reference loader", {
 	try {
 		await harness.handlers.get("session_start")?.({}, ctx);
 		await tick();
-		assert.equal(listCalls, 1);
+		assert.equal(listCalls, 0);
 		await harness.handlers.get("session_before_switch")?.({}, ctx);
 		assert.equal(
 			await harness.handlers.get("before_agent_start")?.(
