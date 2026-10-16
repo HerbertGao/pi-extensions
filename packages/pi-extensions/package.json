@@ -37,7 +37,6 @@
   "dependencies": {
     "@ast-grep/cli": "0.45.3",
     "@ast-grep/napi": "^0.45.0",
-    "@bufbuild/protobuf": "^2.15.0",
     "@dietrichgebert/ponytail": "5.2.0",
     "@herbertgao/pi-agency": "0.1.1",
     "@herbertgao/pi-bark": "0.2.1",
@@ -80,7 +79,6 @@
     "pi-web-access": "0.41.0",
     "pidusage": "^4.0.1",
     "promise.try": "^2.0.1",
-    "proper-lockfile": "4.1.2",
     "turndown": "^7.2.0",
     "unbash": "4.0.10",
     "undici": "^8.11.2",
