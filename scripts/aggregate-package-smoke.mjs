@@ -946,60 +946,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     )
   }
 
-  const multiAccountRoot = join(packageRoot, "node_modules", "pi-multi-account")
-  const multiAccountManifestPath = join(multiAccountRoot, "package.json")
-  const multiAccountManifest = parseJson(
-    await readFile(multiAccountManifestPath, "utf8"),
-    multiAccountManifestPath,
-  )
-  const expectedMultiAccountVersion =
-    sourceManifest.dependencies["pi-multi-account"]
-  if (multiAccountManifest.version !== expectedMultiAccountVersion) {
-    throw new Error(
-      `Expected bundled pi-multi-account ${expectedMultiAccountVersion}, got ${multiAccountManifest.version}`,
-    )
-  }
-  if (multiAccountManifest.license !== "MIT") {
-    throw new Error(
-      `Expected pi-multi-account MIT license, got ${multiAccountManifest.license}`,
-    )
-  }
-  const multiAccountEntryRelative = "./index.ts"
-  if (
-    !multiAccountManifest.pi?.extensions?.includes(multiAccountEntryRelative)
-  ) {
-    throw new Error(
-      "Bundled pi-multi-account no longer declares its expected Pi entry",
-    )
-  }
-  const multiAccountLicense = await readFile(
-    join(multiAccountRoot, "LICENSE"),
-    "utf8",
-  )
-  if (
-    !multiAccountLicense.startsWith(
-      "MIT License\n\nCopyright (c) 2026 pi-multi-account contributors",
-    )
-  ) {
-    throw new Error(
-      "Bundled pi-multi-account LICENSE is not the expected MIT text",
-    )
-  }
-  for (const [dependency, range] of Object.entries(
-    multiAccountManifest.dependencies ?? {},
-  )) {
-    const sourceRange = sourceManifest.dependencies[dependency]
-    const compatiblePiHost =
-      dependency.startsWith("@earendil-works/pi-") &&
-      sourceRange === "^0.87.1" &&
-      range === ">=0.85.1 <0.88.0"
-    if (sourceRange !== range && !compatiblePiHost) {
-      throw new Error(
-        `Expected pi-multi-account dependency ${dependency}@${range}, got ${sourceManifest.dependencies[dependency]}`,
-      )
-    }
-  }
-
   const btwRoot = join(packageRoot, "node_modules", "@narumitw", "pi-btw")
   const btwManifestPath = join(btwRoot, "package.json")
   const btwManifest = parseJson(
@@ -1977,32 +1923,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       else process.env[name] = value
     }
   }
-  cleanupLoadedExtensions = async () => {
-    const multiAccountEntry = resolve(
-      multiAccountRoot,
-      multiAccountEntryRelative,
-    )
-    const loadedMultiAccount = result.extensions.find(
-      (extension) => extension.resolvedPath === multiAccountEntry,
-    )
-    for (const handler of loadedMultiAccount?.handlers.get(
-      "session_shutdown",
-    ) ?? []) {
-      // Lifecycle hooks must run in registration order, matching Pi.
-      // eslint-disable-next-line no-await-in-loop
-      await handler(
-        { reason: "aggregate smoke" },
-        {
-          model: undefined,
-          sessionManager: {
-            getSessionId: () => "aggregate-smoke",
-            getLeafId: () => "aggregate-smoke",
-          },
-          ui: { setStatus() {}, notify() {} },
-        },
-      )
-    }
-  }
   if (result.errors.length > 0) {
     throw new Error(
       `Aggregate extension load failed:\n${JSON.stringify(result.errors, null, 2)}`,
@@ -2381,21 +2301,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     !typesafeLicense.startsWith("MIT License\n\nCopyright (c) 2026 Ryan Gapac")
   ) {
     throw new Error("Bundled pi-typesafe LICENSE is not the expected MIT text")
-  }
-
-  const multiAccountEntry = resolve(multiAccountRoot, multiAccountEntryRelative)
-  if (!extensionPaths.includes(multiAccountEntry)) {
-    throw new Error(
-      "Packed aggregate is missing the pi-multi-account extension entry",
-    )
-  }
-  const loadedMultiAccount = result.extensions.find(
-    (extension) => extension.resolvedPath === multiAccountEntry,
-  )
-  if (!loadedMultiAccount?.handlers.has("session_shutdown")) {
-    throw new Error(
-      "Packed pi-multi-account did not register its session cleanup handler",
-    )
   }
 
   beginPhase("bundle-contracts")

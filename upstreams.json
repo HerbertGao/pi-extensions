@@ -81,10 +81,6 @@
       "repository": "https://github.com/DevMortimer/pi-typesafe"
     },
     {
-      "package": "pi-multi-account",
-      "repository": "https://github.com/Sarrius/pi-multi-account"
-    },
-    {
       "package": "pi-next-cue",
       "repository": "https://github.com/ouzhenkun/pi-next-cue"
     },

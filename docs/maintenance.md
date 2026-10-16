@@ -269,7 +269,6 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
 | `pi-typesafe`                        | `0.10.0`  | `DevMortimer/pi-typesafe`    |
-| `pi-multi-account`                   | `1.24.0`  | `Sarrius/pi-multi-account`   |
 | `pi-lens`                            | `4.4.3`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.41.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.6.1`   | `simonsmh/pi-provider-qoder` |
@@ -277,8 +276,6 @@ The aggregate package also pins the following npm packages under their original 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
 `pi-provider-qoder@0.6.1` is pinned from `simonsmh/pi-provider-qoder` at git `340036ccdb14646820b48dec412c53f1cf639afe`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
-
-`pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
 
