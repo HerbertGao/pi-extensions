@@ -1,5 +1,18 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.9
+
+### Minor Changes
+
+- [#295](https://github.com/HerbertGao/pi-extensions/pull/295) [`a7462ef`](https://github.com/HerbertGao/pi-extensions/commit/a7462ef4bfe15e16efaea0a7de2ba09fd9458124) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove the bundled `pi-multi-account` dependency.
+
+  Its automatic provider failover and local exhaustion cooldown can switch away from working accounts after a temporary quota hit, which is undesirable for this aggregate.
+
+  - Drop `pi-multi-account` from aggregate dependencies, bundled dependencies, and Pi extension entries; remove its pin from `upstreams.json`.
+  - Drop the promoted runtime dependencies it alone required: `@bufbuild/protobuf` and `proper-lockfile`.
+  - Remove the aggregate assertions that verified its bundled manifest, license, extension entry, and session cleanup handler.
+  - Remove its documentation and third-party notices.
+
 ## 2026.10.8
 
 ### Patch Changes
