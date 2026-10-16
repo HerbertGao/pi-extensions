@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.6-local.1
+
+### Patch Changes
+
+- [#293](https://github.com/HerbertGao/pi-extensions/pull/293) [`6568b44`](https://github.com/HerbertGao/pi-extensions/commit/6568b449f6bef7ea93a3990bd46179e0f5cc0fdd) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay pi-cc-extensions onto upstream v1.0.6 without the rejected regular-mode mouse wiring, and bump the published companion pins from issue [#291](https://github.com/HerbertGao/pi-extensions/issues/291).
+
 ## 1.0.4-local.1
 
 ### Patch Changes
