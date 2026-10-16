@@ -21,7 +21,7 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `pi-antigravity@0.10.0`
-- `pi-provider-qoder@0.5.1`
+- `pi-provider-qoder@0.6.1`
 - `@dietrichgebert/ponytail@5.2.0`
 - `@juicesharp/rpiv-ask-user-question@2.13.8`
 - `@narumitw/pi-btw@0.61.1`
@@ -29,16 +29,16 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `@pi-plugins/fast-mode@0.1.14`
 - `@tifan/pi-copy-response@0.2.7`
 - `@tifan/pi-handoff@2.2.2`
-- `@tifan/pi-inline-skills@1.0.6`
+- `@tifan/pi-inline-skills@1.0.7`
 - `@tifan/pi-mermaid-open@0.2.2`
 - `@tifan/pi-preferred-thinking@1.0.2`
 - `@tifan/pi-recap@0.4.8`
 - `@tifan/pi-rename@0.6.0`
-- `pi-typesafe@0.9.1`
+- `pi-typesafe@0.10.0`
 - `pi-multi-account@1.24.0`
 - `pi-next-cue@1.0.7`
 - `pi-lens@4.4.3`
-- `pi-web-access@0.40.0`
+- `pi-web-access@0.41.0`
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 

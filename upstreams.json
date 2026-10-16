@@ -4,7 +4,7 @@
     {
       "name": "Tifan Pi extensions",
       "repository": "https://github.com/tifandotme/pi-extensions",
-      "reviewedCommit": "cc60d55451efed48e3a22aedc166ee77455854be"
+      "reviewedCommit": "2bc1fd16cb166aadb0b53768a79bf014176ce0cc"
     },
     {
       "name": "pi-subagents",
@@ -14,7 +14,7 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "184fa852e4d4b141e6732817a542f41509bcef9e"
+      "reviewedCommit": "52d5b095d3d4c77b9634267ac9c34a1ce34cb485"
     },
     {
       "name": "NVlabs SoL-Pi",

@@ -11,7 +11,7 @@
 | Local package set  | Upstream                   | Imported baseline          | Notes                                                                                                                                                                                                  |
 | ------------------ | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                 |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `184fa852` (`1.0.4`)       | Latest complete upstream tree with local patches replayed, including Action Fusion write-diff cooperation. See "2026-10-15 issue #286 review".                                                         |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `52d5b095` (`1.0.6`)       | Replayed onto upstream v1.0.6. Local patches remain. The published regular-mode SGR wiring is not kept. See "2026-10-16 issue #291 review".                                                         |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
@@ -263,24 +263,32 @@ The aggregate package also pins the following npm packages under their original 
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-inline-skills`            | `1.0.6`   | `tifandotme/pi-extensions`   |
+| `@tifan/pi-inline-skills`            | `1.0.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-mermaid-open`             | `0.2.2`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-preferred-thinking`       | `1.0.2`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
-| `pi-typesafe`                        | `0.9.1`   | `DevMortimer/pi-typesafe`    |
+| `pi-typesafe`                        | `0.10.0`  | `DevMortimer/pi-typesafe`    |
 | `pi-multi-account`                   | `1.24.0`  | `Sarrius/pi-multi-account`   |
 | `pi-lens`                            | `4.4.3`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.40.0`  | `nicobailon/pi-web-access`   |
-| `pi-provider-qoder`                  | `0.5.1`   | `simonsmh/pi-provider-qoder` |
+| `pi-web-access`                      | `0.41.0`  | `nicobailon/pi-web-access`   |
+| `pi-provider-qoder`                  | `0.6.1`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
-`pi-provider-qoder@0.5.1` is pinned from `simonsmh/pi-provider-qoder` at git `613cbc6fc3f289360e20e550b21388b86ce2d315`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
+`pi-provider-qoder@0.6.1` is pinned from `simonsmh/pi-provider-qoder` at git `340036ccdb14646820b48dec412c53f1cf639afe`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 `pi-multi-account@1.24.0` fixes OAuth SDK lookup on Pi 1.0.4 by using the running host's latest public APIs: `builtinProviders()` from `@earendil-works/pi-ai/providers/all` and `getModel` from `@earendil-works/pi-ai/compat`, with no private SDK copy. This migration also accepts optional `/multi-account pin <provider/model>`, `/multi-account unpin <provider-or-family>`, and `/multi-account pins [list]` commands; pin/unpin persist routing preferences when invoked, without changing the current foreground model. No model preference or auth/settings migration is performed by this aggregate update.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-16 issue #291 review
+
+`@herbertgao/pi-cc-extensions` is replayed onto published upstream v1.0.6 (`52d5b095d3d4c77b9634267ac9c34a1ce34cb485`). Local identity, Action Fusion write cooperation, and the session-switch guards remain. Upstream's regular-mode SGR preview wiring is not kept: regular mode does not enable terminal mouse reporting, and the upstream author asked that it stay that way. Fullscreen mouse still uses `handleMouse`.
+
+`@herbertgao/pi-subagents` stays on published v0.22.0 (`85a704cb`). Commits after that release, including resume `max_turns`, RPC steer, and usage events, are unpublished and not imported.
+
+Companion pins advance to the published releases: `@tifan/pi-inline-skills@1.0.7`, `pi-web-access@0.41.0`, `pi-typesafe@0.10.0`, and `pi-provider-qoder@0.6.1`. The Tifan repository cursor advances to `2bc1fd16` as reviewed-without-import; that range only releases the inline-skills pin.
 
 ### 2026-10-15 issue #286 review
 

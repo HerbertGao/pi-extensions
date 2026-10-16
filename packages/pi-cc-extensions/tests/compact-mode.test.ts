@@ -40,7 +40,7 @@ import {
 } from "../extensions/renderer/tool/message-display.ts";
 import { WriteExecutionMetadataStore } from "../extensions/renderer/tool/diff/write-execution.ts";
 import { invalidateIoView, isExpandedToolIoView } from "../extensions/renderer/tool/tool-io.ts";
-import { toolCallSummary } from "../extensions/renderer/tool/names.ts";
+import { renderToolSummary, toolCallSummary } from "../extensions/renderer/tool/names.ts";
 
 initTheme("dark");
 
@@ -204,9 +204,6 @@ test("config normalize keeps compact, defaults to on, command completions order 
 	assert.equal(normalizeConfig({ mode: "invalid" }).mode, "on");
 	assert.equal(normalizeConfig({}).writeDiffCollapsedLines, 0);
 	assert.equal(normalizeConfig({ writeDiffCollapsedLines: 0 }).writeDiffCollapsedLines, 0);
-	assert.equal(normalizeConfig({}).dimThinkingText, false);
-	assert.equal(normalizeConfig({ dimThinkingText: true }).dimThinkingText, true);
-	assert.match(formatConfigStatus(normalizeConfig({})), /thinkingDim=off/);
 	assert.equal(normalizeConfig({}).toolLabelClip, 0);
 	assert.equal(normalizeConfig({ toolLabelClip: 40 }).toolLabelClip, 40);
 	assert.equal(normalizeConfig({ toolLabelClip: "0" }).toolLabelClip, 0);
@@ -221,25 +218,6 @@ test("config normalize keeps compact, defaults to on, command completions order 
 	assert.equal(normalizeConfig({ expandedOutputMaxLines: 40 }).expandedOutputMaxLines, 40);
 	assert.match(formatConfigStatus(normalizeConfig({})), /expandedInput=5/);
 	assert.match(formatConfigStatus(normalizeConfig({})), /expandedOutput=10/);
-	// issue 46：展开卡背景槽位白名单，默认与旧行为一致。
-	assert.equal(normalizeConfig({}).expandedCardBackground, "userMessageBg");
-	assert.equal(
-		normalizeConfig({ expandedCardBackground: "toolPendingBg" }).expandedCardBackground,
-		"toolPendingBg",
-	);
-	assert.equal(
-		normalizeConfig({ expandedCardBackground: "selectedBg" }).expandedCardBackground,
-		"selectedBg",
-	);
-	// 非背景 token（fg 槽位）与垃圾值都回退默认，theme.bg 不会拿到未知 token。
-	assert.equal(
-		normalizeConfig({ expandedCardBackground: "toolTitle" }).expandedCardBackground,
-		"userMessageBg",
-	);
-	assert.equal(
-		normalizeConfig({ expandedCardBackground: 42 }).expandedCardBackground,
-		"userMessageBg",
-	);
 
 	let completions: Array<{ value: string }> = [];
 	const pi: any = {
@@ -275,20 +253,20 @@ test("tool path summaries relativize cwd paths and preserve filenames when clipp
 	const original = { ...args };
 	try {
 		config.toolLabelClip = 40;
+		const plain = (_color: string, text: string) => text;
 		for (const variant of ["default", "grouping"] as const) {
 			const summary = toolCallSummary("read", args, { variant, cwd: process.cwd() });
-			assert.match(summary.main, /^Read extensions/);
-			assert.match(summary.main, /…[\\/]target-file\.ts$/);
-			assert.doesNotMatch(
-				summary.main,
-				new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-			);
+			assert.equal(summary.main, "Read", "路径值移出 main，交给渲染层按宽度截断");
+			const line = renderToolSummary(summary, 100, plain);
+			assert.match(line, /^Read extensions/);
+			assert.match(line, /…[\\/]target-file\.ts$/);
+			assert.doesNotMatch(line, new RegExp(process.cwd().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 		}
 		config.toolLabelClip = 200;
 		const outside = join(process.cwd(), "..", "outside-project", "target-file.ts");
 		assert.equal(
-			toolCallSummary("write", { path: outside }, { cwd: process.cwd() }).main,
-			`Write ${outside}`,
+			toolCallSummary("write", { path: outside }, { cwd: process.cwd() }).path?.value,
+			outside,
 			"cwd 外绝对路径保持绝对形式",
 		);
 		assert.deepEqual(args, original, "display formatting does not mutate tool arguments");
@@ -297,48 +275,28 @@ test("tool path summaries relativize cwd paths and preserve filenames when clipp
 	}
 });
 
-test("dim thinking text uses the dim token without mutating the theme", () => {
+test("thinking 正文固定走 dim，不改主题", () => {
 	const theme = { fg: (color: string, text: string) => `<${color}>${text}` };
-	const previous = config.dimThinkingText;
-	try {
-		config.dimThinkingText = false;
-		assert.equal(styleCompactThinkingText("hi", theme as any), "<thinkingText>hi");
-		config.dimThinkingText = true;
-		assert.equal(styleCompactThinkingText("hi", theme as any), "<dim>hi");
-	} finally {
-		config.dimThinkingText = previous;
-	}
+	assert.equal(styleCompactThinkingText("hi", theme as any), "<dim>hi");
 });
 
-test("Dim thinking text 开启时摘要行整行走 dim", () => {
+test("摘要行整行走 dim", () => {
 	const previousTheme = getMessageDisplayTheme();
-	const previousDim = config.dimThinkingText;
 	const previousMode = config.mode;
 	setMessageDisplayTheme({
 		fg: (color: string, text: string) => `<${color}>${text}`,
 	} as any);
-	// 每次调用独立装卸补丁：共用安装时，上一个组件的回合会被 refresh 抢回去。
-	const summaryOf = (dim: boolean) => {
-		config.mode = "compact";
-		config.dimThinkingText = dim;
-		const hooks = installCompactMode({ writeMetadata: new WriteExecutionMetadataStore() });
-		try {
-			const msg = toolCallMessage(1);
-			const assistant = new AssistantMessageComponent(msg, true) as any;
-			assistant.updateContent(msg);
-			return assistant.render(200).join("\n");
-		} finally {
-			hooks.shutdown();
-		}
-	};
+	config.mode = "compact";
+	const hooks = installCompactMode({ writeMetadata: new WriteExecutionMetadataStore() });
 	try {
-		const muted = summaryOf(false);
-		assert.ok(muted.includes("<muted>, bash×1"), `关闭时工具计数走 muted: ${muted}`);
-		const dim = summaryOf(true);
-		assert.ok(dim.includes("<dim>, bash×1"), `开启时工具计数走 dim: ${dim}`);
-		assert.ok(!dim.includes("<muted>"), `开启时整行不该再有 muted: ${dim}`);
+		const msg = toolCallMessage(1);
+		const assistant = new AssistantMessageComponent(msg, true) as any;
+		assistant.updateContent(msg);
+		const rendered = assistant.render(200).join("\n");
+		assert.ok(rendered.includes("<dim>, bash×1"), `工具计数走 dim: ${rendered}`);
+		assert.ok(!rendered.includes("<muted>"), `整行不该再有 muted: ${rendered}`);
 	} finally {
-		config.dimThinkingText = previousDim;
+		hooks.shutdown();
 		config.mode = previousMode;
 		setMessageDisplayTheme(previousTheme);
 	}
@@ -570,24 +528,8 @@ test("consecutive tool-call messages accumulate into one round until the next vi
 			cardLines.every((line: string) => line === "" || visibleWidth(line) === 80),
 			"expanded round is wrapped by one width-safe tool card",
 		);
-		// 面板铺的就是当前配置的槽位（默认 userMessageBg 由 normalizeConfig 用例守）
-		assert.deepEqual([...new Set(backgroundSlots)], [config.expandedCardBackground]);
-		// issue 46：展开面板背景槽位可配，改配置后重新渲染要跟着换。
-		// 当前值可能已被本机配置设成 toolPendingBg，换个槽位验证跟随。
-		const previousSlot = config.expandedCardBackground;
-		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
-		try {
-			backgroundSlots.length = 0;
-			config.expandedCardBackground = targetSlot;
-			assistant1.render(80);
-			assert.deepEqual(
-				[...new Set(backgroundSlots)],
-				[targetSlot],
-				"expanded round card follows the configured slot",
-			);
-		} finally {
-			config.expandedCardBackground = previousSlot;
-		}
+		// 回合里的工具都已成功：整张展开卡用成功底色。
+		assert.deepEqual([...new Set(backgroundSlots)], ["toolSuccessBg"]);
 		setMessageDisplayTheme(previousTheme);
 		assert.deepEqual(renderText(bash), [], "round tools render only inside the summary card");
 		assistant1.setExpanded(false);
@@ -685,28 +627,24 @@ test("expanded round panel repaints when the card background slot changes", () =
 				},
 			}),
 		);
-		const initialSlot = config.expandedCardBackground;
 		anchor.render(120);
-		assert.ok(backgroundSlots.includes(initialSlot), "panel starts on the configured slot");
+		assert.ok(
+			backgroundSlots.includes("toolSuccessBg"),
+			"settled round panel uses the success background",
+		);
 
 		backgroundSlots.length = 0;
 		anchor.render(120);
 		assert.deepEqual(backgroundSlots, [], "identical frame reuses the cached panel rows");
 
-		// issue 46：改槽位后已展开的回合面板必须重画，不能命中旧底色的缓存。
-		const previousSlot = config.expandedCardBackground;
-		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
-		try {
-			config.expandedCardBackground = targetSlot;
-			anchor.render(120);
-			assert.deepEqual(
-				[...new Set(backgroundSlots)],
-				[targetSlot],
-				"panel follows the configured slot",
-			);
-		} finally {
-			config.expandedCardBackground = previousSlot;
-		}
+		// 其中一个工具失败：整张回合卡改用失败底色，不能命中旧底色的缓存。
+		second.updateResult({ content: [{ type: "text", text: "failed" }], isError: true });
+		anchor.render(120);
+		assert.deepEqual(
+			[...new Set(backgroundSlots)],
+			["toolErrorBg"],
+			"one failed tool paints the whole round card",
+		);
 	} finally {
 		setMessageDisplayTheme(previousTheme);
 		config.mode = previousMode;
@@ -1129,16 +1067,16 @@ test("compact live: a superseding round folds the previous one immediately", () 
 		const roundB = new AssistantMessageComponent(messageB as any, true) as any;
 		roundB.updateContent(messageB);
 
-		// 收尾只少槽位卡：正文与摘要行原地不动，摘要行只换时态。
-		const foldedA = renderText(roundA);
-		assert.deepEqual(
-			foldedA.slice(0, 2),
-			["first-line", "latest-a"],
-			`收尾后正文原地不动: ${foldedA}`,
+		// roundB 的 text+toolCall 并入 roundA（同一 turn、无用户消息隔断）：
+		// roundA 仍 active，摘要行从 Running 里累计出 grep×1；roundB 只渲染自己的正文。
+		const mergedA = renderText(roundA);
+		assert.match(
+			mergedA[2] ?? "",
+			/^Running\.\.\..*bash×1.*grep×1/,
+			`并入同一回合后摘要累计: ${mergedA}`,
 		);
-		assert.match(foldedA[2] ?? "", /^Ran for .*bash×1/, `摘要行原地换时态: ${foldedA}`);
-		assert.equal(foldedA.length, liveA.length - 1, `收尾只该少槽位卡: ${liveA} → ${foldedA}`);
-		assert.ok(renderText(roundB).join("\n").includes("needle"), "新回合槽位应可见");
+		// roundB 并入 roundA 后不是 anchor：updateContent 走成员分支，自身渲染为空。
+		assert.deepEqual(renderText(roundB), [], "并入回合的成员不再独立渲染");
 	} finally {
 		hooks.shutdown();
 		config.mode = previousMode;
@@ -1190,18 +1128,13 @@ test("compact 尾行：展开的活回合不随新工具推到容器末尾，摘
 		chat.addChild(grep);
 		grep.updateDisplay?.();
 
-		// 展开的回合不抢容器最末：tail 停留在 round 的最后成员之后，
-		// 不越过后面挂进来的 second。second 自己起了活回合，容器最末是它的尾行。
+		// second 的 toolCall 并入第一回合（同一 turn，未被用户消息隔开），
+		// tail 位置钉在回合最后成员之后（grep 之后），展开面板里能看到 grep 卡。
 		const tailIdx = chat.children.indexOf(tail);
-		const secondIdx = chat.children.indexOf(second);
+		const grepIdx = chat.children.indexOf(grep);
 		assert.ok(tailIdx >= 0, "尾行仍在容器里");
-		assert.ok(secondIdx >= 0, "second 仍在容器里");
-		assert.ok(
-			tailIdx < secondIdx,
-			`展开的摘要行不该越过后续消息 (tail=${tailIdx}, second=${secondIdx})`,
-		);
-		assert.notEqual(chat.children.at(-1), tail, "容器最末不是被篡位的第一回合摘要行");
-		assert.ok(isCompactAssistantComponent(chat.children.at(-1)), "最末是第二回合的尾行");
+		assert.ok(tailIdx > grepIdx, `摘要行钉在回合末位 (tail=${tailIdx}, grep=${grepIdx})`);
+		assert.match(renderText(tail).join("\n"), /grep \/x\//, "新工具并入同一回合面板");
 	} finally {
 		setToolMouseTui(null);
 		restore();
@@ -1372,7 +1305,7 @@ test("compact resume：重放已结束的回合直接落成 Ran for，不停留�
 	}
 });
 
-test("compact：带正文的工具消息各起回合，无正文续接才并入上一回合", () => {
+test("compact：同一 turn 内 text+toolCall 消息不拆回合，用户消息才切断", () => {
 	const { hooks, restore } = installHooks();
 	const chat = new Container() as any;
 	setToolMouseTui({ children: [chat] });
@@ -1406,12 +1339,89 @@ test("compact：带正文的工具消息各起回合，无正文续接才并入�
 
 		hooks.settleReplayedRound();
 		const summaries = renderText(chat).filter((line) => /Ran for/.test(line));
-		// 每条消息都带可见正文 → 各自是自己的 anchor，两个 bash 各成一行（截图语义）。
-		assert.deepEqual(summaries.length, 2, `两条带正文的消息应各起一行: ${summaries}`);
-		assert.ok(
-			summaries.every((line) => /bash×1/.test(line)),
-			`每行各记一次 bash: ${summaries}`,
+		// 同一 agent turn 里不带用户消息隔断的 text+toolCall 仍归同一回合。
+		assert.deepEqual(summaries.length, 1, `不应因正文拆回合: ${summaries}`);
+		assert.match(summaries[0] ?? "", /bash×2/, `两次调用累计: ${summaries}`);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact：同一组件流式切换 text/toolCall 形态不拆回合", () => {
+	const { hooks, restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const base = {
+			role: "assistant",
+			timestamp: 1,
+			stopReason: "toolUse",
+		};
+		const anchor = new AssistantMessageComponent(base as any, true) as any;
+		chat.addChild(anchor);
+		chat.addChild(tool("bash", "b1", { command: "ls" }));
+		chat.addChild(tool("grep", "g1", { pattern: "x" }));
+
+		// pi 的流式 message_update：同一组件反复 updateContent，content 形态会变。
+		anchor.updateContent({
+			...base,
+			content: [{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "ls" } }],
+		});
+		anchor.updateContent({
+			...base,
+			content: [
+				{ type: "text", text: "leading text" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "ls" } },
+			],
+		});
+		anchor.updateContent({
+			...base,
+			content: [
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "ls" } },
+				{ type: "toolCall", id: "g1", name: "grep", arguments: { pattern: "x" } },
+			],
+		});
+
+		hooks.settleReplayedRound();
+		const summaries = renderText(chat).filter((line) => /Ran for/.test(line));
+		assert.equal(summaries.length, 1, `同一组件形态变化不拆回合: ${summaries}`);
+		assert.match(summaries[0] ?? "", /bash×1, grep×1/, `两次工具都计入: ${summaries}`);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact 尾行：reset 后同 anchor 残留的旧尾行被清扫", async () => {
+	const { hooks, restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const message = {
+			role: "assistant",
+			timestamp: 1,
+			content: [
+				{ type: "text", text: "hello" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+			],
+		};
+		const anchor = new AssistantMessageComponent(message as any, true) as any;
+		chat.addChild(anchor);
+		chat.addChild(tool("bash", "b1", { command: "one" }));
+		anchor.updateContent(message);
+		assert.equal(
+			renderText(chat).filter((line) => /Running\.\.\.|Ran for/.test(line)).length,
+			1,
+			"前置：单条摘要行",
 		);
+
+		// refresh 走 resetRounds + refreshTrackedComponents：重放 updateContent 后
+		// 同一 anchor 起新回合，sweepOrphanTails 应把残留旧 tail 摘掉。
+		hooks.refresh();
+		await settleFold();
+		const summaries = renderText(chat).filter((line) => /Running\.\.\.|Ran for/.test(line));
+		assert.equal(summaries.length, 1, `只该有一条摘要行: ${summaries}`);
 	} finally {
 		setToolMouseTui(null);
 		restore();
@@ -2593,26 +2603,23 @@ test("compact edit/write：计数只在正文显示一处，0 行预览带颜色
 		const titlePlain = expandedPlain.find((line) => line.includes("edit a.ts")) ?? "";
 		assert.match(titlePlain, /^ ✓ edit a\.ts/, "expanded title uses Box pad only");
 		assert.doesNotMatch(titlePlain, /\(\+\d+ -\d+\)/);
+		// ↳ 头行与标题文字列对齐（Box pad 1 + 缩进 2），body 行保持贴左。
+		const diffHeader = expandedPlain.find((line) => line.includes("↳ diff")) ?? "";
+		assert.match(diffHeader, /^   ↳ diff/, `↳ 与标题文字列同列: ${diffHeader}`);
 		const expanded = expandedPlain.join("\n");
 		assert.match(expanded, /old/);
 		assert.match(expanded, /new/);
 		assert.doesNotMatch(expanded, /Input|Output|Details:/);
-		assert.ok(backgroundSlots.includes("userMessageBg"));
-		// issue 46：edit/write 展开卡单独一条取槽位路径，同样跟随配置。
-		const previousSlot = config.expandedCardBackground;
-		const targetSlot = previousSlot === "toolPendingBg" ? "customMessageBg" : "toolPendingBg";
-		try {
-			backgroundSlots.length = 0;
-			config.expandedCardBackground = targetSlot;
-			edit.render(120);
-			assert.deepEqual(
-				[...new Set(backgroundSlots)],
-				[targetSlot],
-				"expanded edit card follows the configured slot",
-			);
-		} finally {
-			config.expandedCardBackground = previousSlot;
-		}
+		assert.ok(backgroundSlots.includes("toolSuccessBg"));
+		// 失败的 edit 单独走自己的状态，整张展开卡改用失败底色。
+		backgroundSlots.length = 0;
+		edit.updateResult({ content: [], details: { diff: EDIT_DIFF }, isError: true });
+		edit.render(120);
+		assert.deepEqual(
+			[...new Set(backgroundSlots)],
+			["toolErrorBg"],
+			"failed edit card uses the error background",
+		);
 		setMessageDisplayTheme(previousTheme);
 
 		// edit 缺 diff 时统计未知，不能伪报 (+0 -0)，退回 Input/Output。
@@ -2975,7 +2982,8 @@ test("session_start and session_tree keep the compact patch outermost over compa
 		};
 		const afterTree = new AssistantMessageComponent(nextMessage as any, true) as any;
 		afterTree.updateContent(nextMessage);
-		assert.match(renderText(afterTree).join("\n"), /bash×1/);
+		// 未挂进容器的独立组件并入上一个 activeRound；摘要行落在该回合的 anchor 上。
+		assert.match(renderText(component).join("\n"), /bash×2/, "同一回合累计两次 bash");
 
 		// shutdown 恢复原生原型。
 		await emit("session_shutdown", {}, ctx);

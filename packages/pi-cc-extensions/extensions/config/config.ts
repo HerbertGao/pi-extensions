@@ -1,4 +1,3 @@
-import type { ThemeBg } from "@earendil-works/pi-coding-agent";
 import type { CompactThinkingConfig } from "../feature/compact-thinking.ts";
 import {
 	DEFAULT_FOOTER_CHIP_LAYOUT,
@@ -15,6 +14,7 @@ export type DiffViewMode = "auto" | "split" | "unified";
 export type DiffIndicatorMode = "bars" | "classic" | "none";
 export type FooterGitStatsMode = "working" | "branch";
 export type FooterTokenRateMode = "average" | "live";
+export type ScrollButtonMode = "dock" | "native";
 
 export interface ToolDisplayConfig {
 	diffViewMode: DiffViewMode;
@@ -57,23 +57,25 @@ export type Config = {
 	writeDiffCollapsedLines: number;
 	diffWordWrap: boolean;
 	expandedPreviewMaxLines: number;
-	expandedCardBackground: ThemeBg;
 	expandedInputMaxLines: number;
 	expandedOutputMaxLines: number;
 	toolLabelClip: number;
 	useSummaryTitlesAsThinkingTitle: boolean;
 	previewLines: number;
 	animationIntervalMs: number;
-	dimThinkingText: boolean;
 	showStartupHeader: boolean;
 	/** fullscreen：userMessage 正文首行滚出视口上沿后钉住，直到下一条指令接手。 */
 	stickyUserMessage: boolean;
+	/** fullscreen 回到底部按钮：扩展 dock 行，或 Pi 原生浮层。 */
+	scrollButtonMode: ScrollButtonMode;
 	enableSessionReference: boolean;
 	enableSubagentAutocomplete: boolean;
 	enableContextCommand: boolean;
 	enableAgentSummary: boolean;
 	enableWorkingMessage: boolean;
 	enableAliases: boolean;
+	/** 输入框 `❯ ` 前缀（占左侧 2 列，颜色随 thinking/bash mode 联动）。 */
+	enableEditorPrefix: boolean;
 	enableCustomFooter: boolean;
 	/** footer 输出速率芯片。关则不显示。 */
 	footerTokenRate: boolean;
@@ -101,26 +103,13 @@ export const DIFF_VIEW_MODES: DiffViewMode[] = ["auto", "split", "unified"];
 export const DIFF_INDICATOR_MODES: DiffIndicatorMode[] = ["bars", "classic", "none"];
 export const FOOTER_GIT_STATS_MODES: FooterGitStatsMode[] = ["working", "branch"];
 export const FOOTER_TOKEN_RATE_MODES: FooterTokenRateMode[] = ["average", "live"];
+export const SCROLL_BUTTON_MODES: ScrollButtonMode[] = ["dock", "native"];
 export const DIFF_SPLIT_MIN_WIDTH_VALUES = ["80", "100", "120", "140", "160", "180"];
 export const DIFF_COLLAPSED_LINES_VALUES = ["0", "12", "24", "36", "48", "80", "120"];
 /** Write collapsed presets. 0 = stats only (`+N -0` + expand hint). */
 export const WRITE_DIFF_COLLAPSED_LINES_VALUES = ["0", "4", "8", "12", "24", "36"];
 /** Presets for expanded body height — keep low options first so cycling stays TUI-friendly. */
 export const EXPANDED_PREVIEW_MAX_LINES_VALUES = ["40", "60", "80", "120", "200", "500", "2000"];
-/**
- * 展开卡可用的主题背景槽位。theme.bg/getBgAnsi 只认这些 token，
- * 别的名字会抛 Unknown theme color，所以按白名单校验；
- * 面板顺序把 userMessageBg（默认）和 toolPendingBg（内置主题的中性灰）放最前。
- */
-export const EXPANDED_CARD_BACKGROUND_SLOTS: readonly ThemeBg[] = [
-	"userMessageBg",
-	"toolPendingBg",
-	"customMessageBg",
-	"selectedBg",
-	"searchMatchBg",
-	"toolSuccessBg",
-	"toolErrorBg",
-];
 /** 展开工具卡 Input 可见行数预设。 */
 export const EXPANDED_INPUT_MAX_LINES_VALUES = ["5", "10", "20", "40", "80"];
 /** 展开工具卡 Output 可见行数预设。 */
@@ -153,23 +142,22 @@ export const DEFAULT_CONFIG: Config = {
 	writeDiffCollapsedLines: DEFAULT_TOOL_DISPLAY_CONFIG.writeDiffCollapsedLines,
 	diffWordWrap: DEFAULT_TOOL_DISPLAY_CONFIG.diffWordWrap,
 	expandedPreviewMaxLines: DEFAULT_TOOL_DISPLAY_CONFIG.expandedPreviewMaxLines,
-	/** 展开卡背景。userMessageBg 与用户消息同色（ccstyle 原约定）。 */
-	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
 	toolLabelClip: 0,
 	useSummaryTitlesAsThinkingTitle: true,
 	previewLines: 3,
 	animationIntervalMs: 90,
-	dimThinkingText: false,
 	showStartupHeader: true,
 	stickyUserMessage: true,
+	scrollButtonMode: "dock",
 	enableSessionReference: true,
 	enableSubagentAutocomplete: true,
 	enableContextCommand: true,
 	enableAgentSummary: true,
 	enableWorkingMessage: true,
 	enableAliases: true,
+	enableEditorPrefix: true,
 	enableCustomFooter: true,
 	footerTokenRate: true,
 	footerTokenRateMode: "average",
@@ -263,11 +251,6 @@ export function normalizeConfig(input: unknown): Config {
 			10,
 			50_000,
 		),
-		expandedCardBackground: pickEnum(
-			source.expandedCardBackground,
-			EXPANDED_CARD_BACKGROUND_SLOTS,
-			DEFAULT_CONFIG.expandedCardBackground,
-		),
 		expandedInputMaxLines: pickPositiveInt(
 			source.expandedInputMaxLines,
 			DEFAULT_CONFIG.expandedInputMaxLines,
@@ -294,15 +277,20 @@ export function normalizeConfig(input: unknown): Config {
 			source.animationIntervalMs,
 			DEFAULT_CONFIG.animationIntervalMs,
 		),
-		dimThinkingText: source.dimThinkingText === true,
 		showStartupHeader: source.showStartupHeader !== false,
 		stickyUserMessage: source.stickyUserMessage !== false,
+		scrollButtonMode: pickEnum(
+			source.scrollButtonMode,
+			SCROLL_BUTTON_MODES,
+			DEFAULT_CONFIG.scrollButtonMode,
+		),
 		enableSessionReference: source.enableSessionReference !== false,
 		enableSubagentAutocomplete: source.enableSubagentAutocomplete !== false,
 		enableContextCommand: source.enableContextCommand !== false,
 		enableAgentSummary: source.enableAgentSummary !== false,
 		enableWorkingMessage: source.enableWorkingMessage !== false,
 		enableAliases: source.enableAliases !== false,
+		enableEditorPrefix: (source.enableEditorPrefix ?? source.enableInputPrompt) !== false, // 兼容旧配置键
 		enableCustomFooter: source.enableCustomFooter !== false,
 		footerTokenRate: source.footerTokenRate !== false,
 		footerTokenRateMode: pickEnum(
@@ -364,15 +352,16 @@ export function formatConfigStatus(source: Config = config): string {
 		`thinkingTitle=${source.useSummaryTitlesAsThinkingTitle ? "summary" : "default"}`,
 		`thinkingPreview=${source.previewLines}`,
 		`thinkingAnimation=${source.animationIntervalMs}ms`,
-		`thinkingDim=${source.dimThinkingText ? "on" : "off"}`,
 		`startupHeader=${source.showStartupHeader ? "on" : "off"}`,
 		`stickyUserMessage=${source.stickyUserMessage ? "on" : "off"}`,
+		`scrollButton=${source.scrollButtonMode}`,
 		`sessionRef=${source.enableSessionReference ? "on" : "off"}`,
 		`subagentAuto=${source.enableSubagentAutocomplete ? "on" : "off"}`,
 		`context=${source.enableContextCommand ? "on" : "off"}`,
 		`agentSummary=${source.enableAgentSummary ? "on" : "off"}`,
 		`workingMsg=${source.enableWorkingMessage ? "on" : "off"}`,
 		`aliases=${source.enableAliases ? "on" : "off"}`,
+		`editorPrefix=${source.enableEditorPrefix ? "on" : "off"}`,
 		`footer=${source.enableCustomFooter ? "on" : "off"}`,
 		`footerTokenRate=${source.footerTokenRate ? "on" : "off"}`,
 		`footerTokenRateMode=${source.footerTokenRateMode}`,

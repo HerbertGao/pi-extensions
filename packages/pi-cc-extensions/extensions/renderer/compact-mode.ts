@@ -2,7 +2,7 @@
  * Compact mode：每条含 toolCall 的 assistant message 折叠为一条逐步累加的摘要行
  * （`Ran for 8s, bash×2, read×2`），edit/write 独立标题行（`✓ write <path> (+25 -0)`），
  * 普通工具折叠时不显示独立行；展开（Ctrl+O / fullscreen 点击）时助手文本按原生渲染，
- * thinking 与工具卡装进 userMessageBg 面板（卡内恢复 compact-thinking/Pi 原生或专用
+ * thinking 与工具卡装进按状态着色的面板（卡内恢复 compact-thinking/Pi 原生或专用
  * renderer）。edit/write 复用 mode=on 的 rich diff
  * 与 `editDiffCollapsedLines` / `writeDiffCollapsedLines` / `expandedPreviewMaxLines`。
  * Agent/Task 族：调用只进摘要计数，tool 卡始终折叠（避免 pending→完成高度闪动）。
@@ -37,6 +37,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, Box, Spacer } from "@earendil-works/pi-tui";
 import { config, getToolDisplayConfig } from "../config/config.ts";
+import { aggregateToolCardBgSlot, toolCardBgSlot } from "./tool/tool-state.ts";
 import { ASK_USER_QUESTION_TOOL_NAME } from "./tool/ask-user-question.ts";
 import { toolLoadingIcon } from "../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../utils/tool-result-sanitize.ts";
@@ -53,7 +54,7 @@ import { displayConfigCacheKey } from "./tool/diff/diff-component.ts";
 import type { WriteExecutionMetadataStore } from "./tool/diff/write-execution.ts";
 import { isToolCallHovered } from "./mouse/hover.ts";
 import { getToolMouseTui } from "./mouse/scroll.ts";
-import { insetComponent } from "./tool/result.ts";
+import { expandedBodyComponent, insetComponent } from "./tool/result.ts";
 import { isLiveToolCall, scheduleAnimation } from "./tool/tool-state.ts";
 import { renderExpandedToolResult } from "./tool/tool-io.ts";
 import { paddedBackgroundRow } from "./tool/grouping.ts";
@@ -114,8 +115,7 @@ export function styleCompactThinkingText(
 	bold = false,
 ): string {
 	if (!theme) return text;
-	const color = config.dimThinkingText ? "dim" : "thinkingText";
-	const colored = typeof theme.fg === "function" ? theme.fg(color, text) : text;
+	const colored = typeof theme.fg === "function" ? theme.fg("dim", text) : text;
 	const weighted = bold && typeof theme.bold === "function" ? theme.bold(colored) : colored;
 	return typeof theme.italic === "function" ? theme.italic(weighted) : weighted;
 }
@@ -333,7 +333,7 @@ function darkenBgAnsi(theme: any, slot: string): string {
 	return `\x1b[48;2;${r};${g};${b}m`;
 }
 
-/** 工具卡深色行：左右内缩（左 2 右 3 格，含工具卡自身 padding），背景只到内容区，
+/** 工具卡深色行：左右各缩 1 格（含工具卡自身 padding），背景只到内容区，
  *  修复行尾 reset 截断。 */
 function toolCardBgRow(
 	theme: any,
@@ -342,8 +342,8 @@ function toolCardBgRow(
 	line: string,
 	width: number,
 ): string {
-	const leftInset = 2;
-	const rightInset = 3;
+	const leftInset = 1;
+	const rightInset = 1;
 	const contentWidth = Math.max(0, width - leftInset - rightInset);
 	// 深色块内左右各 1 格内部 padding；去掉行首原有空格后重新对齐
 	const text = stripBackgroundAnsi(line).replace(/^ +/, "");
@@ -356,14 +356,13 @@ function toolCardBgRow(
 	const inset = (n: number) => (outerBg ? `${outerBg}${" ".repeat(n)}\x1b[49m` : " ".repeat(n));
 	return `${inset(leftInset)}${bgAnsi}${stable}\x1b[49m${inset(rightInset)}`;
 }
-/** edit/write 展开卡：保持原样式（展开卡背景 Box），不应用工具卡深色/间距改动。 */
-function editWriteExpandedCard(theme: any): any {
+/** edit/write 展开卡：按这张工具卡自己的状态取底色，不应用工具卡深色/间距改动。 */
+function editWriteExpandedCard(theme: any, component: any): any {
+	const slot = toolCardBgSlot(component);
 	return new Box(
 		1,
 		1,
-		typeof theme.bg === "function"
-			? (text: string) => theme.bg(config.expandedCardBackground, text)
-			: undefined,
+		typeof theme.bg === "function" ? (text: string) => theme.bg(slot, text) : undefined,
 	);
 }
 
@@ -384,7 +383,7 @@ function layoutExpandedToolCard(
 	toolHits = false,
 	live = false,
 ): { lines: string[]; hits: Array<{ child: any; start: number; end: number }> } {
-	const slot = config.expandedCardBackground;
+	const slot = aggregateToolCardBgSlot(children.map((child) => child?.__ccTool).filter(Boolean));
 	const toolBgAnsi = darkenBgAnsi(theme, slot);
 	/** live 每行前面的标记宽度（首行 `↳ `，其余对齐空格）。 */
 	const markerWidth = live ? 2 : 0;
@@ -397,7 +396,10 @@ function layoutExpandedToolCard(
 	let liveLead = 0;
 	const pushRow = (raw: string) => {
 		if (!live) {
-			lines.push(paddedBackgroundRow(theme, slot, raw, width));
+			// 面板 pad 1 是唯一左边距：剥掉子行 collapsed 态自带的 1 格 lead，
+			// 否则标题行偏到 2、↳ 行偏到 4，左右不再对称。
+			const line = raw.replace(/^((?:\x1b\[[0-?]*[ -/]*[@-~])*) /, "$1");
+			lines.push(paddedBackgroundRow(theme, slot, line, width));
 			return;
 		}
 		// 槽位里不重复展开入口（见 SLOT_HINT_PATTERNS）。
@@ -500,7 +502,9 @@ function compactRoundCard(
 		| undefined;
 	const layout = (width: number) => {
 		const theme = themeOf();
-		const bgSlot = config.expandedCardBackground;
+		const bgSlot = aggregateToolCardBgSlot(
+			children.map((child) => child?.__ccTool).filter(Boolean),
+		);
 		const innerWidth = contentWidth(width);
 		const paints = children.map((child) => {
 			const lines = child.render?.(innerWidth);
@@ -706,7 +710,7 @@ function compactEditWriteLine(
 	const isError = component.result?.isError === true;
 	const isPending = !component.result || component.isPartial === true;
 	const icon = isError ? "✗" : isPending ? toolLoadingIcon() : "✓";
-	const iconColor = isError ? "error" : isPending ? "accent" : "success";
+	const iconColor = isError ? "error" : isPending ? "dim" : "success";
 	let statsText = "";
 	let statsStyled = "";
 	// 统计只显示一处：正文自带 +A -D 时标题不再重复（showStats=false）。
@@ -749,7 +753,7 @@ function compactEditWriteLine(
 	const hintPart = clickable
 		? `${theme.fg("dim", " · ")}${theme.fg(isToolCallHovered(component.toolCallId) ? "text" : "dim", clickText)}`
 		: "";
-	const line = `${iconPart}${namePart}${theme.fg("toolTitle", pathPart)}${statsStyled}${hintPart}`;
+	const line = `${iconPart}${namePart}${theme.fg("muted", pathPart)}${statsStyled}${hintPart}`;
 	return ["", truncateToWidth(line, width, "")];
 }
 
@@ -809,7 +813,7 @@ function compactEditWriteLines(
 			hit &&
 			hit.width === width &&
 			hit.theme === theme &&
-			hit.bgSlot === config.expandedCardBackground &&
+			hit.bgSlot === toolCardBgSlot(component) &&
 			hit.diffConfigKey === diffConfigKey &&
 			hit.expanded === expanded &&
 			hit.result === component.result &&
@@ -826,7 +830,7 @@ function compactEditWriteLines(
 		compactEditPaintCache.set(component, {
 			width,
 			theme,
-			bgSlot: config.expandedCardBackground,
+			bgSlot: toolCardBgSlot(component),
 			diffConfigKey,
 			expanded,
 			result: component.result,
@@ -894,7 +898,7 @@ function paintCompactEditWrite(
 
 	let detail: any;
 	if (hasRich) {
-		detail = expanded ? candidate : insetComponent(candidate as any);
+		detail = expanded ? expandedBodyComponent(candidate) : insetComponent(candidate as any);
 	} else {
 		const outputText = sanitizeToolResultText(
 			Array.isArray(result?.content)
@@ -921,7 +925,7 @@ function paintCompactEditWrite(
 		return [...title, ...detail.render(width)];
 	}
 
-	const box = editWriteExpandedCard(theme);
+	const box = editWriteExpandedCard(theme, component);
 	box.addChild({
 		render(innerWidth: number): string[] {
 			return compactEditWriteLine(component, innerWidth, writeMetadata, {
@@ -985,8 +989,7 @@ function compactAssistantLineComponent(
 				return paint.lines;
 			}
 			const plainText = truncateToWidth(resolved, summaryWidth, "…");
-			// Dim thinking text 开启时整行统一 dim，否则工具计数保持 muted。
-			const plain = (value: string) => theme.fg(config.dimThinkingText ? "dim" : "muted", value);
+			const plain = (value: string) => theme.fg("dim", value);
 			let text = plain(plainText);
 			if (runningActive || plainText.startsWith("Ran for ")) {
 				const separator = plainText.indexOf(", ");
@@ -2065,7 +2068,11 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	const sweepOrphanTails = (): void => {
 		for (const tail of [...mountedTails]) {
 			const round = tail.round as CompactRound | undefined;
-			if (round && liveRounds.has(round)) continue;
+			// 回合还在本 pass 名单里、且没有同 anchor 的更新 tail 顶位时保留。
+			if (round && liveRounds.has(round)) {
+				const anchor = round.anchor;
+				if (!anchor || tailByAnchor.get(anchor) === tail) continue;
+			}
 			removeTailHost(tail);
 			mountedTails.delete(tail);
 			if (round?.anchor && tailByAnchor.get(round.anchor) === tail) {
@@ -2143,16 +2150,11 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 
 		if (hasToolCalls) {
 			let round = roundByComponent.get(this);
-			if (hasText && (!round || round.anchor !== this)) {
-				if (round) {
-					round.messages.delete(this);
-					clearRoundAnchor(this);
-				}
-				if (activeRound) finishRound(activeRound, message.timestamp);
-				round = createRound(this, message);
-				roundByComponent.set(this, round);
-			} else if (!round) {
-				// 中间隔着用户消息就另起一回合，不并进上一个回合。
+			if (!round) {
+				// 本条消息是否带 text 不是回合边界：pi 流式协议里同一条
+				// assistant 消息会以 text+toolCall、toolCall-only 反复到达。
+				// 只在「组件未挂进任何回合」时并入 activeRound；被用户消息
+				// 隔开（steer/上回合没正文）时由 joinOrCreateRound 收尾另起。
 				round = joinOrCreateRound(this, message);
 				roundByComponent.set(this, round);
 			}
