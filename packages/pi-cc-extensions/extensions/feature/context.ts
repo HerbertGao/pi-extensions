@@ -11,7 +11,6 @@ import {
 import { Key, Markdown, matchesKey, visibleWidth } from "@earendil-works/pi-tui";
 import { type Color, rgbColor } from "@earendil-works/pi-tui";
 import { padLine } from "../utils/format.ts";
-import { mouseBaseButton, parseSgrMousePacket } from "../utils/sgr-mouse.ts";
 
 export type ContextPart = {
 	label: string;
@@ -34,53 +33,6 @@ type ContextPreview = {
 	title: string;
 	content: string;
 };
-
-/** Pi 居中 overlay 的屏幕起点。没有 renderedOverlayLayouts 时用它，避免把 1-based 屏幕坐标当局部坐标。 */
-function centeredOverlayOrigin(
-	tui: any,
-	margin: number,
-	maxHeightPercent: number,
-	width: number,
-	height: number,
-) {
-	const termWidth = Math.max(1, tui.terminal?.columns ?? 80);
-	const termHeight = Math.max(1, tui.terminal?.rows ?? 24);
-	const availWidth = Math.max(1, termWidth - margin * 2);
-	const availHeight = Math.max(1, termHeight - margin * 2);
-	const maxHeight = Math.max(
-		1,
-		Math.min(Math.floor((termHeight * maxHeightPercent) / 100), availHeight),
-	);
-	const effectiveHeight = Math.min(height, maxHeight);
-	return {
-		col: Math.max(
-			margin,
-			Math.min(margin + Math.floor((availWidth - width) / 2), termWidth - margin - width),
-		),
-		row: Math.max(
-			margin,
-			Math.min(
-				margin + Math.floor((availHeight - effectiveHeight) / 2),
-				termHeight - margin - effectiveHeight,
-			),
-		),
-	};
-}
-
-function localMouseFromSgr(
-	tui: any,
-	mouse: { code: number; col: number; row: number; final: "M" | "m" },
-	fallback: { col: number; row: number },
-) {
-	const layout = tui.renderedOverlayLayouts?.at(-1) ?? fallback;
-	return {
-		col: mouse.col - 1 - layout.col,
-		row: mouse.row - 1 - layout.row,
-		release: mouse.final === "m",
-		motion: (mouse.code & 32) !== 0,
-		baseButton: mouseBaseButton(mouse.code),
-	};
-}
 
 function normalizePreviewText(text: string): string {
 	return text
@@ -170,7 +122,6 @@ export async function showTextPreview(
 					  }
 					| undefined;
 				let scrollbarDragOffset: number | null = null;
-				let screenOrigin = { col: 0, row: 0 };
 				const markdownView = new Markdown(content, 0, 0, getMarkdownTheme());
 
 				const scrollTo = (nextOffset: number): void => {
@@ -326,11 +277,6 @@ export async function showTextPreview(
 						else if (matchesKey(data, "pageDown")) scrollTo(scrollOffset + pageSize);
 						else if (matchesKey(data, Key.home)) scrollTo(0);
 						else if (matchesKey(data, Key.end)) scrollTo(totalLines - pageSize);
-						else {
-							const mouse = parseSgrMousePacket(data);
-							if (!mouse) return;
-							handlePreviewMouse(localMouseFromSgr(tui, mouse, screenOrigin));
-						}
 					},
 					// overlay 事件对象路径：官方 dispatchMouseToOverlay 把鼠标派到
 					// handleMouse，event.x/y 是相对弹框左上角的 0-based 局部坐标，
@@ -416,7 +362,8 @@ export async function showTextPreview(
 						const start = totalLines === 0 ? 0 : scrollOffset + 1;
 						const end = Math.min(totalLines, scrollOffset + pageSize);
 						const status = `${start}-${end} / ${totalLines} lines · ↑↓ PgUp/PgDn Home/End`;
-						const lines = [
+
+						return [
 							border(`╭${"─".repeat(inner)}╮`),
 							`${border("│")}${padLine(` ${theme.bold(theme.fg("accent", title))}`, inner - actionsWidth)}${theme.fg(copyHovered ? "text" : "muted", COPY_LABEL)} ${theme.fg(escHovered ? "text" : "muted", ESC_LABEL)}${border("│")}`,
 							`${border("├")}${border("─".repeat(inner))}${border("┤")}`,
@@ -425,8 +372,6 @@ export async function showTextPreview(
 							`${border("│")}${padLine(theme.fg("dim", ` ${status}`), inner)}${border("│")}`,
 							border(`╰${"─".repeat(inner)}╯`),
 						];
-						screenOrigin = centeredOverlayOrigin(tui, 2, 80, width, lines.length);
-						return lines;
 					},
 				};
 			},
@@ -763,7 +708,6 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 							let escHitbox: { row: number; startCol: number; endCol: number } | undefined;
 							let escHovered = false;
 							let hoveredKey: PreviewKey | undefined;
-							let screenOrigin = { col: 0, row: 0 };
 
 							/** context 主弹框鼠标共用处：handleInput（raw SGR）与 handleMouse（overlay
 							 * 事件对象）同一套 hover/选中/关闭行为。返回 true 表示被预览消费。 */
@@ -840,9 +784,6 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 										done(visiblePreviews[selectedPreviewIndex]?.key);
 										return;
 									}
-									const mouse = parseSgrMousePacket(data);
-									if (!mouse) return;
-									handleDialogMouse(localMouseFromSgr(tui, mouse, screenOrigin));
 								},
 								// overlay 事件对象路径：event.x/y 是弹框局部 0-based 坐标，
 								// 与 hitbox 同基准。click 是 press+release 的合成，动作已在
@@ -933,7 +874,6 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 												]
 											: [];
 									});
-									screenOrigin = centeredOverlayOrigin(tui, 1, 90, width, visibleHeight);
 
 									return lines;
 								},
