@@ -35,7 +35,6 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `@tifan/pi-recap@0.4.8`
 - `@tifan/pi-rename@0.6.0`
 - `pi-typesafe@0.10.0`
-- `pi-multi-account@1.24.0`
 - `pi-next-cue@1.0.7`
 - `pi-lens@4.4.3`
 - `pi-web-access@0.41.0`
