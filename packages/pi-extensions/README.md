@@ -22,7 +22,7 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 
 - `pi-antigravity@0.10.0`
 - `pi-provider-qoder@0.6.1`
-- `@dietrichgebert/ponytail@5.2.0`
+- `@dietrichgebert/ponytail@5.3.2`
 - `@juicesharp/rpiv-ask-user-question@2.13.8`
 - `@narumitw/pi-btw@0.61.1`
 - `@narumitw/pi-caffeinate@0.49.11`
@@ -41,7 +41,9 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 
 Pi loads their extensions and skills through `node_modules/` paths inside one package root. The upstream companions are pinned and bundled, not forked or renamed.
 
-The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@1.0.4` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
+The locally customized CC and SoL-Pi packages now follow complete upstream baselines `pi-cc-extensions@1.0.7` and SoL-Pi main `e1a586af`, with local behavior replayed on top. Action Fusion and ccstyle write rich diffs coexist without disabling either feature. All four SoL-Pi features remain opt-in; its new non-persistent-session evidence archives remain on disk for consumers and require host or caller cleanup.
+
+Ponytail `5.3.2` updates the Pi skill guidance, including how to turn it off. Its Pi extension entry is unchanged; the new Claude Code band/board hooks are not registered by this aggregate.
 
 ### Agency Agents
 

@@ -46,6 +46,7 @@ function runtime() {
 	const handlers = new Map<string, Function[]>();
 	const commands: string[] = [];
 	const entryRenderers: string[] = [];
+	const markdownTransformers: Function[] = [];
 	return {
 		pi: {
 			on(name: string, handler: Function) {
@@ -60,7 +61,9 @@ function runtime() {
 			registerEntryRenderer(type: string) {
 				entryRenderers.push(type);
 			},
-			registerMarkdownTransformer() {},
+			registerMarkdownTransformer(transformer: Function) {
+				markdownTransformers.push(transformer);
+			},
 			registerMessageRenderer() {},
 			appendEntry() {},
 			getAllTools: () => [],
@@ -68,6 +71,7 @@ function runtime() {
 		} as any,
 		commands,
 		entryRenderers,
+		markdownTransformers,
 		handlers,
 		async emit(name: string) {
 			for (const handler of handlers.get(name) ?? []) await handler({}, ctx);
@@ -97,6 +101,7 @@ test("feature switches independently skip optional package registrations", async
 		"enableAgentSummary",
 		"enableWorkingMessage",
 		"enableAliases",
+		"enableMarkdownEnhance",
 	] as const;
 
 	try {
@@ -105,6 +110,7 @@ test("feature switches independently skip optional package registrations", async
 		const signatures = (current: ReturnType<typeof runtime>) => ({
 			aliases: current.commands.includes("clear") && current.commands.includes("exit"),
 			context: current.commands.includes("context"),
+			markdown: current.markdownTransformers.length > 0,
 			summary:
 				current.entryRenderers.includes(AGENT_SUMMARY_ENTRY_TYPE) &&
 				current.handlers.has("agent_start"),
@@ -120,6 +126,7 @@ test("feature switches independently skip optional package registrations", async
 		assert.deepEqual(signatures(enabled), {
 			aliases: true,
 			context: true,
+			markdown: true,
 			summary: true,
 			working: true,
 			sessionReference: true,
@@ -128,6 +135,7 @@ test("feature switches independently skip optional package registrations", async
 
 		const cases = [
 			["enableAliases", "aliases"],
+			["enableMarkdownEnhance", "markdown"],
 			["enableContextCommand", "context"],
 			["enableAgentSummary", "summary"],
 			["enableWorkingMessage", "working"],

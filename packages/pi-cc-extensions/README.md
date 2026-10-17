@@ -28,7 +28,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 | 功能                  | 说明                                                                            | 入口                                            |
 | --------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Claude Code UI        | 工具摘要、折叠展开、rich edit/write diff，以及`on` / `compact` / `off` 三种模式 | `/ccstyle`                                      |
-| Markdown 增强         | Mermaid 图、提示框、URL 链接化等                                                        | 自动生效                                        |
+| Markdown 增强         | Mermaid 方言渲染、圈数字转半角括号                                                         | 自动生效；`enableMarkdownEnhance: false` 关闭   |
 | Fullscreen mode       | 工具卡/group 单击展开与收起、预览、hover 高亮、回到底部按钮                 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
 | 配置面板              | `Style / Features / UI / Diff / Thinking / Footer` 六页签                       | `/ccstyle`                                      |
 | 上下文检查            | 查看上下文占用，并预览 System prompt、Memory、Skills、Tools definition 和消息内容 | `/context`                                      |
@@ -55,6 +55,7 @@ pi install git:github.com/HerbertGao/pi-extensions
   "enableAgentSummary": true,              // 每回合工具摘要
   "enableWorkingMessage": true,            // Working... 底部 token/耗时
   "enableAliases": true,                   // /clear、/exit 别名
+  "enableMarkdownEnhance": true,             // markdown 转换：Mermaid 方言渲染、圈数字转半角括号；false 让位给其他扩展
   "enableEditorPrefix": true,              // 输入框 ❯ 前缀
 
   // ui
@@ -120,6 +121,7 @@ pi -e .              # 只跑一次，不改 settings.json
 | ---------------------------------------- | ------------------------------------------------ |
 | `npm:pi-web-access`                      | 网页搜索、URL 抓取、GitHub 克隆、PDF/视频解析    |
 | `npm:@narumitw/pi-usage`                 | 查看当前账号用量（Codex / Copilot / OpenRouter） |
+| `npm:@juicesharp/rpiv-ask-user-question` | 模型拿不准时向你提问的选择题面板                 |
 
 ## 致谢
 
