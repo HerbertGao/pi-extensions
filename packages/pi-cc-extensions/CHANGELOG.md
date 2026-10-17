@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.7-local.1
+
+### Minor Changes
+
+- [#298](https://github.com/HerbertGao/pi-extensions/pull/298) [`0bec596`](https://github.com/HerbertGao/pi-extensions/commit/0bec5963c7165ddb155872d65e2d9f3625b696f9) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync upstream 1.0.7: add the default-on `enableMarkdownEnhance` switch, leave admonitions and bare links to Pi’s native renderer, and fix streaming token counts for Anthropic placeholder usage and tool-call arguments. Preserve the local lifecycle and Action Fusion behavior without reintroducing the abandoned regular-mode SGR wiring.
+
 ## 1.0.6-local.1
 
 ### Patch Changes
