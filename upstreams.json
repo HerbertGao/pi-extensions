@@ -9,12 +9,12 @@
     {
       "name": "pi-subagents",
       "repository": "https://github.com/tintinweb/pi-subagents",
-      "reviewedCommit": "85a704cb8f35c96c0cabfa665b572bab296942e5"
+      "reviewedCommit": "ca93a5247e72e7053fcd10bea7125d6c4205f949"
     },
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "52d5b095d3d4c77b9634267ac9c34a1ce34cb485"
+      "reviewedCommit": "5963eefd452822994e6a001830ded7676ebb1845"
     },
     {
       "name": "NVlabs SoL-Pi",
@@ -24,7 +24,7 @@
     {
       "name": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity",
-      "reviewedCommit": "d59d22bfebd9e44f2fd4a31bf5954a23fb9b043a"
+      "reviewedCommit": "f950c08e7a5c1069a0339af88252347a5ecb0f8c"
     }
   ],
   "companions": [

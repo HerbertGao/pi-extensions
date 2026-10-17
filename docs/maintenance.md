@@ -11,14 +11,14 @@
 | Local package set  | Upstream                   | Imported baseline          | Notes                                                                                                                                                                                                  |
 | ------------------ | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                 |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `52d5b095` (`1.0.6`)       | Replayed onto upstream v1.0.6. Local patches remain. The published regular-mode SGR wiring is not kept. See "2026-10-16 issue #291 review".                                                            |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `5963eefd` (`1.0.7`)       | Replayed onto upstream v1.0.7. Local patches remain; regular mode does not enable mouse reporting. See "2026-10-17 issue #297 review".                                                                 |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.4`          | `1.0.4`          | `184fa852e4d4`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.7`          | `1.0.7`          | `5963eefd4528`  |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.22.0`         | `0.22.0`         | `85a704cb8f35`  |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
@@ -256,7 +256,7 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version   | Upstream                     |
 | ------------------------------------ | --------- | ---------------------------- |
 | `pi-antigravity`                     | `0.10.0`  | `Rahularya01/pi-antigravity` |
-| `@dietrichgebert/ponytail`           | `5.2.0`   | `DietrichGebert/ponytail`    |
+| `@dietrichgebert/ponytail`           | `5.3.2`   | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.13.8`  | `juicesharp/rpiv-mono`       |
 | `@narumitw/pi-btw`                   | `0.61.1`  | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.11` | `narumiruna/pi-extensions`   |
@@ -278,6 +278,20 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-provider-qoder@0.6.1` is pinned from `simonsmh/pi-provider-qoder` at git `340036ccdb14646820b48dec412c53f1cf639afe`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-17 issue #297 review
+
+`@herbertgao/pi-cc-extensions` is replayed onto published upstream v1.0.7 (`5963eefd452822994e6a001830ded7676ebb1845`). Markdown enhancement gains the default-on `enableMarkdownEnhance` switch; admonition rewriting and bare-URL conversion are removed in favor of Pi's native rendering. Mermaid dialects and circled-number conversion remain. Token counters retain estimates when Anthropic sends placeholder usage, finalize real usage at message end, and include tool-call argument deltas. The footer `pi-usage` fix was already present locally. Local identity, lifecycle/session-switch guards, and Action Fusion cooperation remain. The abandoned regular-mode SGR wiring is not replayed; fullscreen mouse still uses `handleMouse`.
+
+Mouse PRs were checked against their current GitHub records: [#65](https://github.com/minuque/pi-cc-extensions/pull/65) was closed without merging after the maintainer rejected regular-mode mouse integration, while [#67](https://github.com/minuque/pi-cc-extensions/pull/67) was merged and its overlay-layout click guard already matches the local code. Upstream commits `12c0cac1` and `4d4893e3` nevertheless brought equivalent regular-mode SGR wiring into the published baseline. The existing local exclusion of that wiring remains necessary; it is not a regular-mode mouse feature or a separate replay of #67.
+
+Ponytail advances from `5.2.0` to published `5.3.2`. The npm tarballs retain the MIT license, identical Pi extension entry, and the same dependencies. Pi skill/help guidance changes, including `off` instructions. The new band/board reporting is Claude Code-only: its hooks can write local CSV/HTML, an explicit import can start a detached transcript scan, and a configured webhook can send reports. The aggregate does not register those hooks or enable that reporting for Pi.
+
+`pi-subagents` advances its review cursor from `85a704cb` to `ca93a5247e72e7053fcd10bea7125d6c4205f949` without importing code. The range covers usage events, RPC steer, resume budgets, and inline/nested resume cancellation. These commits are unpublished; the imported source and `x-upstream` metadata remain at v0.22.0.
+
+`pi-antigravity` advances its review cursor from `d59d22bf` to `f950c08e7a5c1069a0339af88252347a5ecb0f8c` without importing code. The target contains unpublished v0.11.0 work on model discovery/cache, rate limits, and search citations/source enrichment. In particular, source enrichment introduces default-on requests to source sites and incomplete DNS-rebinding defenses. The companion remains pinned at published `0.10.0`; none of those new network behaviors are enabled.
+
+Only the fixed ranges in issue [#297](https://github.com/HerbertGao/pi-extensions/issues/297) were reviewed. Package versions remain unchanged until the Changesets version step; imported provenance and review cursors are updated separately.
 
 ### 2026-10-16 issue #291 review
 

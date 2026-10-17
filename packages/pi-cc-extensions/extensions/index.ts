@@ -60,7 +60,7 @@ export default function (pi: ExtensionAPI): void {
 		getThinkingAnimationFrame: () => compactThinking?.getThinkingAnimationFrame?.() ?? 0,
 		setCompactSummaryActive: (active) => compactThinking?.setCompactSummaryActive?.(active),
 	};
-	markdownEnhance(pi);
+	if (config.enableMarkdownEnhance) markdownEnhance(pi);
 	claudeCodeStyle(pi, undefined, compactThinkingQuery);
 	compactThinking = installCompactThinking(pi, getCompactThinkingConfig());
 

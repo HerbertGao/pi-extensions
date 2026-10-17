@@ -181,6 +181,7 @@ function buildFooterChipsSubmenu(
 		() => onClose(),
 		{ enableSearch: false },
 	);
+	// SAFETY: SettingsList stores these as plain fields; disabled search keeps indices in items.
 	const listState = list as unknown as { selectedIndex: number; items: typeof items };
 
 	const mutate = (transform: (layout: FooterChipLayout, key: string) => FooterChipLayout) => {
@@ -656,6 +657,13 @@ export async function showCcstylePanel(
 			"Aliases disabled.",
 			config.enableAliases,
 		);
+		const markdownEnhanceToggle = featureToggleSetting(
+			"enableMarkdownEnhance",
+			"Markdown enhance",
+			"Mermaid dialects and circled-number conversion. Next restart applies.",
+			"Markdown enhancements off; another extension can own the markdown pass.",
+			config.enableMarkdownEnhance,
+		);
 		const footerCurrencySetting = {
 			id: "footerCurrency",
 			label: "Cost currency",
@@ -798,6 +806,7 @@ export async function showCcstylePanel(
 			enableAgentSummary: agentSummaryToggle,
 			enableWorkingMessage: workingMessageToggle,
 			enableAliases: aliasesToggle,
+			enableMarkdownEnhance: markdownEnhanceToggle,
 		};
 
 		const onSettingChange = (id: string, value: string) => {
@@ -1049,6 +1058,7 @@ export async function showCcstylePanel(
 					agentSummaryToggle.setting,
 					workingMessageToggle.setting,
 					aliasesToggle.setting,
+					markdownEnhanceToggle.setting,
 				],
 			},
 			{
@@ -1122,6 +1132,7 @@ export async function showCcstylePanel(
 
 		/** 数值项：当前选中项有 submenu + values 时，Space 仅循环预设，不打开子面板。 */
 		const cyclePresetInList = (list: InstanceType<typeof SettingsList>): boolean => {
+			// SAFETY: SettingsList exposes these runtime fields, and these lists disable search.
 			const internal = list as unknown as {
 				submenuComponent: unknown;
 				items: {

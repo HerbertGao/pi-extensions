@@ -28,7 +28,7 @@ Run `/reload` after installation.
 | Feature                     | Description                                                                                                                                  | Entry point                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Claude Code UI              | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                   | `/ccstyle`                                      |
-| Markdown enhancements       | Mermaid diagrams, admonitions, URL linking, and more                                                                                         | Automatic                                       |
+| Markdown enhancements       | Mermaid dialects and circled-number conversion                                                                                               | Automatic; turn off with `enableMarkdownEnhance: false` |
 | Fullscreen mode             | Tool card/group expand and collapse on click, previews, hover highlight, and a back-to-bottom button                                         | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
 | Settings panel              | `Style / Features / UI / Diff / Thinking / Footer` tabs                                                                                      | `/ccstyle`                                      |
 | Context inspection          | Usage breakdown and previews for the system prompt, memory, skills, tools definition, and messages                                           | `/context`                                      |
@@ -55,6 +55,7 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "enableAgentSummary": true,              // per-turn tool summary
   "enableWorkingMessage": true,            // Working... bottom token/elapsed
   "enableAliases": true,                   // /clear, /exit aliases
+  "enableMarkdownEnhance": true,             // markdown pass: Mermaid dialects and circled-number conversion; false hands it to other extensions
   "enableEditorPrefix": true,              // editor ❯ prefix
 
   // ui
@@ -117,10 +118,11 @@ pi -e .              # one run, does not edit settings.json
 
 ## Recommended companions
 
-| Extension                | Purpose                                                     |
-| ------------------------ | ----------------------------------------------------------- |
-| `npm:pi-web-access`      | Web search, URL fetching, GitHub cloning, PDF/video parsing |
-| `npm:@narumitw/pi-usage` | Current-account usage for Codex / Copilot / OpenRouter      |
+| Extension                                | Purpose                                                     |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| `npm:pi-web-access`                      | Web search, URL fetching, GitHub cloning, PDF/video parsing |
+| `npm:@narumitw/pi-usage`                 | Current-account usage for Codex / Copilot / OpenRouter      |
+| `npm:@juicesharp/rpiv-ask-user-question` | Multiple-choice questionnaire the model can ask you         |
 
 ## Credits
 
