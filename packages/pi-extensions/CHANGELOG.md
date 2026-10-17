@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.10
+
+### Patch Changes
+
+- [#298](https://github.com/HerbertGao/pi-extensions/pull/298) [`0bec596`](https://github.com/HerbertGao/pi-extensions/commit/0bec5963c7165ddb155872d65e2d9f3625b696f9) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update the bundled Ponytail companion to 5.3.2 for revised Pi skill/help guidance, including how to turn it off. The Pi extension entry is unchanged, and the Claude Code band/board hooks are not enabled by the aggregate.
+
+- Updated dependencies [[`0bec596`](https://github.com/HerbertGao/pi-extensions/commit/0bec5963c7165ddb155872d65e2d9f3625b696f9)]:
+  - @herbertgao/pi-cc-extensions@1.1.0
+
 ## 2026.10.9
 
 ### Minor Changes
