@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.8-local.1
+
+### Patch Changes
+
+- [#301](https://github.com/HerbertGao/pi-extensions/pull/301) [`b79b640`](https://github.com/HerbertGao/pi-extensions/commit/b79b640048f3e871db5791cf2e6cb8cbb1a183c7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync upstream 1.0.8: preserve inline text and notification positions across compact segments, share expanded tool panels across messages, and unify back-to-bottom labels, new-message counts, shortcuts, and click priority in dock and native modes.
+
 ## 1.0.7-local.1
 
 ### Minor Changes
