@@ -36,11 +36,11 @@ export function createSolPiExtension(
 		let initialized = false;
 		pi.on("session_start", (_event, ctx) => {
 			if (initialized) return;
-			initialized = true;
 			const config = loadConfig(ctx);
 			const bashOptions = config.actionFusion
 				? loadActionFusionBashOptions(ctx.cwd, ctx.isProjectTrusted())
 				: undefined;
+			initialized = true;
 			registerConfiguredFeatures(pi, config, bashOptions);
 		});
 	};
