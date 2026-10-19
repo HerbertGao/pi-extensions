@@ -554,6 +554,14 @@ Recommended configuration files may be shipped under `packages/pi-extensions/exa
 
 `packages/pi-extensions` uses `scripts/aggregate-bundle.mjs` during `npm pack` and `npm publish`. It bundles only the 25 direct Pi packages, then promotes their immediate runtime dependencies into the aggregate manifest so npm installs platform-specific transitive dependencies on the consumer machine. Do not replace this with Bun workspace symlinks or recursively bundled native dependencies. `bun run test:aggregate` must pass before release.
 
+## CI and release validation
+
+PRs run `.github/workflows/ci.yml`; pushes to `master` run `.github/workflows/release.yml`. Both call the read-only `checks.yml` workflow, which runs static checks, unit tests, and metadata validation in one matrix runner and aggregate packaging/integration tests in another. Together they cover every command in the local `bun run check`, which remains unchanged. Aggregate smoke failures still upload diagnostics.
+
+Both callers retain a final job named `check` for required status checks. It succeeds only when the shared validation succeeds; failed, cancelled, or skipped validation cannot pass the gate. Do not rename this job without checking branch protection requirements. `NPM_RELEASE_ENABLED` gates only the release job, not validation on `master`.
+
+The release job waits for `check` and alone receives write permissions and OIDC access. Keep publishing in `release.yml` so npm Trusted Publishing identity remains unchanged. Release runs remain serialized per branch, and published versions are still verified against npm after publishing.
+
 ## npm and Trusted Publishing bootstrap
 
 The npm account must have two-factor authentication enabled. The current machine must authenticate first and use Node 22.22.2 or newer plus npm 12 or newer for the `npm trust` command:
