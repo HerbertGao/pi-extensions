@@ -1,5 +1,13 @@
 # @herbertgao/sol-pi
 
+## 0.4.2
+
+### Patch Changes
+
+- [#301](https://github.com/HerbertGao/pi-extensions/pull/301) [`b79b640`](https://github.com/HerbertGao/pi-extensions/commit/b79b640048f3e871db5791cf2e6cb8cbb1a183c7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Sync upstream Pi 1.x and codemode compatibility fixes: preserve fused edit details on command failures, inherit trusted Pi shell settings, leave nested structured results intact, and preserve system-message positions during observation packing. Correct compaction projection, request accounting, and failure continuation. Keep `update_plan` declared to the model in codemode-only mode and disallow calling it from codemode scripts so completion boundaries remain visible to Online Context Compact.
+
+- [#301](https://github.com/HerbertGao/pi-extensions/pull/301) [`b79b640`](https://github.com/HerbertGao/pi-extensions/commit/b79b640048f3e871db5791cf2e6cb8cbb1a183c7) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Allow SoL-Pi initialization to retry on the next session after configuration loading fails. Malformed shell settings still report an error, but repairing them no longer leaves all enabled features permanently unregistered.
+
 ## 0.4.1
 
 ### Patch Changes
