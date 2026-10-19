@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
-import type { ExtensionContext, ToolResultEvent } from "@earendil-works/pi-coding-agent";
+import { SettingsManager, type ExtensionContext, type ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_CONFIG } from "../src/sol-pi/config.ts";
 import { REDUCER_RECEIPT_SCHEMA } from "../src/sol-pi/extensions/evidence-preserving-reducer/index.ts";
@@ -76,6 +76,8 @@ describe("SoL-Pi entrypoint", () => {
 			"before_provider_request",
 			"context",
 			"input",
+			"message_end",
+			"session_before_compact",
 			"session_before_tree",
 			"session_compact",
 			"session_shutdown",
@@ -99,6 +101,37 @@ describe("SoL-Pi entrypoint", () => {
 		expect(loader).toHaveBeenCalledOnce();
 		expect(pi.registeredTools.map((tool) => tool.name)).toEqual(["obs_recall"]);
 		expect([...pi.handlers.keys()].toSorted()).toEqual(["context", "session_start"]);
+	});
+
+	it("retries failed shell settings on the next session and registers features only once", async () => {
+		const pi = new FakePi();
+		const loader = vi.fn(() => ({
+			...DEFAULT_CONFIG,
+			actionFusion: true,
+			observationPack: true,
+			evidencePreservingReducer: true,
+			onlineContextCompact: true,
+		}));
+		const settings = SettingsManager.inMemory({});
+		vi.spyOn(settings, "drainErrors").mockReturnValueOnce([
+			{ scope: "global", error: new SyntaxError("invalid shell settings") },
+		]);
+		const createSettings = vi.spyOn(SettingsManager, "create").mockReturnValue(settings);
+		try {
+			createSolPiExtension(loader)(pi.asExtensionApi());
+			const ctx = fakeContext(pi.sessionManager);
+			await expect(pi.emit("session_start", { type: "session_start" }, ctx)).rejects.toThrow("invalid shell settings");
+			expect(pi.registeredTools).toEqual([]);
+			expect([...pi.handlers.keys()]).toEqual(["session_start"]);
+
+			await pi.emit("session_start", { type: "session_start" }, ctx);
+			await pi.emit("session_start", { type: "session_start" }, ctx);
+			expect(loader).toHaveBeenCalledTimes(2);
+			expect(createSettings).toHaveBeenCalledTimes(2);
+			expect(pi.registeredTools.map((tool) => tool.name)).toEqual(["edit", "write", "obs_recall", "update_plan"]);
+		} finally {
+			createSettings.mockRestore();
+		}
 	});
 
 	it("passes the configured reducer provider/model route into EPR", async () => {

@@ -13,7 +13,7 @@
 </p>
 
 > [!NOTE]
-> This package republishes the MIT-licensed SoL-Pi source from [NVlabs/SoL-Pi](https://github.com/NVlabs/SoL-Pi) at the reviewed commit recorded in `package.json`. It is maintained here as `@herbertgao/sol-pi`, not an official distribution of Pi or NVIDIA.
+> This package republishes the MIT-licensed SoL-Pi source from [NVlabs/SoL-Pi](https://github.com/NVlabs/SoL-Pi). The complete import baseline remains `e1a586af0ad8956f42ae5b26bba20e48fbf30e00`, recorded in `package.json`; Pi 1.x and codemode compatibility fixes from `41fa7e0e230bedc5e639aed2e7b9cc5698726db1..219568034fa54ed121ede80961655e33dfb9d0e3` are selectively ported on top. This is not a complete re-import or an npm `sol-pi@0.1.1` release. It is maintained here as `@herbertgao/sol-pi`, not an official distribution of Pi or NVIDIA.
 >
 > The package is independently loadable and is bundled by `@herbertgao/pi-extensions`; its aggregate entry is covered by the collection smoke test.
 
@@ -48,6 +48,12 @@ The mechanisms share four rules:
 - **Explicit opt-in.** A missing configuration leaves every mechanism disabled.
 - **Preserve evidence.** Original observations remain available locally, and reducer failures leave the original result unchanged.
 - **Use Pi's runtime choices.** Authentication, provider URLs, the main model, and shell behavior remain under Pi's control.
+
+## Pi 1.x and codemode behavior
+
+Action Fusion reports failed follow-up commands without losing the mutation's edit details, and inherits Pi's file-backed shell settings with project trust respected. Nested codemode calls do not count as independent model round-trips. Evidence-Preserving Reducer leaves nested tool results and their structured content unchanged. ObservationPack preserves message identity so Pi's mid-conversation system messages keep their positions and cached prefixes.
+
+Online Context Compact declares `update_plan` to the model only, including in codemode-only mode. Codemode scripts cannot call it: plan boundaries must appear as direct tool results in the agent turn. Compaction uses Pi's effective token settings and context projection, does not count cache-warming replays as provider requests, and resumes a stopped task after a non-cancellation compaction failure before reporting that error. User cancellation does not schedule a continuation.
 
 ## Technical Details and Core Insights
 

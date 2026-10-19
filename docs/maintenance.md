@@ -8,17 +8,17 @@
 
 ## Source baselines
 
-| Local package set  | Upstream                   | Imported baseline          | Notes                                                                                                                                                                                                  |
-| ------------------ | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                 |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `5963eefd` (`1.0.7`)       | Replayed onto upstream v1.0.7. Local patches remain; regular mode does not enable mouse reporting. See "2026-10-17 issue #297 review".                                                                 |
-| `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Latest complete mainline tree with local patches replayed. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
+| Local package set  | Upstream                   | Imported baseline          | Notes                                                                                                                                                                                                                         |
+| ------------------ | -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                                        |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `2cb2c1ec` (`1.0.8`)       | Replayed onto upstream v1.0.8. Local patches remain; regular mode does not enable mouse reporting. See "2026-10-19 issue #300 review".                                                                                        |
+| `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Last complete replay plus Pi 1.x/codemode compatibility ports through `21956803`. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.7`          | `1.0.7`          | `5963eefd4528`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.8`          | `1.0.8`          | `2cb2c1ec7240`  |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.22.0`         | `0.22.0`         | `85a704cb8f35`  |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
@@ -255,11 +255,11 @@ The aggregate package also pins the following npm packages under their original 
 
 | Package                              | Version   | Upstream                     |
 | ------------------------------------ | --------- | ---------------------------- |
-| `pi-antigravity`                     | `0.10.0`  | `Rahularya01/pi-antigravity` |
+| `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity` |
 | `@dietrichgebert/ponytail`           | `5.3.2`   | `DietrichGebert/ponytail`    |
-| `@juicesharp/rpiv-ask-user-question` | `2.13.8`  | `juicesharp/rpiv-mono`       |
-| `@narumitw/pi-btw`                   | `0.61.1`  | `narumiruna/pi-extensions`   |
-| `@narumitw/pi-caffeinate`            | `0.49.11` | `narumiruna/pi-extensions`   |
+| `@juicesharp/rpiv-ask-user-question` | `2.13.9`  | `juicesharp/rpiv-mono`       |
+| `@narumitw/pi-btw`                   | `0.61.2`  | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-caffeinate`            | `0.49.12` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
@@ -270,7 +270,7 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
 | `pi-typesafe`                        | `0.10.0`  | `DevMortimer/pi-typesafe`    |
 | `pi-lens`                            | `4.4.3`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.41.0`  | `nicobailon/pi-web-access`   |
+| `pi-web-access`                      | `0.42.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.6.1`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
@@ -278,6 +278,19 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-provider-qoder@0.6.1` is pinned from `simonsmh/pi-provider-qoder` at git `340036ccdb14646820b48dec412c53f1cf639afe`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-19 issue #300 review
+
+Reviewed the fixed issue ranges, not subsequent upstream releases. Prefer the upstream implementations and their tests; add local compatibility code only for demonstrated integration failures. Preserve existing local behavior only where it is not already covered upstream.
+
+- CC: accepted `5963eefd452822994e6a001830ded7676ebb1845..2cb2c1ec7240f183ff68cbab0ea6ae3239529f23` (`1.0.7 → 1.0.8`), including the new compact segments and shared expansion panel, native scroll-to-bottom wrapper and unread count, plus content, notification, keybinding and mouse-priority fixes.
+- SoL-Pi: reviewed `41fa7e0e230bedc5e639aed2e7b9cc5698726db1..219568034fa54ed121ede80961655e33dfb9d0e3`. Import upstream's Pi 1.x/codemode fixes for fused-command results, nested-result handling, system-message positions, compaction projection and request accounting, plus inheritance of Pi shell settings with project trust respected. Adopt upstream's model-only `update_plan`: call it directly as a model tool, not through `tools.update_plan` in codemode scripts. Existing nonzero `then_run` and continuation fixes must not regress. The review cursor is distinct from the last complete imported tree.
+- Ask: pin `2.13.9` and promote `@juicesharp/rpiv-config@^2.13.9`. The maintainer explicitly accepted its automatically registered same-process answer/cancel event channel. It has no sender authentication or separate enable switch; installed extensions can answer TUI questionnaires without a user click. RPC dialogs reject external answers, and first answer wins. No network service is added.
+- Antigravity: pin `0.11.0` (`3870729ede108e439ad2a48ca0448b2245e863b2`). The maintainer explicitly accepted default citation-source visits, curated model filtering, startup refresh and the existing model-cache schema/credential-key changes. Source enrichment adds outbound disclosure and latency; `ANTIGRAVITY_NO_SOURCE_ENRICH=1` disables it. Old model IDs can disappear from the curated catalog. The repository range `f950c08e..3870729e` is already included in this release, not an additional unpublished patch. The changes deferred in #297 are now adopted; retain that historical decision below.
+- Web Access: pin `0.42.0` (`18e36f9e0fc2de3c9895a7fda8d39a62ce60f49e`). Keep default direct exposure; DeepSeek search, deferred exposure and GCE ADC metadata fallback remain explicitly configured capabilities. Adopt upstream router-aware `streamSimple` and Windows credential-shell fixes without wrappers or default provider changes.
+- BTW: pin `0.61.2` for duplicate/unsupported key-modifier rejection. Caffeinate: pin `0.49.12` for hidden Windows inhibitor-process spawning.
+
+Published tarballs retain their MIT licenses and Pi entry points. Apart from the existing promoted rpiv-config range, these companion updates need no new aggregate runtime dependency. No new database, service, worker or deployment step is introduced.
 
 ### 2026-10-17 issue #297 review
 

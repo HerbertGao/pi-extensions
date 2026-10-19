@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { EventEmitter } from "node:events"
 import {
   mkdir,
   mkdtemp,
@@ -591,14 +592,15 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const askConfigPath = join(askConfigDir, "config.json")
   process.env.XDG_CONFIG_HOME = askConfigRoot
   let askTool
+  const askEvents = new EventEmitter()
   try {
-    const registerAskTool = () => {
+    const registerAskTool = (events = new EventEmitter()) => {
       let registered
       askToolModule.registerAskUserQuestionTool({
         registerTool(tool) {
           registered = tool
         },
-        events: { emit() {} },
+        events,
       })
       if (!registered) {
         throw new Error("ask-user-question did not register its tool")
@@ -606,7 +608,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       return registered
     }
 
-    askTool = registerAskTool()
+    askTool = registerAskTool(askEvents)
     await mkdir(askConfigDir, { recursive: true })
     await writeFile(
       askConfigPath,
@@ -640,6 +642,41 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       },
     ],
   }
+  const externalVerdicts = []
+  const externalPayload = {
+    toolCallId: "aggregate-external-answer",
+    requestId: "aggregate-request",
+    answers: [{ questionIndex: 0, optionIndexes: [1] }],
+  }
+  askEvents.on("rpiv:ask-user:answer-result", (verdict) =>
+    externalVerdicts.push(verdict),
+  )
+  askEvents.on("rpiv:ask-user:prompt", ({ toolCallId }) => {
+    if (toolCallId !== externalPayload.toolCallId) return
+    askEvents.emit("rpiv:ask-user:answer", externalPayload)
+    askEvents.emit("rpiv:ask-user:answer", externalPayload)
+  })
+  const externalResponse = await askTool.execute(
+    externalPayload.toolCallId,
+    askParams,
+    new AbortController().signal,
+    undefined,
+    {
+      hasUI: true,
+      ui: {
+        custom() {
+          throw new Error("Early external answers must not mount the TUI")
+        },
+      },
+    },
+  )
+  assert.equal(externalResponse.details.answers[0].answer, "B")
+  assert.equal(externalVerdicts[0].ok, true)
+  assert.equal(externalVerdicts[0].requestId, externalPayload.requestId)
+  assert.equal(externalVerdicts[1].code, "not_found")
+  askEvents.emit("rpiv:ask-user:answer", externalPayload)
+  assert.equal(externalVerdicts[2].code, "not_found")
+
   const { buildQuestionnaireResponse, DECLINE_MESSAGE } = await askJiti.import(
     join(askRoot, "tool", "response-envelope.ts"),
   )
@@ -952,7 +989,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.61.1"
+  const expectedBtwVersion = "0.61.2"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1044,16 +1081,21 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   // 0.58.1's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
-    `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
+    `${btwDistSource}\nexport { BtwTranscriptPager, createBtwFullscreenTui, normalizedKeyId, pickMainEntry, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
     { filename: btwEntry, async: true, forceTranspile: true },
   )
   const {
     BtwTranscriptPager,
     createBtwFullscreenTui,
+    normalizedKeyId,
     pickMainEntry,
     runBtwMenuPreservingEditor,
     updateBtwSettings,
   } = btwProbe
+  assert.equal(normalizedKeyId("ctrl+ctrl+end"), "")
+  assert.equal(normalizedKeyId("bogus+end"), "")
+  assert.equal(normalizedKeyId("ctrl+shift+return"), "shift+ctrl+enter")
+  assert.equal(normalizedKeyId("esc"), "escape")
   const styleTheme = {
     bg: (_color, text) => `bg:${text}`,
     bold: (text) => `bold:${text}`,
@@ -2011,6 +2053,62 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     join(antigravityRoot, "src/index.ts"),
     { moduleCache: false },
   )
+  const { defaultUserAgent } = await antigravityJiti.import(
+    join(antigravityRoot, "src/client/client.ts"),
+  )
+  assert.match(defaultUserAgent(), /^antigravity\/cli\/1\.4\.0 /)
+  const { buildAntigravityCatalog } = await antigravityJiti.import(
+    join(antigravityRoot, "src/models/grouping.ts"),
+  )
+  const discoveredModels = {
+    "gemini-4-argon-low": { displayName: "Gemini 4 Argon (Low)" },
+    "gemini-4-argon-high": { displayName: "Gemini 4 Argon (High)" },
+    "gemini-pro-agent": { displayName: "Gemini Pro Agent (High)" },
+  }
+  const curatedCatalog = buildAntigravityCatalog(
+    discoveredModels,
+    { models: [], routing: {} },
+    [{ groups: [{ modelIds: ["gemini-4-argon-low", "gemini-4-argon-high"] }] }],
+  )
+  assert.deepEqual(
+    curatedCatalog.models.map((model) => model.id),
+    ["gemini-4-argon"],
+  )
+  assert.equal(
+    buildAntigravityCatalog(discoveredModels, { models: [], routing: {} }, [
+      { groups: [{ modelIds: ["not-present"] }] },
+    ]).models.length,
+    2,
+  )
+  const loadedAntigravity = result.extensions.find(
+    (extension) =>
+      extension.resolvedPath === join(antigravityRoot, "src/index.ts"),
+  )
+  const antigravitySessionHandlers =
+    loadedAntigravity.handlers.get("session_start")
+  assert.equal(antigravitySessionHandlers.length > 0, true)
+  const previousPiOffline = process.env.PI_OFFLINE
+  try {
+    process.env.PI_OFFLINE = "1"
+    for (const handler of antigravitySessionHandlers) {
+      await handler(
+        {},
+        new Proxy(
+          {},
+          {
+            get() {
+              throw new Error(
+                "Offline Antigravity must not refresh the registry",
+              )
+            },
+          },
+        ),
+      )
+    }
+  } finally {
+    if (previousPiOffline === undefined) delete process.env.PI_OFFLINE
+    else process.env.PI_OFFLINE = previousPiOffline
+  }
   const { isExtraToolEnabled } = await antigravityJiti.import(
     join(antigravityRoot, "src/utils/util.ts"),
   )

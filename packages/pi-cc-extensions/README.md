@@ -97,6 +97,8 @@ pi install git:github.com/HerbertGao/pi-extensions
 
 > [!TIP]
 > **全屏模式**：单击 `click to show more` 展开工具卡、思考、Skill 和 compact 摘要；工具卡展开态 diff 全量显示，Input/Output 超行时末行 `… +N more lines · click to show more` 打开全量预览，单击收起。
+>
+> `scrollButtonMode` 两种模式文案相同（`Back to bottom` / `N new message(s)`）：`dock` 画在独占行，`native` 画在 Pi 原生浮层。
 
 > [!NOTE]
 > **Mermaid 渲染**：建议把 `markdown.mermaid` 设为 `final`（`~/.pi/agent/settings.json` 或 `/settings` 面板的 Mermaid diagrams 选项）。默认 `streaming` 逐帧重绘，`final` 渲染最终版更稳定。
@@ -125,6 +127,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.8（MIT），上游基线 [`2cb2c1e`](https://github.com/minuque/pi-cc-extensions/commit/2cb2c1ec7240f183ff68cbab0ea6ae3239529f23)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

@@ -3,15 +3,20 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { getAgentDir, type ExtensionAPI, type ExtensionContext, type ExtensionFactory } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type BashToolOptions, type ExtensionAPI, type ExtensionContext, type ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import { loadSolPiConfig, type SolPiConfig } from "./config.ts";
-import { registerActionFusion } from "./extensions/action-fusion/index.ts";
+import { createActionFusionExtension } from "./extensions/action-fusion/index.ts";
+import { loadActionFusionBashOptions } from "./shell-options.ts";
 import { registerEvidencePreservingReducer } from "./extensions/evidence-preserving-reducer/index.ts";
 import { registerObservationPack } from "./extensions/observation-pack/index.ts";
 import { registerOnlineContextCompact } from "./extensions/online-context-compact/index.ts";
 
-export function registerConfiguredFeatures(pi: ExtensionAPI, config: SolPiConfig): void {
-	if (config.actionFusion) registerActionFusion(pi);
+export function registerConfiguredFeatures(
+	pi: ExtensionAPI,
+	config: SolPiConfig,
+	bashOptions?: BashToolOptions,
+): void {
+	if (config.actionFusion) createActionFusionExtension({ bashOptions })(pi);
 	if (config.observationPack) registerObservationPack(pi);
 	if (config.evidencePreservingReducer) {
 		registerEvidencePreservingReducer(pi, {
@@ -31,8 +36,12 @@ export function createSolPiExtension(
 		let initialized = false;
 		pi.on("session_start", (_event, ctx) => {
 			if (initialized) return;
+			const config = loadConfig(ctx);
+			const bashOptions = config.actionFusion
+				? loadActionFusionBashOptions(ctx.cwd, ctx.isProjectTrusted())
+				: undefined;
 			initialized = true;
-			registerConfiguredFeatures(pi, loadConfig(ctx));
+			registerConfiguredFeatures(pi, config, bashOptions);
 		});
 	};
 }

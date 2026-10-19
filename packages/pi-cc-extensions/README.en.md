@@ -98,6 +98,8 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 
 > [!TIP]
 > **Fullscreen**: click `click to show more` to expand tool cards, thinking, Skill, and compact summaries. An expanded diff always shows every line; when expanded Input/Output exceeds the line cap, the footer `… +N more lines · click to show more` opens a full preview. Click to collapse.
+>
+> Both `scrollButtonMode` values show the same `Back to bottom` / `N new message(s)` text: `dock` draws it in a dedicated row, `native` in Pi’s floating overlay.
 
 > [!NOTE]
 > **Mermaid rendering**: set `markdown.mermaid` to `final` via `~/.pi/agent/settings.json` or the Mermaid diagrams option in `/settings`. Default `streaming` redraws per frame; `final` renders once at completion.
@@ -126,6 +128,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.8 (MIT), upstream baseline [`2cb2c1e`](https://github.com/minuque/pi-cc-extensions/commit/2cb2c1ec7240f183ff68cbab0ea6ae3239529f23), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

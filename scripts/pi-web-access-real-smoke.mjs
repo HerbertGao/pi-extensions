@@ -865,6 +865,11 @@ async function assertNewReleaseFeatures({
         false,
         "XCrawl must remain explicit-only",
       )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("deepseek"),
+        false,
+        "DeepSeek must remain explicit-only",
+      )
       const xcrawl = await searchProvider.search("xcrawl smoke", {
         provider: "xcrawl",
         domainFilter: ["run.xcrawl.com"],
