@@ -36,7 +36,7 @@ THE SOFTWARE.
 
 ## `@narumitw/pi-caffeinate`
 
-The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.11 under its original MIT license:
+The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.12 under its original MIT license:
 
 MIT License
 
@@ -86,7 +86,7 @@ THE SOFTWARE.
 
 ## `pi-antigravity`
 
-The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.10.0 under its original attribution:
+The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.11.0 under its original attribution:
 
 MIT License
 

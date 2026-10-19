@@ -12,6 +12,9 @@ SoL-Pi imports only public package exports:
 - native compaction events, `ExtensionContext.getContextUsage()`, and `ExtensionContext.compact()`
 - `ExtensionContext.model` and `ExtensionContext.modelRegistry`
 - the public session-manager methods exposed through `ExtensionContext`
+- `SettingsManager` for trusted file-backed shell settings
+- feature-detected `ExtensionAPI.getSettings()` and `buildSessionProjection()` on Pi 1.x
+- tool `exposure` for model-only `update_plan` calls
 
 ## Action Fusion
 
@@ -31,7 +34,9 @@ Pi 1.x may return `Bash.isError` instead of throwing on a failed follow-up. Acti
 
 ## ObservationPack
 
-ObservationPack changes only the messages projected through the public `context` event. Stored session history remains intact. Original bytes and the JSONL ledger live under the session-derived SoL-Pi directory.
+ObservationPack changes only the messages projected through the public `context` event. Pi passes `context` handlers a cloned copy of the conversation, so stored session history remains intact. ObservationPack replaces the content of those message objects in place and returns nothing. Since Pi 0.87, a handler that returns different message objects makes Pi merge every mid-conversation system message, such as prompt sections and tool-declaration deltas, into one leading system message, which breaks the provider's cached prefix on every later request. The in-place edit keeps those messages where they are on Pi 1.x and behaves the same on Pi 0.84.2.
+
+Original bytes and the JSONL ledger live under the session-derived SoL-Pi directory.
 
 ## Evidence-Preserving Reducer
 
@@ -47,15 +52,15 @@ Online Context Compact uses ordinary public `context` and `before_provider_reque
 
 Before selecting or executing a boundary compaction, it also checks the optional `Symbol.for("pi-subagents:manager")` registry exposed by `pi-subagents`. A running top-level subagent, or an unreadable registry, suppresses that compaction rather than risking a context rewrite during delegated work. When the registry is absent, the check is a no-op.
 
-The native cut is selected from session entries, while removable-token savings are measured from the corresponding messages in the latest observed projection. ObservationPack placeholders are therefore priced at their projected size. Dropped messages, unseen additions, and ambiguous matches contribute no proven savings; the estimator never substitutes their raw byte counts or reruns context hooks to estimate them.
+The native cut is estimated from Pi's canonical session projection when available (Pi 1.x), and from raw session entries on Pi 0.84.2. Removable-token savings are measured from corresponding messages in the latest observed extension projection. ObservationPack placeholders are therefore priced at their projected size, context edits are applied before choosing the cut, and retained system checkpoints are excluded from savings. Dropped messages, unseen additions, and ambiguous matches contribute no proven savings; the estimator never substitutes their raw byte counts or reruns context hooks. Pi's special recovery-omission suffix can allow a larger removable prefix than the public cut-point helper predicts; OCC conservatively underestimates savings in that case.
 
 Compaction preserves the current plan, request-horizon samples, and context-growth history. Every plan update uses the same step-ID/status comparison, including the first update after compaction. A boundary requires a previously registered unfinished step to become completed. Newly introduced completed IDs establish history without creating a boundary, so re-keyed completed snapshots do not retrigger compaction. An assistant must register a step before completing it to make that completion eligible for OCC. Economic compaction has a two-provider-request cooldown; context-window protection can override it. A new user task following a fully completed plan resets the request-horizon samples while preserving unpaid cache debt.
 
-Pi does not expose its active retained-tail compaction setting through the public extension context. The standalone extension therefore uses the Pi 0.85.1 default of 20,000 tokens for its economic estimate. Its programmatic factory accepts an explicit matching value for a non-default Pi setting.
+On Pi builds whose `ExtensionAPI` has `getSettings()` (1.0.x), Online Context Compact reads Pi's effective `compaction.keepRecentTokens` and `compaction.reserveTokens`. A per-model `compaction.modelOverrides["<provider>/<id>"]` entry for the current `ctx.model` takes precedence, as in Pi. The reserve is used for window-pressure protection. On Pi 0.84.2 it uses the documented defaults of 20,000 retained-tail tokens and a 16,384-token reserve. An explicit `keepRecentTokens` passed to the programmatic factory overrides the retained tail on every version.
 
 Pi 0.85.1's `ExtensionContext.compact()` aborts the active agent before it summarizes, and `agent_settled` fires only once a whole run has drained every turn, retry, auto-compaction, and queued continuation. A plan boundary that selects compaction therefore saves its plan and progress state, calls `ExtensionContext.abort()` to stop the run, and runs compaction from the `agent_settled` that stop produces. The handler awaits the compaction's own `onComplete`/`onError` callbacks. On success, the extension sends a hidden reminder through public `ExtensionAPI.sendMessage()` with `triggerTurn: true`, so Pi starts a new turn against the compacted context and continues the current plan. The reminder asks it to preserve existing step IDs when updating progress; an immediate plan update is not required.
 
-A settlement barrier keeps the original `agent_settled` dispatch open until a synchronously triggered continuation settles. Print- and JSON-mode processes therefore complete the compact-and-continue sequence within the same Pi invocation; an outer driver does not need to resume the session or send `Continue working`. Successful compaction schedules a continuation. The exact native refusals `Nothing to compact (session too small)` and `Already compacted`, and Pi's explicit incomplete-summary token-cap error, also resume the interrupted task with the existing context. These skips are recorded as `sol-pi-online-context-compact-skipped` entries and shown as TUI warnings; they do not record a compaction or charge new cache debt. Plan-only turns cannot retry compaction until successful non-plan tool work or new user input occurs. Cancelling or exiting does not schedule a continuation. Other compaction errors still propagate.
+A settlement barrier keeps the original `agent_settled` dispatch open until a synchronously triggered continuation settles. Print- and JSON-mode processes therefore complete the compact-and-continue sequence within the same Pi invocation; an outer driver does not need to resume the session or send `Continue working`. Successful compaction schedules a continuation. The exact native refusals `Nothing to compact (session too small)` and `Already compacted`, and Pi's explicit incomplete-summary token-cap error, also resume the interrupted task with the existing context. These skips are recorded as `sol-pi-online-context-compact-skipped` entries and shown as TUI warnings; they do not record a compaction or charge new cache debt. Plan-only turns cannot retry compaction until successful non-plan tool work or new user input occurs. Cancelling or exiting does not schedule a continuation. Other non-cancellation compaction errors schedule a hidden continuation before the failure propagates.
 
 Pi 0.85.1 does not return a promise from `ExtensionAPI.sendMessage()` and starts the requested turn synchronously, so it uses the extension's settlement barrier. Newer hosts can keep the context idle and defer the turn until settled handlers return; OCC returns control to such a host instead of waiting on the deferred turn or reporting a false start failure. A later-loaded third-party extension that performs long asynchronous work in its own `agent_settled` handler needs an integration test with that extension set.
 
@@ -66,6 +71,25 @@ Pi reports the session as idle while an extension-requested manual compaction is
 Online Context Compact reads `ExtensionContext.getContextUsage()` for both the context window and the provider-counted context size. When Pi reports no size — as it does between a compaction and the next answered request — the boundary falls back to its own estimate.
 
 The standalone entry passes `cacheWriteReadRatio` from `sol-pi.json` directly into Online Context Compact's economic check. It does not inspect model price metadata. Changing models during a session does not change the ratio; users who want a different decision policy update the configuration and start a new session.
+
+## Codemode
+
+Pi 1.x codemode lets the model run a script that calls other tools through `ctx.executeTool()`. With `codemode.mode: "on"`, declared tools stay declared and are also callable from scripts. With `"only"`, they are hidden from the model and listed in the `codemode` tool description instead. Calls made from a script get the id `<codemode call id>/<n>`, and their results reach only the script, not the transcript. Every mechanism loads and runs in both modes:
+
+| Mechanism | `codemode.mode: "on"` | `codemode.mode: "only"` |
+|---|---|---|
+| Action Fusion | Fused edit/write stay declared to the model and are also callable from scripts. | Fused edit/write are callable from scripts only. |
+| ObservationPack | Large text results of direct tools and of `codemode` itself are packed. `obs_recall` is declared directly and callable from scripts. | `codemode` results are packed. `obs_recall` is listed in the `codemode` description and callable from scripts. |
+| Evidence-Preserving Reducer | Reduces direct bash and fused edit/write results as before. Script calls are skipped. | No effect in normal operation: the model reaches bash, edit, and write through scripts, and script calls are skipped. It makes no model calls. |
+| Online Context Compact | `update_plan` stays declared to the model and is not callable from scripts. | Same as `"on"`. |
+
+**Action Fusion.** Scripts call `tools.edit` and `tools.write`; the `then_run` parameter appears in their script declarations. Edit and write declare no output schema, so following codemode's rule a successful call resolves to the combined text, including `[then_run:succeeded]` and the command output. A failed command (`[then_run:failed]`) or a failed mutation (`[then_run:skipped]`) rejects with an `Error` whose message holds that text. The file change is kept, so scripts that run `then_run` should use `try`/`catch` or `Promise.allSettled()`. Codemode lists script calls inside its own TUI row, so they show neither the Action Fusion banner nor the savings notice: a script already chains tools inside one model request.
+
+**ObservationPack.** A `codemode` result is an ordinary tool result. Successful text-only results over 10 KiB are sent in full for two provider requests and then replaced by a placeholder naming `tool: codemode`. Tool calls made inside a script are not in the transcript and are never packed; only the script's output is. `tools.obs_recall({ id, offset })` resolves to the recall text, a header followed by the original bytes. The placeholder still says to call `obs_recall`; its wording is unchanged so placeholder bytes stay stable.
+
+**Evidence-Preserving Reducer.** Because script calls are skipped, a script calling `tools.bash` gets Pi's own result: the call resolves to Pi's structured value `{ output, exit_code, truncated, full_output_path?, wall_time_seconds }`, and a non-zero exit resolves rather than rejects. A timeout, an abort, or a missing exit code rejects. The `codemode` result itself is never reduced.
+
+**Online Context Compact.** `update_plan` is registered with exposure `"model-only"`: a script call would get a nested id that no turn reports as a tool result, so its plan boundary could never compact. The model calls `update_plan` directly in both modes, and plan boundaries compact and continue as described above.
 
 ## Interactive TUI
 

@@ -122,7 +122,13 @@ function switchMode(
 
 // ─── live on ↔ compact ───────────────────────────────────────────────
 
-test("on → compact reshapes to summary; compact → on restores tool cards", () => {
+test("on → compact reshapes to summary; compact → on restores tool cards", (t) => {
+	// This assertion exercises summary-only diffs, not the default collapsed body preview.
+	const previousCollapsedLines = config.editDiffCollapsedLines;
+	config.editDiffCollapsedLines = 0;
+	t.after(() => {
+		config.editDiffCollapsedLines = previousCollapsedLines;
+	});
 	const previous = config.mode;
 	config.mode = "on";
 	const hooks = installCompactMode({
@@ -168,8 +174,7 @@ test("on → compact reshapes to summary; compact → on restores tool cards", (
 		assert.match(renderText(a1).join("\n"), /click to show more/);
 		assert.deepEqual(renderText(bash), []);
 		assert.doesNotMatch(renderText(edit).join("\n"), /edit sample\.ts \(\+\d+ -\d+\)/);
-		// 默认 24 行折叠预览装得下这一处改动，走 unified 头而不是 0 行摘要。
-		assert.match(renderText(edit).join("\n"), /↳ diff · \+1 · -1 · unified/);
+		assert.match(renderText(edit).join("\n"), /↳ diff \+1 -1 · .*to show more/);
 		assert.match(renderText(aFinal).join("\n"), /task done/);
 
 		// → on：工具卡恢复，摘要消失

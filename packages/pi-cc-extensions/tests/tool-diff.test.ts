@@ -838,16 +838,19 @@ test("Action Fusion preserves write rich diff and then_run without replacing its
 		assert.match(rendered, /after/);
 		assert.match(rendered, /FUSED_DIFF_OK/);
 		assert.doesNotMatch(rendered, /diff unavailable/);
-		await assert.rejects(
-			write.execute(
-				"failed-command",
-				{ path, content: "kept\n", then_run: { command: "exit 7" } },
-				undefined,
-				undefined,
-				ctx,
-			),
-			/then_run:failed/,
+		const failedResult = await write.execute(
+			"failed-command",
+			{ path, content: "kept\n", then_run: { command: "exit 7" } },
+			undefined,
+			undefined,
+			ctx,
 		);
+		assert.equal(failedResult.isError, true);
+		assert.match(JSON.stringify(failedResult.content), /then_run:failed/);
+		assert.deepEqual(store.get("failed-command"), {
+			fileExistedBeforeWrite: true,
+			previousContent: "after\n",
+		});
 		assert.equal(await readFile(join(cwd, "space and #hash.txt"), "utf8"), "kept\n");
 	} finally {
 		restoreBuiltinWriteOwnership();
