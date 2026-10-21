@@ -11,7 +11,7 @@ The catalog location is fixed at `~/.agency-agents`. `agency_dispatch` also need
 
 ## Tools
 
-`agency_search({ queries, limit?, per_division? })` returns cards (`path`, `name`, `description`, `score`) for each query. It ranks every `<division>/**/*.md` file with `name` and `description` frontmatter by BM25 over name, path, and description. It returns at most `limit` cards per query (default 6) and `per_division` cards per top-level division (default 2). The repository's `integrations`, `strategy`, `examples`, and `scripts` directories are skipped.
+`agency_search({ queries, limit?, per_division? })` returns cards (`path`, `name`, `description`, `score`) for each query. The text form prints each card's absolute path; `catalog` plus `path` compose the same path for programmatic callers. It ranks every `<division>/**/*.md` file with `name` and `description` frontmatter by BM25 over name, path, and description. It returns at most `limit` cards per query (default 6) and `per_division` cards per top-level division (default 2). The repository's `integrations`, `strategy`, `examples`, and `scripts` directories are skipped.
 
 `agency_dispatch({ runs, shared?, shared_file?, subagent_type?, isolated?, model?, thinking?, max_turns?, record_dir? })` runs every `runs[i].prompt` as a foreground `Agent` call, all in parallel, and returns when they finish. Foreground calls do not queue completion notifications for the parent session.
 
@@ -19,8 +19,10 @@ The catalog location is fixed at `~/.agency-agents`. `agency_dispatch` also need
 - `{{shared}}` is replaced by `shared` or the text of `shared_file`.
 - Each placeholder must appear exactly once when its value is given and must not appear otherwise. Substitution happens in one pass, so `$&` and placeholder-like text in inserted content stay literal.
 - Defaults are `subagent_type: "general-purpose"` and `isolated: true`, which gives subagents built-in tools only.
-- Each result includes `promptSha256` for the prompt actually sent, plus the run's status, agent id, resolved model, and output.
-- `record_dir` must be absolute. It receives `<id>.prompt.txt` and `<id>.return.txt` with mode `0600`. The call fails before any dispatch if one of those files already exists.
+- Each result includes `promptSha256` for the prompt actually sent, plus the run's status, agent id, resolved model, duration, tool uses, tokens, and output. The text form repeats those statistics on the heading of a completed run.
+- All runs come back inside one tool result, so their `Agent` calls stay nested and get no separate transcript rows. Seat, review, and any other lane that needs its own row, its own model, or its own turn cap belongs in one `Agent` call per lane, not here.
+- `max_turns` is omitted unless you pass it, so a run decides when it is done; set it only to bound a runaway.
+- `record_dir` must be absolute and used by one dispatch at a time. It receives `<id>.prompt.txt` and `<id>.return.txt` with mode `0600`. The call fails before any dispatch if one of those files already exists.
 
 Both tools return `structuredContent`, so codemode scripts receive objects instead of text.
 

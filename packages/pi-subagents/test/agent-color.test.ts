@@ -1,6 +1,10 @@
 import { visibleWidth } from "@earendil-works/pi-tui"
 import { describe, expect, it } from "vitest"
-import { renderAgentNameLabel, resolveAgentColor } from "../src/agent-color.js"
+import {
+  renderAgentName,
+  renderAgentNameLabel,
+  resolveAgentColor,
+} from "../src/agent-color.js"
 
 const theme = {
   fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
@@ -78,5 +82,22 @@ describe("renderAgentNameLabel", () => {
         fallbackColor: "muted",
       }),
     ).toBe("<muted>Agent</muted>")
+  })
+})
+
+describe("renderAgentName", () => {
+  it("shows a run's own name while keeping its type's badge color", () => {
+    // The badge color belongs to the type and is asserted on the surfaces that
+    // can register a colored type; here only the label swap is visible.
+    expect(
+      renderAgentName("general-purpose", theme, {}, "identity-access"),
+    ).toBe("identity-access")
+    expect(renderAgentName("general-purpose", theme, {})).not.toBe(
+      "identity-access",
+    )
+    expect(renderAgentName("Explore", theme, {})).toBe(
+      renderAgentNameLabel("Agent", undefined, theme, {}),
+    )
+    expect(renderAgentName(undefined, theme, {}, "seat-one")).toBe("seat-one")
   })
 })

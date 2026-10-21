@@ -167,7 +167,26 @@ export function fillPrompt(
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex")
+
+/** Same wording pi-subagents prints, so one run reads the same on every surface. */
+function statsLine(run: {
+  durationMs: number | null
+  toolUses: number | null
+  tokens: string | null
+}): string {
+  const parts = [
+    run.durationMs === null
+      ? undefined
+      : `${(run.durationMs / 1000).toFixed(1)}s`,
+    run.toolUses === null
+      ? undefined
+      : `${run.toolUses} tool use${run.toolUses === 1 ? "" : "s"}`,
+    run.tokens,
+  ].filter(Boolean)
+  return parts.length ? ` (${parts.join(", ")})` : ""
+}
 const NullableString = Type.Union([Type.String(), Type.Null()])
+const NullableNumber = Type.Union([Type.Number(), Type.Null()])
 
 /** Some models fill every optional parameter with "" or 0; every such value here means omitted. */
 export function dropPlaceholders(args: unknown): any {
@@ -186,7 +205,7 @@ export function agencyTools(root = CATALOG_ROOT) {
     name: "agency_search",
     label: "Agency Search",
     description:
-      "Search the local Agency Agents catalog (~/.agency-agents) without listing or reading it into context. Each query (one per review axis or touchpoint) returns up to `limit` cards (catalog path, name, description) ranked by BM25 over name, path and description, with at most `per_division` cards per top-level division. Pick personas from the cards; read a persona file only if its card is not enough.",
+      "Search the local Agency Agents catalog (~/.agency-agents) without listing or reading it into context. Each query (one per review axis or touchpoint) returns up to `limit` cards (catalog path, name, description) ranked by BM25 over name, path and description, with at most `per_division` cards per top-level division. Pick personas from the cards and let the seat read the file.",
     promptSnippet: "Shortlist Agency Agents personas by query",
     prepareArguments: dropPlaceholders,
     parameters: Type.Object({
@@ -225,6 +244,7 @@ export function agencyTools(root = CATALOG_ROOT) {
       ),
     }),
     async execute(_toolCallId, params) {
+      const base = realRoot(root)
       const cards = loadCatalog(root)
       const results = params.queries.map((query) => ({
         query,
@@ -236,7 +256,8 @@ export function agencyTools(root = CATALOG_ROOT) {
             `## ${result.query}\n` +
             (result.cards
               .map(
-                (card) => `- ${card.path} — ${card.name}: ${card.description}`,
+                (card) =>
+                  `- ${join(base, card.path)} — ${card.name}: ${card.description}`,
               )
               .join("\n") || "(no match)"),
         )
@@ -258,12 +279,12 @@ export function agencyTools(root = CATALOG_ROOT) {
     name: "agency_dispatch",
     label: "Agency Dispatch",
     description:
-      "Run subagents in parallel through pi-subagents' Agent tool and return all results together. Runs are foreground, so no completion notifications follow. Each run's prompt is sent as written after `{{persona}}` is replaced by the persona file's body (frontmatter removed) and `{{shared}}` by `shared` or the text of `shared_file`, so persona text never passes through your context. Personas outside the catalog or containing <persona> delimiters are rejected. Results include the SHA-256 of each sent prompt; `record_dir` also saves <id>.prompt.txt and <id>.return.txt and never overwrites. Defaults: subagent_type general-purpose, isolated true (built-in tools only).",
+      "Run subagents in parallel through pi-subagents' Agent tool and return all results together. Runs are foreground, so no completion notifications follow. Each run's prompt is sent as written after `{{persona}}` is replaced by the persona file's body (frontmatter removed) and `{{shared}}` by `shared` or the text of `shared_file`, so persona text never passes through your context. Personas outside the catalog or containing <persona> delimiters are rejected. Every run shares one tool result, so its Agent calls stay nested and get no separate transcript rows: seat, review, and any other lane that needs its own row, model, or turn cap belongs in one Agent call per lane, not here. Each result carries status, the SHA-256 of the prompt actually sent, duration, tool uses, tokens, and output; `record_dir` also saves <id>.prompt.txt and <id>.return.txt and never overwrites. `max_turns` is omitted unless you set it, so a run decides when it is done. Defaults: subagent_type general-purpose, isolated true (built-in tools only).",
     promptSnippet:
       "Dispatch catalog personas to parallel subagents without reading them",
     prepareArguments: dropPlaceholders,
     promptGuidelines: [
-      "For Agency Agents personas, use agency_search and agency_dispatch instead of listing the catalog or reading persona files into context.",
+      "For Agency Agents personas, use agency_search to pick the seat, then one Agent call per seat carrying that persona's path; reach for agency_dispatch only for bulk work that does not need a run per row.",
     ],
     parameters: Type.Object({
       runs: Type.Array(
@@ -300,7 +321,13 @@ export function agencyTools(root = CATALOG_ROOT) {
       isolated: Type.Optional(Type.Boolean()),
       model: Type.Optional(Type.String()),
       thinking: Type.Optional(Type.String()),
-      max_turns: Type.Optional(Type.Integer({ minimum: 1 })),
+      max_turns: Type.Optional(
+        Type.Integer({
+          minimum: 1,
+          description:
+            "Turn cap. Omit it unless host policy requires one, so the run decides when it is done.",
+        }),
+      ),
       record_dir: Type.Optional(
         Type.String({
           description:
@@ -317,6 +344,9 @@ export function agencyTools(root = CATALOG_ROOT) {
           status: Type.String(),
           agentId: NullableString,
           model: NullableString,
+          durationMs: NullableNumber,
+          toolUses: NullableNumber,
+          tokens: NullableString,
           output: Type.String(),
         }),
       ),
@@ -398,12 +428,17 @@ export function agencyTools(root = CATALOG_ROOT) {
           status?: string
           agentId?: string
           modelName?: string
+          durationMs?: number
+          toolUses?: number
+          tokens?: string
         }
-        // pi-subagents prefixes foreground output with "Agent completed in …\n\n".
+        // pi-subagents prefixes foreground output with "Agent completed in 5.4s (2 tool uses).\n\n".
         const header = /^(?:[\s\S]*?\n)?Agent completed in [^\n]*\n\n/.exec(
           text,
         )
         const output = header ? text.slice(header[0].length) : text
+        // Reuse the producer's own wording so one run reads the same everywhere.
+
         record(`${run.id}.return.txt`, output)
         return {
           id: run.id,
@@ -414,13 +449,22 @@ export function agencyTools(root = CATALOG_ROOT) {
             : (details.status ?? (header ? "completed" : "unknown")),
           agentId: details.agentId ?? null,
           model: details.modelName ?? null,
+          // A hand-off to the background reports zeroes where a run measured.
+          durationMs:
+            details.status === "background"
+              ? null
+              : (details.durationMs ?? null),
+          toolUses:
+            details.status === "background" ? null : (details.toolUses ?? null),
+          tokens:
+            details.status === "background" ? null : details.tokens || null,
           output,
         }
       })
       const text = results
         .map(
           (run) =>
-            `## ${run.id}${run.persona ? ` ${run.persona}` : ""}: ${run.status}\nsha256 ${run.promptSha256}\n\n${run.output}`,
+            `## ${run.id}${run.persona ? ` ${run.persona}` : ""}: ${run.status}${statsLine(run)}\nsha256 ${run.promptSha256}\n\n${run.output}`,
         )
         .join("\n\n")
       return {

@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   statSync,
   symlinkSync,
   writeFileSync,
@@ -98,6 +99,30 @@ test("search ranks catalog personas and caps each division", () => {
   )
 })
 
+test("search text prints the absolute path a seat can read", async () => {
+  const { root } = fixture()
+  const { search } = agencyTools(root)
+  const result = await search.execute(
+    "call",
+    { queries: ["OAuth OIDC login"] },
+    undefined,
+    undefined,
+    undefined as any,
+  )
+  const text = (result.content as any)[0].text
+  // The printed path is resolved, so a symlinked catalog still yields a readable file.
+  assert.match(
+    text,
+    new RegExp(
+      `- ${realpathSync(root)}/engineering/engineering-identity-access-engineer\\.md —`,
+    ),
+  )
+  assert.equal(
+    (result.structuredContent as any).results[0].cards[0].path,
+    "engineering/engineering-identity-access-engineer.md",
+  )
+})
+
 test("fillPrompt inserts text verbatim exactly once", () => {
   const persona = "Keep $& and $1 literally; {{shared}} stays."
   assert.equal(
@@ -179,10 +204,17 @@ test(
             content: [
               {
                 type: "text",
-                text: `Agent completed in 1.0s (0 tool uses).\n\nreply ${args.description}`,
+                text: `Agent completed in 5.4s (2 tool uses, 7.2k token).\n\nreply ${args.description}`,
               },
             ],
-            details: { status: "completed", agentId: "a1", modelName: "m" },
+            details: {
+              status: "completed",
+              agentId: "a1",
+              modelName: "m",
+              durationMs: 5400,
+              toolUses: 2,
+              tokens: "7.2k token",
+            },
           },
         }
       },
@@ -227,14 +259,124 @@ test(
       status: "completed",
       agentId: "a1",
       model: "m",
+      durationMs: 5400,
+      toolUses: 2,
+      tokens: "7.2k token",
       output: "reply engineering-backend-architect",
     })
+    // The heading reuses the producer's own stats wording, not a re-derivation.
+    // One source for both surfaces: the numbers come from details, formatted the
+    // way pi-subagents prints them.
+    assert.match(
+      (result.content as any)[0].text,
+      /## seat-1 engineering\/engineering-backend-architect\.md: completed \(5\.4s, 2 tool uses, 7\.2k token\)/,
+    )
     const promptFile = join(recordDir, "seat-1.prompt.txt")
     assert.equal(readFileSync(promptFile, "utf8"), sent)
     assert.equal(statSync(promptFile).mode & 0o777, 0o600)
     assert.equal(
       readFileSync(join(recordDir, "seat-2.return.txt"), "utf8"),
       "reply agency seat-2",
+    )
+
+    const errored = await agencyTools(root).dispatch.execute(
+      "err",
+      { runs: [{ id: "e", prompt: "boom" }] },
+      undefined,
+      undefined,
+      {
+        tools: [{ name: "Agent" }],
+        executeTool: async () => ({
+          isError: true,
+          result: {
+            content: [{ type: "text", text: "Agent failed: upstream 503" }],
+            details: {
+              status: "error",
+              durationMs: 41000,
+              toolUses: 7,
+              tokens: "40.1k token",
+            },
+          },
+        }),
+      } as any,
+    )
+    assert.match(
+      (errored.content as any)[0].text,
+      /## e: error \(41\.0s, 7 tool uses, 40\.1k token\)/,
+    )
+
+    const zeroTools = await agencyTools(root).dispatch.execute(
+      "zero",
+      { runs: [{ id: "z", prompt: "no tools" }] },
+      undefined,
+      undefined,
+      {
+        tools: [{ name: "Agent" }],
+        executeTool: async () => ({
+          isError: false,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: "Agent completed in 2.0s (0 tool uses).\n\nanswered",
+              },
+            ],
+            details: {
+              status: "completed",
+              durationMs: 2000,
+              toolUses: 0,
+              tokens: "",
+            },
+          },
+        }),
+      } as any,
+    )
+    assert.match(
+      (zeroTools.content as any)[0].text,
+      /## z: completed \(2\.0s, 0 tool uses\)/,
+    )
+    assert.equal(
+      (zeroTools.structuredContent as any).results[0].toolUses,
+      0,
+      "a foreground run that used no tools measured zero, so 0 must survive",
+    )
+
+    // A run whose call carries no completion line reports no stats rather than zeroes.
+    const bare = await agencyTools(root).dispatch.execute(
+      "bare",
+      { runs: [{ id: "b", prompt: "only text" }] },
+      undefined,
+      undefined,
+      {
+        tools: [{ name: "Agent" }],
+        executeTool: async () => ({
+          isError: false,
+          result: {
+            content: [{ type: "text", text: "handed off" }],
+            details: { status: "background", durationMs: 0, toolUses: 0 },
+          },
+        }),
+      } as any,
+    )
+    assert.equal(
+      (bare.content as any)[0].text,
+      "## b: background\nsha256 " +
+        createHash("sha256").update("only text").digest("hex") +
+        "\n\nhanded off",
+    )
+    assert.deepEqual(
+      {
+        durationMs: (bare.structuredContent as any).results[0].durationMs,
+        toolUses: (bare.structuredContent as any).results[0].toolUses,
+        tokens: (bare.structuredContent as any).results[0].tokens,
+        heading: (bare.content as any)[0].text.split("\n")[0],
+      },
+      {
+        durationMs: null,
+        toolUses: null,
+        tokens: null,
+        heading: "## b: background",
+      },
     )
 
     await assert.rejects(
