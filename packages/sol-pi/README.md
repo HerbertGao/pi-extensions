@@ -67,7 +67,7 @@ Read our paper: [SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient A
 
 ### Requirements
 
-- Node.js 24 or newer
+- Node.js 22.19.0 or newer
 - npm
 - `@earendil-works/pi-coding-agent` 1.2.0 (the monorepo's tested host; runtime peers remain `*`)
 

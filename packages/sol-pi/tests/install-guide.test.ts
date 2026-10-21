@@ -33,7 +33,7 @@ describe("agent installation instructions", () => {
 	it("defines a reproducible and all-enabled installation", () => {
 		const guide = rootFile("agents-install.md");
 		const requiredText = [
-			"Node.js 24",
+			"Node.js 22.19.0",
 			"@earendil-works/pi-coding-agent@1.2.0",
 			"bun install --frozen-lockfile",
 			"bun run check",
