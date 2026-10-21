@@ -8,7 +8,7 @@ Aggregate installer for HerbertGao-maintained Pi extensions and pinned upstream 
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 24 or newer and Pi 1.2.0 or newer.
+Requires Node.js 22.19.0 or newer and Pi 1.2.0 or newer.
 
 ## Native MCP
 
