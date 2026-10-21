@@ -4,27 +4,32 @@
     {
       "name": "Tifan Pi extensions",
       "repository": "https://github.com/tifandotme/pi-extensions",
-      "reviewedCommit": "2bc1fd16cb166aadb0b53768a79bf014176ce0cc"
+      "reviewedCommit": "2bc1fd16cb166aadb0b53768a79bf014176ce0cc",
+      "watch": "npm"
     },
     {
       "name": "pi-subagents",
       "repository": "https://github.com/tintinweb/pi-subagents",
-      "reviewedCommit": "ca93a5247e72e7053fcd10bea7125d6c4205f949"
+      "reviewedCommit": "ca93a5247e72e7053fcd10bea7125d6c4205f949",
+      "watch": "npm"
     },
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "2cb2c1ec7240f183ff68cbab0ea6ae3239529f23"
+      "reviewedCommit": "2cb2c1ec7240f183ff68cbab0ea6ae3239529f23",
+      "watch": "npm"
     },
     {
       "name": "NVlabs SoL-Pi",
       "repository": "https://github.com/NVlabs/SoL-Pi",
-      "reviewedCommit": "219568034fa54ed121ede80961655e33dfb9d0e3"
+      "reviewedCommit": "219568034fa54ed121ede80961655e33dfb9d0e3",
+      "watch": "commits"
     },
     {
       "name": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity",
-      "reviewedCommit": "3870729ede108e439ad2a48ca0448b2245e863b2"
+      "reviewedCommit": "3870729ede108e439ad2a48ca0448b2245e863b2",
+      "watch": "npm"
     }
   ],
   "companions": [

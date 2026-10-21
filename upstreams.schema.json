@@ -10,7 +10,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "repository", "reviewedCommit"],
+        "required": ["name", "repository", "reviewedCommit", "watch"],
         "properties": {
           "name": { "type": "string", "minLength": 1 },
           "repository": {
@@ -20,7 +20,8 @@
           "reviewedCommit": {
             "type": "string",
             "pattern": "^[0-9a-f]{40}$"
-          }
+          },
+          "watch": { "enum": ["npm", "commits"] }
         }
       }
     },

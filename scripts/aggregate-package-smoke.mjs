@@ -405,10 +405,11 @@ try {
   // ponytail: pinned bundle probe; use public probes if upstream exports these invariants.
   const lensProbeSource = `${await readFile(lensEntry, "utf8")}\n
 init_ast_grep_napi2(); init_file_kinds(); init_fact_store(); init_session_roots(); init_instance_registry();
+function clearSessionRoots() { sessionRoots.clear() }
 export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadSg, getLang,
   evaluateAstGrepRules, detectFileKind, FactStore, getFactStoreEvictionReporter,
   setFactStoreEvictionReporter, registerSessionRoot, isOutsideAllSessionRoots,
-  shouldInitializeSessionRoot, sessionRootConfigEntries, mergeInstanceRoots,
+  shouldInitializeSessionRoot, clearSessionRoots, mergeInstanceRoots,
   getLSPService, resetLSPService };
 `
   const lensProbe = await createLensJiti(lensEntry, {
@@ -506,7 +507,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const sessionRoots = lensProbe
   const primaryRoot = join(stageDir, "lens-primary")
   const nestedRoot = join(primaryRoot, "nested")
-  sessionRoots.sessionRootConfigEntries().clear()
+  sessionRoots.clearSessionRoots()
   try {
     sessionRoots.registerSessionRoot(primaryRoot)
     sessionRoots.registerSessionRoot(nestedRoot)
@@ -526,7 +527,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       throw new Error("pi-lens lost its multi-root session registry contract")
     }
   } finally {
-    sessionRoots.sessionRootConfigEntries().clear()
+    sessionRoots.clearSessionRoots()
   }
 
   const instanceRegistry = lensProbe
@@ -989,7 +990,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.61.2"
+  const expectedBtwVersion = "0.62.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1136,7 +1137,10 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       throw new Error("clipboard unavailable")
     },
   )
-  if ((await failingClipboardTui.copySelection("copy me")) !== false) {
+  if (
+    (await failingClipboardTui.copySelection("copy me")) !==
+    "clipboard unavailable"
+  ) {
     throw new Error("pi-btw fullscreen clipboard failure was not reported")
   }
   let manualSelectionRejected = false
@@ -1289,7 +1293,9 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const bottomLines = pager.render(60)
   const layoutNodeSymbol = Symbol.for("@earendil-works/pi-tui/layout-node")
   const layoutNode = pager.getFullscreenLayout()[layoutNodeSymbol]?.()
-  const transcriptScrollView = layoutNode?.entries?.[1]?.component
+  const transcriptScrollView = layoutNode?.entries?.find(
+    (entry) => entry.component?.[layoutNodeSymbol]?.()?.type === "scroll",
+  )?.component
   const scrollNode = transcriptScrollView?.[layoutNodeSymbol]?.()
   const scrollState = scrollNode?.state
   const bottomOffset = scrollState?.scrollTop
@@ -1305,12 +1311,13 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   }
   scrollState.scrollBy(-Math.max(1, scrollState.viewportHeight))
   const olderLines = pager.render(60)
+  const bottomFooter = bottomLines.find((line) => line.includes("Ctrl+C"))
+  const olderFooter = olderLines.find((line) => line.includes("Ctrl+C"))
   if (
     scrollState.scrollTop >= bottomOffset ||
     JSON.stringify(olderLines) === JSON.stringify(bottomLines) ||
-    olderLines[0] !== bottomLines[0] ||
-    !olderLines.some((line) => line.includes("Ctrl+C")) ||
-    !bottomLines.some((line) => line.includes("Ctrl+C"))
+    !bottomFooter ||
+    olderFooter !== bottomFooter
   ) {
     throw new Error(
       "pi-btw native transcript scrolling did not preserve its fixed chrome",
