@@ -7,7 +7,7 @@ Installation and configuration are complete only when Pi remains unmodified, the
 ## Rules
 
 - Do not modify, patch, fork, or vendor upstream Pi. SoL-Pi must load as a standalone extension through Pi's public package interface.
-- Use Node.js 24 or newer and the tested Pi release `@earendil-works/pi-coding-agent@1.2.0`. Treat a different Pi version as a compatibility change and rerun the full suite before using it.
+- Use Node.js 22.19.0 or newer and the tested Pi release `@earendil-works/pi-coding-agent@1.2.0`. Treat a different Pi version as a compatibility change and rerun the full suite before using it.
 - Do not clean, reset, switch, or overwrite unrelated repository changes.
 - Do not print, log, commit, upload, or include any secret in a command line. Check only whether a credential is present.
 - Keep SoL-Pi settings in `sol-pi.json`. The Evidence-Preserving Reducer provider/model route is a SoL-Pi setting; provider URLs, credentials, the main agent model, and shell behavior remain Pi settings.
@@ -35,7 +35,7 @@ node --version
 npm --version
 ```
 
-Require Node.js 24 or newer. In this monorepo, run the dependency and full checks from the repository root, then return to `packages/sol-pi` for package validation:
+Require Node.js 22.19.0 or newer. In this monorepo, run the dependency and full checks from the repository root, then return to `packages/sol-pi` for package validation:
 
 ```bash
 # Repository root

@@ -4,9 +4,19 @@ import test from "node:test"
 import {
   findOpenTrackingIssue,
   issueSyncAction,
+  npmTrackedRepositories,
   syncTrackingIssue,
   trackingReportFingerprint,
 } from "./check-upstreams.mjs"
+
+test("npm-published repositories are not commit-watched", () => {
+  const tracked = npmTrackedRepositories([
+    { repository: "https://github.com/minuque/pi-cc-extensions", watch: "npm" },
+    { repository: "https://github.com/NVlabs/SoL-Pi", watch: "commits" },
+  ])
+  assert.equal(tracked.has("https://github.com/minuque/pi-cc-extensions"), true)
+  assert.equal(tracked.has("https://github.com/NVlabs/SoL-Pi"), false)
+})
 
 test("opens the rolling issue only for upstream releases", () => {
   assert.equal(issueSyncAction(["release"], []), "open")

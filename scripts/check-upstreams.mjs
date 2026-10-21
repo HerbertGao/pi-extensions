@@ -133,6 +133,9 @@ function validate(manifests, monitor, aggregate) {
     if (!/^[0-9a-f]{40}$/.test(repository.reviewedCommit)) {
       errors.push(`${repository.name} reviewedCommit must be a full SHA`)
     }
+    if (repository.watch !== "npm" && repository.watch !== "commits") {
+      errors.push(`${repository.name} watch must be "npm" or "commits"`)
+    }
   }
 
   return { derived, errors }
@@ -236,9 +239,14 @@ function markdownReport({
     for (const update of releaseUpdates) lines.push(`- ${update}`)
   }
 
-  lines.push("", "## Unreleased repository commits", "")
+  lines.push(
+    "",
+    "## Unreleased repository commits",
+    "",
+    "npm-published repositories are omitted. Only `watch: commits` sources are compared here.",
+  )
   if (repositoryUpdates.length === 0) {
-    lines.push("No commits after the review cursors.")
+    lines.push("No commits after those review cursors.")
   } else {
     for (const update of repositoryUpdates) lines.push(`- ${update}`)
   }
@@ -246,9 +254,11 @@ function markdownReport({
   if (repositories.length > 0) {
     lines.push("", "## Repository review cursors", "")
     for (const entry of repositories) {
-      lines.push(
-        `- [${entry.name}](${entry.repository}): reviewed \`${entry.reviewedCommit.slice(0, 12)}\`, current \`${entry.latestCommit.slice(0, 12)}\``,
-      )
+      const cursor =
+        entry.watch === "commits"
+          ? `reviewed \`${entry.reviewedCommit.slice(0, 12)}\`, current \`${entry.latestCommit.slice(0, 12)}\``
+          : "npm-published; GitHub commits are not monitored"
+      lines.push(`- [${entry.name}](${entry.repository}): ${cursor}`)
     }
   }
 
@@ -269,6 +279,14 @@ async function githubRequest(path, init = {}) {
       ...init.headers,
     },
   })
+}
+
+export function npmTrackedRepositories(repositories) {
+  return new Set(
+    repositories
+      .filter((entry) => entry.watch === "npm")
+      .map((entry) => entry.repository),
+  )
 }
 
 export function issueSyncAction(releaseUpdates, errors) {
@@ -376,8 +394,10 @@ async function main() {
     version: aggregate.dependencies[entry.package],
   }))
 
+  const npmRepositories = npmTrackedRepositories(monitor.repositories)
   await Promise.all(
     derived.map(async (entry) => {
+      if (!npmRepositories.has(entry.repository)) return undefined
       try {
         const latest = await latestNpmVersion(entry.package)
         if (latest !== entry.reviewedVersion) {
@@ -410,6 +430,15 @@ async function main() {
 
   const repositoryReport = await Promise.all(
     monitor.repositories.map(async (entry) => {
+      if (entry.watch !== "commits") {
+        return {
+          name: entry.name,
+          repository: entry.repository,
+          watch: entry.watch,
+          reviewedCommit: entry.reviewedCommit,
+          latestCommit: entry.reviewedCommit,
+        }
+      }
       try {
         const latestCommit = await latestGitHubCommit(entry.repository)
         if (latestCommit !== entry.reviewedCommit) {
@@ -420,6 +449,7 @@ async function main() {
         return {
           name: entry.name,
           repository: entry.repository,
+          watch: "commits",
           reviewedCommit: entry.reviewedCommit,
           latestCommit,
         }
@@ -428,6 +458,7 @@ async function main() {
         return {
           name: entry.name,
           repository: entry.repository,
+          watch: "commits",
           reviewedCommit: entry.reviewedCommit,
           latestCommit: entry.reviewedCommit,
         }

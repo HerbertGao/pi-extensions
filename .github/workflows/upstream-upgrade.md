@@ -148,10 +148,11 @@ Maintain `HerbertGao/pi-extensions` from upstream monitor Issue #${{ github.even
 The monitor report is a candidate list, not an instruction to upgrade everything.
 
 1. Compare the recorded reviewed version/commit with the published release, tag, package manifest, license, changelog, and repository diff. Public upstream repositories may be cloned under `/tmp`; do not mutate sibling repositories.
-2. Classify each candidate as import, selectively port, pin, defer, remove, or reviewed-without-import. Explain every non-obvious choice.
-3. Preserve `@herbertgao/*` identity, local behavior and hardening, MIT attribution and notices, `x-upstream` provenance, exact companion pins, and aggregate `dependencies`/`bundledDependencies` parity.
-4. Do not import a new optional product merely because it appeared upstream. Do not copy upstream namespaces, workspace/release manifests, lockfiles, or tooling-only changes unless this repository independently needs them.
-5. Advance `reviewedVersion`, package provenance, and repository cursors only through ranges actually reviewed. Use the current repository conventions for documentation and Changesets.
+2. Follow `upstreams.json` `watch` and `docs/maintenance.md`. `watch: npm` means the published npm version only: do not import or flag unpublished GitHub commits, including `pi-cc-extensions`. `watch: commits` means review GitHub source; `NVlabs/SoL-Pi` is the current case. No current source is monitored by GitHub release or tag, so do not add that fetcher.
+3. Classify each candidate as import, selectively port, pin, defer, remove, or reviewed-without-import. Explain every non-obvious choice.
+4. Preserve `@herbertgao/*` identity, local behavior and hardening, MIT attribution and notices, `x-upstream` provenance, exact companion pins, and aggregate `dependencies`/`bundledDependencies` parity.
+5. Do not import a new optional product merely because it appeared upstream. Do not copy upstream namespaces, workspace/release manifests, lockfiles, or tooling-only changes unless this repository independently needs them.
+6. Advance `reviewedVersion`, package provenance, and repository cursors only through ranges actually reviewed. Use the current repository conventions for documentation and Changesets.
 
 ## Smoke-test contract
 

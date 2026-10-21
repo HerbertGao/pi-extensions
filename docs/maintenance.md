@@ -24,6 +24,14 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 `upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
 
+### What the monitor reports
+
+Imported forks and companions are not all reviewed from GitHub commits.
+
+- If the upstream publishes to npm, monitor that npm version only. Do not import or flag unpublished GitHub commits. `pi-cc-extensions`, `pi-subagents`, Tifan packages, and `pi-antigravity` are in this group. Their `upstreams.json` entries use `"watch": "npm"`.
+- If the upstream does not publish to npm but publishes GitHub releases or tags, monitor that release or tag. No current source uses this channel, so the monitor does not fetch releases yet.
+- If the upstream publishes neither, review GitHub source commits. `NVlabs/SoL-Pi` is the current case and uses `"watch": "commits"`.
+
 ### Agentic upstream upgrades
 
 When the daily monitor creates a tracking Issue or changes its findings, it explicitly dispatches `.github/workflows/upstream-upgrade.lock.yml` with the Issue number. A successful dispatch appends a SHA-256 acknowledgement marker to the Issue. Findings with a matching marker are not dispatched again even though the `Generated:` timestamp changes; a failed or interrupted dispatch leaves no marker and is retried on the next run. A direct `issues` trigger is intentionally not used because events created with the monitor's `GITHUB_TOKEN` do not start another workflow. If the Issue changes while its earlier draft PR is still open, the new run compares the report with that trusted gh-aw PR and alerts the maintainer instead of opening a duplicate. Rerun `Upstream Monitor` after a pre-dispatch failure; rerun `Reviewed Upstream Upgrade` with the Issue number only when the earlier dispatch was accepted but its agent run failed.
@@ -258,7 +266,7 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity` |
 | `@dietrichgebert/ponytail`           | `5.3.2`   | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.13.9`  | `juicesharp/rpiv-mono`       |
-| `@narumitw/pi-btw`                   | `0.61.2`  | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-btw`                   | `0.62.0`  | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.12` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
@@ -269,15 +277,24 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
 | `pi-typesafe`                        | `0.10.0`  | `DevMortimer/pi-typesafe`    |
-| `pi-lens`                            | `4.4.3`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.42.0`  | `nicobailon/pi-web-access`   |
-| `pi-provider-qoder`                  | `0.6.1`   | `simonsmh/pi-provider-qoder` |
+| `pi-lens`                            | `4.4.4`   | `apmantza/pi-lens`           |
+| `pi-web-access`                      | `0.44.0`  | `nicobailon/pi-web-access`   |
+| `pi-provider-qoder`                  | `0.6.2`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
-`pi-provider-qoder@0.6.1` is pinned from `simonsmh/pi-provider-qoder` at git `340036ccdb14646820b48dec412c53f1cf639afe`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
+`pi-provider-qoder@0.6.2` is pinned from `simonsmh/pi-provider-qoder` at git `9764217c0c2c8db9f442b87e045153a11a6dfb1c`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-21 issue #304 review
+
+Reviewed the issue's published companion releases, plus `pi-web-access@0.44.0`, which was published after the issue snapshot. Do not import `pi-cc-extensions` until upstream publishes the next npm release. The only commit after `2cb2c1ec7240` is unpublished documentation (`25d61a9c5660`, theme entry `/settings` → Theme). The review cursor stays at `2cb2c1ec7240` so that line is included with the next npm release. The monitor no longer flags that commit on its own.
+
+- BTW: pin `0.62.0` (`843824670abb525281bc41c4fcbf81431ec43585`). Align the side workspace with native Pi input and add a conflict-checked pane shortcut. The `@narumitw/pi-tui-kit@^0.64.0` range and `./dist/index.ts` entry are unchanged.
+- Pi-Lens: pin `4.4.4` (`122e5c30c5d84143ac588b16a489477451f8803f`). Diagnostic correctness fixes only. Entry, bins, skills, and optional peers are unchanged. Promote `@ast-grep/cli@0.50.0` and `@ast-grep/napi@^0.50.0`.
+- Web Access: pin `0.44.0` (`d0e323ac935e8753d11e1853b81c057e39dee4dc`), including reviewed `0.43.0` (`7fcb1531fbc4b86cef12e8851f66b42e6385e0ce`). Linkup and DeepSeek fetch stay explicit-only. Default exposure and `toolActivation: auto` stay. Gateway base URLs, cross-site redirect key stripping, and `toolActivation: "none"` are opt-in. No new runtime dependency.
+- Qoder: pin `0.6.2` (`9764217c0c2c8db9f442b87e045153a11a6dfb1c`). Keep a flat context prompt when the transcript has no system message, and preserve tool-call identity. The credit footer stays opt-in. The tarball still declares MIT and omits a LICENSE file. Smoke checks registration without a live Qoder request.
 
 ### 2026-10-19 issue #300 review
 
