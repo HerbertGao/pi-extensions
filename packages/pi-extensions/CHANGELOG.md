@@ -1,5 +1,17 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.12
+
+### Patch Changes
+
+- [#306](https://github.com/HerbertGao/pi-extensions/pull/306) [`935acc3`](https://github.com/HerbertGao/pi-extensions/commit/935acc38af54c76b6924bb48a0b09d2c59e4997f) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Label a run with its own `name` in the agent widget, the expanded agent block, the fleet list, the conversation header, and the Agent tool row, keeping its type's badge color. `agency_dispatch` now reports per-run duration, tool uses, and tokens in both its text and its structured result, and reports none of them for a run handed off to the background.
+
+- [#305](https://github.com/HerbertGao/pi-extensions/pull/305) [`435da1f`](https://github.com/HerbertGao/pi-extensions/commit/435da1fc7ae554ef72fa2ee82474770aab75d42e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pinned companions to BTW 0.62.0, Pi-Lens 4.4.4, Qoder 0.6.2, and Web Access 0.44.0. Pi-Lens promotes `@ast-grep/cli` to 0.50.0 and `@ast-grep/napi` to ^0.50.0. Web Access adds opt-in Linkup, DeepSeek fetch, provider gateways, and `toolActivation: "none"`; default exposure and automatic providers stay unchanged. BTW aligns its side workspace with native Pi input. Qoder keeps a flat context prompt when the transcript has no system message and preserves tool-call identity.
+
+- Updated dependencies [[`935acc3`](https://github.com/HerbertGao/pi-extensions/commit/935acc38af54c76b6924bb48a0b09d2c59e4997f)]:
+  - @herbertgao/pi-agency@0.1.2
+  - @herbertgao/pi-subagents@0.22.0
+
 ## 2026.10.11
 
 ### Patch Changes
