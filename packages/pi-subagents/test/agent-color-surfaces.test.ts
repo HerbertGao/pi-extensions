@@ -204,6 +204,40 @@ describe("custom agent color runtime surfaces", () => {
     }
   })
 
+  it("labels a named run with its own name and keeps its type's badge", () => {
+    const record = { ...makeRecord(), alias: "seat-one" }
+    const widget = new AgentWidget(
+      { listAgents: () => [record] } as unknown as ConstructorParameters<
+        typeof AgentWidget
+      >[0],
+      new Map([[record.id, makeActivity()]]),
+      () => "all",
+    )
+    let factory: WidgetFactory | undefined
+    widget.setUICtx({
+      setStatus: vi.fn(),
+      setWidget: (_key, content) => {
+        if (typeof content === "function") factory = content as WidgetFactory
+      },
+    })
+
+    try {
+      widget.update()
+      const output = factory?.(
+        { terminal: { columns: 120 }, requestRender: vi.fn() },
+        theme,
+      )
+        .render()
+        .join("\n")
+
+      expect(output).toContain("seat-one")
+      expect(output).not.toMatch(new RegExp(` ${DISPLAY_NAME}\\b`))
+      expect(output).toContain(PURPLE_BACKGROUND)
+    } finally {
+      widget.dispose()
+    }
+  })
+
   it("renders the FleetView row with the display name and color", () => {
     const record = makeRecord()
     const manager = {

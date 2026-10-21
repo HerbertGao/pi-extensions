@@ -192,8 +192,17 @@ export function renderAgentName(
   type: string | undefined,
   theme: AgentNameTheme,
   style: AgentNameStyle = {},
+  /** A run's own name, which outranks its type's label while keeping the type's color. */
+  label?: string,
 ): string {
-  if (!type) return renderAgentNameLabel("Agent", undefined, theme, style)
+  if (!type) {
+    return renderAgentNameLabel(label ?? "Agent", undefined, theme, style)
+  }
   const config = getConfig(type)
-  return renderAgentNameLabel(config.displayName, config.color, theme, style)
+  return renderAgentNameLabel(
+    label ?? config.displayName,
+    config.color,
+    theme,
+    style,
+  )
 }

@@ -2280,11 +2280,16 @@ Terse command-style prompts produce shallow, generic work.
           )
         : ""
       const desc = args.description ?? ""
-      const name = renderAgentName(args.subagent_type, theme, {
-        fallbackColor: "toolTitle",
-        restoreBackground: rowBackground,
-        bold: true,
-      })
+      const name = renderAgentName(
+        args.subagent_type,
+        theme,
+        {
+          fallbackColor: "toolTitle",
+          restoreBackground: rowBackground,
+          bold: true,
+        },
+        args.name,
+      )
       return new Text(
         rowBackground +
           "▸ " +

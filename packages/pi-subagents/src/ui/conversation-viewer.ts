@@ -594,7 +594,7 @@ export class ConversationViewer implements Component, Focusable {
 
     lines.push(
       row(
-        `${statusIcon} ${renderAgentName(this.record.type, th, { bold: true })}${modeTag}  ${th.fg("muted", this.record.description)} ${th.fg("dim", "·")} ${fgPreservingNestedStyles(th, "dim", headerParts.join(" · "))}`,
+        `${statusIcon} ${renderAgentName(this.record.type, th, { bold: true }, this.record.alias)}${modeTag}  ${th.fg("muted", this.record.description)} ${th.fg("dim", "·")} ${fgPreservingNestedStyles(th, "dim", headerParts.join(" · "))}`,
       ),
     )
     const invocationLine = this.invocationLine()
