@@ -19,14 +19,12 @@ permissions:
 engine:
   id: copilot
   fallback-models:
-    - gpt-4.1
-    - claude-sonnet-5
-model: gpt-5.6-luna
+    - gpt-6-luna
+model: claude-sonnet-5.5
 models:
   allowed:
-    - gpt-5.6-luna
-    - gpt-4.1
-    - claude-sonnet-5
+    - claude-sonnet-5.5
+    - gpt-6-luna
 strict: true
 sandbox:
   agent:
