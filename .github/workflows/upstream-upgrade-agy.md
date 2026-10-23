@@ -132,9 +132,9 @@ steps:
 max-ai-credits: 400
 timeout-minutes: 90
 ---
+
 > [!NOTE]
 > **Archived Agy engine configuration.** Upstream Monitor dispatches `upstream-upgrade.lock.yml` (Copilot). Recompile this file only when intentionally reviving Agy; keep `gh aw` on v0.93.1 and `engine.id: agy` / `version: "1.3.6"`.
-
 
 # Reviewed upstream upgrade
 
