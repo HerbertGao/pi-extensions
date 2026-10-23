@@ -1,6 +1,6 @@
 ---
 name: Reviewed Upstream Upgrade
-description: Review an upstream-monitor issue, selectively sync safe updates, strengthen smoke coverage, and open a draft pull request
+description: Review an upstream-monitor issue, sync by version or full upstream replay, strengthen smoke coverage, and open a draft pull request
 on:
   workflow_dispatch:
     inputs:
@@ -137,7 +137,7 @@ timeout-minutes: 90
 
 # Reviewed upstream upgrade
 
-Maintain `HerbertGao/pi-extensions` from upstream monitor Issue #${{ github.event.inputs.issue_number }}. Issue #115 and merged PR #116 are the canonical shape; merged PR #137 is a later example of the same selective review policy.
+Maintain `HerbertGao/pi-extensions` from upstream monitor Issue #${{ github.event.inputs.issue_number }}. Issue #115 / merged PR #116 and later complete-replay syncs (for example the 2026-10-06 CC/SoL-Pi replay documented in `docs/maintenance.md`) are the canonical shape. Prefer version bumps for versioned companions and full upstream-tree replay for imported forks with local patches; do not selectively port a few files when a replay is required.
 
 ## Trust boundary
 
@@ -153,11 +153,14 @@ Maintain `HerbertGao/pi-extensions` from upstream monitor Issue #${{ github.even
 The monitor report is a candidate list, not an instruction to upgrade everything.
 
 1. Compare the recorded reviewed version/commit with the published release, tag, package manifest, license, changelog, and repository diff. Public upstream repositories may be cloned under `/tmp`; do not mutate sibling repositories.
-2. Follow `upstreams.json` `watch` and `docs/maintenance.md`. `watch: npm` means the published npm version only: do not import or flag unpublished GitHub commits, including `pi-cc-extensions`. `watch: commits` means review GitHub source; `NVlabs/SoL-Pi` is the current case. No current source is monitored by GitHub release or tag, so do not add that fetcher.
-3. Classify each candidate as import, selectively port, pin, defer, remove, or reviewed-without-import. Explain every non-obvious choice.
+2. Follow `upstreams.json` `watch` and `docs/maintenance.md`. `watch: npm` means the published npm version only: do not import or flag unpublished GitHub commits. `watch: commits` means review GitHub source; `NVlabs/SoL-Pi` is the current case. No current source is monitored by GitHub release or tag, so do not add that fetcher.
+3. Choose the sync method from the source type (this is the current maintainer policy; do not invent a lighter alternative):
+   - **Versioned companions** (npm packages and other upstreams identified by a release/version number, including bundled pins such as `pi-provider-qoder` and Tifan packages): sync **by published version**. Pin or bump to the reviewed release; take that release's published artifacts/provenance. Do not chase unpublished GitHub commits for `watch: npm` sources.
+   - **Imported forks with local patches** — currently `@herbertgao/pi-cc-extensions` (`minuque/pi-cc-extensions`) and `@herbertgao/sol-pi` (`NVlabs/SoL-Pi`): **prefer a full upstream-tree replay**. Take the latest in-scope upstream tree (npm release for CC; reviewed GitHub tip for SoL-Pi), then re-apply preserved local identity and documented local adaptations on top (filewise three-way / complete replay as in `docs/maintenance.md`). Do **not** selectively port a handful of files or cherry-pick a few commits when the baseline should advance. Paths that stay exact upstream bytes are fine; only documented local adaptations diverge.
+   - Classify deferred/remove/reviewed-without-import only when a product decision or blocker truly requires it. Explain every non-obvious choice. "Selectively port" is not an acceptable default for CC or SoL-Pi.
 4. Preserve `@herbertgao/*` identity, local behavior and hardening, MIT attribution and notices, `x-upstream` provenance, exact companion pins, and aggregate `dependencies`/`bundledDependencies` parity.
 5. Do not import a new optional product merely because it appeared upstream. Do not copy upstream namespaces, workspace/release manifests, lockfiles, or tooling-only changes unless this repository independently needs them.
-6. Advance `reviewedVersion`, package provenance, and repository cursors only through ranges actually reviewed. Use the current repository conventions for documentation and Changesets.
+6. Advance `reviewedVersion`, package provenance, and repository cursors only through ranges actually reviewed. Use the current repository conventions for documentation and Changesets. In the PR Summary, name the method used for each accepted candidate (`version pin`, `full replay`, `defer`, …); never claim "replayed" for a selective file port.
 
 ## Smoke-test contract
 
