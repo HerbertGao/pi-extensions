@@ -8,6 +8,7 @@ on:
         description: Upstream monitor issue number
         required: true
         type: string
+  admission: true
 concurrency:
   job-discriminator: ${{ github.run_id }}
 permissions:
