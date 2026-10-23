@@ -15,7 +15,9 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-engine: agy
+engine:
+  id: agy
+  version: "1.3.6"
 model: gemini-3.8-flash-medium
 models:
   allowed:
