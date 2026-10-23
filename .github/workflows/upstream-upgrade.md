@@ -16,13 +16,11 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-engine:
-  id: agy
-  version: "1.3.6"
-model: gemini-3.8-flash-medium
+engine: copilot
+model: gpt-6.1-sol
 models:
   allowed:
-    - gemini-3.8-flash-medium
+    - gpt-6.1-sol
 strict: true
 sandbox:
   agent:
