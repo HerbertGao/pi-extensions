@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.13
+
+### Patch Changes
+
+- [#315](https://github.com/HerbertGao/pi-extensions/pull/315) [`bead12b`](https://github.com/HerbertGao/pi-extensions/commit/bead12b80a3436883390b89a91169622546c4808) Thanks [@github-actions](https://github.com/apps/github-actions)! - Replay upstream pi-cc-extensions 1.0.9 onto the full tree: fix `/ccstyle` editor-prefix toggle freezing input, memoize footer session statistics on long sessions, keep image payload lines from stalling compact rendering, and stop writing back stale editor factories after Pi resets. Bump the bundled Qoder provider to 0.6.5.
+
+- Updated dependencies [[`bead12b`](https://github.com/HerbertGao/pi-extensions/commit/bead12b80a3436883390b89a91169622546c4808)]:
+  - @herbertgao/pi-cc-extensions@1.0.9
+
 ## 2026.10.12
 
 ### Patch Changes
