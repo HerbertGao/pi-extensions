@@ -11,14 +11,14 @@
 | Local package set  | Upstream                   | Imported baseline          | Notes                                                                                                                                                                                                                         |
 | ------------------ | -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                                        |
-| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `2cb2c1ec` (`1.0.8`)       | Replayed onto upstream v1.0.8. Local patches remain; regular mode does not enable mouse reporting. See "2026-10-19 issue #300 review".                                                                                        |
+| `pi-cc-extensions` | `minuque/pi-cc-extensions` | `6519fadd` (`1.0.9`)       | Replayed onto upstream v1.0.9. Local patches remain; regular mode does not enable mouse reporting. See "2026-10-23 issue #308 review".                                                                                        |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Last complete replay plus Pi 1.x/codemode compatibility ports through `21956803`. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
 
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
-| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.8`          | `1.0.8`          | `2cb2c1ec7240`  |
+| `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.9`          | `1.0.9`          | `6519fadd5e0b`  |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.22.0`         | `0.22.0`         | `85a704cb8f35`  |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
@@ -283,13 +283,18 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-typesafe`                        | `0.10.0`  | `DevMortimer/pi-typesafe`    |
 | `pi-lens`                            | `4.4.4`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.44.0`  | `nicobailon/pi-web-access`   |
-| `pi-provider-qoder`                  | `0.6.2`   | `simonsmh/pi-provider-qoder` |
+| `pi-provider-qoder`                  | `0.6.5`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
-`pi-provider-qoder@0.6.2` is pinned from `simonsmh/pi-provider-qoder` at git `9764217c0c2c8db9f442b87e045153a11a6dfb1c`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
+`pi-provider-qoder@0.6.5` is pinned from `simonsmh/pi-provider-qoder` at git `fa5067d1bf0c4accc2fc88ad672e23390a2d6f16`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-23 issue #308 review
+
+- CC: **full filewise three-way replay** of the published npm tree `2cb2c1ec7240..6519fadd5e0b` (`1.0.8 → 1.0.9`), not a selective commit port. Paths that still matched 1.0.8 took 1.0.9 bytes; paths with local adaptations where upstream was unchanged kept the local text; README, config panel, and compact-mode tests merged cleanly. Fixes: `/ccstyle` editor-prefix toggle no longer freezes input (the slot is replaced only after the panel closes), footer session statistics are memoized (1s TTL) to stop 100% CPU on long sessions, compact slot-hint stripping scans only the line tail so image payload lines no longer stall rendering, and editor release no longer writes back a stale factory after Pi resets the slot. README theme entry and fullscreen/Mermaid wording are also taken. Upstream tests are imported; the local `SAFETY` comments and monorepo README differences are preserved. Upstream `package.json`/lockfile changes are not copied.
+- Qoder: pin `0.6.5` (`fa5067d1bf0c4accc2fc88ad672e23390a2d6f16`), covering the reported `0.6.4` and the later `0.6.5`. Adds thinking-config/effort mapping, an explicit reasoning-off path, bounded retry on the model-busy rejection, DSML degenerate-output detection, and case-insensitive `Auto` filtering. Dependencies, entry and MIT declaration are unchanged; the credit footer stays opt-in. Live provider behavior and OAuth stay an external-validation boundary.
 
 ### 2026-10-21 issue #304 review
 
