@@ -16,15 +16,19 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-engine: copilot
-model: gpt-6.1-sol
+engine:
+  id: copilot
+  fallback-models:
+    - gpt-6-luna
+model: claude-sonnet-5.5
 models:
   allowed:
-    - gpt-6.1-sol
+    - claude-sonnet-5.5
+    - gpt-6-luna
 strict: true
 sandbox:
   agent:
-    model-fallback: false
+    model-fallback: true
     token-steering: false
 checkout:
   fetch-depth: 0
