@@ -9,7 +9,9 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Text, visibleWidth } from "@earendil-works/pi-tui";
 type AnyToolDefinition = ToolDefinition<any, any, any>;
-import { config } from "../extensions/config/config.ts";
+import { config, EXCLUDE_RENDERER_CANDIDATES } from "../extensions/config/config.ts";
+import { installDefaultMode } from "../extensions/renderer/default-mode.ts";
+import { WriteExecutionMetadataStore } from "../extensions/renderer/tool/diff/index.ts";
 import claudeCodeStyleExtension, {
 	ExpandedToolIoView,
 	isMcpToolDefinition,
@@ -439,7 +441,7 @@ test("MCP detection, titles, details, and custom tools use the global wrapper", 
 		);
 
 		for (const [name, args, expected] of [
-			["Agents", { description: "review changes" }, "Agents review changes"],
+			["Agents", { description: "review changes" }, "Subagents review changes"],
 			["Skill", { name: "deploy" }, "Skill deploy"],
 			["EnterPlanMode", {}, "Enter Plan Mode enable read-only planning"],
 			["ExitPlanMode", {}, "Exit Plan Mode present plan"],
@@ -565,7 +567,75 @@ test("ccstyle is the default renderer and exclusions preserve dedicated renderer
 	assert.equal(preservesOriginalRenderer(undefined, "Agent"), false);
 });
 
-test("Agent keeps its dedicated renderer under ccstyle", async () => {
+test("Agent exclude candidate uses live tool name so toggle restores native renderer", () => {
+	assert.ok(
+		EXCLUDE_RENDERER_CANDIDATES.includes("Agent"),
+		"settings candidate must match pi-subagents live tool name",
+	);
+	assert.equal(
+		EXCLUDE_RENDERER_CANDIDATES.includes("agent"),
+		false,
+		"lowercase agent would miss case-sensitive excludeRenderers.includes(toolName)",
+	);
+
+	const agentDefinition = {
+		name: "Agent",
+		renderShell: "self",
+		renderCall() {},
+		renderResult() {},
+	};
+	// Settings panel stores the candidate id as-is; live toolName is "Agent".
+	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["Agent"]), true);
+	// Regression: previous lowercase candidate never matched the live name.
+	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["agent"]), false);
+});
+
+test("excluding Agent keeps the dedicated renderer instead of ccstyle wrap", async () => {
+	const previousExclude = [...config.excludeRenderers];
+	const events = new Map<string, Function>();
+	try {
+		config.excludeRenderers = ["Agent"];
+		claudeCodeStyleExtension({
+			registerCommand() {},
+			registerShortcut() {},
+			on(name: string, handler: Function) {
+				events.set(name, handler);
+			},
+		} as any);
+		const extensionTheme = { fg: (_color: string, text: string) => text };
+		const ui = {
+			theme: extensionTheme,
+			setStatus() {},
+			requestRender() {},
+		};
+		const ctx = { mode: "tui", hasUI: true, ui };
+		await events.get("session_start")?.({}, ctx);
+		const definition = {
+			name: "Agent",
+			renderShell: "default",
+			renderCall: () => new Text("agent dedicated call", 0, 0),
+			renderResult: () => new Text("agent dedicated result", 0, 0),
+		} as unknown as AnyToolDefinition;
+		const component = new ToolExecutionComponent(
+			"Agent",
+			"agent-renderer-exclude",
+			{ description: "review changes", subagent_type: "explorer" },
+			{},
+			definition,
+			ui as any,
+			process.cwd(),
+		) as any;
+		component.updateResult({ content: [{ type: "text", text: "raw" }], isError: false });
+		const output = component.render(100).join("\n");
+		assert.match(output, /agent dedicated/);
+		assert.doesNotMatch(output, /Subagent explorer/);
+		await events.get("session_shutdown")?.({}, ctx);
+	} finally {
+		config.excludeRenderers = previousExclude;
+	}
+});
+
+test("Agent uses the ccstyle renderer under ccstyle", async () => {
 	const events = new Map<string, Function>();
 	const pi = {
 		registerCommand() {},
@@ -592,20 +662,118 @@ test("Agent keeps its dedicated renderer under ccstyle", async () => {
 	const component = new ToolExecutionComponent(
 		"Agent",
 		"agent-renderer",
-		{ description: "review changes" },
+		{ description: "review changes", subagent_type: "explorer" },
 		{},
 		definition,
 		ui as any,
 		process.cwd(),
 	) as any;
 	component.updateResult({ content: [{ type: "text", text: "raw" }], isError: false });
-	assert.equal(component.children.includes(component.contentBox), true);
-	assert.equal(component.children.includes(component.selfRenderContainer), false);
 	const output = component.render(100).join("\n");
-	assert.match(output, /agent dedicated/);
-	assert.doesNotMatch(output, /Agent review changes/);
+	// ccstyle 接管后：标题写 `Subagent explorer`，描述进 payload；原渲染器的文本不出现。
+	assert.doesNotMatch(output, /agent dedicated/);
+	assert.match(output, /Subagent explorer/);
+	assert.match(output, /review changes/);
 	await events.get("session_shutdown")?.({}, ctx);
 });
+
+for (const [status, label] of [
+	["completed", "Done"],
+	["steered", "Wrapped up (turn limit)"],
+] as const) {
+	test(`Agent ${status} collapsed results show statistics once`, () => {
+		const previousMode = config.mode;
+		config.mode = "on";
+		const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+		try {
+			const ui = { theme: { fg: (_color: string, text: string) => text }, requestRender() {} };
+			const component = new ToolExecutionComponent(
+				"Agent",
+				`agent-stats-${status}`,
+				{ description: "review changes", subagent_type: "explorer" },
+				{},
+				undefined,
+				ui as any,
+				process.cwd(),
+			);
+			component.updateResult({
+				content: [{ type: "text", text: "Reviewed the changes." }],
+				isError: false,
+				details: {
+					status,
+					turnCount: 3,
+					toolUses: 8,
+					totalTokens: 12400,
+					durationMs: 12300,
+				},
+			});
+			const rows = component
+				.render(240)
+				.map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").trimEnd());
+			assert.deepEqual(
+				rows.filter((line) => line.includes("↳")),
+				[`   ↳ ${label} · 3 turns · 8 tool uses · 12.4k token · 12.3s`],
+			);
+		} finally {
+			hooks.shutdown();
+			config.mode = previousMode;
+		}
+	});
+}
+
+for (const [status, collapsedNeedle, fullText] of [
+	["stopped", "Stopped", "Stopped mid-run with more detail.\nSecond line of context."],
+	["error", "agent blew up", "agent blew up\nstack frame one\nstack frame two"],
+	["aborted", "user aborted", "user aborted\nbefore finishing"],
+] as const) {
+	test(`Agent ${status} expanded results show the full body`, () => {
+		const previousMode = config.mode;
+		config.mode = "on";
+		const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+		try {
+			const ui = { theme: { fg: (_color: string, text: string) => text }, requestRender() {} };
+			const component = new ToolExecutionComponent(
+				"Agent",
+				`agent-expand-${status}`,
+				{ description: "review changes", subagent_type: "explorer" },
+				{},
+				undefined,
+				ui as any,
+				process.cwd(),
+			) as any;
+			component.updateResult({
+				content: [{ type: "text", text: fullText }],
+				isError: status === "error",
+				details: {
+					status,
+					turnCount: 2,
+					toolUses: 3,
+					totalTokens: 1000,
+					durationMs: 4500,
+				},
+			});
+			const collapsed = component
+				.render(240)
+				.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+				.join("\n");
+			assert.match(collapsed, new RegExp(collapsedNeedle));
+			assert.doesNotMatch(collapsed, /stack frame two|Second line of context/);
+
+			component.setExpanded(true);
+			const expanded = component
+				.render(240)
+				.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+				.join("\n");
+			for (const part of fullText.split("\n")) {
+				assert.match(expanded, new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+			}
+			assert.doesNotMatch(expanded, /↳ Stopped|↳ agent blew up|↳ user aborted/);
+		} finally {
+			hooks.shutdown();
+			config.mode = previousMode;
+		}
+	});
+}
 
 test("global renderer reload chains external wrappers and shutdown restores them", async () => {
 	const prototype = ToolExecutionComponent.prototype as any;

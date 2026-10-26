@@ -90,7 +90,7 @@ pi install git:github.com/HerbertGao/pi-extensions
   "footerGitStatsMode": "working",         // working（默认）：未提交改动；branch：分支累计净改动
   "footerHiddenKeys": [],                  // 隐藏的芯片 key
   "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "pi-usage"], // 每行芯片顺序；内置项与插件同一套排布
-  "footerLine2Keys": ["cwd", "git"],        // cwd：目录和会话名；git：分支和改动。可换到任意行
+  "footerLine2Keys": ["cwd", "git"],       // cwd：目录和会话名；git：分支和改动。可换到任意行
   "footerLine3Keys": []                    // 有可见芯片才占行
 }
 ```
@@ -125,7 +125,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.9（MIT），上游基线 [`6519fad`](https://github.com/minuque/pi-cc-extensions/commit/6519fadd5e0bc84109f3359f2afe8f67337bdaad)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.11（MIT），上游基线 [`4697b4a`](https://github.com/minuque/pi-cc-extensions/commit/4697b4ac2cc28ee89bb9c37f1021e91075bfd94c)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证
