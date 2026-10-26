@@ -31,24 +31,30 @@ MCP is provided by Pi 0.99.0+, not by an extension in this collection. Configure
 
 These packages retain their original names and upstream maintainers. The aggregate package pins and bundles them; this repository does not fork or republish their source under `@herbertgao/*`.
 
-| Package                                                                         | Pinned version | Purpose                                       |
-| ------------------------------------------------------------------------------- | -------------- | --------------------------------------------- |
-| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `5.2.0`        | Minimal coding mode and maintenance skills.   |
-| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.13.9`       | Structured user questionnaires.               |
-| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.62.0`       | Parallel side questions outside main history. |
-| [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.12`      | Keep the computer awake during Pi agent runs. |
-| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.14`       | Priority service tier for selected models.    |
-| [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.          |
-| [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                 |
-| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.7`        | Inline `/skill` autocomplete.                 |
-| [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.2`        | Extract and open Mermaid diagrams.            |
-| [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.            |
-| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.8`        | Generate one-line session recaps.             |
-| [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.      |
-| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.10.0`       | Structured TypeSafe/Jev decisions.            |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.4`        | Code diagnostics and skills.                  |
-| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.44.0`       | Web search and content access.                |
-| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.5`        | Qoder account models for global and China.    |
+| Package                                                                         | Pinned version | Purpose                                           |
+| ------------------------------------------------------------------------------- | -------------- | ------------------------------------------------- |
+| [`@dietrichgebert/ponytail`](https://github.com/DietrichGebert/ponytail)        | `5.3.2`        | Minimal coding mode and maintenance skills.       |
+| [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.13.9`       | Structured user questionnaires.                   |
+| [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.62.0`       | Parallel side questions outside main history.     |
+| [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.12`      | Keep the computer awake during Pi agent runs.     |
+| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.14`       | Priority service tier for selected models.        |
+| [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.              |
+| [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                     |
+| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.7`        | Inline `/skill` autocomplete.                     |
+| [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.2`        | Extract and open Mermaid diagrams.                |
+| [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.                |
+| [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.8`        | Generate one-line session recaps.                 |
+| [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.          |
+| [`pi-antigravity`](https://www.npmjs.com/package/pi-antigravity)                | `0.11.0`       | Antigravity models, search, and image generation. |
+| [`pi-next-cue`](https://www.npmjs.com/package/pi-next-cue)                      | `1.0.7`        | Predict the next prompt; Tab fills, Enter sends.  |
+| [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.10.0`       | Structured TypeSafe/Jev decisions.                |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.4`        | Code diagnostics and skills.                      |
+| [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.44.0`       | Web search and content access.                    |
+| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.5`        | Qoder account models for global and China.        |
+
+## Local extension
+
+The aggregate also includes [`clef`](packages/pi-extensions/extensions/clef.mjs), a local extension rather than a separate npm package. Its `clef` tool asks Cloudflare Clef-flash for yes/no, choice, or score judgments and displays the questions and answers in the transcript. It is not a permission gate.
 
 ## Footer
 
