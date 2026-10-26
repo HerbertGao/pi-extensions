@@ -9,7 +9,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Text, visibleWidth } from "@earendil-works/pi-tui";
 type AnyToolDefinition = ToolDefinition<any, any, any>;
-import { config } from "../extensions/config/config.ts";
+import { config, EXCLUDE_RENDERER_CANDIDATES } from "../extensions/config/config.ts";
 import { installDefaultMode } from "../extensions/renderer/default-mode.ts";
 import { WriteExecutionMetadataStore } from "../extensions/renderer/tool/diff/index.ts";
 import claudeCodeStyleExtension, {
@@ -565,6 +565,74 @@ test("ccstyle is the default renderer and exclusions preserve dedicated renderer
 		false,
 	);
 	assert.equal(preservesOriginalRenderer(undefined, "Agent"), false);
+});
+
+test("Agent exclude candidate uses live tool name so toggle restores native renderer", () => {
+	assert.ok(
+		EXCLUDE_RENDERER_CANDIDATES.includes("Agent"),
+		"settings candidate must match pi-subagents live tool name",
+	);
+	assert.equal(
+		EXCLUDE_RENDERER_CANDIDATES.includes("agent"),
+		false,
+		"lowercase agent would miss case-sensitive excludeRenderers.includes(toolName)",
+	);
+
+	const agentDefinition = {
+		name: "Agent",
+		renderShell: "self",
+		renderCall() {},
+		renderResult() {},
+	};
+	// Settings panel stores the candidate id as-is; live toolName is "Agent".
+	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["Agent"]), true);
+	// Regression: previous lowercase candidate never matched the live name.
+	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["agent"]), false);
+});
+
+test("excluding Agent keeps the dedicated renderer instead of ccstyle wrap", async () => {
+	const previousExclude = [...config.excludeRenderers];
+	const events = new Map<string, Function>();
+	try {
+		config.excludeRenderers = ["Agent"];
+		claudeCodeStyleExtension({
+			registerCommand() {},
+			registerShortcut() {},
+			on(name: string, handler: Function) {
+				events.set(name, handler);
+			},
+		} as any);
+		const extensionTheme = { fg: (_color: string, text: string) => text };
+		const ui = {
+			theme: extensionTheme,
+			setStatus() {},
+			requestRender() {},
+		};
+		const ctx = { mode: "tui", hasUI: true, ui };
+		await events.get("session_start")?.({}, ctx);
+		const definition = {
+			name: "Agent",
+			renderShell: "default",
+			renderCall: () => new Text("agent dedicated call", 0, 0),
+			renderResult: () => new Text("agent dedicated result", 0, 0),
+		} as unknown as AnyToolDefinition;
+		const component = new ToolExecutionComponent(
+			"Agent",
+			"agent-renderer-exclude",
+			{ description: "review changes", subagent_type: "explorer" },
+			{},
+			definition,
+			ui as any,
+			process.cwd(),
+		) as any;
+		component.updateResult({ content: [{ type: "text", text: "raw" }], isError: false });
+		const output = component.render(100).join("\n");
+		assert.match(output, /agent dedicated/);
+		assert.doesNotMatch(output, /Subagent explorer/);
+		await events.get("session_shutdown")?.({}, ctx);
+	} finally {
+		config.excludeRenderers = previousExclude;
+	}
 });
 
 test("Agent uses the ccstyle renderer under ccstyle", async () => {
