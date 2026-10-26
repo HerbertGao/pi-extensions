@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.14
+
+### Patch Changes
+
+- [#319](https://github.com/HerbertGao/pi-extensions/pull/319) [`3b863fa`](https://github.com/HerbertGao/pi-extensions/commit/3b863fadb83bdb9e858ee0d1f49dc7f20e09f8c5) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pinned companions to ask-user-question 2.15.0 (with rpiv-config ^2.15.0), pi-btw 0.63.0, pi-lens 4.4.5, pi-next-cue 1.0.8, and pi-typesafe 0.13.0. Ask can open notes with a configurable key, including a single non-Latin character. pi-btw imports new main-thread context only after an explicit shortcut and confirmation. pi-lens flags concatenated SQL passed to execute as advisory and promotes ast-grep to 0.51.0. pi-typesafe follows PI_TYPESAFE_BACKEND and PI_TYPESAFE_MODEL, stores a separate key per backend, and uses @typesafe-ai/sdk 0.7.0. The default backend remains the TypeSafe API. pi-next-cue 1.0.8 requires Pi >=1.2.0 and does not change its prompt prediction behavior.
+
+- Updated dependencies [[`3b863fa`](https://github.com/HerbertGao/pi-extensions/commit/3b863fadb83bdb9e858ee0d1f49dc7f20e09f8c5)]:
+  - @herbertgao/pi-cc-extensions@1.1.0
+
 ## 2026.10.13
 
 ### Patch Changes

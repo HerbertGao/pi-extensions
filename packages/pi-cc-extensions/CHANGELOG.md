@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.11-local.1
+
+### Minor Changes
+
+- [#319](https://github.com/HerbertGao/pi-extensions/pull/319) [`3b863fa`](https://github.com/HerbertGao/pi-extensions/commit/3b863fadb83bdb9e858ee0d1f49dc7f20e09f8c5) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.11. Subagent notifications render as cards, and an idle compact session finishes the trailing round instead of leaving it on Running. Regular mode still does not turn on terminal mouse reporting, and local session guards and Action Fusion write diffs stay in place.
+
 ## 1.0.9-local.2
 
 ### Patch Changes
