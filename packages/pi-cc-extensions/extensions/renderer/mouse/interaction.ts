@@ -370,9 +370,9 @@ function isNativeExpandHintLine(line: string): boolean {
 
 /**
  * pi 0.87 给工具结果区套了 MouseRegion：整卡左键 click 都会 setExpanded。
- * 声明了展开入口的组件（diff remainder 等）与原生卡（提示在预览末行）只放行入口
- * 行，其余位置直接吞掉 click，避免官方把正文当展开入口；无提示的单行摘要卡保持
- * 官方整行行为。
+ * 声明了展开入口的组件（diff remainder 等）与带原生展开提示的卡只放行入口行，
+ * 其余位置直接吞掉 click，避免官方把正文当展开入口；无任何展开提示行的原生卡
+ * （短输出 / excludeRenderers / mode=off）保持官方整卡 toggle。
  */
 function blocksOfficialCardToggle(component: any, event: any): boolean {
 	if (event?.type !== "click" || event.button !== "left" || component?.expanded) return false;
@@ -380,7 +380,19 @@ function blocksOfficialCardToggle(component: any, event: any): boolean {
 	const row = event.y;
 	const line = Array.isArray(lines) ? lines[row] : undefined;
 	if (typeof line !== "string") return false;
-	return !isCollapsedHintRow(component, line, row);
+
+	const result = component?.resultRendererComponent;
+	if (typeof result?.isCollapsedHintLine === "function") {
+		return !result.isCollapsedHintLine(line, row);
+	}
+
+	// 原生卡：只有整卡里确实存在展开提示行时，才把入口收到那些行；
+	// 无提示的短卡放行官方整卡 expand。
+	const hasNativeHint =
+		Array.isArray(lines) &&
+		lines.some((entry) => typeof entry === "string" && isNativeExpandHintLine(entry));
+	if (!hasNativeHint) return false;
+	return !isNativeExpandHintLine(line);
 }
 
 /**

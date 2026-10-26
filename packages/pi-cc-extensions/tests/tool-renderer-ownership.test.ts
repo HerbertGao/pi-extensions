@@ -653,6 +653,60 @@ for (const [status, label] of [
 	});
 }
 
+for (const [status, collapsedNeedle, fullText] of [
+	["stopped", "Stopped", "Stopped mid-run with more detail.\nSecond line of context."],
+	["error", "agent blew up", "agent blew up\nstack frame one\nstack frame two"],
+	["aborted", "user aborted", "user aborted\nbefore finishing"],
+] as const) {
+	test(`Agent ${status} expanded results show the full body`, () => {
+		const previousMode = config.mode;
+		config.mode = "on";
+		const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+		try {
+			const ui = { theme: { fg: (_color: string, text: string) => text }, requestRender() {} };
+			const component = new ToolExecutionComponent(
+				"Agent",
+				`agent-expand-${status}`,
+				{ description: "review changes", subagent_type: "explorer" },
+				{},
+				undefined,
+				ui as any,
+				process.cwd(),
+			) as any;
+			component.updateResult({
+				content: [{ type: "text", text: fullText }],
+				isError: status === "error",
+				details: {
+					status,
+					turnCount: 2,
+					toolUses: 3,
+					totalTokens: 1000,
+					durationMs: 4500,
+				},
+			});
+			const collapsed = component
+				.render(240)
+				.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+				.join("\n");
+			assert.match(collapsed, new RegExp(collapsedNeedle));
+			assert.doesNotMatch(collapsed, /stack frame two|Second line of context/);
+
+			component.setExpanded(true);
+			const expanded = component
+				.render(240)
+				.map((line: string) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ""))
+				.join("\n");
+			for (const part of fullText.split("\n")) {
+				assert.match(expanded, new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+			}
+			assert.doesNotMatch(expanded, /↳ Stopped|↳ agent blew up|↳ user aborted/);
+		} finally {
+			hooks.shutdown();
+			config.mode = previousMode;
+		}
+	});
+}
+
 test("global renderer reload chains external wrappers and shutdown restores them", async () => {
 	const prototype = ToolExecutionComponent.prototype as any;
 	const methodNames = [

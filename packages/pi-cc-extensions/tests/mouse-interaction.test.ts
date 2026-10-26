@@ -252,6 +252,107 @@ test("native collapsed tool expands only from its trailing expand hint", async (
 	}
 });
 
+test("hintless native cards keep official whole-card expand", () => {
+	// 短输出 / excludeRenderers / mode=off：折叠卡没有展开提示行，整卡 click 仍走官方 toggle。
+	const prototype = (ToolExecutionComponent as any).prototype;
+	const originalHandleMouse = prototype.handleMouse;
+	const delegated: Array<Record<string, unknown>> = [];
+	prototype.handleMouse = function (event: any) {
+		delegated.push({ type: event?.type, button: event?.button, y: event?.y });
+		return { handled: true };
+	};
+	const card: any = {
+		toolCallId: "native-hintless",
+		expanded: false,
+		// 无 isCollapsedHintLine：走原生路径。
+		render() {
+			return ["✓ Bash(echo hi)", "  ↳ hi"];
+		},
+	};
+	const tui = {
+		terminal: { columns: 80, rows: 24, write() {} },
+		mode: "tui",
+		requestRender() {},
+	};
+	try {
+		installToolMouseInteraction({
+			mode: "tui",
+			hasUI: true,
+			ui: {
+				setWidget(_key: string, factory: any) {
+					if (typeof factory === "function") factory(tui, { fg: (_c: string, t: string) => t });
+				},
+				onTerminalInput() {
+					return () => undefined;
+				},
+			},
+		} as any);
+
+		prototype.handleMouse.call(card, { type: "click", button: "left", y: 0, width: 80 });
+		assert.equal(delegated.length, 1, "hintless title row keeps official toggle");
+		prototype.handleMouse.call(card, { type: "click", button: "left", y: 1, width: 80 });
+		assert.equal(delegated.length, 2, "hintless body row keeps official toggle");
+	} finally {
+		installToolMouseInteraction({});
+		prototype.handleMouse = originalHandleMouse;
+	}
+});
+
+test("native cards with expand hints still swallow body clicks", () => {
+	const prototype = (ToolExecutionComponent as any).prototype;
+	const originalHandleMouse = prototype.handleMouse;
+	const delegated: Array<Record<string, unknown>> = [];
+	prototype.handleMouse = function (event: any) {
+		delegated.push({ type: event?.type, button: event?.button, y: event?.y });
+		return { handled: true };
+	};
+	const card: any = {
+		toolCallId: "native-with-hint",
+		expanded: false,
+		render() {
+			return [
+				"✓ grep /thinking/ in src/",
+				"src/a.ts:1: thinking",
+				"... (195 more lines, ctrl+o to expand)",
+			];
+		},
+	};
+	const tui = {
+		terminal: { columns: 80, rows: 24, write() {} },
+		mode: "tui",
+		requestRender() {},
+	};
+	try {
+		installToolMouseInteraction({
+			mode: "tui",
+			hasUI: true,
+			ui: {
+				setWidget(_key: string, factory: any) {
+					if (typeof factory === "function") factory(tui, { fg: (_c: string, t: string) => t });
+				},
+				onTerminalInput() {
+					return () => undefined;
+				},
+			},
+		} as any);
+
+		const rows = card.render() as string[];
+		const bodyRow = rows.findIndex((line: string) => line.includes("src/a.ts"));
+		const hintRow = rows.findIndex((line: string) => line.includes("to expand"));
+		assert.ok(bodyRow >= 0 && hintRow >= 0);
+
+		prototype.handleMouse.call(card, { type: "click", button: "left", y: bodyRow, width: 80 });
+		assert.deepEqual(delegated, [], "body click must not reach official toggle");
+
+		prototype.handleMouse.call(card, { type: "click", button: "left", y: hintRow, width: 80 });
+		assert.equal(delegated.length, 1, "hint row still reaches official toggle");
+		assert.deepEqual(delegated[0], { type: "click", button: "left", y: hintRow });
+	} finally {
+		installToolMouseInteraction({});
+		prototype.handleMouse = originalHandleMouse;
+	}
+});
+
 test("rich diff hint highlights and expands on click", async () => {
 	let inputHandler: ((data: string) => { consume?: boolean } | undefined) | undefined;
 	let renderRequests = 0;

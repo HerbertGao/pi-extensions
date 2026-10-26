@@ -262,21 +262,43 @@ function renderAgentResult(
 	}
 
 	if (status === "stopped") {
-		const body = tail("Stopped");
-		return new Text(theme.fg("muted", renderCollapsedToolResult(body, "")), 0, 0);
+		if (!expanded) {
+			const body = tail("Stopped");
+			return new Text(theme.fg("muted", renderCollapsedToolResult(body, "")), 0, 0);
+		}
+		return renderExpandedToolResult(
+			text || "Stopped",
+			theme,
+			Boolean(isError),
+			context?.lastComponent,
+			context?.args,
+			context,
+			true,
+		);
 	}
 
-	// error / aborted：首行错误文案 + 统计，与通用失败行口径一致。
+	// error / aborted：折叠时首行错误文案 + 统计；展开时走通用展开视图。
 	const label = agentStatusLabel(status);
 	const firstLine = text.split("\n").find((line) => line.trim()) ?? label;
-	const body = tail(oneLine(firstLine, 72));
-	return new Text(
-		theme.fg(
-			isFailedSubagentStatus(status) ? "error" : "muted",
-			renderCollapsedToolResult(body, ""),
-		),
-		0,
-		0,
+	if (!expanded) {
+		const body = tail(oneLine(firstLine, 72));
+		return new Text(
+			theme.fg(
+				isFailedSubagentStatus(status) ? "error" : "muted",
+				renderCollapsedToolResult(body, ""),
+			),
+			0,
+			0,
+		);
+	}
+	return renderExpandedToolResult(
+		text || label,
+		theme,
+		isFailedSubagentStatus(status) || Boolean(isError),
+		context?.lastComponent,
+		context?.args,
+		context,
+		true,
 	);
 }
 
