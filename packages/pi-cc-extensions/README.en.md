@@ -91,7 +91,7 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "footerGitStatsMode": "working",         // working (default): uncommitted; branch: cumulative net changes
   "footerHiddenKeys": [],                  // hidden chip keys
   "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "pi-usage"], // chip order per line; builtins and plugins share one layout
-  "footerLine2Keys": ["cwd", "git"],        // cwd: directory and session; git: branch and changes. Either can move to any line
+  "footerLine2Keys": ["cwd", "git"],       // cwd: directory and session; git: branch and changes. Either can move to any line
   "footerLine3Keys": [],                   // painted only when a chip is visible
 }
 ```
@@ -126,7 +126,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.9 (MIT), upstream baseline [`6519fad`](https://github.com/minuque/pi-cc-extensions/commit/6519fadd5e0bc84109f3359f2afe8f67337bdaad), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.11 (MIT), upstream baseline [`4697b4a`](https://github.com/minuque/pi-cc-extensions/commit/4697b4ac2cc28ee89bb9c37f1021e91075bfd94c), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

@@ -111,7 +111,7 @@ THE SOFTWARE.
 
 ## `pi-typesafe`
 
-The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.10.0 under its original MIT license:
+The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.13.0 under its original MIT license:
 
 MIT License
 
@@ -137,7 +137,7 @@ THE SOFTWARE.
 
 ## `pi-next-cue`
 
-The aggregate bundles [`pi-next-cue`](https://github.com/ouzhenkun/pi-next-cue) version 1.0.7 under its original MIT license. The imported npm package corresponds to upstream commit [`015a595c6751d50889b3a6937ba4816dfe92adc1`](https://github.com/ouzhenkun/pi-next-cue/commit/015a595c6751d50889b3a6937ba4816dfe92adc1).
+The aggregate bundles [`pi-next-cue`](https://github.com/ouzhenkun/pi-next-cue) version 1.0.8 under its original MIT license. The imported npm package corresponds to upstream commit [`49c56b4ba659d20bbb36873a572094f55779e87b`](https://github.com/ouzhenkun/pi-next-cue/commit/49c56b4ba659d20bbb36873a572094f55779e87b).
 
 MIT License
 
