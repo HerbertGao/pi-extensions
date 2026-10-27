@@ -270,8 +270,8 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity` |
 | `@dietrichgebert/ponytail`           | `5.3.2`   | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.15.0`  | `juicesharp/rpiv-mono`       |
-| `@narumitw/pi-btw`                   | `0.63.0`  | `narumiruna/pi-extensions`   |
-| `@narumitw/pi-caffeinate`            | `0.49.12` | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-btw`                   | `0.63.1`  | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-caffeinate`            | `0.49.13` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
@@ -283,7 +283,7 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-typesafe`                        | `0.13.0`  | `DevMortimer/pi-typesafe`    |
 | `pi-next-cue`                        | `1.0.8`   | `ouzhenkun/pi-next-cue`      |
 | `pi-lens`                            | `4.4.5`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.44.0`  | `nicobailon/pi-web-access`   |
+| `pi-web-access`                      | `0.45.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.6.5`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
@@ -291,6 +291,16 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-provider-qoder@0.6.5` is pinned from `simonsmh/pi-provider-qoder` at git `fa5067d1bf0c4accc2fc88ad672e23390a2d6f16`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-27 issue #321 review
+
+Release updates only. SoL-Pi stays at review cursor `219568034fa5`. No imported-fork baseline changed. Each accepted candidate is a **version pin** of the published npm release.
+
+- BTW: pin `0.63.1`. npm publishes no gitHead; provenance is the registry version and tarball integrity `sha512-Og05FmvyKvxo6JGGOqAF/XOC0HnMq7zf1W3+zYAZVXhRUnNYCSN0Pd5EslxlCEr00dgfOLyDOiUppguPHWkowg==`. The side workspace transfers the terminal through `@narumitw/pi-tui-kit/fullscreen-handoff` and does not start that UI when the flow is already aborted or the parent terminal cannot be restored. Cleanup failures are combined instead of keeping only the first error. The Pi entry stays `./dist/index.ts` and the license stays MIT. Promote `@narumitw/pi-tui-kit@^0.67.0` (resolved `0.67.0`, integrity `sha512-IFLOImxPqmxH+5zKGXDOd1CZEZo0S4n+Owx00zQ8kJoUDtEZ0I9K1P1NEQrekwmWiAdiJcOMwe2pRoismGAbsg==`). Its other new UI entry points are not registered as aggregate extensions. Manual main-thread import from `0.63.0` is unchanged.
+- Caffeinate: pin `0.49.13`. The published extension source and `dist` are unchanged aside from the manifest. npm publishes no gitHead; provenance is the registry version and tarball integrity `sha512-0c0ePl6w4VnDCk4kAQRC097XWXT+UOcYowLt8gU2/vIzhs6pi89SXd6BBywVSub7RHK+kzxOI10oxnQ6THn8ag==`. Promote `dbus-native@^0.16.2`. `0.16.2` adds `ref()`/`unref()` on the Bun Unix transport so an unreferenced bus connection releases its reader thread. The Pi entry stays `./dist/index.ts` and the license stays MIT. Caffeinate still depends on `@narumitw/pi-tui-kit@^0.59.0` (resolved `0.59.0`); that caret does not include `0.67.0`, so it stays a separate install from the BTW promotion. The extension does not call `unref()` itself.
+- Web Access: pin `0.45.0` (`35e57ef30f4b8ac771f4062a381493993af41ebe`). The MIT license, `./dist` entry, bin, engines, and runtime dependency ranges are unchanged. Default fetch modes stay `readable`, `raw`, and `answer`; `extract` stays off unless `fetch.allowedModes` lists it, and it cannot be the default mode. `ninerouter` stays out of automatic and `all` selection. Empty, domain-miss, and off-topic routing stay off unless `searchRouting.fallbackOn` lists them. Plain `http://` gateway URLs stay rejected except on loopback unless `allowHttpBaseUrls` or `PI_WEB_ACCESS_ALLOW_HTTP_BASE_URLS` is set. A tool-call `provider` that names an unknown provider fails with the valid names; comma-separated names select several providers; config values still use the lenient normalizer. DuckDuckGo searches run one at a time, at least two seconds apart, and a bot check fails immediately as quota until the cooldown ends; a timeout is reported as a timeout rather than an abort. `source_check` keeps a sentence that contains `example.com` intact and matches the claim against fetched page text. The first UI session after an upgrade shows skipped release highlights once; a fresh install or a downgrade stays quiet. Field extraction sends page text to Cloudflare only when extract mode is enabled. Azure Bing grounding, a per-call search model, and `summaryModel: "current"` stay explicit.
+
+No new runtime dependency was added beyond those two promoted ranges. No installed configuration, credentials, or sessions are migrated.
 
 ### 2026-10-26 issue #318 review
 

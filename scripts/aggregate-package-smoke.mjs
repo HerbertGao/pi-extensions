@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
+import { existsSync, readFileSync } from "node:fs"
 import {
   mkdir,
   mkdtemp,
@@ -48,6 +49,27 @@ async function pathExists(path) {
   } catch (error) {
     if (error?.code === "ENOENT") return false
     throw error
+  }
+}
+
+function resolveBundledImport(parentRequire, packageName, subpath) {
+  const manifestPath = (parentRequire.resolve.paths(packageName) ?? [])
+    .map((dir) => join(dir, ...packageName.split("/"), "package.json"))
+    .find((candidate) => existsSync(candidate))
+  if (!manifestPath) {
+    throw new Error(`Cannot resolve ${packageName} from the bundled package`)
+  }
+  const manifest = parseJson(readFileSync(manifestPath, "utf8"), manifestPath)
+  const exported = manifest.exports?.[subpath]
+  const target = typeof exported === "string" ? exported : exported?.import
+  if (typeof target !== "string" || !target.startsWith(".")) {
+    throw new Error(
+      `${packageName} ${manifest.version} does not import ${subpath}`,
+    )
+  }
+  return {
+    manifest,
+    file: join(dirname(manifestPath), target),
   }
 }
 
@@ -1067,7 +1089,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.0"
+  const expectedBtwVersion = "0.63.1"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1083,7 +1105,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = "^0.64.0"
+  const expectedTuiKitRange = "^0.67.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
       expectedTuiKitRange ||
@@ -1130,6 +1152,34 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       `Expected promoted dbus-native dependency ${expectedDbusRange}, got ${sourceManifest.dependencies["dbus-native"]}`,
     )
   }
+  const aggregateRequire = createRequire(join(packageRoot, "package.json"))
+  const dbusRoot = dirname(aggregateRequire.resolve("dbus-native"))
+  const dbusManifestPath = join(dbusRoot, "package.json")
+  const dbusManifest = parseJson(
+    await readFile(dbusManifestPath, "utf8"),
+    dbusManifestPath,
+  )
+  if (dbusManifest.version !== "0.16.2" || dbusManifest.license !== "MIT") {
+    throw new Error(
+      `Expected promoted dbus-native 0.16.2 MIT package, got ${dbusManifest.version} ${dbusManifest.license}`,
+    )
+  }
+  const dbusTransport = await readFile(
+    join(dbusRoot, "lib", "transport-bun.js"),
+    "utf8",
+  )
+  if (
+    !/ref\(\)\s*\{\s*this\._worker\?\.ref\(\);\s*return this;\s*\}/.test(
+      dbusTransport,
+    ) ||
+    !/unref\(\)\s*\{\s*this\._worker\?\.unref\(\);\s*return this;\s*\}/.test(
+      dbusTransport,
+    )
+  ) {
+    throw new Error(
+      "Promoted dbus-native Bun transport does not release its reader thread on unref",
+    )
+  }
 
   const btwEntry = join(btwRoot, btwEntryRelative)
   const btwDistSource = await readFile(btwEntry, "utf8")
@@ -1159,17 +1209,19 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   // 0.58.1's public entry is the bundled dist. Add test-only exports in memory
   // so these regressions exercise that exact artifact rather than its src mirror.
   const btwProbe = await btwJiti.evalModule(
-    `${btwDistSource}\nexport { BtwTranscriptPager, appendMainContextUpdate, createBtwFullscreenTui, createSideThread, normalizedKeyId, pickMainEntry, resolveBtwShortcuts, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
+    `${btwDistSource}\nexport { BtwTranscriptPager, FullscreenUiDisposedError, appendMainContextUpdate, createBtwFullscreenTui, createSideThread, normalizedKeyId, pickMainEntry, resolveBtwShortcuts, runBtwFullscreen, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
     { filename: btwEntry, async: true, forceTranspile: true },
   )
   const {
     BtwTranscriptPager,
+    FullscreenUiDisposedError,
     appendMainContextUpdate,
     createBtwFullscreenTui,
     createSideThread,
     normalizedKeyId,
     pickMainEntry,
     resolveBtwShortcuts,
+    runBtwFullscreen,
     runBtwMenuPreservingEditor,
     updateBtwSettings,
   } = btwProbe
@@ -1447,6 +1499,138 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error(
       "pi-btw native transcript scrolling did not preserve its fixed chrome",
+    )
+  }
+
+  let disposedFullscreenCalls = 0
+  const disposedContext = {
+    signal: AbortSignal.abort(),
+    ui: {
+      getEditorText: () => "main draft",
+      custom: async () => {
+        disposedFullscreenCalls += 1
+        return {}
+      },
+    },
+  }
+  let disposedBeforeStart = false
+  try {
+    await runBtwFullscreen(disposedContext, async () => "ran")
+  } catch (error) {
+    disposedBeforeStart = error instanceof FullscreenUiDisposedError
+  }
+  let unrestorableBeforeStart = false
+  try {
+    await runBtwFullscreen(
+      {
+        ui: {
+          getEditorText: () => "main draft",
+          custom: async () => {
+            disposedFullscreenCalls += 1
+            return {}
+          },
+        },
+      },
+      async () => "ran",
+      { canRestoreParent: () => false },
+    )
+  } catch (error) {
+    unrestorableBeforeStart = error instanceof FullscreenUiDisposedError
+  }
+  if (
+    !disposedBeforeStart ||
+    !unrestorableBeforeStart ||
+    disposedFullscreenCalls !== 0
+  ) {
+    throw new Error(
+      "pi-btw started a fullscreen flow that was already disposed",
+    )
+  }
+
+  const handoffModule = resolveBundledImport(
+    btwRequire,
+    "@narumitw/pi-tui-kit",
+    "./fullscreen-handoff",
+  )
+  if (
+    handoffModule.manifest.version !== "0.67.0" ||
+    handoffModule.manifest.license !== "MIT"
+  ) {
+    throw new Error(
+      `Expected pi-btw to load pi-tui-kit 0.67.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+    )
+  }
+  const { createFullscreenHandoff } = await import(
+    pathToFileURL(handoffModule.file).href
+  )
+  let idleChildCreated = false
+  const idleParent = {
+    terminal: {},
+    stop() {
+      throw new Error("idle parent stopped")
+    },
+    start() {
+      throw new Error("idle parent started")
+    },
+    renderNow() {},
+  }
+  const idleHandoff = createFullscreenHandoff(idleParent, {
+    isCurrent: () => false,
+  })
+  const idleChild = await idleHandoff.enter(() => {
+    idleChildCreated = true
+    return { start() {}, stop() {} }
+  })
+  const handoffEvents = []
+  const handoffParent = {
+    terminal: {
+      async drainInput() {
+        handoffEvents.push("drain")
+      },
+    },
+    stop() {
+      handoffEvents.push("parent-stop")
+    },
+    start() {
+      handoffEvents.push("parent-start")
+    },
+    renderNow() {
+      handoffEvents.push("parent-render")
+    },
+  }
+  const handoff = createFullscreenHandoff(handoffParent, {
+    isCurrent: () => true,
+  })
+  const handoffChild = await handoff.enter(() => {
+    handoffEvents.push("create")
+    return {
+      start() {
+        handoffEvents.push("child-start")
+      },
+      stop() {
+        handoffEvents.push("child-stop")
+      },
+    }
+  })
+  await handoff.restore()
+  if (
+    idleChild !== undefined ||
+    idleChildCreated ||
+    !handoffChild ||
+    JSON.stringify(handoffEvents) !==
+      JSON.stringify([
+        "drain",
+        "parent-stop",
+        "create",
+        "child-start",
+        "drain",
+        "child-stop",
+        "parent-start",
+        "parent-render",
+      ])
+  ) {
+    throw new Error(
+      "pi-tui-kit fullscreen handoff did not transfer and restore one terminal",
     )
   }
 

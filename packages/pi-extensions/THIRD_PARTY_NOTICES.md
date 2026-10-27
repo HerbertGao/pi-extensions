@@ -36,7 +36,7 @@ THE SOFTWARE.
 
 ## `@narumitw/pi-caffeinate`
 
-The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.12 under its original MIT license:
+The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.13 under its original MIT license:
 
 MIT License
 
