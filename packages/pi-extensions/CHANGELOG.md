@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.15
+
+### Patch Changes
+
+- [#322](https://github.com/HerbertGao/pi-extensions/pull/322) [`1f43deb`](https://github.com/HerbertGao/pi-extensions/commit/1f43deb475b8271562daff95b0c37408ba98b5ed) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pinned companions to pi-btw 0.63.1, pi-caffeinate 0.49.13, and pi-web-access 0.45.0. pi-btw opens its side workspace through the pi-tui-kit fullscreen handoff and does not start that UI after the flow is already disposed. pi-caffeinate requires dbus-native ^0.16.2 so a Bun D-Bus reader thread can be unreferenced. Web Access keeps field extraction, 9router, and plain HTTP gateways off unless configured. An unknown search provider name now fails instead of falling back to automatic selection, and DuckDuckGo searches stay spaced apart after a bot check.
+
 ## 2026.10.14
 
 ### Patch Changes
