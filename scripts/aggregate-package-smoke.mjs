@@ -1130,7 +1130,8 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       `Expected promoted dbus-native dependency ${expectedDbusRange}, got ${sourceManifest.dependencies["dbus-native"]}`,
     )
   }
-  const dbusRoot = join(packageRoot, "node_modules", "dbus-native")
+  const aggregateRequire = createRequire(join(packageRoot, "package.json"))
+  const dbusRoot = dirname(aggregateRequire.resolve("dbus-native"))
   const dbusManifestPath = join(dbusRoot, "package.json")
   const dbusManifest = parseJson(
     await readFile(dbusManifestPath, "utf8"),
@@ -1526,14 +1527,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
 
   const { createFullscreenHandoff } = await import(
     pathToFileURL(
-      join(
-        packageRoot,
-        "node_modules",
-        "@narumitw",
-        "pi-tui-kit",
-        "dist",
-        "fullscreen-handoff.js",
-      ),
+      aggregateRequire.resolve("@narumitw/pi-tui-kit/fullscreen-handoff"),
     ).href
   )
   let idleChildCreated = false
