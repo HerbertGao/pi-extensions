@@ -1030,34 +1030,36 @@ async function assertNewReleaseFeatures({
       minIntervalMs: 0,
       timeoutMs: 50,
     })
-    const duckduckgoTimeoutError = await new Promise((resolve, reject) => {
-      const watchdog = setTimeout(
-        () => reject(new Error("DuckDuckGo timeout probe hung")),
-        1_000,
-      )
-      duckduckgoTimeout
-        .run(
-          (signal) =>
-            new Promise((_resolve, rejectOperation) => {
-              const fail = () => rejectOperation(new Error("Aborted"))
-              if (signal.aborted) {
-                fail()
-                return
-              }
-              signal.addEventListener("abort", fail)
-            }),
+    const duckduckgoTimeoutError = await new Promise(
+      (finishTimeout, failTimeout) => {
+        const watchdog = setTimeout(
+          () => failTimeout(new Error("DuckDuckGo timeout probe hung")),
+          1_000,
         )
-        .then(
-          () => {
-            clearTimeout(watchdog)
-            reject(new Error("DuckDuckGo timeout probe resolved"))
-          },
-          (error) => {
-            clearTimeout(watchdog)
-            resolve(error)
-          },
-        )
-    })
+        duckduckgoTimeout
+          .run(
+            (signal) =>
+              new Promise((_resolveOperation, rejectOperation) => {
+                const fail = () => rejectOperation(new Error("Aborted"))
+                if (signal.aborted) {
+                  fail()
+                  return
+                }
+                signal.addEventListener("abort", fail)
+              }),
+          )
+          .then(
+            () => {
+              clearTimeout(watchdog)
+              failTimeout(new Error("DuckDuckGo timeout probe resolved"))
+            },
+            (error) => {
+              clearTimeout(watchdog)
+              finishTimeout(error)
+            },
+          )
+      },
+    )
     assert.match(
       duckduckgoTimeoutError instanceof Error
         ? duckduckgoTimeoutError.message
