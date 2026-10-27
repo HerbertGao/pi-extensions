@@ -893,40 +893,40 @@ async function assertNewReleaseFeatures({
           body: { engine: "google_search", q: "xcrawl smoke" },
         },
       ])
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("ninerouter"),
+        false,
+        "9router must remain explicit-only",
+      )
+      assert.equal(
+        searchProvider.parseProviderArgument("ninerouter"),
+        "ninerouter",
+      )
+      assert.deepEqual(searchProvider.parseProviderArgument("brave,exa"), [
+        "brave",
+        "exa",
+      ])
+      assert.throws(
+        () => searchProvider.parseProviderArgument("not-a-provider"),
+        /Unknown search provider "not-a-provider"[\s\S]*brave/,
+      )
+      assert.equal(
+        searchProvider.normalizeSearchProviderSelection("not-a-provider"),
+        "auto",
+      )
+      assert.throws(
+        () =>
+          searchProvider.validateSearchModelOverride(undefined, "gpt-6-luna"),
+        /model requires one explicit provider/,
+      )
+      assert.equal(
+        searchProvider.validateSearchModelOverride("openai", "gpt-6-luna"),
+        "gpt-6-luna",
+      )
+      assert.equal(searchProvider.getConfiguredSearchRouting(), undefined)
     } finally {
       globalThis.fetch = originalFetch
     }
-
-    assert.equal(
-      searchProvider.ALL_SEARCH_PROVIDERS.includes("ninerouter"),
-      false,
-      "9router must remain explicit-only",
-    )
-    assert.equal(
-      searchProvider.parseProviderArgument("ninerouter"),
-      "ninerouter",
-    )
-    assert.deepEqual(searchProvider.parseProviderArgument("brave,exa"), [
-      "brave",
-      "exa",
-    ])
-    assert.throws(
-      () => searchProvider.parseProviderArgument("not-a-provider"),
-      /Unknown search provider "not-a-provider"[\s\S]*brave/,
-    )
-    assert.equal(
-      searchProvider.normalizeSearchProviderSelection("not-a-provider"),
-      "auto",
-    )
-    assert.throws(
-      () => searchProvider.validateSearchModelOverride(undefined, "gpt-6-luna"),
-      /model requires one explicit provider/,
-    )
-    assert.equal(
-      searchProvider.validateSearchModelOverride("openai", "gpt-6-luna"),
-      "gpt-6-luna",
-    )
-    assert.equal(searchProvider.getConfiguredSearchRouting(), undefined)
 
     const webToolCore = await jiti.import(
       join(dirname(webAccessEntry), "web-tool-core.ts"),
