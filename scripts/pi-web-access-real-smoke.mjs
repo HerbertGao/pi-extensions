@@ -897,6 +897,256 @@ async function assertNewReleaseFeatures({
       globalThis.fetch = originalFetch
     }
 
+    assert.equal(
+      searchProvider.ALL_SEARCH_PROVIDERS.includes("ninerouter"),
+      false,
+      "9router must remain explicit-only",
+    )
+    assert.equal(
+      searchProvider.parseProviderArgument("ninerouter"),
+      "ninerouter",
+    )
+    assert.deepEqual(searchProvider.parseProviderArgument("brave,exa"), [
+      "brave",
+      "exa",
+    ])
+    assert.throws(
+      () => searchProvider.parseProviderArgument("not-a-provider"),
+      /Unknown search provider "not-a-provider"[\s\S]*brave/,
+    )
+    assert.equal(
+      searchProvider.normalizeSearchProviderSelection("not-a-provider"),
+      "auto",
+    )
+    assert.throws(
+      () => searchProvider.validateSearchModelOverride(undefined, "gpt-6-luna"),
+      /model requires one explicit provider/,
+    )
+    assert.equal(
+      searchProvider.validateSearchModelOverride("openai", "gpt-6-luna"),
+      "gpt-6-luna",
+    )
+    assert.equal(searchProvider.getConfiguredSearchRouting(), undefined)
+
+    const webToolCore = await jiti.import(
+      join(dirname(webAccessEntry), "web-tool-core.ts"),
+    )
+    const defaultFetchModes = webToolCore.resolveFetchModeConfig({})
+    assert.deepEqual(defaultFetchModes.allowedModes, [
+      "readable",
+      "raw",
+      "answer",
+    ])
+    assert.equal(defaultFetchModes.allowedModes.includes("extract"), false)
+    assert.deepEqual(
+      webToolCore.resolveFetchModeConfig({
+        fetch: { allowedModes: ["readable", "extract"] },
+      }).allowedModes,
+      ["readable", "extract"],
+    )
+    assert.throws(
+      () =>
+        webToolCore.resolveFetchModeConfig({
+          fetch: {
+            defaultMode: "extract",
+            allowedModes: ["readable", "extract"],
+          },
+        }),
+      /cannot be "extract"/,
+    )
+
+    const utils = await jiti.import(join(dirname(webAccessEntry), "utils.ts"))
+    const previousAllowHttp = process.env.PI_WEB_ACCESS_ALLOW_HTTP_BASE_URLS
+    delete process.env.PI_WEB_ACCESS_ALLOW_HTTP_BASE_URLS
+    try {
+      assert.throws(
+        () =>
+          utils.resolveApiBaseUrl({
+            configKey: "braveBaseUrl",
+            configuredValue: "http://gateway.internal/brave",
+            defaultValue: "https://api.search.brave.com",
+            environmentKey: "BRAVE_BASE_URL",
+          }),
+        /braveBaseUrl in .* must be an absolute HTTPS URL/,
+      )
+      assert.equal(
+        utils.resolveApiBaseUrl({
+          configKey: "braveBaseUrl",
+          configuredValue: "http://127.0.0.1:8080/brave/",
+          defaultValue: "https://api.search.brave.com",
+          environmentKey: "BRAVE_BASE_URL",
+        }),
+        "http://127.0.0.1:8080/brave",
+      )
+    } finally {
+      if (previousAllowHttp === undefined) {
+        delete process.env.PI_WEB_ACCESS_ALLOW_HTTP_BASE_URLS
+      } else {
+        process.env.PI_WEB_ACCESS_ALLOW_HTTP_BASE_URLS = previousAllowHttp
+      }
+    }
+
+    const duckduckgoLimit = await jiti.import(
+      join(dirname(webAccessEntry), "duckduckgo-rate-limit.ts"),
+    )
+    let duckduckgoNow = 1_000
+    const duckduckgoSleeps = []
+    const duckduckgoLimiter = new duckduckgoLimit.DuckDuckGoRateLimit({
+      now: () => duckduckgoNow,
+      sleep: async (ms) => {
+        duckduckgoSleeps.push(ms)
+        duckduckgoNow += ms
+      },
+      minIntervalMs: 2_000,
+      cooldownMs: 5_000,
+      timeoutMs: 30_000,
+    })
+    const duckduckgoStarts = []
+    await duckduckgoLimiter.run(async () => {
+      duckduckgoStarts.push(duckduckgoNow)
+    })
+    await duckduckgoLimiter.run(async () => {
+      duckduckgoStarts.push(duckduckgoNow)
+    })
+    assert.deepEqual(duckduckgoSleeps, [2_000])
+    assert.deepEqual(duckduckgoStarts, [1_000, 3_000])
+    await assert.rejects(
+      duckduckgoLimiter.run(async () => {
+        throw new duckduckgoLimit.DuckDuckGoBotCheckError(202)
+      }),
+      /HTTP 202, rate limited/,
+    )
+    let duckduckgoRetried = false
+    await assert.rejects(
+      duckduckgoLimiter.run(async () => {
+        duckduckgoRetried = true
+      }),
+      /not retrying for .*rate limited/,
+    )
+    assert.equal(duckduckgoRetried, false)
+    const duckduckgoTimeout = new duckduckgoLimit.DuckDuckGoRateLimit({
+      now: () => 0,
+      sleep: async () => {},
+      minIntervalMs: 0,
+      timeoutMs: 50,
+    })
+    const duckduckgoTimeoutError = await new Promise((resolve, reject) => {
+      const watchdog = setTimeout(
+        () => reject(new Error("DuckDuckGo timeout probe hung")),
+        1_000,
+      )
+      duckduckgoTimeout
+        .run(
+          (signal) =>
+            new Promise((_resolve, rejectOperation) => {
+              const fail = () => rejectOperation(new Error("Aborted"))
+              if (signal.aborted) {
+                fail()
+                return
+              }
+              signal.addEventListener("abort", fail)
+            }),
+        )
+        .then(
+          () => {
+            clearTimeout(watchdog)
+            reject(new Error("DuckDuckGo timeout probe resolved"))
+          },
+          (error) => {
+            clearTimeout(watchdog)
+            resolve(error)
+          },
+        )
+    })
+    assert.match(
+      duckduckgoTimeoutError instanceof Error
+        ? duckduckgoTimeoutError.message
+        : String(duckduckgoTimeoutError),
+      /DuckDuckGo request timed out after/,
+    )
+
+    const sourceCheck = await jiti.import(
+      join(dirname(webAccessEntry), "source-check.ts"),
+    )
+    const passages = sourceCheck.buildPassages(
+      [
+        {
+          rank: 1,
+          url: "https://docs.example/page",
+          title: "Docs",
+          snippet: "Weather snippet that should not replace the claim",
+          quality: "unknown",
+        },
+      ],
+      [
+        {
+          url: "https://docs.example/page",
+          title: "Docs",
+          content:
+            "The documented API lives at example.com today. Unrelated weather follows.",
+          error: null,
+        },
+      ],
+      "documented API",
+    )
+    assert.equal(
+      passages.find((passage) => passage.text.includes("example.com"))?.text,
+      "The documented API lives at example.com today.",
+    )
+
+    const upgradeNotice = await jiti.import(
+      join(dirname(webAccessEntry), "upgrade-notice.ts"),
+    )
+    const upgradeStateDir = join(agentDir, "upgrade-notice-smoke")
+    const upgradeChangelog = join(dirname(webAccessEntry), "CHANGELOG.md")
+    const upgradeNotices = []
+    const upgradeContext = {
+      hasUI: true,
+      ui: {
+        notify(message) {
+          upgradeNotices.push(message)
+        },
+      },
+    }
+    await upgradeNotice.showUpgradeNotice(
+      upgradeContext,
+      upgradeStateDir,
+      upgradeChangelog,
+      "0.45.0",
+    )
+    assert.deepEqual(upgradeNotices, [])
+    await writeFile(
+      join(upgradeStateDir, "last-seen-version.json"),
+      JSON.stringify({ version: "0.44.0" }),
+    )
+    await upgradeNotice.showUpgradeNotice(
+      upgradeContext,
+      upgradeStateDir,
+      upgradeChangelog,
+      "0.45.0",
+    )
+    assert.equal(upgradeNotices.length, 1)
+    assert.match(upgradeNotices[0], /updated from 0\.44\.0 to 0\.45\.0/)
+    assert.match(upgradeNotices[0], /Pull exact facts/)
+    await upgradeNotice.showUpgradeNotice(
+      upgradeContext,
+      upgradeStateDir,
+      upgradeChangelog,
+      "0.45.0",
+    )
+    assert.equal(upgradeNotices.length, 1)
+    await writeFile(
+      join(upgradeStateDir, "last-seen-version.json"),
+      JSON.stringify({ version: "0.46.0" }),
+    )
+    await upgradeNotice.showUpgradeNotice(
+      upgradeContext,
+      upgradeStateDir,
+      upgradeChangelog,
+      "0.45.0",
+    )
+    assert.equal(upgradeNotices.length, 1)
+
     const extract = await jiti.import(
       join(dirname(webAccessEntry), "extract.ts"),
     )
