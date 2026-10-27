@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
+import { existsSync, readFileSync } from "node:fs"
 import {
   mkdir,
   mkdtemp,
@@ -48,6 +49,27 @@ async function pathExists(path) {
   } catch (error) {
     if (error?.code === "ENOENT") return false
     throw error
+  }
+}
+
+function resolveBundledImport(parentRequire, packageName, subpath) {
+  const manifestPath = (parentRequire.resolve.paths(packageName) ?? [])
+    .map((dir) => join(dir, ...packageName.split("/"), "package.json"))
+    .find((candidate) => existsSync(candidate))
+  if (!manifestPath) {
+    throw new Error(`Cannot resolve ${packageName} from the bundled package`)
+  }
+  const manifest = parseJson(readFileSync(manifestPath, "utf8"), manifestPath)
+  const exported = manifest.exports?.[subpath]
+  const target = typeof exported === "string" ? exported : exported?.import
+  if (typeof target !== "string" || !target.startsWith(".")) {
+    throw new Error(
+      `${packageName} ${manifest.version} does not import ${subpath}`,
+    )
+  }
+  return {
+    manifest,
+    file: join(dirname(manifestPath), target),
   }
 }
 
@@ -1525,10 +1547,21 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     )
   }
 
+  const handoffModule = resolveBundledImport(
+    btwRequire,
+    "@narumitw/pi-tui-kit",
+    "./fullscreen-handoff",
+  )
+  if (
+    handoffModule.manifest.version !== "0.67.0" ||
+    handoffModule.manifest.license !== "MIT"
+  ) {
+    throw new Error(
+      `Expected pi-btw to load pi-tui-kit 0.67.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+    )
+  }
   const { createFullscreenHandoff } = await import(
-    pathToFileURL(
-      aggregateRequire.resolve("@narumitw/pi-tui-kit/fullscreen-handoff"),
-    ).href
+    pathToFileURL(handoffModule.file).href
   )
   let idleChildCreated = false
   const idleParent = {
