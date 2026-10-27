@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 import test from "node:test"
 
@@ -111,4 +111,56 @@ test("only the gated release job retains publishing permissions and commands", (
     ),
   )
   assert.ok(publish.steps.every((step) => step.run !== "bun run check"))
+})
+
+test("reviewed upstream upgrade is retired and the monitor only syncs issues", () => {
+  const active = readdirSync(new URL("../.github/workflows/", import.meta.url))
+  assert.deepEqual(
+    active.filter((name) => name.includes("upstream-upgrade")),
+    [],
+  )
+
+  const archived = readdirSync(
+    new URL(
+      "../.github/workflows-disabled/reviewed-upstream-upgrade/",
+      import.meta.url,
+    ),
+  )
+  for (const name of [
+    "README.md",
+    "upstream-upgrade.md",
+    "upstream-upgrade.lock.yml",
+    "upstream-upgrade-agy.md",
+    "upstream-upgrade-agy.lock.yml",
+  ]) {
+    assert.ok(archived.includes(name), name)
+  }
+
+  const monitor = workflow("upstream-monitor")
+  assert.deepEqual(monitor.permissions, {
+    contents: "read",
+    issues: "write",
+  })
+  assert.deepEqual(monitor.on.schedule, [{ cron: "17 1 * * *" }])
+  assert.ok(Object.hasOwn(monitor.on, "workflow_dispatch"))
+  assert.equal(monitor.jobs.check.env, undefined)
+  const runs = monitor.jobs.check.steps
+    .map((step) => step.run)
+    .filter((run) => run !== undefined)
+  assert.equal(runs.length, 1)
+  assert.match(runs[0], /node scripts\/check-upstreams\.mjs --sync-issue/)
+
+  const source = readFileSync(
+    new URL("../.github/workflows/upstream-monitor.yml", import.meta.url),
+    "utf8",
+  )
+  for (const forbidden of [
+    "UPGRADE_DISPATCH",
+    "workflow run",
+    "COPILOT_GITHUB_TOKEN",
+    "GH_AW_CI_TRIGGER_TOKEN",
+    "actions: write",
+  ]) {
+    assert.equal(source.includes(forbidden), false, forbidden)
+  }
 })

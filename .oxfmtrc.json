@@ -1,6 +1,7 @@
 {
   "ignorePatterns": [
     ".github/workflows/*.lock.yml",
+    ".github/workflows-disabled/**/*.lock.yml",
     "packages/pi-cc-extensions/**",
     "packages/sol-pi/**",
     ".gemini/**",
