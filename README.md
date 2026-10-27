@@ -66,7 +66,7 @@ Pi 0.85.1's native `fullscreen` TUI owns transcript scrolling and the fixed bott
 
 ## Maintenance
 
-See [`docs/maintenance.md`](docs/maintenance.md) for per-package upstream baselines, synchronization, and npm OIDC bootstrap. A daily `Upstream Monitor` workflow checks npm releases and source-repository commits, then maintains one rolling reminder Issue.
+See [`docs/maintenance.md`](docs/maintenance.md) for per-package upstream baselines, synchronization, and npm OIDC bootstrap. A daily `Upstream Monitor` workflow checks npm releases and source-repository commits, then maintains one rolling reminder Issue. Cursor cloud agents and the Grok Bot routine turn those Issues into pull requests. This repository does not run a Reviewed Upstream Upgrade workflow.
 
 ## Attribution
 
