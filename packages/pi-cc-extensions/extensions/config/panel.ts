@@ -38,7 +38,6 @@ import {
 	DIFF_INDICATOR_MODES,
 	DIFF_SPLIT_MIN_WIDTH_VALUES,
 	DIFF_VIEW_MODES,
-	EXCLUDE_RENDERER_CANDIDATES,
 	EXPANDED_INPUT_MAX_LINES_VALUES,
 	EXPANDED_OUTPUT_MAX_LINES_VALUES,
 	EXPANDED_PREVIEW_MAX_LINES_VALUES,
@@ -62,6 +61,9 @@ import {
 	type FooterGitStatsMode,
 	type FooterTokenRateMode,
 	type ScrollButtonMode,
+	isExcludedRenderer,
+	mergeExcludeRendererCandidates,
+	withExcludeRendererToggle,
 } from "./config.ts";
 
 /** renderer 注入的渲染副作用，面板自身不触碰渲染状态。 */
@@ -269,14 +271,13 @@ function buildExcludeRenderersSubmenu(
 	invalidate: () => void;
 	handleInput: (data: string) => void;
 } {
-	const candidates = [
-		...new Set([...EXCLUDE_RENDERER_CANDIDATES, ...config.excludeRenderers]),
-	].sort((a, b) => a.localeCompare(b));
+	// 候选与名单按大小写不敏感合并：存过 Agent 时不再多出一行 agent。
+	const candidates = mergeExcludeRendererCandidates(config.excludeRenderers);
 	const items = candidates.map((name) => ({
 		id: name,
 		label: name,
 		description: `Use Pi native renderer for ${name} instead of Claude Code styling.`,
-		currentValue: config.excludeRenderers.includes(name) ? "exclude" : "style",
+		currentValue: isExcludedRenderer(name, config.excludeRenderers) ? "exclude" : "style",
 		values: ["style", "exclude"],
 	}));
 	const list = new SettingsList(
@@ -284,10 +285,13 @@ function buildExcludeRenderersSubmenu(
 		Math.min(8, Math.max(4, items.length)),
 		getSettingsListTheme(),
 		(id: string, value: string) => {
-			const excluded = new Set(config.excludeRenderers);
-			if (value === "exclude") excluded.add(id);
-			else excluded.delete(id);
-			updateConfig({ excludeRenderers: [...excluded].sort((a, b) => a.localeCompare(b)) });
+			updateConfig({
+				excludeRenderers: withExcludeRendererToggle(
+					config.excludeRenderers,
+					id,
+					value === "exclude",
+				),
+			});
 			onLiveChange();
 		},
 		() => onClose(),

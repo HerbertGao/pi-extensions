@@ -46,7 +46,7 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 {
   // style
   "mode": "on", // on / compact / off
-  "excludeRenderers": [], // tools keeping the native renderer; Agent always keeps its dedicated renderer
+  "excludeRenderers": [], // tools keeping the native renderer, matched case-insensitively; Agent always keeps its dedicated renderer
 
   // features
   "enableSessionReference": true,          // @ session references
@@ -126,7 +126,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.11 (MIT), upstream baseline [`4697b4a`](https://github.com/minuque/pi-cc-extensions/commit/4697b4ac2cc28ee89bb9c37f1021e91075bfd94c), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.12 (MIT), upstream baseline [`90957cd`](https://github.com/minuque/pi-cc-extensions/commit/90957cd445403bc493e8aaee2231e1932ac26d46), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

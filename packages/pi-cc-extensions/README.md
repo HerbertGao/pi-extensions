@@ -46,7 +46,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 {
   // style
   "mode": "on",                            // on / compact / off
-  "excludeRenderers": [],                  // 走原生渲染的工具名；Agent 始终保留专用渲染器
+  "excludeRenderers": [],                  // 走原生渲染的工具名，匹配忽略大小写；Agent 始终保留专用渲染器
 
   // features
   "enableSessionReference": true,          // @ session 引用
@@ -125,7 +125,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.11（MIT），上游基线 [`4697b4a`](https://github.com/minuque/pi-cc-extensions/commit/4697b4ac2cc28ee89bb9c37f1021e91075bfd94c)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.12（MIT），上游基线 [`90957cd`](https://github.com/minuque/pi-cc-extensions/commit/90957cd445403bc493e8aaee2231e1932ac26d46)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

@@ -9,7 +9,13 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Text, visibleWidth } from "@earendil-works/pi-tui";
 type AnyToolDefinition = ToolDefinition<any, any, any>;
-import { config, EXCLUDE_RENDERER_CANDIDATES } from "../extensions/config/config.ts";
+import {
+	config,
+	EXCLUDE_RENDERER_CANDIDATES,
+	isExcludedRenderer,
+	mergeExcludeRendererCandidates,
+	withExcludeRendererToggle,
+} from "../extensions/config/config.ts";
 import { installDefaultMode } from "../extensions/renderer/default-mode.ts";
 import { WriteExecutionMetadataStore } from "../extensions/renderer/tool/diff/index.ts";
 import claudeCodeStyleExtension, {
@@ -565,17 +571,47 @@ test("ccstyle is the default renderer and exclusions preserve dedicated renderer
 		false,
 	);
 	assert.equal(preservesOriginalRenderer(undefined, "Agent"), false);
-});
-
-test("Agent exclude candidate uses live tool name so toggle restores native renderer", () => {
-	assert.ok(
-		EXCLUDE_RENDERER_CANDIDATES.includes("Agent"),
-		"settings candidate must match pi-subagents live tool name",
+	// 设置面板候选是 "agent"；pi-subagents 运行时工具名是 "Agent"。
+	assert.equal(isExcludedRenderer("Agent", ["agent"]), true);
+	assert.equal(isExcludedRenderer("agent", ["Agent"]), true);
+	assert.equal(
+		preservesOriginalRenderer(
+			{ name: "Agent", renderShell: "self", renderCall() {}, renderResult() {} },
+			"Agent",
+			undefined,
+			["agent"],
+		),
+		true,
 	);
 	assert.equal(
-		EXCLUDE_RENDERER_CANDIDATES.includes("agent"),
+		preservesOriginalRenderer(
+			{ name: "Agent", renderShell: "self", renderCall() {}, renderResult() {} },
+			"Agent",
+			undefined,
+			["bash"],
+		),
 		false,
-		"lowercase agent would miss case-sensitive excludeRenderers.includes(toolName)",
+	);
+	assert.deepEqual(withExcludeRendererToggle(["Agent", "bash"], "agent", true), ["agent", "bash"]);
+	assert.deepEqual(withExcludeRendererToggle(["Agent", "bash"], "agent", false), ["bash"]);
+	// 面板候选按大小写不敏感去重：名单存过 Agent 时 agent 只留一行（候选在前，保留小写写法）。
+	assert.deepEqual(
+		mergeExcludeRendererCandidates(["Agent"]).filter((name) => name.toLowerCase() === "agent"),
+		["agent"],
+	);
+	assert.deepEqual(
+		mergeExcludeRendererCandidates(["bash"]),
+		[...EXCLUDE_RENDERER_CANDIDATES].sort((a, b) => a.localeCompare(b)),
+	);
+	assert.equal(mergeExcludeRendererCandidates(["Custom"]).includes("Custom"), true);
+});
+
+test("stored excludeRenderers names match the live Agent tool regardless of case", () => {
+	assert.equal(EXCLUDE_RENDERER_CANDIDATES.includes("agent"), true);
+	assert.equal(
+		EXCLUDE_RENDERER_CANDIDATES.includes("Agent"),
+		false,
+		"the settings candidate keeps the lowercase spelling",
 	);
 
 	const agentDefinition = {
@@ -584,10 +620,10 @@ test("Agent exclude candidate uses live tool name so toggle restores native rend
 		renderCall() {},
 		renderResult() {},
 	};
-	// Settings panel stores the candidate id as-is; live toolName is "Agent".
 	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["Agent"]), true);
-	// Regression: previous lowercase candidate never matched the live name.
-	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["agent"]), false);
+	// The case-sensitive miss is gone: a lowercase stored name excludes the live tool.
+	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["agent"]), true);
+	assert.equal(preservesOriginalRenderer(agentDefinition, "Agent", undefined, ["bash"]), false);
 });
 
 test("excluding Agent keeps the dedicated renderer instead of ccstyle wrap", async () => {
