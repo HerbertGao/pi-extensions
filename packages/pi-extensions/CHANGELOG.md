@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.16
+
+### Patch Changes
+
+- [#326](https://github.com/HerbertGao/pi-extensions/pull/326) [`eb63524`](https://github.com/HerbertGao/pi-extensions/commit/eb63524cdff6e93b681cfa317c3b52dbf5b5566a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Resolve dbus-native to 0.16.3. Closing a D-Bus connection whose socket is already gone stops a pending reconnect, and a failed Hello tears the transport down instead of throwing from the reply callback.
+
+- [#326](https://github.com/HerbertGao/pi-extensions/pull/326) [`eb63524`](https://github.com/HerbertGao/pi-extensions/commit/eb63524cdff6e93b681cfa317c3b52dbf5b5566a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-lens 4.4.6, pi-provider-qoder 0.6.6, and pi-typesafe 0.13.1. pi-lens refuses a workspace edit through a dangling symlink and drops the stale nursery rule from its fallback Biome config. Qoder reports a queued model-busy limit with its wait. TypeSafe replays a judge response body under Bun so the result stays readable.
+
+- Updated dependencies [[`eb63524`](https://github.com/HerbertGao/pi-extensions/commit/eb63524cdff6e93b681cfa317c3b52dbf5b5566a)]:
+  - @herbertgao/pi-cc-extensions@1.0.11
+
 ## 2026.10.15
 
 ### Patch Changes
