@@ -8,6 +8,7 @@ import {
   readdir,
   rm,
   stat,
+  symlink,
   writeFile,
 } from "node:fs/promises"
 import { createRequire } from "node:module"
@@ -40,6 +41,21 @@ const npmEnv = {
         https_proxy: proxy,
       }
     : {}),
+}
+
+function lensWorkspaceCreate(filePath) {
+  return {
+    documentChanges: [{ kind: "create", uri: pathToFileURL(filePath).href }],
+  }
+}
+
+function qoderBusyBody(queue) {
+  return {
+    message: JSON.stringify({
+      code: "10605",
+      message: JSON.stringify(queue),
+    }),
+  }
 }
 
 async function pathExists(path) {
@@ -432,7 +448,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   evaluateAstGrepRules, detectFileKind, FactStore, getFactStoreEvictionReporter,
   setFactStoreEvictionReporter, registerSessionRoot, isOutsideAllSessionRoots,
   shouldInitializeSessionRoot, clearSessionRoots, mergeInstanceRoots,
-  getLSPService, resetLSPService };
+  getLSPService, resetLSPService, validateWorkspaceEdit };
 `
   const lensProbe = await createLensJiti(lensEntry, {
     moduleCache: false,
@@ -532,6 +548,50 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error("pi-lens flagged a parameterized SQL execute")
   }
+
+  const lensBiomeConfigPath = join(lensRoot, "config/biome/core.jsonc")
+  const lensBiomeConfig = await readFile(lensBiomeConfigPath, "utf8")
+  if (lensBiomeConfig.includes('"useSortedClasses"')) {
+    throw new Error(
+      "pi-lens fallback Biome config still names nursery useSortedClasses",
+    )
+  }
+  const lensBiomeRules = JSON.parse(
+    lensBiomeConfig
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "")
+      .replace(/,(\s*[}\]])/g, "$1"),
+  ).linter.rules
+  if (Object.hasOwn(lensBiomeRules, "nursery")) {
+    throw new Error("pi-lens fallback Biome config still has a nursery group")
+  }
+
+  const lensWorkspace = join(stageDir, "lens-workspace-edit")
+  const lensOutside = join(stageDir, "lens-outside-target")
+  await mkdir(lensWorkspace)
+  await writeFile(lensOutside, "outside")
+  const lensEscapeLink = join(lensWorkspace, "escape-link")
+  const lensDanglingLink = join(lensWorkspace, "dangling-link")
+  await symlink(lensOutside, lensEscapeLink)
+  await symlink(join(stageDir, "lens-missing-target"), lensDanglingLink)
+  await assert.rejects(
+    lensProbe.validateWorkspaceEdit(
+      lensWorkspaceCreate(lensEscapeLink),
+      lensWorkspace,
+    ),
+    /workspace edit path escapes workspace/,
+  )
+  await assert.rejects(
+    lensProbe.validateWorkspaceEdit(
+      lensWorkspaceCreate(lensDanglingLink),
+      lensWorkspace,
+    ),
+    /workspace edit path identity is unresolvable/,
+  )
+  await lensProbe.validateWorkspaceEdit(
+    lensWorkspaceCreate(join(lensWorkspace, "inside.txt")),
+    lensWorkspace,
+  )
 
   const factStoreModule = lensProbe
   const factStoreReports = []
@@ -2366,6 +2426,56 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   )
   assert.equal(loadedQoder?.commands.has("qoder-usage"), true)
   assert.equal(loadedQoder.flags.get("qoder-credit-footer")?.default, false)
+  const { createJiti: createQoderJiti } = await import(
+    pathToFileURL(createRequire(qoderEntry).resolve("jiti"))
+  )
+  const qoderProbe = await createQoderJiti(qoderEntry, {
+    moduleCache: false,
+  }).evalModule(
+    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError };\n`,
+    { filename: qoderEntry, async: true, forceTranspile: true },
+  )
+  assert.deepEqual(
+    qoderProbe.parseModelBusyRejection(
+      qoderBusyBody({
+        isQueued: false,
+        serviceAvailable: true,
+        retryAfterSeconds: 1.2,
+      }),
+    ),
+    { kind: "ready", retryAfterMs: 1200 },
+  )
+  const queued = qoderProbe.parseModelBusyRejection(
+    qoderBusyBody({
+      isQueued: true,
+      serviceAvailable: true,
+      waitTime: 2.4,
+      queueCount: 3,
+      queueType: "standard",
+    }),
+  )
+  assert.deepEqual(queued, {
+    kind: "queued",
+    waitMs: 2400,
+    queueCount: 3,
+    queueType: "standard",
+  })
+  assert.equal(
+    qoderProbe.formatQueuedBusyError(queued).message,
+    "Qoder model is busy: request queued (10605 CALL_COUNT_LIMIT (standard), 3 ahead, ~2s wait, rate limit, retry-after-ms=2400)",
+  )
+  assert.equal(
+    qoderProbe.parseModelBusyRejection(
+      qoderBusyBody({ isQueued: true, serviceAvailable: false, waitTime: 1 }),
+    ),
+    undefined,
+  )
+  assert.equal(
+    qoderProbe.parseModelBusyRejection(
+      qoderBusyBody({ serviceAvailable: true, retryAfterSeconds: 1 }),
+    ),
+    undefined,
+  )
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),
     { moduleCache: false },
@@ -2703,6 +2813,97 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     assert.deepEqual(submissions[0].body.questions, request.questions)
     await assert.rejects(client.evaluate(request), /request limit reached/)
     assert.equal(submissions.length, 1)
+    const typesafeClientPath = join(typesafeRoot, "dist/client.js")
+    const { createJiti: createTypesafeJiti } = await import(
+      pathToFileURL(createRequire(typesafeClientPath).resolve("jiti"))
+    )
+    const { readableTransport } = await createTypesafeJiti(typesafeClientPath, {
+      moduleCache: false,
+    }).evalModule(
+      `${await readFile(typesafeClientPath, "utf8")}\nexport { readableTransport };\n`,
+      { filename: typesafeClientPath, async: true, forceTranspile: true },
+    )
+    const replayBody = JSON.stringify({
+      model: "jev-latest",
+      answers: { urgent: { type: "noul", noul: 0.5 } },
+      usage: { input_tokens: 1, output_tokens: 1 },
+    })
+    let replayReads = 0
+    const replayed = await readableTransport(async () => {
+      const original = new Response(replayBody, {
+        status: 201,
+        statusText: "Created",
+        headers: {
+          "content-type": "application/json",
+          "content-length": String(Buffer.byteLength(replayBody)),
+          "content-encoding": "identity",
+        },
+      })
+      const readText = original.text.bind(original)
+      original.text = async () => {
+        replayReads += 1
+        return readText()
+      }
+      return original
+    })("https://api.typesafe.ai/v1/systemone", {})
+    assert.equal(replayReads, 1)
+    assert.equal(replayed.headers.get("content-length"), null)
+    assert.equal(replayed.headers.get("content-encoding"), null)
+    assert.equal(replayed.body, null)
+    assert.equal(await replayed.text(), replayBody)
+    assert.equal(await replayed.text(), replayBody)
+    await assert.rejects(
+      readableTransport(async () => {
+        const failing = new Response(replayBody)
+        failing.text = async () => {
+          throw new Error("aborted")
+        }
+        return failing
+      })("https://api.typesafe.ai/v1/systemone", {}),
+      /aborted/,
+    )
+    const transportGateScript = join(installDir, "typesafe-transport-gate.mjs")
+    await writeFile(
+      transportGateScript,
+      `const bun = process.argv[2] === "bun"
+if (bun) process.versions.bun = "1.4.4"
+const { createTypeSafe } = await import(${JSON.stringify(pathToFileURL(join(typesafeRoot, "dist/index.js")).href)})
+const seen = []
+const body = ${JSON.stringify(replayBody)}
+class SpyResponse extends Response {
+  text() {
+    seen.push("text")
+    return super.text()
+  }
+  get body() {
+    seen.push("body")
+    return super.body
+  }
+  clone() {
+    seen.push("clone")
+    return super.clone()
+  }
+}
+const client = createTypeSafe({
+  apiKey: "offline-fixture-key",
+  maxRequests: 1,
+  fetch: async () => new SpyResponse(body, { headers: { "content-type": "application/json" } }),
+})
+const evaluation = await client.evaluate({
+  state: "offline fixture",
+  questions: { urgent: { type: "noul", instructions: "Is this urgent?" } },
+})
+if (evaluation.answers.urgent.noul !== 0.5) throw new Error("judge answer was lost")
+const trace = seen.join(",")
+if (bun) {
+  if (trace !== "text") throw new Error("Bun transport exposed the original body: " + trace)
+} else if (trace !== "clone,body,text") {
+  throw new Error("Node transport did not leave the caller response intact: " + trace)
+}
+`,
+    )
+    run(process.execPath, [transportGateScript, "node"])
+    run(process.execPath, [transportGateScript, "bun"])
     const {
       backendFromEnvironment,
       backendHost,
