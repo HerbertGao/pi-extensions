@@ -1219,9 +1219,18 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(dbusManifestPath, "utf8"),
     dbusManifestPath,
   )
-  if (dbusManifest.version !== "0.16.2" || dbusManifest.license !== "MIT") {
+  if (dbusManifest.version !== "0.16.3" || dbusManifest.license !== "MIT") {
     throw new Error(
-      `Expected promoted dbus-native 0.16.2 MIT package, got ${dbusManifest.version} ${dbusManifest.license}`,
+      `Expected promoted dbus-native 0.16.3 MIT package, got ${dbusManifest.version} ${dbusManifest.license}`,
+    )
+  }
+  const dbusBus = await readFile(join(dbusRoot, "lib", "bus.js"), "utf8")
+  if (
+    !dbusBus.includes("conn.end?.();") ||
+    !dbusBus.includes("self.connection.stream.destroy(err);")
+  ) {
+    throw new Error(
+      "Promoted dbus-native no longer stops a closed reconnect or tears down a failed Hello",
     )
   }
   const dbusTransport = await readFile(
