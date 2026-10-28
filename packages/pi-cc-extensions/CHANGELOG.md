@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.12-local.1
+
+### Patch Changes
+
+- [#326](https://github.com/HerbertGao/pi-extensions/pull/326) [`eb63524`](https://github.com/HerbertGao/pi-extensions/commit/eb63524cdff6e93b681cfa317c3b52dbf5b5566a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Match names in `excludeRenderers` without regard to case, highlight each side of a diff omission separately, and send writes through Pi's path handling so a WSL drive path lands on the real drive. A write that has already reached disk still reports success if the turn is aborted afterward.
+
 ## 1.0.11-local.1
 
 ### Minor Changes
