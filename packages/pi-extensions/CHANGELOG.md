@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.17
+
+### Patch Changes
+
+- [#331](https://github.com/HerbertGao/pi-extensions/pull/331) [`12c8680`](https://github.com/HerbertGao/pi-extensions/commit/12c86808bf7084d4fab6f90d6bac17a2531585ce) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor the official Impeccable 4.8.0 Pi skill as `@herbertgao/pi-impeccable` and include it in the aggregate package.
+
+- [#329](https://github.com/HerbertGao/pi-extensions/pull/329) [`133e2b6`](https://github.com/HerbertGao/pi-extensions/commit/133e2b68997db0a66c57307883478f9fbc8e322b) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Update pinned pi-btw to 0.63.2. Settings rows keep a clipped label or value in full under the list, and a searchable choice list shows how many results match.
+
+- Updated dependencies [[`12c8680`](https://github.com/HerbertGao/pi-extensions/commit/12c86808bf7084d4fab6f90d6bac17a2531585ce)]:
+  - @herbertgao/pi-impeccable@0.1.0
+
 ## 2026.10.16
 
 ### Patch Changes
