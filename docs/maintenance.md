@@ -12,6 +12,7 @@
 | ------------------ | -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pi-subagents`     | `tintinweb/pi-subagents`   | `85a704cb` (`0.22.0`)      | Replayed onto upstream v0.22.0. Local identity, the mention-clone tool context, and the still-open worktree/result patches remain. See "2026-10-15 issue #286 review".                                                        |
 | `pi-cc-extensions` | `minuque/pi-cc-extensions` | `90957cd4` (`1.0.12`)      | Replayed onto upstream v1.0.12. Local patches remain; regular mode does not enable mouse reporting. See "2026-10-28 issue #325 review".                                                                                       |
+| `pi-impeccable`    | `pbakaus/impeccable`       | `414603bf` (`4.8.0`)       | Vendored official Pi skill payload only. No CLI installer, browser hooks, or automatic updater; native engines remain upstream release downloads.                                                                             |
 | `sol-pi`           | `NVlabs/SoL-Pi`            | `e1a586a` (`0.1.0` source) | Last complete replay plus Pi 1.x/codemode compatibility ports through `21956803`. Compaction economics, rejection recovery, temporary evidence archives, path compatibility, and local tool/subagent safeguards are retained. |
 
 Record a new upstream commit in this table whenever a sync is accepted. Each derived package also carries canonical `x-upstream` metadata in its own `package.json`:
@@ -19,6 +20,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | Local package                  | Upstream package          | Imported version | Reviewed version | Imported commit |
 | ------------------------------ | ------------------------- | ---------------- | ---------------- | --------------- |
 | `@herbertgao/pi-cc-extensions` | `pi-cc-extensions`        | `1.0.12`         | `1.0.12`         | `90957cd44540`  |
+| `@herbertgao/pi-impeccable`    | `impeccable`              | `4.8.0`          | `4.8.0`          | `414603bf14c7`  |
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.22.0`         | `0.22.0`         | `85a704cb8f35`  |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
@@ -28,7 +30,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 Imported forks and companions are not all reviewed from GitHub commits.
 
-- If the upstream publishes to npm, monitor that npm version only. Do not import or flag unpublished GitHub commits. `pi-cc-extensions`, `pi-subagents`, Tifan packages, and `pi-antigravity` are in this group. Their `upstreams.json` entries use `"watch": "npm"`.
+- If the upstream publishes to npm, monitor that npm version only. Do not import or flag unpublished GitHub commits. `pi-cc-extensions`, `pi-subagents`, `impeccable`, Tifan packages, and `pi-antigravity` are in this group. Their `upstreams.json` entries use `"watch": "npm"`.
 - If the upstream does not publish to npm but publishes GitHub releases or tags, monitor that release or tag. No current source uses this channel, so the monitor does not fetch releases yet.
 - If the upstream publishes neither, review GitHub source commits. `NVlabs/SoL-Pi` is the current case and uses `"watch": "commits"`.
 

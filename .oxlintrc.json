@@ -3,7 +3,8 @@
   "ignorePatterns": [
     "packages/pi-cc-extensions/**",
     "packages/pi-subagents/**",
-    "packages/sol-pi/**"
+    "packages/sol-pi/**",
+    "packages/pi-impeccable/skills/impeccable/**"
   ],
   "categories": {
     "correctness": "error",

@@ -73,6 +73,7 @@
         "@herbertgao/pi-agency": "0.1.2",
         "@herbertgao/pi-bark": "0.2.1",
         "@herbertgao/pi-cc-extensions": "1.0.12-local.1",
+        "@herbertgao/pi-impeccable": "0.0.0",
         "@herbertgao/pi-subagents": "0.22.0-local.2",
         "@herbertgao/sol-pi": "0.4.2",
         "@juicesharp/rpiv-ask-user-question": "2.15.0",
@@ -130,6 +131,10 @@
         "@sinclair/typebox": "*",
         "typebox": "*",
       },
+    },
+    "packages/pi-impeccable": {
+      "name": "@herbertgao/pi-impeccable",
+      "version": "0.0.0",
     },
     "packages/pi-subagents": {
       "name": "@herbertgao/pi-subagents",
@@ -360,6 +365,8 @@
     "@herbertgao/pi-cc-extensions": ["@herbertgao/pi-cc-extensions@workspace:packages/pi-cc-extensions"],
 
     "@herbertgao/pi-extensions": ["@herbertgao/pi-extensions@workspace:packages/pi-extensions"],
+
+    "@herbertgao/pi-impeccable": ["@herbertgao/pi-impeccable@workspace:packages/pi-impeccable"],
 
     "@herbertgao/pi-subagents": ["@herbertgao/pi-subagents@workspace:packages/pi-subagents"],
 

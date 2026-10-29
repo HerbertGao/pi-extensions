@@ -18,7 +18,7 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 
 ## Bundled extensions
 
-The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
+The package bundles 6 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-impeccable`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `pi-antigravity@0.11.0`
 - `pi-provider-qoder@0.6.6`
@@ -46,6 +46,8 @@ The locally customized CC package follows upstream `pi-cc-extensions@1.0.12`; So
 Antigravity `0.11.0` enriches search citations by visiting source sites by default (`ANTIGRAVITY_NO_SOURCE_ENRICH=1` disables enrichment). It refreshes a curated model catalog and upgrades the existing model cache; previously listed model IDs may disappear. Ask `2.15.0` lets other extensions in the same process answer or cancel TUI questionnaires through its event channel, without sender authentication. Its notes shortcut defaults to `n` and can be a single non-Latin character; reserved navigation keys stay on `n`. Web Access `0.45.0` keeps direct tool exposure and `toolActivation: auto` by default. Linkup, DeepSeek search and fetch, provider gateways, `toolActivation: "none"`, deferred exposure, GCE ADC, field extraction, 9router, and plain HTTP gateway URLs require explicit configuration.
 
 Ponytail `5.3.2` updates the Pi skill guidance, including how to turn it off. Its Pi extension entry is unchanged; the new Claude Code band/board hooks are not registered by this aggregate.
+
+Impeccable `4.8.0` is vendored as `@herbertgao/pi-impeccable` and loaded with `/skill:impeccable`. Its native engine downloads to `~/.impeccable` on first use after SHA-256 verification; set `IMPECCABLE_BIN` for offline or preinstalled setups. The package does not install automatic post-edit hooks, and upstream `pin`/`unpin` do not discover npm-loaded skills.
 
 ### Agency Agents
 

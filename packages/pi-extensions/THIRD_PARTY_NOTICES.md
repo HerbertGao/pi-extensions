@@ -164,3 +164,7 @@ THE SOFTWARE.
 ## `pi-provider-qoder`
 
 The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.6 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0`](https://github.com/simonsmh/pi-provider-qoder/commit/29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0).
+
+## `@herbertgao/pi-impeccable`
+
+The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.8.0` at commit `414603bf14c7a344edb466bb1f85690c77ce8b7d`, under the Apache License 2.0. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.

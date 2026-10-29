@@ -20,6 +20,12 @@
       "watch": "npm"
     },
     {
+      "name": "impeccable",
+      "repository": "https://github.com/pbakaus/impeccable",
+      "reviewedCommit": "414603bf14c7a344edb466bb1f85690c77ce8b7d",
+      "watch": "npm"
+    },
+    {
       "name": "NVlabs SoL-Pi",
       "repository": "https://github.com/NVlabs/SoL-Pi",
       "reviewedCommit": "219568034fa54ed121ede80961655e33dfb9d0e3",

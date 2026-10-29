@@ -1,0 +1,53 @@
+{
+  "name": "@herbertgao/pi-impeccable",
+  "version": "0.0.0",
+  "description": "The Impeccable design skill for Pi, vendored from the official release.",
+  "keywords": [
+    "design",
+    "frontend",
+    "impeccable",
+    "pi-package",
+    "pi-skill",
+    "ux"
+  ],
+  "homepage": "https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable#readme",
+  "bugs": {
+    "url": "https://github.com/HerbertGao/pi-extensions/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Herbert Gao",
+  "contributors": [
+    "Paul Bakaus"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HerbertGao/pi-extensions.git",
+    "directory": "packages/pi-impeccable"
+  },
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "x-upstream": {
+    "package": "impeccable",
+    "version": "4.8.0",
+    "reviewedVersion": "4.8.0",
+    "repository": "https://github.com/pbakaus/impeccable",
+    "commit": "414603bf14c7a344edb466bb1f85690c77ce8b7d"
+  }
+}

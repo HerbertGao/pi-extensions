@@ -41,6 +41,7 @@
     "@herbertgao/pi-agency": "0.1.2",
     "@herbertgao/pi-bark": "0.2.1",
     "@herbertgao/pi-cc-extensions": "1.0.12-local.1",
+    "@herbertgao/pi-impeccable": "0.0.0",
     "@herbertgao/pi-subagents": "0.22.0-local.2",
     "@herbertgao/sol-pi": "0.4.2",
     "@juicesharp/rpiv-ask-user-question": "2.15.0",
@@ -103,6 +104,7 @@
     "@herbertgao/pi-agency",
     "@herbertgao/pi-bark",
     "@herbertgao/pi-cc-extensions",
+    "@herbertgao/pi-impeccable",
     "@herbertgao/pi-subagents",
     "@herbertgao/sol-pi",
     "@juicesharp/rpiv-ask-user-question",
@@ -163,6 +165,7 @@
     ],
     "skills": [
       "./node_modules/@dietrichgebert/ponytail/skills",
+      "./node_modules/@herbertgao/pi-impeccable/skills",
       "./node_modules/pi-lens/skills"
     ]
   }

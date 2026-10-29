@@ -4,6 +4,7 @@
     ".github/workflows-disabled/**/*.lock.yml",
     "packages/pi-cc-extensions/**",
     "packages/sol-pi/**",
+    "packages/pi-impeccable/skills/impeccable/**",
     ".gemini/**",
     "packages/pi-subagents/examples/agent-tool-description.md",
     "packages/pi-subagents/test/fixtures/.pi/**"
