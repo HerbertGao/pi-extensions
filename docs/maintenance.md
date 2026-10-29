@@ -258,7 +258,7 @@ The aggregate package also pins the following npm packages under their original 
 | `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity` |
 | `@dietrichgebert/ponytail`           | `5.3.2`   | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.15.0`  | `juicesharp/rpiv-mono`       |
-| `@narumitw/pi-btw`                   | `0.63.1`  | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-btw`                   | `0.63.2`  | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.13` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
@@ -279,6 +279,12 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-provider-qoder@0.6.6` is pinned from `simonsmh/pi-provider-qoder` at git `29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. A ready model-busy response stays retryable. A queued model-busy response is reported with its wait, queue count, and queue type. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration and that queue parser without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-29 issue #328 review
+
+Release update only. SoL-Pi stays at review cursor `219568034fa5`. No imported-fork baseline moved.
+
+- BTW: **version pin** `0.63.2`. Published `dist` and `src` are byte-identical to `0.63.1` aside from the manifest. npm publishes no gitHead; provenance is the registry version and tarball integrity `sha512-oPWWViO3Tivbb0Lw15QGn0hLNDf4cdjHIbn/+gSndrAABMSaZcfM/pZswRtXPVc0qtTDsNNymyfpuaSYMZDyQQ==`. The Pi entry stays `./dist/index.ts` and the license stays MIT. Promote `@narumitw/pi-tui-kit@^0.68.0` (resolved `0.68.0`, integrity `sha512-AIPMCkgLLUg5bZj0GeM0F5wIIz+x9f73OlScEkwzSph7UMJ4ngJH3p5Ca54ebHWAGWxpeaNHNOqB+mD6yvXhDA==`, license MIT, no gitHead). `fullscreen-handoff` is unchanged. Its other dependencies stay `diff@9.0.0`, `grok-mermaid@0.2.3`, and `highlight.js@11.12.0`. Settings rows bound the label and value columns, mark clipped text with an ellipsis, and repeat the full selected label or value below the list. Choice rows keep a `✓ current` marker when both it and a label fragment fit, and repeat the full selected label below the list when the row clips it. A searchable choice list shows a muted result count. Browse rows reserve name cells before status text, and query editing still runs when a compact layout hides the search field. An empty choice label renders as `(unnamed)` instead of the raw id. New editor-status publisher, view, and collection helpers are optional library exports. They are not registered as aggregate extensions, and this pin does not import Progress, Subagents, or Herdr. Caffeinate still depends on `@narumitw/pi-tui-kit@^0.59.0` (resolved `0.59.0`); that caret does not include `0.68.0`, so it stays a separate install. Manual main-thread import and the disposed-flow handoff guard are unchanged.
 
 ### 2026-10-28 issue #325 review
 

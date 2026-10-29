@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
 import { existsSync, readFileSync } from "node:fs"
+import { stripVTControlCharacters } from "node:util"
 import {
   mkdir,
   mkdtemp,
@@ -87,6 +88,17 @@ function resolveBundledImport(parentRequire, packageName, subpath) {
     manifest,
     file: join(dirname(manifestPath), target),
   }
+}
+
+function visibleMenuLine(line) {
+  return stripVTControlCharacters(line).trimEnd()
+}
+
+function visibleMenuText(lines) {
+  return lines
+    .map(visibleMenuLine)
+    .join(" ")
+    .replace(/[ \t]+/g, " ")
 }
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
@@ -1149,7 +1161,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.1"
+  const expectedBtwVersion = "0.63.2"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1165,7 +1177,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = "^0.67.0"
+  const expectedTuiKitRange = "^0.68.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
       expectedTuiKitRange ||
@@ -1622,11 +1634,11 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "./fullscreen-handoff",
   )
   if (
-    handoffModule.manifest.version !== "0.67.0" ||
+    handoffModule.manifest.version !== "0.68.0" ||
     handoffModule.manifest.license !== "MIT"
   ) {
     throw new Error(
-      `Expected pi-btw to load pi-tui-kit 0.67.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+      `Expected pi-btw to load pi-tui-kit 0.68.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
     )
   }
   const { createFullscreenHandoff } = await import(
@@ -1700,6 +1712,122 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error(
       "pi-tui-kit fullscreen handoff did not transfer and restore one terminal",
+    )
+  }
+
+  const kitMenuModule = resolveBundledImport(
+    btwRequire,
+    "@narumitw/pi-tui-kit",
+    ".",
+  )
+  const kitTestingModule = resolveBundledImport(
+    btwRequire,
+    "@narumitw/pi-tui-kit",
+    "./testing",
+  )
+  const { defineMenu, runMenu } = await import(
+    pathToFileURL(kitMenuModule.file).href
+  )
+  const { createTuiHarness } = await import(
+    pathToFileURL(kitTestingModule.file).href
+  )
+  const longSettingLabel = "Remember thinking level changes across side threads"
+  const longSettingValue = "Same as main thread (currently high)"
+  const settingsMenu = defineMenu({
+    start: "settings",
+    screens: {
+      settings: () => ({
+        kind: "settings",
+        title: "Pi BTW Settings",
+        items: [
+          {
+            id: "thinking",
+            label: longSettingLabel,
+            currentValue: longSettingValue,
+            action: "keep",
+          },
+        ],
+      }),
+    },
+    actions: {
+      keep: async () => ({ kind: "stay" }),
+    },
+  })
+  const settingsHarness = createTuiHarness({ width: 36, rows: 24 })
+  const settingsRun = runMenu(
+    {
+      mode: "tui",
+      hasUI: true,
+      ui: { custom: settingsHarness.custom },
+    },
+    settingsMenu,
+    { getState: async () => ({}) },
+  )
+  await settingsHarness.waitForOpen()
+  const settingsText = visibleMenuText(settingsHarness.render(36))
+  settingsHarness.dispose()
+  await settingsRun
+  if (
+    !settingsText.includes("…") ||
+    !settingsText.includes(longSettingLabel) ||
+    !settingsText.includes(`Value: ${longSettingValue}`)
+  ) {
+    throw new Error(
+      "pi-btw settings rows did not keep a clipped label and value in full below the list",
+    )
+  }
+  const modelLabel = "Same as main thread with a very long model name"
+  const modelMenu = defineMenu({
+    start: "model",
+    screens: {
+      model: () => ({
+        kind: "choice",
+        title: "Pi BTW Model",
+        enableSearch: true,
+        currentItemId: "same",
+        viewportSize: 10,
+        items: [
+          { id: "same", label: modelLabel },
+          { id: "other", label: "Other model" },
+        ],
+        action: "set-model",
+      }),
+    },
+    actions: {
+      "set-model": async () => ({ kind: "stay" }),
+    },
+  })
+  const openModelMenu = async (width) => {
+    const harness = createTuiHarness({ width, rows: 24 })
+    const running = runMenu(
+      { mode: "tui", hasUI: true, ui: { custom: harness.custom } },
+      modelMenu,
+      { getState: async () => ({}) },
+    )
+    await harness.waitForOpen()
+    const lines = harness.render(width).map(visibleMenuLine)
+    harness.dispose()
+    await running
+    return lines
+  }
+  const narrowModelLines = await openModelMenu(40)
+  const wideModelLines = await openModelMenu(70)
+  const narrowModelText = visibleMenuText(narrowModelLines)
+  const wideModelText = visibleMenuText(wideModelLines)
+  const wideCurrentRow = wideModelLines.find((line) =>
+    line.includes("✓ current"),
+  )
+  if (
+    !narrowModelText.includes("2 choices") ||
+    !narrowModelText.includes("✓ current") ||
+    !narrowModelText.includes(modelLabel) ||
+    !narrowModelText.includes("…") ||
+    !wideModelText.includes("2 choices") ||
+    wideCurrentRow !== `→ ${modelLabel} ✓ current` ||
+    wideModelLines.filter((line) => line.includes(modelLabel)).length !== 1
+  ) {
+    throw new Error(
+      "pi-btw model choices did not keep the current marker and searchable result count",
     )
   }
 
@@ -3016,6 +3144,11 @@ if (bun) {
   }
   if (bundled.has("@narumitw/pi-tui-kit")) {
     throw new Error("pi-tui-kit must remain an unbundled runtime dependency")
+  }
+  if (manifest.pi.extensions.some((entry) => entry.includes("pi-tui-kit"))) {
+    throw new Error(
+      "pi-tui-kit editor status helpers must stay unregistered aggregate extensions",
+    )
   }
   if (bundled.has("undici")) {
     throw new Error("undici must remain an unbundled runtime dependency")
