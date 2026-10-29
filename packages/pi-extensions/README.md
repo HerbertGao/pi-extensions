@@ -24,7 +24,7 @@ The package bundles 5 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `pi-provider-qoder@0.6.6`
 - `@dietrichgebert/ponytail@5.3.2`
 - `@juicesharp/rpiv-ask-user-question@2.15.0`
-- `@narumitw/pi-btw@0.63.1`
+- `@narumitw/pi-btw@0.63.2`
 - `@narumitw/pi-caffeinate@0.49.13`
 - `@pi-plugins/fast-mode@0.1.14`
 - `@tifan/pi-copy-response@0.2.7`
@@ -57,7 +57,7 @@ Ponytail `5.3.2` updates the Pi skill guidance, including how to turn it off. It
 
 `@narumitw/pi-caffeinate@0.49.13` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends. Its D-Bus dependency remains on the normal socket transport under Node; Bun on Linux/macOS can use FFI and an in-process reader thread for Unix file-descriptor transport, and that thread can be unreferenced so the connection need not keep the process alive. It falls back when FFI is unavailable. No daemon or build step is added.
 
-`@narumitw/pi-btw@0.63.1` opens its side workspace through the `@narumitw/pi-tui-kit@^0.67.0` fullscreen handoff. It does not start that UI when the flow is already disposed or the parent terminal cannot be restored. Importing new main-thread context stays manual.
+`@narumitw/pi-btw@0.63.2` opens its side workspace through the `@narumitw/pi-tui-kit@^0.68.0` fullscreen handoff. It does not start that UI when the flow is already disposed or the parent terminal cannot be restored. Importing new main-thread context stays manual. Settings rows keep a clipped label or value in full under the list, and a searchable model choice shows how many results match.
 
 `clef` asks Cloudflare Clef-flash an on-demand yes/no, choice, or score and prints the questions and answers in the transcript, plus a one-line notice. It is not a permission gate. `pi-typesafe@0.13.1` provides `/typesafe` and `typesafe_evaluate` for explicit structured decisions; `/typesafe enable` or `PI_TYPESAFE_ENABLED=1` is still required for agent tool calls. The default backend remains `https://api.typesafe.ai`. `PI_TYPESAFE_BACKEND` and `PI_TYPESAFE_MODEL` select the session backend and model, and `/typesafe login` stores a key for the named backend. Daily request, token, and USD caps are opt-in. OpenRouter, Command Code, Liquid, SubQ, and a named endpoint stay explicit and use that backend's own key. The promoted SDK is `@typesafe-ai/sdk@0.7.0`. Under Bun, the judge transport reads each response body once and replays it, so the SDK can still read the result after Bun marks the original body used.
 
