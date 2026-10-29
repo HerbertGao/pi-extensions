@@ -111,5 +111,13 @@
       "package": "pi-provider-qoder",
       "repository": "https://github.com/simonsmh/pi-provider-qoder"
     }
+  ],
+  "pypi": [
+    {
+      "package": "graphifyy",
+      "repository": "https://github.com/Graphify-Labs/graphify",
+      "pin": "pins/graphifyy",
+      "watch": "pypi"
+    }
   ]
 }

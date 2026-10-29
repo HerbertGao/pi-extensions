@@ -58,7 +58,7 @@ Remove it with `graphify pi guard uninstall`. The install command is commented i
 
 ## Upstream Monitor
 
-Upstream Monitor reads `upstreams.json` and reports npm releases and GitHub commits. `graphifyy` is not an entry, and the monitor has no PyPI channel. A future `watch: pypi` value could report new PyPI releases. The schema stays `npm` and `commits` until that channel exists. Until then, a newer Graphify release is a manual edit of `pins/graphifyy`.
+`upstreams.json` registers `graphifyy` with `"watch": "pypi"`. The expected version is the requirement in [`pins/graphifyy`](../pins/graphifyy). Upstream Monitor fetches the latest PyPI release and, when it differs from that pin, adds it to the same `chore: upstream updates available` Issue used for npm companions. A PyPI query error fails the workflow and leaves the Issue unchanged unless another release was detected. GitHub commits for Graphify are not part of this watch. Adopting a release means editing the pin and re-running the bootstrap. The npm aggregate still does not vendor `graphifyy`.
 
 ## Attribution
 

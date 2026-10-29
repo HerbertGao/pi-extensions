@@ -62,7 +62,42 @@ function githubSlug(repository) {
   return `${parts[0]}/${parts[1]}`
 }
 
-function validate(manifests, monitor, aggregate) {
+const pinRequirementPattern =
+  /^([A-Za-z0-9][A-Za-z0-9._-]*)==([0-9]+\.[0-9]+\.[0-9]+(?:[.a-zA-Z0-9_+-]+)?)$/
+
+export function readPinRequirement(text, packageName) {
+  const requirements = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"))
+  if (requirements.length !== 1) {
+    throw new Error(`pin must contain one ${packageName}==X.Y.Z requirement`)
+  }
+  const match = pinRequirementPattern.exec(requirements[0])
+  if (!match) {
+    throw new Error(`pin must contain one ${packageName}==X.Y.Z requirement`)
+  }
+  if (match[1] !== packageName) {
+    throw new Error(`pin names ${match[1]}, expected ${packageName}`)
+  }
+  return match[2]
+}
+
+export function pypiReleaseUpdate(packageName, pinned, latest) {
+  if (latest === pinned) return undefined
+  return `\`${packageName}\`: PyPI is \`${latest}\` (pinned \`${pinned}\`).`
+}
+
+export function recordPypiRelease(releaseUpdates, errors, pin, latest) {
+  if (latest instanceof Error) {
+    errors.push(`pypi ${pin.package}: ${latest.message}`)
+    return
+  }
+  const update = pypiReleaseUpdate(pin.package, pin.version, latest)
+  if (update) releaseUpdates.push(update)
+}
+
+export function validate(manifests, monitor, aggregate) {
   const errors = []
   const derived = manifests
     .filter(
@@ -138,7 +173,59 @@ function validate(manifests, monitor, aggregate) {
     }
   }
 
-  return { derived, errors }
+  const pypi = []
+  if (!Array.isArray(monitor.pypi)) {
+    errors.push("upstreams.json must declare a pypi array")
+  } else {
+    const pypiNames = new Set()
+    for (const entry of monitor.pypi) {
+      if (pypiNames.has(entry.package)) {
+        errors.push(`Duplicate PyPI package ${entry.package}`)
+        continue
+      }
+      pypiNames.add(entry.package)
+      if (entry.watch !== "pypi") {
+        errors.push(`${entry.package} watch must be "pypi"`)
+      }
+      try {
+        githubSlug(entry.repository)
+      } catch (error) {
+        errors.push(error.message)
+      }
+      if (
+        aggregate.dependencies?.[entry.package] !== undefined ||
+        aggregate.bundledDependencies?.includes(entry.package)
+      ) {
+        errors.push(
+          `${entry.package} is a PyPI pin and must stay out of the npm aggregate`,
+        )
+      }
+      if (
+        typeof entry.pin !== "string" ||
+        !/^pins\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(entry.pin)
+      ) {
+        errors.push(`${entry.package} pin must be a file under pins/`)
+        continue
+      }
+      try {
+        const version = readPinRequirement(
+          readFileSync(resolve(root, entry.pin), "utf8"),
+          entry.package,
+        )
+        pypi.push({
+          package: entry.package,
+          repository: entry.repository,
+          pin: entry.pin,
+          watch: "pypi",
+          version,
+        })
+      } catch (error) {
+        errors.push(`pypi ${entry.package}: ${error.message}`)
+      }
+    }
+  }
+
+  return { derived, errors, pypi }
 }
 
 async function fetchJson(url, options = {}) {
@@ -164,6 +251,20 @@ async function latestNpmVersion(packageName) {
     throw new Error(`npm latest metadata for ${packageName} has no version`)
   }
   return metadata.version
+}
+
+export async function latestPypiVersion(packageName) {
+  const metadata = await fetchJson(
+    `https://pypi.org/pypi/${encodeURIComponent(packageName)}/json`,
+    {
+      headers: { Accept: "application/json" },
+    },
+  )
+  const version = metadata?.info?.version
+  if (typeof version !== "string" || version.trim() === "") {
+    throw new Error(`PyPI metadata for ${packageName} has no version`)
+  }
+  return version
 }
 
 function githubHeaders() {
@@ -192,6 +293,7 @@ async function latestGitHubCommit(repository) {
 function markdownReport({
   derived,
   companions,
+  pypi,
   repositories,
   releaseUpdates,
   repositoryUpdates,
@@ -232,6 +334,25 @@ function markdownReport({
     )
   }
 
+  lines.push("", "## PyPI companion pins", "")
+  if (pypi.length === 0) {
+    lines.push("No PyPI pins.")
+  } else {
+    lines.push(
+      "These stay outside the npm aggregate. Versions come from the pin file.",
+      "",
+      "| Package | Pinned version | Upstream |",
+      "| --- | --- | --- |",
+    )
+    for (const entry of pypi.toSorted((a, b) =>
+      a.package.localeCompare(b.package),
+    )) {
+      lines.push(
+        `| \`${entry.package}\` | \`${entry.version}\` | [repository](${entry.repository}) |`,
+      )
+    }
+  }
+
   lines.push("", "## Release updates", "")
   if (releaseUpdates.length === 0) {
     lines.push("No upstream releases detected.")
@@ -243,7 +364,7 @@ function markdownReport({
     "",
     "## Unreleased repository commits",
     "",
-    "npm-published repositories are omitted. Only `watch: commits` sources are compared here.",
+    "npm-published repositories and PyPI companions are omitted. Only `watch: commits` sources are compared here.",
   )
   if (repositoryUpdates.length === 0) {
     lines.push("No commits after those review cursors.")
@@ -376,12 +497,12 @@ async function main() {
   const manifests = packageManifests()
   const monitor = readJson(monitorPath)
   const aggregate = readJson(aggregatePath)
-  const { derived, errors } = validate(manifests, monitor, aggregate)
+  const { derived, errors, pypi } = validate(manifests, monitor, aggregate)
 
   if (validateOnly) {
     if (errors.length > 0) throw new Error(errors.join("\n"))
     process.stdout.write(
-      `Validated ${derived.length} derived packages and ${monitor.companions.length} companions.\n`,
+      `Validated ${derived.length} derived packages, ${monitor.companions.length} companions, and ${pypi.length} PyPI ${pypi.length === 1 ? "pin" : "pins"}.\n`,
     )
     return
   }
@@ -423,6 +544,18 @@ async function main() {
         }
       } catch (error) {
         errors.push(`npm ${entry.package}: ${error.message}`)
+      }
+      return undefined
+    }),
+  )
+
+  await Promise.all(
+    pypi.map(async (entry) => {
+      try {
+        const latest = await latestPypiVersion(entry.package)
+        recordPypiRelease(releaseUpdates, errors, entry, latest)
+      } catch (error) {
+        recordPypiRelease(releaseUpdates, errors, entry, error)
       }
       return undefined
     }),
@@ -472,6 +605,7 @@ async function main() {
   const report = markdownReport({
     derived,
     companions: companionReport,
+    pypi,
     repositories: repositoryReport,
     releaseUpdates,
     repositoryUpdates,

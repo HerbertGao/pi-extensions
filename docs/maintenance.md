@@ -24,17 +24,16 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 | `@herbertgao/pi-subagents`     | `@tintinweb/pi-subagents` | `0.22.0`         | `0.22.0`         | `85a704cb8f35`  |
 | `@herbertgao/sol-pi`           | `sol-pi`                  | `0.1.0`          | `0.1.0`          | `e1a586af0ad8`  |
 
-`upstreams.json` records repository review cursors and original-name companion repositories. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
+`upstreams.json` records repository review cursors, original-name companion repositories, and PyPI pins. `scripts/check-upstreams.mjs` validates these records, checks npm latest versions, pinned PyPI versions, and GitHub default-branch commits, and powers the daily `Upstream Monitor` workflow. `x-upstream.reviewedVersion` records an audited release that was deliberately not imported, so the monitor can distinguish a known product decision from a new release without falsifying imported provenance. For npm and PyPI release changes, the workflow updates the open upstream-tracking Issue with the matching title, or creates a new Issue when no matching open Issue exists. Unreleased commits remain visible in the workflow summary without opening an Issue. Query errors fail the workflow; without an independently detected release, they leave the Issue state unchanged.
 
 ### What the monitor reports
 
 Imported forks and companions are not all reviewed from GitHub commits.
 
 - If the upstream publishes to npm, monitor that npm version only. Do not import or flag unpublished GitHub commits. `pi-cc-extensions`, `pi-subagents`, `impeccable`, Tifan packages, and `pi-antigravity` are in this group. Their `upstreams.json` entries use `"watch": "npm"`.
+- If the upstream publishes to PyPI and this repository pins it, monitor that PyPI version only. `graphifyy` is registered under `pypi` with `"watch": "pypi"`. The expected version is the requirement in [`pins/graphifyy`](../pins/graphifyy). A different PyPI version is a release update on the same upstream-tracking Issue. GitHub commits for that repository are not monitored, and the package stays out of the npm aggregate. Install and bootstrap steps are in [`docs/graphify.md`](graphify.md).
 - If the upstream does not publish to npm but publishes GitHub releases or tags, monitor that release or tag. No current source uses this channel, so the monitor does not fetch releases yet.
 - If the upstream publishes neither, review GitHub source commits. `NVlabs/SoL-Pi` is the current case and uses `"watch": "commits"`.
-
-Graphify (`graphifyy` on PyPI) is a standalone companion. Its pin and bootstrap are in [`docs/graphify.md`](graphify.md). Upstream Monitor has no PyPI channel. A future `watch: pypi` value could report new `graphifyy` releases; the schema stays `npm` and `commits` until that channel exists.
 
 ### Upstream Issues
 

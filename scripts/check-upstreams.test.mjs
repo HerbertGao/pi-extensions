@@ -1,12 +1,16 @@
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import test from "node:test"
 
 import {
   findOpenTrackingIssue,
   issueSyncAction,
   npmTrackedRepositories,
+  readPinRequirement,
+  recordPypiRelease,
   syncTrackingIssue,
   trackingReportFingerprint,
+  validate,
 } from "./check-upstreams.mjs"
 
 test("npm-published repositories are not commit-watched", () => {
@@ -16,6 +20,88 @@ test("npm-published repositories are not commit-watched", () => {
   ])
   assert.equal(tracked.has("https://github.com/minuque/pi-cc-extensions"), true)
   assert.equal(tracked.has("https://github.com/NVlabs/SoL-Pi"), false)
+})
+
+test("a newer graphifyy release opens the tracking issue", () => {
+  const pinned = readPinRequirement(
+    readFileSync(new URL("../pins/graphifyy", import.meta.url), "utf8"),
+    "graphifyy",
+  )
+  assert.equal(pinned, "0.9.97")
+
+  const releaseUpdates = []
+  const errors = []
+  recordPypiRelease(
+    releaseUpdates,
+    errors,
+    { package: "graphifyy", version: pinned },
+    "0.9.98",
+  )
+  assert.deepEqual(releaseUpdates, [
+    "`graphifyy`: PyPI is `0.9.98` (pinned `0.9.97`).",
+  ])
+  assert.equal(issueSyncAction(releaseUpdates, errors), "open")
+
+  const current = []
+  recordPypiRelease(
+    current,
+    [],
+    { package: "graphifyy", version: pinned },
+    pinned,
+  )
+  assert.deepEqual(current, [])
+  assert.equal(issueSyncAction(current, []), "close")
+
+  const failed = []
+  const fetchErrors = []
+  recordPypiRelease(
+    failed,
+    fetchErrors,
+    { package: "graphifyy", version: pinned },
+    new Error("503"),
+  )
+  assert.deepEqual(failed, [])
+  assert.equal(issueSyncAction(failed, fetchErrors), "unchanged")
+  assert.throws(
+    () => readPinRequirement("other==1.2.3\n", "graphifyy"),
+    /expected graphifyy/,
+  )
+})
+
+test("graphifyy is a pypi pin outside the npm aggregate", () => {
+  const monitor = JSON.parse(
+    readFileSync(new URL("../upstreams.json", import.meta.url), "utf8"),
+  )
+  const aggregate = JSON.parse(
+    readFileSync(
+      new URL("../packages/pi-extensions/package.json", import.meta.url),
+      "utf8",
+    ),
+  )
+  const graphify = monitor.pypi.find((entry) => entry.package === "graphifyy")
+  assert.equal(graphify.watch, "pypi")
+  assert.equal(graphify.pin, "pins/graphifyy")
+  assert.equal(graphify.repository, "https://github.com/Graphify-Labs/graphify")
+
+  const { errors, pypi } = validate([], monitor, aggregate)
+  assert.deepEqual(errors, [])
+  assert.deepEqual(
+    pypi.map((entry) => [entry.package, entry.version, entry.watch]),
+    [["graphifyy", "0.9.97", "pypi"]],
+  )
+
+  const vendored = validate([], monitor, {
+    ...aggregate,
+    dependencies: { ...aggregate.dependencies, graphifyy: "0.9.97" },
+    bundledDependencies: [...aggregate.bundledDependencies, "graphifyy"],
+  })
+  assert.ok(
+    vendored.errors.some((error) =>
+      error.includes(
+        "graphifyy is a PyPI pin and must stay out of the npm aggregate",
+      ),
+    ),
+  )
 })
 
 test("opens the rolling issue only for upstream releases", () => {

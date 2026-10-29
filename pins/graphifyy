@@ -5,4 +5,5 @@
 # PyPI: https://pypi.org/project/graphifyy/
 # Checked: 2026-10-29 (stable 0.9.97)
 # Not an npm dependency. Do not add this package to bundledDependencies.
+# Upstream Monitor watches this requirement with watch: pypi.
 graphifyy==0.9.97

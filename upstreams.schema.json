@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["repositories", "companions"],
+  "required": ["repositories", "companions", "pypi"],
   "properties": {
     "$schema": { "type": "string" },
     "repositories": {
@@ -37,6 +37,29 @@
             "type": "string",
             "pattern": "^https://github\\.com/[^/]+/[^/]+$"
           }
+        }
+      }
+    },
+    "pypi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "repository", "pin", "watch"],
+        "properties": {
+          "package": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "repository": {
+            "type": "string",
+            "pattern": "^https://github\\.com/[^/]+/[^/]+$"
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^pins/[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "watch": { "enum": ["pypi"] }
         }
       }
     }
