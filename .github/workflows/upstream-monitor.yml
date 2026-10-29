@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: 22.23.1
 
-      - name: Check upstream releases and commits
+      - name: Check upstream npm, PyPI, and commit cursors
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

@@ -1,0 +1,9 @@
+# Pinned PyPI release of Graphify.
+# Package: graphifyy (the CLI command is graphify)
+# License: Apache-2.0
+# Repository: https://github.com/Graphify-Labs/graphify
+# PyPI: https://pypi.org/project/graphifyy/
+# Checked: 2026-10-29 (stable 0.9.97)
+# Not an npm dependency. Do not add this package to bundledDependencies.
+# Upstream Monitor watches this requirement with watch: pypi.
+graphifyy==0.9.97
