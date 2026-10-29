@@ -53,6 +53,10 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.45.0`       | Web search and content access.                    |
 | [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.6`        | Qoder account models for global and China.        |
 
+## Companion tools
+
+[Graphify](docs/graphify.md) is an optional standalone code-graph CLI (`graphifyy` on PyPI). It is not part of the npm aggregate.
+
 ## Local extension
 
 The aggregate also includes [`clef`](packages/pi-extensions/extensions/clef.mjs), a local extension rather than a separate npm package. Its `clef` tool asks Cloudflare Clef-flash for yes/no, choice, or score judgments and displays the questions and answers in the transcript. It is not a permission gate.

@@ -34,6 +34,8 @@ Imported forks and companions are not all reviewed from GitHub commits.
 - If the upstream does not publish to npm but publishes GitHub releases or tags, monitor that release or tag. No current source uses this channel, so the monitor does not fetch releases yet.
 - If the upstream publishes neither, review GitHub source commits. `NVlabs/SoL-Pi` is the current case and uses `"watch": "commits"`.
 
+Graphify (`graphifyy` on PyPI) is a standalone companion. Its pin and bootstrap are in [`docs/graphify.md`](graphify.md). Upstream Monitor has no PyPI channel. A future `watch: pypi` value could report new `graphifyy` releases; the schema stays `npm` and `commits` until that channel exists.
+
 ### Upstream Issues
 
 `Upstream Monitor` only checks upstreams and syncs the tracking Issue with `scripts/check-upstreams.mjs --sync-issue`. It does not start an upgrade workflow. There is no dispatch flag, credential gate, or acknowledgement step to turn one back on.
