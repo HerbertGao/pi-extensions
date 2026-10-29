@@ -2409,6 +2409,12 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error("Aggregate Qoder provider notice is incomplete")
   }
+  if (
+    !tifanNotices.includes("`@herbertgao/pi-impeccable`") ||
+    !tifanNotices.includes("pbakaus/impeccable")
+  ) {
+    throw new Error("Aggregate Impeccable third-party notice is incomplete")
+  }
 
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
@@ -2432,6 +2438,11 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
       "node_modules/pi-web-access/LICENSE",
       "node_modules/@herbertgao/sol-pi/LICENSE",
+      "node_modules/@herbertgao/pi-impeccable/skills/impeccable/SKILL.md",
+      "node_modules/@herbertgao/pi-impeccable/skills/impeccable/scripts/impeccable",
+      "node_modules/@herbertgao/pi-impeccable/skills/impeccable/scripts/engine-checksums.txt",
+      "node_modules/@herbertgao/pi-impeccable/LICENSE",
+      "node_modules/@herbertgao/pi-impeccable/NOTICE.md",
     ].map((path) => stat(join(packageRoot, path))),
   )
   await Promise.all(

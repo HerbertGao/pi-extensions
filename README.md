@@ -23,6 +23,7 @@ MCP is provided by Pi 0.99.0+, not by an extension in this collection. Configure
 | [`@herbertgao/pi-agency`](packages/pi-agency)               | Search and dispatch Agency Agents personas without loading them.          | This repository                                                        |
 | [`@herbertgao/pi-bark`](packages/pi-bark)                   | Bark notifications when Pi finishes or needs user input.                  | This repository                                                        |
 | [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions) | Claude Code-style output, fullscreen interaction, context and references. | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)      |
+| [`@herbertgao/pi-impeccable`](packages/pi-impeccable)       | Impeccable design skills and deterministic anti-pattern detection.        | [`impeccable`](https://github.com/pbakaus/impeccable)                  |
 | [`@herbertgao/sol-pi`](packages/sol-pi)                     | Token-efficient tools, observations, logs, and context compaction.        | [`NVlabs/SoL-Pi`](https://github.com/NVlabs/SoL-Pi)                    |
 | [`@herbertgao/pi-subagents`](packages/pi-subagents)         | Autonomous subagents with lifecycle and compatibility hardening.          | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) |
 | [`@herbertgao/pi-extensions`](packages/pi-extensions)       | Aggregate installer for the collection.                                   | This repository                                                        |
