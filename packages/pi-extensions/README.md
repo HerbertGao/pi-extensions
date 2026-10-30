@@ -29,7 +29,6 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `@pi-plugins/fast-mode@0.1.14`
 - `@tifan/pi-copy-response@0.2.7`
 - `@tifan/pi-handoff@2.2.2`
-- `@tifan/pi-inline-skills@1.0.7`
 - `@tifan/pi-mermaid-open@0.2.2`
 - `@tifan/pi-preferred-thinking@1.0.2`
 - `@tifan/pi-recap@0.4.8`

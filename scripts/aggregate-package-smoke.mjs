@@ -1991,7 +1991,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const directTifanPackages = [
     "@tifan/pi-copy-response",
     "@tifan/pi-handoff",
-    "@tifan/pi-inline-skills",
     "@tifan/pi-mermaid-open",
     "@tifan/pi-preferred-thinking",
     "@tifan/pi-recap",
@@ -2518,7 +2517,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ["@tifan/pi-copy-response/src/index.ts", "commands", "copy-response"],
     ["@tifan/pi-handoff/src/index.ts", "commands", "__pi-handoff-session"],
     ["@tifan/pi-handoff/src/session-query.ts", "tools", "session_query"],
-    ["@tifan/pi-inline-skills/src/index.ts", "commands", "loaded-skills"],
     ["@tifan/pi-mermaid-open/src/index.ts", "commands", "mermaid-open"],
     [
       "@tifan/pi-preferred-thinking/src/index.ts",

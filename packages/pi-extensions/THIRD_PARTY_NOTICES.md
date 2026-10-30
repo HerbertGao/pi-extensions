@@ -4,7 +4,6 @@ The aggregate package bundles the following packages from [tifandotme/pi-extensi
 
 - `@tifan/pi-copy-response`
 - `@tifan/pi-handoff`
-- `@tifan/pi-inline-skills`
 - `@tifan/pi-mermaid-open`
 - `@tifan/pi-preferred-thinking`
 - `@tifan/pi-recap`

@@ -68,10 +68,6 @@
       "repository": "https://github.com/tifandotme/pi-extensions"
     },
     {
-      "package": "@tifan/pi-inline-skills",
-      "repository": "https://github.com/tifandotme/pi-extensions"
-    },
-    {
       "package": "@tifan/pi-mermaid-open",
       "repository": "https://github.com/tifandotme/pi-extensions"
     },
