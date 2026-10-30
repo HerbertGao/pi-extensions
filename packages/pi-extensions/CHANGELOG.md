@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.18
+
+### Patch Changes
+
+- [#334](https://github.com/HerbertGao/pi-extensions/pull/334) [`937cd63`](https://github.com/HerbertGao/pi-extensions/commit/937cd63918ce2ff5d64310461a6f02b3adc58a5a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin ponytail 5.3.3, pi-btw 0.63.3, pi-lens 4.4.7, and pi-web-access 0.46.0. BTW keeps a single open workspace and releases the main input after a split mounts; Cloudflare, SearchApi, and Tabstack stay explicit-only.
+
 ## 2026.10.17
 
 ### Patch Changes
