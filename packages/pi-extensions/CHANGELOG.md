@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.10.19
+
+### Patch Changes
+
+- [#336](https://github.com/HerbertGao/pi-extensions/pull/336) [`8280f19`](https://github.com/HerbertGao/pi-extensions/commit/8280f1933c37d7e57f24100ef99478df01872338) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove `@tifan/pi-inline-skills` so skill autocomplete is provided only by Pi's native `/skill:<name>` commands.
+
 ## 2026.10.18
 
 ### Patch Changes
