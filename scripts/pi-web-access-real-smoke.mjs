@@ -875,6 +875,21 @@ async function assertNewReleaseFeatures({
         false,
         "Linkup must remain explicit-only",
       )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("cloudflare"),
+        false,
+        "Cloudflare must remain explicit-only",
+      )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("searchapi"),
+        false,
+        "SearchApi must remain explicit-only",
+      )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("tabstack"),
+        false,
+        "Tabstack must remain explicit-only",
+      )
       const xcrawl = await searchProvider.search("xcrawl smoke", {
         provider: "xcrawl",
         domainFilter: ["run.xcrawl.com"],
@@ -1114,38 +1129,38 @@ async function assertNewReleaseFeatures({
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.45.0",
+      "0.46.0",
     )
     assert.deepEqual(upgradeNotices, [])
     await writeFile(
       join(upgradeStateDir, "last-seen-version.json"),
-      JSON.stringify({ version: "0.44.0" }),
+      JSON.stringify({ version: "0.45.0" }),
     )
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.45.0",
+      "0.46.0",
     )
     assert.equal(upgradeNotices.length, 1)
-    assert.match(upgradeNotices[0], /updated from 0\.44\.0 to 0\.45\.0/)
-    assert.match(upgradeNotices[0], /Pull exact facts/)
+    assert.match(upgradeNotices[0], /updated from 0\.45\.0 to 0\.46\.0/)
+    assert.match(upgradeNotices[0], /Read more pages that block bots/)
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.45.0",
+      "0.46.0",
     )
     assert.equal(upgradeNotices.length, 1)
     await writeFile(
       join(upgradeStateDir, "last-seen-version.json"),
-      JSON.stringify({ version: "0.46.0" }),
+      JSON.stringify({ version: "0.47.0" }),
     )
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.45.0",
+      "0.46.0",
     )
     assert.equal(upgradeNotices.length, 1)
 

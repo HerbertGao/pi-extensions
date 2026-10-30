@@ -1161,7 +1161,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.2"
+  const expectedBtwVersion = "0.63.3"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1264,6 +1264,18 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
 
   const btwEntry = join(btwRoot, btwEntryRelative)
   const btwDistSource = await readFile(btwEntry, "utf8")
+  if (
+    !btwDistSource.includes(
+      "A /btw workspace is already open; close it before opening another.",
+    ) ||
+    !btwDistSource.includes("activeCommands") ||
+    !btwDistSource.includes("onSplitReady") ||
+    !btwDistSource.includes("releaseMainInput")
+  ) {
+    throw new Error(
+      "pi-btw lost its single-workspace guard or split onSplitReady release",
+    )
+  }
   await stat(`${btwEntry}.map`)
   const btwRequire = createRequire(btwEntry)
   const { createJiti: createBtwJiti } = await import(

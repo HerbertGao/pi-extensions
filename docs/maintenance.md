@@ -259,9 +259,9 @@ The aggregate package also pins the following npm packages under their original 
 | Package                              | Version   | Upstream                     |
 | ------------------------------------ | --------- | ---------------------------- |
 | `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity` |
-| `@dietrichgebert/ponytail`           | `5.3.2`   | `DietrichGebert/ponytail`    |
+| `@dietrichgebert/ponytail`           | `5.3.3`   | `DietrichGebert/ponytail`    |
 | `@juicesharp/rpiv-ask-user-question` | `2.15.0`  | `juicesharp/rpiv-mono`       |
-| `@narumitw/pi-btw`                   | `0.63.2`  | `narumiruna/pi-extensions`   |
+| `@narumitw/pi-btw`                   | `0.63.3`  | `narumiruna/pi-extensions`   |
 | `@narumitw/pi-caffeinate`            | `0.49.13` | `narumiruna/pi-extensions`   |
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
@@ -273,8 +273,8 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
 | `pi-typesafe`                        | `0.13.1`  | `DevMortimer/pi-typesafe`    |
 | `pi-next-cue`                        | `1.0.8`   | `ouzhenkun/pi-next-cue`      |
-| `pi-lens`                            | `4.4.6`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.45.0`  | `nicobailon/pi-web-access`   |
+| `pi-lens`                            | `4.4.7`   | `apmantza/pi-lens`           |
+| `pi-web-access`                      | `0.46.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.6.6`   | `simonsmh/pi-provider-qoder` |
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
@@ -282,6 +282,15 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 `pi-provider-qoder@0.6.6` is pinned from `simonsmh/pi-provider-qoder` at git `29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. A ready model-busy response stays retryable. A queued model-busy response is reported with its wait, queue count, and queue type. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration and that queue parser without a live Qoder request.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
+
+### 2026-10-30 issue #333 review
+
+Release updates only. SoL-Pi stays at review cursor `219568034fa5`. No imported-fork baseline moved.
+
+- Ponytail: **version pin** `5.3.3` (gitHead `7801d061243d7b753bad0e0b3c057cd250b11755`, integrity `sha512-Gq0ESMi1ZkcY+dvH1dyhOzR3+pYQ/LGW39E4dExcCzhaLe1AMPE43sPrW/JbEiaC986dUWeSzs97WfTABLkdDg==`). MIT unchanged. Band setup survives `/clear`, `/resume`, and `/branch` without labelling other plugins' command output. Transcript lookup no longer depends on a classic hook path. The band row sizes to `bodyColumns` only on a terminal surface. Duplicate-name hints are removed; only in-project files count toward reuse. Map and activate hooks keep a larger `git ls-files` buffer and short Windows start timeouts. Codex uses a small composer icon. Pi entry and skills paths are unchanged.
+- BTW: **version pin** `0.63.3`. Dependencies stay `@narumitw/pi-tui-kit@^0.68.0`. MIT, Pi entry `./dist/index.ts`. npm publishes no gitHead; provenance is the registry version and tarball integrity from `npm view`. Only one BTW flow may be open per session; a second `/btw` warns. Split layout releases Pi's command wait once the first split mounts and focuses, so main-focus submissions keep working while BTW stays open. Fullscreen layout still holds the wait for the whole flow.
+- pi-lens: **version pin** `4.4.7` (gitHead from npm). MIT; runtime dependency ranges unchanged (`@ast-grep/cli@0.51.0`, `@ast-grep/napi@^0.51.0`, `minimatch@^10.2.6`, `js-yaml@^5.2.2`, `pidusage@^4.0.1`, `vscode-jsonrpc@^9.0.0`). Projects with `@effect/tsgo` beside TypeScript 7 get Effect's TypeScript-Go LSP; opt-in `fallow.enabled` / `--lens-fallow` can run fallow-lsp for unused-export advisories. Multi-session blocker, read-guard, and commit-gate ownership stay per session/repository. `--no-ast-grep` and related kill switches are registered. Home-folder ceilings compare by real path. The published `undici` override is not copied.
+- pi-web-access: **version pin** `0.46.0` (gitHead `4af1a7f7757d450ba0afefe2d98737384dc9a9b4`, integrity `sha512-UfeJKU0TPmQU/3hmfAC5Ot/e5Ib0uHkg2+VHM7Ae4kVilLZf7ocGqHFzBzOkYuGLZ87LobzkrhwTAq8lO/N7cQ==`). MIT; runtime dependency ranges unchanged. Cloudflare search, SearchApi, and Tabstack are explicit-only. Optional `fetchContent.curl`, Exa/Tabstack fetch routing, and PDF readable-mode text stay off or unchanged unless configured. MCP tool definitions shrink; Content-Type matching is case-insensitive. A configured proxy survives extension reload.
 
 ### 2026-10-29 issue #328 review
 
