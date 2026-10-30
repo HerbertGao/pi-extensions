@@ -56,9 +56,9 @@ Older Issues may still end with `<!-- upstream-agent-dispatched:<sha256> -->` fr
 
 ### Direct Tifan package migration
 
-The aggregate pins and bundles seven original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.1`, inline-skills `1.0.5`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.6`, and Rename `0.6.0`.
+The aggregate pins and bundles six original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.1`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.6`, and Rename `0.6.0`.
 
-Normalized package comparisons established that copy-response, inline-skills, and Mermaid Open are source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename catch malformed config at their outer initialization boundary; and Handoff intentionally depends on Rename for generated session names. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
+Normalized package comparisons established that copy-response and Mermaid Open are source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename catch malformed config at their outer initialization boundary; and Handoff intentionally depends on Rename for generated session names. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
 
 All Tifan-derived local package sources are removed without compatibility wrappers. Issue #131 removes the last one, `pi-stash`: bundled `pi-btw` already preserves the main editor draft while handling side questions outside the main conversation, so maintaining a Fork solely for `Alt+S` is not justified. Issue #134 also removes deprecated `@tifan/pi-titlebar-spinner`: its 1.x line retargets Herdr tab labels and can overwrite Rename's session-owned label, so the aggregate keeps Rename as the single tab-naming owner. Prior `@herbertgao/*` npm releases remain available but outside this repository's maintained package set.
 
@@ -266,7 +266,6 @@ The aggregate package also pins the following npm packages under their original 
 | `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-inline-skills`            | `1.0.7`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-mermaid-open`             | `0.2.2`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-preferred-thinking`       | `1.0.2`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`   |

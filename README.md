@@ -41,7 +41,6 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.14`       | Priority service tier for selected models.        |
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.              |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                     |
-| [`@tifan/pi-inline-skills`](https://github.com/tifandotme/pi-extensions)        | `1.0.7`        | Inline `/skill` autocomplete.                     |
 | [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.2`        | Extract and open Mermaid diagrams.                |
 | [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.                |
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.8`        | Generate one-line session recaps.                 |
