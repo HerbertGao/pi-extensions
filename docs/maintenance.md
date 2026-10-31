@@ -256,32 +256,35 @@ For Subagents, the direct migration is complete. The package retains only reposi
 
 The aggregate package also pins the following npm packages under their original names without modifying their upstream source:
 
-| Package                              | Version   | Upstream                     |
-| ------------------------------------ | --------- | ---------------------------- |
-| `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity` |
-| `@dietrichgebert/ponytail`           | `5.3.3`   | `DietrichGebert/ponytail`    |
-| `@juicesharp/rpiv-ask-user-question` | `2.15.0`  | `juicesharp/rpiv-mono`       |
-| `@narumitw/pi-btw`                   | `0.63.3`  | `narumiruna/pi-extensions`   |
-| `@narumitw/pi-caffeinate`            | `0.49.13` | `narumiruna/pi-extensions`   |
-| `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`           |
-| `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-mermaid-open`             | `0.2.2`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-preferred-thinking`       | `1.0.2`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`   |
-| `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
-| `@tintinweb/pi-tasks`                | `0.9.1`   | `tintinweb/pi-tasks`         |
-| `pi-typesafe`                        | `0.13.1`  | `DevMortimer/pi-typesafe`    |
-| `pi-next-cue`                        | `1.0.8`   | `ouzhenkun/pi-next-cue`      |
-| `pi-lens`                            | `4.4.7`   | `apmantza/pi-lens`           |
-| `pi-web-access`                      | `0.46.0`  | `nicobailon/pi-web-access`   |
-| `pi-provider-qoder`                  | `0.6.6`   | `simonsmh/pi-provider-qoder` |
+| Package                              | Version   | Upstream                         |
+| ------------------------------------ | --------- | -------------------------------- |
+| `pi-antigravity`                     | `0.11.0`  | `Rahularya01/pi-antigravity`     |
+| `@dietrichgebert/ponytail`           | `5.3.3`   | `DietrichGebert/ponytail`        |
+| `@juicesharp/rpiv-ask-user-question` | `2.15.0`  | `juicesharp/rpiv-mono`           |
+| `@narumitw/pi-btw`                   | `0.63.3`  | `narumiruna/pi-extensions`       |
+| `@narumitw/pi-caffeinate`            | `0.49.13` | `narumiruna/pi-extensions`       |
+| `@pi-plugins/fast-mode`              | `0.1.14`  | `k3dom/pi-plugins`               |
+| `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-mermaid-open`             | `0.2.2`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-preferred-thinking`       | `1.0.2`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`       |
+| `@tintinweb/pi-tasks`                | `0.9.1`   | `tintinweb/pi-tasks`             |
+| `pi-typesafe`                        | `0.13.1`  | `DevMortimer/pi-typesafe`        |
+| `pi-next-cue`                        | `1.0.8`   | `ouzhenkun/pi-next-cue`          |
+| `pi-lens`                            | `4.4.7`   | `apmantza/pi-lens`               |
+| `pi-web-access`                      | `0.46.0`  | `nicobailon/pi-web-access`       |
+| `pi-provider-qoder`                  | `0.6.6`   | `simonsmh/pi-provider-qoder`     |
+| `pi-commandcode-provider`            | `0.7.11`  | `patlux/pi-commandcode-provider` |
 
 `@tintinweb/pi-tasks@0.9.1` is pinned under its original name, not forked. npm `0.9.1` is git `c820715be1bf05db36d0739e88061b97b8c2c9d3`, which is also the default-branch head. The package is MIT, has no runtime dependencies, and peers `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`. `TaskExecute` talks to subagents over `subagents:rpc:*` protocol version 2. It does not import `@tintinweb/pi-subagents`. The bundled `@herbertgao/pi-subagents` fork, replayed onto upstream `0.22.0` (`85a704cb`), still answers that protocol. Its remaining local patches—mention-clone tool context, worktree preservation when cleanup fails, and retention of unconsumed results—do not change the RPC envelope. `TaskExecute` does not request worktree isolation. No other tintinweb package is pinned. The only forked tintinweb package in this repository is `pi-subagents`.
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 
 `pi-provider-qoder@0.6.6` is pinned from `simonsmh/pi-provider-qoder` at git `29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. A ready model-busy response stays retryable. A queued model-busy response is reported with its wait, queue count, and queue type. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration and that queue parser without a live Qoder request.
+
+`pi-commandcode-provider@0.7.11` is pinned from `patlux/pi-commandcode-provider` at tag `v0.7.11`, commit `f4ab05c0a799fd2c991711e72704d5ee219c62ce`. It is not forked. The published package is MIT, has no runtime dependencies, and optionally peers `@earendil-works/pi-ai` and `@earendil-works/pi-coding-agent` at `*`. Pi entry is `./index.ts`. It registers provider id `commandcode` with Pi OAuth name `Command Code` and does not register a `/login` command, so `/login` keeps listing `antigravity`, `qoder`, and `qoder-cn` as separate subscription choices. Commands are `commandcode-quota`, `commandcode-refresh`, and `commandcode-status`. Credential lookup reads `COMMAND_CODE_API_KEY`, `~/.commandcode/auth.json`, and the `commandcode` / `command-code` entries in the host auth file. It does not read `qoder` or `antigravity` credential objects. `main` is two commits ahead of this tag (`13ce5fa2e34e` Bun CI, `eb5ff61420e5` catalog sync); those commits are not in npm `0.7.11` and are not imported. `pi-login-manager@0.1.1` and `@iaziz786/pi-cmd-login@0.4.11` are not pinned. Smoke checks provider registration, command names, and that auth lookup ignores the other providers' credentials. It does not perform a live Command Code login.
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
 
