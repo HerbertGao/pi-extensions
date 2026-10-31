@@ -2415,6 +2415,13 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     throw new Error("Aggregate TypeSafe third-party notices are incomplete")
   }
   if (
+    !tifanNotices.includes("`@tintinweb/pi-tasks`") ||
+    !tifanNotices.includes("Copyright (c) 2026 tintinweb") ||
+    !tifanNotices.includes("c820715be1bf05db36d0739e88061b97b8c2c9d3")
+  ) {
+    throw new Error("Aggregate pi-tasks third-party notice is incomplete")
+  }
+  if (
     !tifanNotices.includes("`pi-provider-qoder`") ||
     !tifanNotices.includes("simonsmh/pi-provider-qoder")
   ) {
@@ -2425,6 +2432,66 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     !tifanNotices.includes("pbakaus/impeccable")
   ) {
     throw new Error("Aggregate Impeccable third-party notice is incomplete")
+  }
+
+  const tasksPackageName = "@tintinweb/pi-tasks"
+  const tasksRoot = join(packageRoot, "node_modules", "@tintinweb", "pi-tasks")
+  const tasksManifestPath = join(tasksRoot, "package.json")
+  const tasksManifest = parseJson(
+    await readFile(tasksManifestPath, "utf8"),
+    tasksManifestPath,
+  )
+  const tasksPeers = tasksManifest.peerDependencies ?? {}
+  if (
+    tasksManifest.name !== tasksPackageName ||
+    tasksManifest.version !== sourceManifest.dependencies[tasksPackageName] ||
+    tasksManifest.license !== "MIT" ||
+    tasksManifest.dependencies?.["@tintinweb/pi-subagents"] ||
+    (tasksManifest.dependencies &&
+      Object.keys(tasksManifest.dependencies).length > 0) ||
+    tasksPeers.typebox !== "*" ||
+    tasksPeers["@earendil-works/pi-coding-agent"] !== "*" ||
+    tasksPeers["@earendil-works/pi-tui"] !== "*" ||
+    !tasksManifest.pi?.extensions?.includes("./src/index.ts")
+  ) {
+    throw new Error(
+      "Bundled @tintinweb/pi-tasks does not match the pinned MIT companion contract",
+    )
+  }
+  const tasksPrefix = `./node_modules/${tasksPackageName}/`
+  const tasksDeclaredEntries = tasksManifest.pi.extensions
+    .map((entry) => `${tasksPrefix}${entry.replace(/^\.\//u, "")}`)
+    .toSorted()
+  const tasksConfiguredEntries = manifest.pi.extensions
+    .filter((entry) => entry.startsWith(tasksPrefix))
+    .toSorted()
+  if (
+    JSON.stringify(tasksDeclaredEntries) !==
+    JSON.stringify(tasksConfiguredEntries)
+  ) {
+    throw new Error(
+      "Aggregate Pi entries for @tintinweb/pi-tasks differ from its published manifest",
+    )
+  }
+  const tasksSource = await readFile(join(tasksRoot, "src/index.ts"), "utf8")
+  const tasksWidget = await readFile(
+    join(tasksRoot, "src/ui/task-widget.ts"),
+    "utf8",
+  )
+  if (
+    /from\s+["']@tintinweb\/pi-subagents["']|require\(\s*["']@tintinweb\/pi-subagents["']\s*\)/.test(
+      tasksSource,
+    ) ||
+    !tasksSource.includes("subagents:rpc:spawn") ||
+    !tasksSource.includes("subagents:rpc:consume") ||
+    !tasksSource.includes("const PROTOCOL_VERSION = 2") ||
+    !tasksWidget.includes('{ placement: "aboveEditor" }') ||
+    tasksSource.includes("setEditorComponent") ||
+    tasksWidget.includes("setEditorComponent")
+  ) {
+    throw new Error(
+      "Bundled pi-tasks no longer integrates through the subagents event bus",
+    )
   }
 
   const extensionPaths = manifest.pi.extensions.map((entry) =>
@@ -2439,6 +2506,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   await Promise.all(
     [
       "node_modules/@dietrichgebert/ponytail/LICENSE",
+      "node_modules/@tintinweb/pi-tasks/LICENSE",
       "node_modules/@juicesharp/rpiv-ask-user-question/LICENSE",
       "node_modules/@narumitw/pi-btw/LICENSE",
       "node_modules/@narumitw/pi-caffeinate/LICENSE",
@@ -2525,6 +2593,14 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ],
     ["@tifan/pi-recap/src/index.ts", "commands", "recap"],
     ["@tifan/pi-rename/src/index.ts", "commands", "rename"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskCreate"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskList"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskGet"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskUpdate"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskOutput"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskStop"],
+    ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskExecute"],
+    ["@tintinweb/pi-tasks/src/index.ts", "commands", "tasks"],
   ]
   for (const [relativePath, registry, name] of requiredChildRegistrations) {
     const entry = resolve(packageRoot, "node_modules", relativePath)

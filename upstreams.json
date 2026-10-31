@@ -106,6 +106,10 @@
     {
       "package": "pi-provider-qoder",
       "repository": "https://github.com/simonsmh/pi-provider-qoder"
+    },
+    {
+      "package": "@tintinweb/pi-tasks",
+      "repository": "https://github.com/tintinweb/pi-tasks"
     }
   ],
   "pypi": [
