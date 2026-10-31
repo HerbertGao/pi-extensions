@@ -16,17 +16,21 @@ The aggregate package bundles the active maintained packages below plus the pinn
 
 MCP is provided by Pi 0.99.0+, not by an extension in this collection. Configure servers in `~/.pi/agent/mcp.json` and manage them with `/mcp`. Older Pi versions need an upgrade to retain MCP support after this collection stops bundling `pi-mcp-adapter`.
 
+## Native thinking levels
+
+Per-model thinking levels are provided by Pi. This collection no longer bundles `@tifan/pi-preferred-thinking`.
+
 ## Maintained packages
 
-| Package                                                     | Description                                                               | Source                                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [`@herbertgao/pi-agency`](packages/pi-agency)               | Search and dispatch Agency Agents personas without loading them.          | This repository                                                        |
-| [`@herbertgao/pi-bark`](packages/pi-bark)                   | Bark notifications when Pi finishes or needs user input.                  | This repository                                                        |
-| [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions) | Claude Code-style output, fullscreen interaction, context and references. | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)      |
-| [`@herbertgao/pi-impeccable`](packages/pi-impeccable)       | Impeccable design skills and deterministic anti-pattern detection.        | [`impeccable`](https://github.com/pbakaus/impeccable)                  |
-| [`@herbertgao/sol-pi`](packages/sol-pi)                     | Token-efficient tools, observations, logs, and context compaction.        | [`NVlabs/SoL-Pi`](https://github.com/NVlabs/SoL-Pi)                    |
-| [`@herbertgao/pi-subagents`](packages/pi-subagents)         | Autonomous subagents with lifecycle and compatibility hardening.          | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) |
-| [`@herbertgao/pi-extensions`](packages/pi-extensions)       | Aggregate installer for the collection.                                   | This repository                                                        |
+| Package                                                     | Downloads                                                                            | Description                                                               | Source                                                                 |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [`@herbertgao/pi-agency`](packages/pi-agency)               | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/pi-agency)        | Search and dispatch Agency Agents personas without loading them.          | This repository                                                        |
+| [`@herbertgao/pi-bark`](packages/pi-bark)                   | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/pi-bark)          | Bark notifications when Pi finishes or needs user input.                  | This repository                                                        |
+| [`@herbertgao/pi-cc-extensions`](packages/pi-cc-extensions) | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/pi-cc-extensions) | Claude Code-style output, fullscreen interaction, context and references. | [`pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions)      |
+| [`@herbertgao/pi-impeccable`](packages/pi-impeccable)       | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/pi-impeccable)    | Impeccable design skills and deterministic anti-pattern detection.        | [`impeccable`](https://github.com/pbakaus/impeccable)                  |
+| [`@herbertgao/sol-pi`](packages/sol-pi)                     | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/sol-pi)           | Token-efficient tools, observations, logs, and context compaction.        | [`NVlabs/SoL-Pi`](https://github.com/NVlabs/SoL-Pi)                    |
+| [`@herbertgao/pi-subagents`](packages/pi-subagents)         | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/pi-subagents)     | Autonomous subagents with lifecycle and compatibility hardening.          | [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) |
+| [`@herbertgao/pi-extensions`](packages/pi-extensions)       | ![npm monthly downloads](https://img.shields.io/npm/dm/@herbertgao/pi-extensions)    | Aggregate installer for the collection.                                   | This repository                                                        |
 
 ## Bundled upstream companions
 
@@ -42,7 +46,6 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.              |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                     |
 | [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.2`        | Extract and open Mermaid diagrams.                |
-| [`@tifan/pi-preferred-thinking`](https://github.com/tifandotme/pi-extensions)   | `1.0.2`        | Persist thinking levels per model.                |
 | [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions)                | `0.4.8`        | Generate one-line session recaps.                 |
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.          |
 | [`@tintinweb/pi-tasks`](https://github.com/tintinweb/pi-tasks)                  | `0.9.1`        | Task lists and subagent task execution.           |

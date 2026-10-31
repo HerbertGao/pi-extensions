@@ -1988,11 +1988,24 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     throw new Error("Bundled SoL-Pi no longer declares its expected Pi entry")
   }
 
+  if (
+    sourceManifest.dependencies["@tifan/pi-preferred-thinking"] ||
+    sourceManifest.bundledDependencies?.includes(
+      "@tifan/pi-preferred-thinking",
+    ) ||
+    sourceManifest.pi?.extensions?.some((entry) =>
+      entry.includes("pi-preferred-thinking"),
+    )
+  ) {
+    throw new Error(
+      "@tifan/pi-preferred-thinking is no longer bundled; Pi native thinking levels cover it",
+    )
+  }
+
   const directTifanPackages = [
     "@tifan/pi-copy-response",
     "@tifan/pi-handoff",
     "@tifan/pi-mermaid-open",
-    "@tifan/pi-preferred-thinking",
     "@tifan/pi-recap",
     "@tifan/pi-rename",
   ]
@@ -2318,68 +2331,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     }
   }
 
-  const preferredThinkingEntry = join(
-    packageRoot,
-    "node_modules/@tifan/pi-preferred-thinking/src/index.ts",
-  )
-  const preferredThinkingRequire = createRequire(preferredThinkingEntry)
-  const { createJiti: createPreferredThinkingJiti } = await import(
-    pathToFileURL(preferredThinkingRequire.resolve("jiti"))
-  )
-  const initializePreferredThinking = (
-    await createPreferredThinkingJiti(preferredThinkingEntry, {
-      moduleCache: false,
-    }).import(preferredThinkingEntry)
-  ).default
-  const preferredHandlers = new Map()
-  const thinkingUpdates = []
-  initializePreferredThinking({
-    registerCommand() {},
-    on(event, handler) {
-      preferredHandlers.set(event, handler)
-    },
-    getThinkingLevel: () => "low",
-    setThinkingLevel: (level) => thinkingUpdates.push(level),
-  })
-  const preferredModel = {
-    provider: "smoke",
-    id: "reasoning-model",
-    reasoning: true,
-  }
-  const preferredContext = {
-    model: preferredModel,
-    scopedModels: [{ model: preferredModel, thinkingLevel: "high" }],
-    hasUI: false,
-    ui: { setWidget() {} },
-  }
-  const preferredSessionStart = preferredHandlers.get("session_start")
-  const preferredModelSelect = preferredHandlers.get("model_select")
-  if (
-    typeof preferredSessionStart !== "function" ||
-    typeof preferredModelSelect !== "function"
-  ) {
-    throw new Error("Preferred Thinking lost its model lifecycle handlers")
-  }
-  const previousSubagentId = process.env.PI_SUBAGENT_ID
-  const originalArgvLength = process.argv.length
-  process.env.PI_SUBAGENT_ID = "aggregate-smoke"
-  process.argv.push("--thinking=medium")
-  try {
-    await preferredSessionStart({}, preferredContext)
-    await preferredModelSelect({ model: preferredModel }, preferredContext)
-  } finally {
-    process.argv.length = originalArgvLength
-    if (previousSubagentId === undefined) delete process.env.PI_SUBAGENT_ID
-    else process.env.PI_SUBAGENT_ID = previousSubagentId
-  }
-  if (thinkingUpdates.length !== 0) {
-    throw new Error("Preferred Thinking overrode explicit subagent thinking")
-  }
-  await preferredModelSelect({ model: preferredModel }, preferredContext)
-  if (JSON.stringify(thinkingUpdates) !== JSON.stringify(["high"])) {
-    throw new Error("Preferred Thinking no longer applies ordinary model pins")
-  }
-
   const tifanNotices = await readFile(
     join(packageRoot, "THIRD_PARTY_NOTICES.md"),
     "utf8",
@@ -2698,11 +2649,6 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ["@tifan/pi-handoff/src/index.ts", "commands", "__pi-handoff-session"],
     ["@tifan/pi-handoff/src/session-query.ts", "tools", "session_query"],
     ["@tifan/pi-mermaid-open/src/index.ts", "commands", "mermaid-open"],
-    [
-      "@tifan/pi-preferred-thinking/src/index.ts",
-      "commands",
-      "preferred-thinking",
-    ],
     ["@tifan/pi-recap/src/index.ts", "commands", "recap"],
     ["@tifan/pi-rename/src/index.ts", "commands", "rename"],
     ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskCreate"],
