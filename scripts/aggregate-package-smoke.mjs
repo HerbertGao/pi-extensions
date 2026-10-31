@@ -2428,6 +2428,13 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     throw new Error("Aggregate Qoder provider notice is incomplete")
   }
   if (
+    !tifanNotices.includes("`pi-commandcode-provider`") ||
+    !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
+    !tifanNotices.includes("f4ab05c0a799fd2c991711e72704d5ee219c62ce")
+  ) {
+    throw new Error("Aggregate Command Code provider notice is incomplete")
+  }
+  if (
     !tifanNotices.includes("`@herbertgao/pi-impeccable`") ||
     !tifanNotices.includes("pbakaus/impeccable")
   ) {
@@ -2494,6 +2501,70 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     )
   }
 
+  const commandCodePackageName = "pi-commandcode-provider"
+  const commandCodeRoot = join(
+    packageRoot,
+    "node_modules",
+    commandCodePackageName,
+  )
+  const commandCodeManifestPath = join(commandCodeRoot, "package.json")
+  const commandCodeManifest = parseJson(
+    await readFile(commandCodeManifestPath, "utf8"),
+    commandCodeManifestPath,
+  )
+  const commandCodePeers = commandCodeManifest.peerDependencies ?? {}
+  const commandCodePeerMeta = commandCodeManifest.peerDependenciesMeta ?? {}
+  if (
+    commandCodeManifest.name !== commandCodePackageName ||
+    commandCodeManifest.version !==
+      sourceManifest.dependencies[commandCodePackageName] ||
+    commandCodeManifest.license !== "MIT" ||
+    (commandCodeManifest.dependencies &&
+      Object.keys(commandCodeManifest.dependencies).length > 0) ||
+    commandCodePeers["@earendil-works/pi-ai"] !== "*" ||
+    commandCodePeers["@earendil-works/pi-coding-agent"] !== "*" ||
+    commandCodePeerMeta["@earendil-works/pi-ai"]?.optional !== true ||
+    commandCodePeerMeta["@earendil-works/pi-coding-agent"]?.optional !== true ||
+    !commandCodeManifest.pi?.extensions?.includes("./index.ts")
+  ) {
+    throw new Error(
+      "Bundled pi-commandcode-provider does not match the pinned MIT companion contract",
+    )
+  }
+  const commandCodePrefix = `./node_modules/${commandCodePackageName}/`
+  const commandCodeDeclaredEntries = commandCodeManifest.pi.extensions
+    .map((entry) => `${commandCodePrefix}${entry.replace(/^\.\//u, "")}`)
+    .toSorted()
+  const commandCodeConfiguredEntries = manifest.pi.extensions
+    .filter((entry) => entry.startsWith(commandCodePrefix))
+    .toSorted()
+  if (
+    JSON.stringify(commandCodeDeclaredEntries) !==
+    JSON.stringify(commandCodeConfiguredEntries)
+  ) {
+    throw new Error(
+      "Aggregate Pi entries for pi-commandcode-provider differ from its published manifest",
+    )
+  }
+  const commandCodeIndex = await readFile(
+    join(commandCodeRoot, "index.ts"),
+    "utf8",
+  )
+  const commandCodeRuntime = await readFile(
+    join(commandCodeRoot, "src/runtime.ts"),
+    "utf8",
+  )
+  if (
+    commandCodeIndex.includes('registerCommand("login"') ||
+    commandCodeRuntime.includes('registerCommand("login"') ||
+    !commandCodeRuntime.includes('registerProvider("commandcode"') ||
+    !commandCodeIndex.includes('name: "Command Code"')
+  ) {
+    throw new Error(
+      "Bundled pi-commandcode-provider no longer keeps Command Code on Pi's /login provider list",
+    )
+  }
+
   const extensionPaths = manifest.pi.extensions.map((entry) =>
     resolve(packageRoot, entry),
   )
@@ -2512,6 +2583,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "node_modules/@narumitw/pi-caffeinate/LICENSE",
       "node_modules/@pi-plugins/fast-mode/LICENSE",
       "node_modules/pi-lens/LICENSE",
+      "node_modules/pi-commandcode-provider/LICENSE",
       "node_modules/pi-typesafe/LICENSE",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/herdr-plugin.toml",
       "node_modules/@tifan/pi-mermaid-open/herdr-plugin/viewer.mjs",
@@ -2560,11 +2632,51 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     process.env[name],
   ])
   for (const name of qoderEnvNames) delete process.env[name]
+  const commandCodeModelsCache = join(stageDir, "commandcode-models.json")
+  await writeFile(
+    commandCodeModelsCache,
+    `${JSON.stringify(
+      {
+        version: 2,
+        models: [
+          {
+            id: "smoke-model",
+            name: "Smoke Model (CC)",
+            api: "openai-completions",
+            reasoning: false,
+            contextWindow: 8192,
+            maxTokens: 1024,
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  )
+  const commandCodeEnvNames = [
+    "COMMAND_CODE_API_KEY",
+    "COMMANDCODE_API_KEY",
+    "COMMANDCODE_MODELS_URL",
+    "COMMANDCODE_MODELS_CACHE",
+    "COMMANDCODE_MODELS_TIMEOUT_MS",
+  ]
+  const previousCommandCodeEnv = commandCodeEnvNames.map((name) => [
+    name,
+    process.env[name],
+  ])
+  delete process.env.COMMAND_CODE_API_KEY
+  delete process.env.COMMANDCODE_API_KEY
+  process.env.COMMANDCODE_MODELS_URL = "http://127.0.0.1:9/models"
+  process.env.COMMANDCODE_MODELS_CACHE = commandCodeModelsCache
+  process.env.COMMANDCODE_MODELS_TIMEOUT_MS = "200"
   let result
   try {
     result = await loadExtensions(extensionPaths, installDir)
   } finally {
-    for (const [name, value] of previousQoderEnv) {
+    for (const [name, value] of [
+      ...previousQoderEnv,
+      ...previousCommandCodeEnv,
+    ]) {
       if (value === undefined) delete process.env[name]
       else process.env[name] = value
     }
@@ -2601,6 +2713,9 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskStop"],
     ["@tintinweb/pi-tasks/src/index.ts", "tools", "TaskExecute"],
     ["@tintinweb/pi-tasks/src/index.ts", "commands", "tasks"],
+    ["pi-commandcode-provider/index.ts", "commands", "commandcode-quota"],
+    ["pi-commandcode-provider/index.ts", "commands", "commandcode-refresh"],
+    ["pi-commandcode-provider/index.ts", "commands", "commandcode-status"],
   ]
   for (const [relativePath, registry, name] of requiredChildRegistrations) {
     const entry = resolve(packageRoot, "node_modules", relativePath)
@@ -2709,6 +2824,91 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       qoderBusyBody({ serviceAvailable: true, retryAfterSeconds: 1 }),
     ),
     undefined,
+  )
+  const commandCodeEntry = resolve(
+    packageRoot,
+    "node_modules/pi-commandcode-provider/index.ts",
+  )
+  assert.equal(extensionPaths.includes(commandCodeEntry), true)
+  const commandCodeProviders = result.runtime.pendingProviderRegistrations
+    .filter((registration) => registration.extensionPath === commandCodeEntry)
+    .map((registration) => registration.name)
+    .toSorted()
+  assert.deepEqual(commandCodeProviders, ["commandcode"])
+  for (const registration of result.runtime.pendingProviderRegistrations) {
+    if (registration.extensionPath !== commandCodeEntry) continue
+    assert.equal(registration.config.api, "commandcode-custom")
+    assert.equal(registration.config.oauth?.name, "Command Code")
+    assert.equal(typeof registration.config.oauth?.login, "function")
+    assert.equal(typeof registration.config.streamSimple, "function")
+    assert.equal(registration.config.apiKey, "$COMMAND_CODE_API_KEY")
+    assert.deepEqual(
+      registration.config.models.map((model) => model.id),
+      ["smoke-model"],
+    )
+  }
+  const loadedCommandCode = result.extensions.find(
+    (extension) => extension.resolvedPath === commandCodeEntry,
+  )
+  for (const commandName of [
+    "commandcode-quota",
+    "commandcode-refresh",
+    "commandcode-status",
+  ]) {
+    assert.equal(loadedCommandCode?.commands.has(commandName), true)
+    for (const extension of result.extensions) {
+      if (extension.resolvedPath === commandCodeEntry) continue
+      assert.equal(extension.commands.has(commandName), false)
+    }
+  }
+  assert.equal(loadedCommandCode.commands.has("login"), false)
+  const providerNames = result.runtime.pendingProviderRegistrations.map(
+    (registration) => registration.name,
+  )
+  assert.deepEqual(providerNames.toSorted(), [
+    "antigravity",
+    "commandcode",
+    "qoder",
+    "qoder-cn",
+  ])
+  const { createJiti: createCommandCodeJiti } = await import(
+    pathToFileURL(createRequire(commandCodeEntry).resolve("jiti"))
+  )
+  const { getConfiguredApiKey } = await createCommandCodeJiti(
+    commandCodeEntry,
+    { moduleCache: false },
+  ).import(join(dirname(commandCodeEntry), "src/api-key.ts"))
+  const sharedAuthPath = join(stageDir, "shared-provider-auth.json")
+  await writeFile(
+    sharedAuthPath,
+    `${JSON.stringify({
+      qoder: { type: "oauth", access: "qoder-secret" },
+      antigravity: { type: "oauth", access: "agy-secret" },
+      commandcode: { type: "oauth", access: "cc-secret" },
+    })}\n`,
+  )
+  assert.equal(
+    getConfiguredApiKey({ env: {}, authPaths: [sharedAuthPath] }),
+    "cc-secret",
+  )
+  const otherAuthPath = join(stageDir, "other-provider-auth.json")
+  await writeFile(
+    otherAuthPath,
+    `${JSON.stringify({
+      qoder: { type: "api", key: "qoder-key" },
+      antigravity: { type: "oauth", access: "agy-secret" },
+    })}\n`,
+  )
+  assert.equal(
+    getConfiguredApiKey({ env: {}, authPaths: [otherAuthPath] }),
+    undefined,
+  )
+  assert.equal(
+    getConfiguredApiKey({
+      env: { COMMAND_CODE_API_KEY: "user_env" },
+      authPaths: [otherAuthPath],
+    }),
+    "user_env",
   )
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),

@@ -108,6 +108,10 @@
       "repository": "https://github.com/simonsmh/pi-provider-qoder"
     },
     {
+      "package": "pi-commandcode-provider",
+      "repository": "https://github.com/patlux/pi-commandcode-provider"
+    },
+    {
       "package": "@tintinweb/pi-tasks",
       "repository": "https://github.com/tintinweb/pi-tasks"
     }

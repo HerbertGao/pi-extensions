@@ -186,6 +186,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
+## `pi-commandcode-provider`
+
+The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.7.11 under its original MIT license. The imported npm package corresponds to upstream tag `v0.7.11` at commit [`f4ab05c0a799fd2c991711e72704d5ee219c62ce`](https://github.com/patlux/pi-commandcode-provider/commit/f4ab05c0a799fd2c991711e72704d5ee219c62ce).
+
+MIT License
+
+Copyright (c) 2025 Pat Woz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
 ## `pi-provider-qoder`
 
 The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.6 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0`](https://github.com/simonsmh/pi-provider-qoder/commit/29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0).

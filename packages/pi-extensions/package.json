@@ -73,6 +73,7 @@
     "nanoid": "^5.0.0",
     "p-limit": "^6.1.0",
     "pi-antigravity": "0.11.0",
+    "pi-commandcode-provider": "0.7.11",
     "pi-lens": "4.4.7",
     "pi-next-cue": "1.0.8",
     "pi-provider-qoder": "0.6.6",
@@ -120,6 +121,7 @@
     "@tintinweb/pi-tasks",
     "grok-mermaid",
     "pi-antigravity",
+    "pi-commandcode-provider",
     "pi-lens",
     "pi-next-cue",
     "pi-provider-qoder",
@@ -156,6 +158,7 @@
       "./node_modules/pi-antigravity/src/features/google-search.ts",
       "./node_modules/pi-antigravity/src/features/generate-image.ts",
       "./node_modules/pi-provider-qoder/dist/index.js",
+      "./node_modules/pi-commandcode-provider/index.ts",
       "./node_modules/pi-typesafe/extensions/index.js",
       "./extensions/clef.mjs"
     ],

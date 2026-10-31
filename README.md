@@ -47,6 +47,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.          |
 | [`@tintinweb/pi-tasks`](https://github.com/tintinweb/pi-tasks)                  | `0.9.1`        | Task lists and subagent task execution.           |
 | [`pi-antigravity`](https://www.npmjs.com/package/pi-antigravity)                | `0.11.0`       | Antigravity models, search, and image generation. |
+| [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider)  | `0.7.11`       | Command Code subscription models and `/login`.    |
 | [`pi-next-cue`](https://www.npmjs.com/package/pi-next-cue)                      | `1.0.8`        | Predict the next prompt; Tab fills, Enter sends.  |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.13.1`       | Structured TypeSafe/Jev decisions.                |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.7`        | Code diagnostics and skills.                      |
