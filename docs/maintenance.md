@@ -270,11 +270,14 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-preferred-thinking`       | `1.0.2`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`   |
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`   |
+| `@tintinweb/pi-tasks`                | `0.9.1`   | `tintinweb/pi-tasks`         |
 | `pi-typesafe`                        | `0.13.1`  | `DevMortimer/pi-typesafe`    |
 | `pi-next-cue`                        | `1.0.8`   | `ouzhenkun/pi-next-cue`      |
 | `pi-lens`                            | `4.4.7`   | `apmantza/pi-lens`           |
 | `pi-web-access`                      | `0.46.0`  | `nicobailon/pi-web-access`   |
 | `pi-provider-qoder`                  | `0.6.6`   | `simonsmh/pi-provider-qoder` |
+
+`@tintinweb/pi-tasks@0.9.1` is pinned under its original name, not forked. npm `0.9.1` is git `c820715be1bf05db36d0739e88061b97b8c2c9d3`, which is also the default-branch head. The package is MIT, has no runtime dependencies, and peers `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`. `TaskExecute` talks to subagents over `subagents:rpc:*` protocol version 2. It does not import `@tintinweb/pi-subagents`. The bundled `@herbertgao/pi-subagents` fork, replayed onto upstream `0.22.0` (`85a704cb`), still answers that protocol. Its remaining local patches—mention-clone tool context, worktree preservation when cleanup fails, and retention of unconsumed results—do not change the RPC envelope. `TaskExecute` does not request worktree isolation. No other tintinweb package is pinned. The only forked tintinweb package in this repository is `pi-subagents`.
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
 

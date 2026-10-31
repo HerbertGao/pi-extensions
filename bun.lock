@@ -65,7 +65,7 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.10.17",
+      "version": "2026.10.19",
       "dependencies": {
         "@ast-grep/cli": "0.51.0",
         "@ast-grep/napi": "^0.51.0",
@@ -92,6 +92,7 @@
         "@tifan/pi-preferred-thinking": "1.0.2",
         "@tifan/pi-recap": "0.4.8",
         "@tifan/pi-rename": "0.6.0",
+        "@tintinweb/pi-tasks": "0.9.1",
         "@typesafe-ai/sdk": "0.7.0",
         "croner": "^10.0.1",
         "dbus-native": "^0.16.2",
@@ -616,6 +617,8 @@
     "@tifan/pi-recap": ["@tifan/pi-recap@0.4.8", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.84.3" } }, "sha512-PK9A0azvGeZMkp5lYz107nQlTn2QH61MSFQmleGLvyBqQOslAUwNN+9GLiwoL5/0/rYUPUH2vmzzMNVYi+QvEA=="],
 
     "@tifan/pi-rename": ["@tifan/pi-rename@0.6.0", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.84.2" } }, "sha512-qb0AwYng+xy1s++9Wt9jqk870tqReueEreFMVWVausiJyBGJNhkJngYIQVn5XWCZGDn0zt8e1Y48Vrzn7F7VWQ=="],
+
+    "@tintinweb/pi-tasks": ["@tintinweb/pi-tasks@0.9.1", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.80.5", "@earendil-works/pi-tui": ">=0.80.5", "typebox": "*" } }, "sha512-nLcoUKrKoNXDR/Lzyj1zG/SlazNZpEpKwFKvy2urAbWAJm67kP1zDda4m45n5zgWs/7X3zNeVzTCi57jZH3ehw=="],
 
     "@types/chai": ["@types/chai@5.2.3", "", { "dependencies": { "@types/deep-eql": "*", "assertion-error": "^2.0.1" } }, "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA=="],
 

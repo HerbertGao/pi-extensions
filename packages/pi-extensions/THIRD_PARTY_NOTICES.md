@@ -134,6 +134,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
+## `@tintinweb/pi-tasks`
+
+The aggregate bundles [`@tintinweb/pi-tasks`](https://github.com/tintinweb/pi-tasks) version 0.9.1 under its original MIT license. The imported npm package corresponds to upstream commit [`c820715be1bf05db36d0739e88061b97b8c2c9d3`](https://github.com/tintinweb/pi-tasks/commit/c820715be1bf05db36d0739e88061b97b8c2c9d3).
+
+MIT License
+
+Copyright (c) 2026 tintinweb
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
 ## `pi-next-cue`
 
 The aggregate bundles [`pi-next-cue`](https://github.com/ouzhenkun/pi-next-cue) version 1.0.8 under its original MIT license. The imported npm package corresponds to upstream commit [`49c56b4ba659d20bbb36873a572094f55779e87b`](https://github.com/ouzhenkun/pi-next-cue/commit/49c56b4ba659d20bbb36873a572094f55779e87b).

@@ -33,6 +33,7 @@ The package bundles 6 active `@herbertgao/*` child packages—`pi-agency`, `pi-b
 - `@tifan/pi-preferred-thinking@1.0.2`
 - `@tifan/pi-recap@0.4.8`
 - `@tifan/pi-rename@0.6.0`
+- `@tintinweb/pi-tasks@0.9.1`
 - `pi-typesafe@0.13.1`
 - `pi-next-cue@1.0.8`
 - `pi-lens@4.4.7`
@@ -69,6 +70,14 @@ Impeccable `4.8.0` is vendored as `@herbertgao/pi-impeccable` and loaded with `/
 ### Next-cue suggestions
 
 `pi-next-cue@1.0.8` predicts a short next prompt after each completed agent turn. Its peer dependency is Pi `>=1.2.0`. In the empty editor, `Tab` fills the suggestion and `Enter` sends it. Each settled turn can make one extra model request using recent conversation text, recent tool names/results, and the configured active or explicitly selected model. It is TUI-only and wraps the prompt editor, so do not enable another custom-editor extension that also owns the editor slot.
+
+### Task lists
+
+`@tintinweb/pi-tasks@0.9.1` adds Claude Code-style task tracking: `TaskCreate`, `TaskList`, `TaskGet`, `TaskUpdate`, `TaskOutput`, `TaskStop`, `TaskExecute`, and `/tasks`. The list is a TUI widget above the editor (`setWidget("tasks", …, { placement: "aboveEditor" })`). It does not call `setEditorComponent` or `setStatus`, so it does not take the prompt editor that `pi-next-cue` wraps and it does not write the pi-cc footer.
+
+Pi stacks widgets by key. While tasks are visible, three other above-editor widgets can show at the same time: `pi-next-cue`'s one-line `hint` (default placement is above the editor), `@herbertgao/pi-subagents`' `agents` list, and pi-cc's empty `compact-thinking-render-loop` hook. The subagents fleet bar stays below the editor. None of these replace the `tasks` widget.
+
+`TaskExecute` needs `@herbertgao/pi-subagents` loaded in the same session. It does not import `@tintinweb/pi-subagents`. It uses the in-process bus (`subagents:rpc:ping`, `spawn`, `stop`, and `consume`) and enables execution only when that bus answers protocol version 2, which this aggregate's subagents fork does. The other task tools, the widget, and `/tasks` work without it. If subagents is missing or the protocol diverges, the tool text still names `@tintinweb/pi-subagents`; that string is upstream copy and is not shown when protocol v2 matches. Peers are `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`, satisfied by the Pi 1.2 host. No extra runtime dependency is promoted.
 
 ### Footer
 
