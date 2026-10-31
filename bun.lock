@@ -89,7 +89,6 @@
         "@tifan/pi-copy-response": "0.2.7",
         "@tifan/pi-handoff": "2.2.2",
         "@tifan/pi-mermaid-open": "0.2.2",
-        "@tifan/pi-preferred-thinking": "1.0.2",
         "@tifan/pi-recap": "0.4.8",
         "@tifan/pi-rename": "0.6.0",
         "@tintinweb/pi-tasks": "0.9.1",
@@ -612,8 +611,6 @@
     "@tifan/pi-handoff": ["@tifan/pi-handoff@2.2.2", "", { "dependencies": { "@tifan/pi-rename": "^0.6.0" } }, "sha512-B4z1yMEf9VyMWznlQl3b8F9EB7dAnoMB6NeG84m3KbCjEzXbInMzTxT6lsdmt3NFnF5o1ewf65AxiqQsiql+8Q=="],
 
     "@tifan/pi-mermaid-open": ["@tifan/pi-mermaid-open@0.2.2", "", { "dependencies": { "grok-mermaid": "0.2.2" }, "peerDependencies": { "@earendil-works/pi-tui": ">=0.84.0" } }, "sha512-oB2YoKtXcqBEECCLWc+93a36MfgZIAAi3fteKsPaelB83XL42fLRrrjCsRhYd4NqxutTSDqv6fQMf4abkd2kFQ=="],
-
-    "@tifan/pi-preferred-thinking": ["@tifan/pi-preferred-thinking@1.0.2", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.84.2" } }, "sha512-WXbsvu46DjoMlRpyPANcrNhmD6DMsT8eSDJFzKnlo5KIJQhrRUux/G9bcG7KEJPDWbIJEi8PB0LhWCqmthoahw=="],
 
     "@tifan/pi-recap": ["@tifan/pi-recap@0.4.8", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.84.3" } }, "sha512-PK9A0azvGeZMkp5lYz107nQlTn2QH61MSFQmleGLvyBqQOslAUwNN+9GLiwoL5/0/rYUPUH2vmzzMNVYi+QvEA=="],
 

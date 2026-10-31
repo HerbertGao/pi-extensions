@@ -56,9 +56,9 @@ Older Issues may still end with `<!-- upstream-agent-dispatched:<sha256> -->` fr
 
 ### Direct Tifan package migration
 
-The aggregate pins and bundles six original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.1`, Mermaid Open `0.2.0`, Preferred Thinking `1.0.1`, Recap `0.4.6`, and Rename `0.6.0`.
+The aggregate pins and bundles five original Tifan packages directly: copy-response `0.2.6`, handoff `2.2.1`, Mermaid Open `0.2.0`, Recap `0.4.6`, and Rename `0.6.0`.
 
-Normalized package comparisons established that copy-response and Mermaid Open are source-identical; Preferred Thinking's upstream invalid-JSON error is more precise; Recap and Rename catch malformed config at their outer initialization boundary; and Handoff intentionally depends on Rename for generated session names. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
+Normalized package comparisons established that copy-response and Mermaid Open are source-identical; Recap and Rename catch malformed config at their outer initialization boundary; and Handoff intentionally depends on Rename for generated session names. Handoff and Rename therefore move together, while the aggregate continues to provide `typebox`, which Handoff imports at runtime. Rename's malformed Herdr response produces the upstream warning during an explicit rename instead of being treated as unavailable; session naming still succeeds, and startup recovery remains quiet.
 
 All Tifan-derived local package sources are removed without compatibility wrappers. Issue #131 removes the last one, `pi-stash`: bundled `pi-btw` already preserves the main editor draft while handling side questions outside the main conversation, so maintaining a Fork solely for `Alt+S` is not justified. Issue #134 also removes deprecated `@tifan/pi-titlebar-spinner`: its 1.x line retargets Herdr tab labels and can overwrite Rename's session-owned label, so the aggregate keeps Rename as the single tab-naming owner. Prior `@herbertgao/*` npm releases remain available but outside this repository's maintained package set.
 
@@ -267,7 +267,6 @@ The aggregate package also pins the following npm packages under their original 
 | `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`       |
 | `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`       |
 | `@tifan/pi-mermaid-open`             | `0.2.2`   | `tifandotme/pi-extensions`       |
-| `@tifan/pi-preferred-thinking`       | `1.0.2`   | `tifandotme/pi-extensions`       |
 | `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`       |
 | `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`       |
 | `@tintinweb/pi-tasks`                | `0.9.1`   | `tintinweb/pi-tasks`             |
@@ -281,6 +280,8 @@ The aggregate package also pins the following npm packages under their original 
 `@tintinweb/pi-tasks@0.9.1` is pinned under its original name, not forked. npm `0.9.1` is git `c820715be1bf05db36d0739e88061b97b8c2c9d3`, which is also the default-branch head. The package is MIT, has no runtime dependencies, and peers `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`. `TaskExecute` talks to subagents over `subagents:rpc:*` protocol version 2. It does not import `@tintinweb/pi-subagents`. The bundled `@herbertgao/pi-subagents` fork, replayed onto upstream `0.22.0` (`85a704cb`), still answers that protocol. Its remaining local patches—mention-clone tool context, worktree preservation when cleanup fails, and retention of unconsumed results—do not change the RPC envelope. `TaskExecute` does not request worktree isolation. No other tintinweb package is pinned. The only forked tintinweb package in this repository is `pi-subagents`.
 
 On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP implementation; it no longer bundles or registers pi-mcp-adapter.
+
+`@tifan/pi-preferred-thinking` is no longer bundled. Pi's native thinking levels cover per-model thinking. `@tifan/pi-rename` stays bundled: `@tifan/pi-handoff@2.2.2` statically imports `@tifan/pi-rename/naming`, so the handoff extension fails to load when that package is absent.
 
 `pi-provider-qoder@0.6.6` is pinned from `simonsmh/pi-provider-qoder` at git `29dbb8fff8fe27356f883f7d4ba2bae8ce7e20b0`. It registers `qoder` and `qoder-cn` and keeps the credit footer opt-in, so the pi-cc status bar remains the default. A ready model-busy response stays retryable. A queued model-busy response is reported with its wait, queue count, and queue type. The published tarball declares MIT and omits a LICENSE file. Smoke checks provider registration and that queue parser without a live Qoder request.
 

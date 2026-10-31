@@ -72,10 +72,6 @@
       "repository": "https://github.com/tifandotme/pi-extensions"
     },
     {
-      "package": "@tifan/pi-preferred-thinking",
-      "repository": "https://github.com/tifandotme/pi-extensions"
-    },
-    {
       "package": "@tifan/pi-recap",
       "repository": "https://github.com/tifandotme/pi-extensions"
     },
