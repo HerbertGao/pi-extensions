@@ -1,5 +1,22 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.0
+
+### Minor Changes
+
+- [#341](https://github.com/HerbertGao/pi-extensions/pull/341) [`8a30787`](https://github.com/HerbertGao/pi-extensions/commit/8a307878c0a91c3481d418cdd94dd9b9258ed1bd) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `pi-commandcode-provider@0.7.11` so `/login` can select the Command Code subscription, or `COMMAND_CODE_API_KEY` can sign that provider in.
+
+- [#344](https://github.com/HerbertGao/pi-extensions/pull/344) [`1feb356`](https://github.com/HerbertGao/pi-extensions/commit/1feb356ae779427d033499d4e922579ec8247619) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-lens 4.4.8 and pi-provider-qoder 0.6.8. An identity filter-then-map stays a warning, and a reduce that copies its accumulator with Object.assign is flagged. Qoder chat prefers the account's remote-agent node and retries another node after a daily chat limit.
+
+- [#339](https://github.com/HerbertGao/pi-extensions/pull/339) [`bcec5c7`](https://github.com/HerbertGao/pi-extensions/commit/bcec5c79504e138d52b81df1571554df50c49eb3) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `@tintinweb/pi-tasks@0.9.1` so Pi can track tasks with `/tasks` and run `TaskExecute` through the already bundled subagents extension.
+
+### Patch Changes
+
+- [#342](https://github.com/HerbertGao/pi-extensions/pull/342) [`3572b4d`](https://github.com/HerbertGao/pi-extensions/commit/3572b4d1497bbf9fca69cd7a167b32d2b06762dd) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Remove `@tifan/pi-preferred-thinking`. Per-model thinking levels come from Pi.
+
+- Updated dependencies [[`1feb356`](https://github.com/HerbertGao/pi-extensions/commit/1feb356ae779427d033499d4e922579ec8247619)]:
+  - @herbertgao/pi-subagents@0.22.0
+
 ## 2026.10.19
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.1-local.1
+
+### Minor Changes
+
+- [#344](https://github.com/HerbertGao/pi-extensions/pull/344) [`1feb356`](https://github.com/HerbertGao/pi-extensions/commit/1feb356ae779427d033499d4e922579ec8247619) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay subagents onto upstream 0.22.1. Other extensions can steer a running agent over `subagents:rpc:steer`, and every agent reports per-message `subagents:usage` until `subagents:disposed`. A resumed run gets a fresh turn budget, a subagent inherits the parent session's thinking level, and an append-mode agent no longer repeats the parent's skills and working directory. Unconsumed results and a failed worktree cleanup still stay recoverable.
+
 ## 0.22.0-local.2
 
 ### Patch Changes
