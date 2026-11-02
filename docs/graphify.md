@@ -28,7 +28,7 @@ Re-running the script installs the same pin again. `uv tool install` exits succe
 
 ## Pin
 
-[`pins/graphifyy`](../pins/graphifyy) is the version this repository expects. The current pin is `graphifyy==0.9.97`, the stable PyPI release checked on 2026-10-29. Bump that file to adopt a newer stable release, then re-run the bootstrap on each machine. The script installs the pin as written.
+[`pins/graphifyy`](../pins/graphifyy) is the version this repository expects. The current pin is `graphifyy==0.9.100`, the stable PyPI release checked on 2026-11-02. Bump that file to adopt a newer stable release, then re-run the bootstrap on each machine. The script installs the pin as written.
 
 A second `uv tool install` of the plain pin replaces the previous tool receipt. Re-running the default bootstrap therefore drops an `[mcp]` extra that was added by hand. Opt in again afterward if that extra should remain.
 
@@ -41,7 +41,7 @@ Copy the same checkout, or pull it, onto each machine. Install `uv` there and ru
 The bootstrap does not install Graphify's MCP extra. Pi 0.99+ provides MCP itself; configure servers in `~/.pi/agent/mcp.json`. To add Graphify's stdio extra, install the same pin with the extra:
 
 ```bash
-uv tool install "graphifyy[mcp]==0.9.97"
+uv tool install "graphifyy[mcp]==0.9.100"
 ```
 
 Use the version from `pins/graphifyy`. The same command is commented in `scripts/bootstrap-graphify.sh`. `graphify install` registers the skill. It does not open an MCP connection. Upstream describes the extra and the difference between skill instructions and MCP tools in the [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) README and the [installation docs](https://docs.graphify.com/installation).

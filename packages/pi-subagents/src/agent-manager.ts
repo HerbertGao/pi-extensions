@@ -49,6 +49,12 @@ import {
 
 export type OnAgentComplete = (record: AgentRecord) => void
 export type OnAgentStart = (record: AgentRecord) => void
+/**
+ * Fired by `steer()` once a message is delivered or queued. Every steer path
+ * goes through it except the steer tools (`steer_subagent` in index.ts, and its
+ * nested twin in nested-tools.ts), which await the session directly.
+ */
+export type OnAgentSteered = (record: AgentRecord, message: string) => void
 export type OnAgentCompact = (record: AgentRecord, info: CompactionInfo) => void
 /**
  * Fired once per assistant `message_end`, for EVERY agent this manager owns —
@@ -351,6 +357,14 @@ interface ResumeOptions {
    * record — the historical behavior.
    */
   isBackground?: boolean
+  /**
+   * Explicit turn limit for the resumed run: this, else the limit the agent
+   * was spawned with, else its type's own `max_turns`, else the default —
+   * counted afresh from the resume prompt (#368).
+   */
+  maxTurns?: number
+  /** Called at the end of each resumed turn with the count since the resume. */
+  onTurnEnd?: (turnCount: number) => void
   /** Called on tool start/end with activity info (for streaming progress to UI). */
   onToolActivity?: (activity: ToolActivity) => void
   /** Called once per assistant message_end with that message's usage delta. */
@@ -420,6 +434,7 @@ export class AgentManager {
   private onStart?: OnAgentStart
   private onCompact?: OnAgentCompact
   private onUsage?: OnAgentUsage
+  private onSteered?: OnAgentSteered
   private maxConcurrent: number
   private maxConcurrentForeground = DEFAULT_MAX_CONCURRENT_FOREGROUND
   /** Base repos worktrees were created from — so dispose() can prune them all,
@@ -476,11 +491,13 @@ export class AgentManager {
     onStart?: OnAgentStart,
     onCompact?: OnAgentCompact,
     onUsage?: OnAgentUsage,
+    onSteered?: OnAgentSteered,
   ) {
     this.onComplete = onComplete
     this.onStart = onStart
     this.onCompact = onCompact
     this.onUsage = onUsage
+    this.onSteered = onSteered
     this.maxConcurrent = maxConcurrent
     // Cleanup consumed completed agents after 10 minutes
     this.cleanupInterval = setInterval(() => this.cleanup(), 60_000)
@@ -972,28 +989,18 @@ export class AgentManager {
           structuredJson,
           structuredRetried,
         }) => {
-          // Don't overwrite status if externally stopped via abort()
-          if (record.status !== "stopped") {
-            // Precedence: a hard abort keeps "aborted"; then a failed final turn
-            // (provider error that pi resolved instead of rejecting, #144) is an
-            // honest "error" — not a completion with an empty or stale result.
-            if (aborted) {
-              record.status = "aborted"
-            } else if (failure) {
-              record.status = "error"
-              record.error = failure
-            } else {
-              record.status = steered ? "steered" : "completed"
-            }
-          }
-          record.result = responseText
+          this.settleOutcome(record, {
+            text: responseText,
+            failure,
+            aborted,
+            steered,
+          })
           // Kept beside `result`, never inside it: `result` is prose meant for a
           // reader — it is previewed, transcribed, and appended to below — while
           // this is a machine-readable payload one caller asked for by schema.
           record.structuredJson = structuredJson
           record.structuredRetried = structuredRetried
           record.session = session
-          record.completedAt ??= Date.now()
 
           detach()
 
@@ -1383,42 +1390,92 @@ export class AgentManager {
     record.completedAt = undefined
     record.result = undefined
     record.error = undefined
+    // Fresh controller, as on the detached path: `abort()` fires whatever
+    // `record.abortController` holds, and the spawn's has long settled — so a
+    // stop from `/agents` or the caller's Esc would mark the record stopped
+    // while the resumed prompt ran on to completion.
+    const abortController = new AbortController()
+    record.abortController = abortController
+    this.armParentAbort(record, signal)
+    // `addEventListener` never fires on a signal that is already aborted, and
+    // the runner skips the prompt only when ITS signal is — stop now, so that
+    // holds for a resume issued on a call that was cancelled first.
+    if (signal?.aborted) this.abort(id)
 
     try {
-      const { text, failure } = await resumeAgent(record.session, prompt, {
-        onToolActivity: (activity) => {
-          if (activity.type === "end") record.toolUses++
-          options?.onToolActivity?.(activity)
-        },
-        onAssistantUsage: (usage) => {
-          addUsage(record.lifetimeUsage, usage)
-          this.onUsage?.(record, usage)
-          options?.onAssistantUsage?.(usage)
-        },
-        onCompaction: (info) => {
-          record.compactionCount++
-          this.onCompact?.(record, info)
-          options?.onCompaction?.(info)
-        },
-        signal,
-      })
-      // Same contract as the spawn path (#144): a failed final turn is an
-      // error, not a completion — but the resumed text stays available.
-      record.status = failure ? "error" : "completed"
-      if (failure) record.error = failure
-      record.result = text
-      record.completedAt = Date.now()
+      this.settleOutcome(
+        record,
+        await resumeAgent(record.session, prompt, {
+          type: record.type,
+          maxTurns: options?.maxTurns ?? record.invocation?.maxTurns,
+          onTurnEnd: options?.onTurnEnd,
+          onToolActivity: (activity) => {
+            if (activity.type === "end") record.toolUses++
+            options?.onToolActivity?.(activity)
+          },
+          onAssistantUsage: (usage) => {
+            addUsage(record.lifetimeUsage, usage)
+            this.onUsage?.(record, usage)
+            options?.onAssistantUsage?.(usage)
+          },
+          onCompaction: (info) => {
+            record.compactionCount++
+            this.onCompact?.(record, info)
+            options?.onCompaction?.(info)
+          },
+          signal: abortController.signal,
+        }),
+      )
     } catch (err) {
-      record.status = "error"
-      record.error = err instanceof Error ? err.message : String(err)
-      record.completedAt = Date.now()
+      this.failResume(record, err)
     }
+    this.detachParentAbort(record)
 
     // Same contract as the spawn settle paths: children spawned during the
     // resumed turn must not outlive it — nothing else can see or reach them.
     this.abortOwnedChildren(id)
 
     return record
+  }
+
+  /**
+   * Write a run's outcome onto its record — a spawn's or a resume's, with one
+   * precedence: an external stop keeps "stopped"; a hard abort (turn limit +
+   * grace) is "aborted"; a failed final turn (a provider error pi resolved
+   * instead of rejecting, #144) is an "error", not a completion with an empty
+   * or stale result; otherwise "steered" or "completed". The run's text stays
+   * available in every case.
+   */
+  private settleOutcome(
+    record: AgentRecord,
+    {
+      text,
+      failure,
+      aborted,
+      steered,
+    }: Awaited<ReturnType<typeof resumeAgent>>,
+  ): void {
+    if (record.status !== "stopped") {
+      if (aborted) {
+        record.status = "aborted"
+      } else if (failure) {
+        record.status = "error"
+        record.error = failure
+      } else {
+        record.status = steered ? "steered" : "completed"
+      }
+    }
+    record.result = text
+    record.completedAt ??= Date.now()
+  }
+
+  /** A resume whose runner rejected: an error, unless an external stop got there first. */
+  private failResume(record: AgentRecord, err: unknown): void {
+    if (record.status !== "stopped") {
+      record.status = "error"
+      record.error = err instanceof Error ? err.message : String(err)
+    }
+    record.completedAt ??= Date.now()
   }
 
   /**
@@ -1490,6 +1547,9 @@ export class AgentManager {
     }
 
     const promise = resumeAgent(record.session, prompt, {
+      type: record.type,
+      maxTurns: options.maxTurns ?? record.invocation?.maxTurns,
+      onTurnEnd: options.onTurnEnd,
       onToolActivity: (activity) => {
         if (activity.type === "end") record.toolUses++
         options.onToolActivity?.(activity)
@@ -1506,25 +1566,13 @@ export class AgentManager {
       },
       signal: abortController.signal,
     })
-      .then(({ text, failure }) => {
-        // Don't overwrite status if externally stopped via abort().
-        if (record.status !== "stopped") {
-          // Same contract as the spawn path (#144): a failed final turn is an
-          // error, not a completion — but the resumed text stays available.
-          record.status = failure ? "error" : "completed"
-          if (failure) record.error = failure
-        }
-        record.result = text
-        record.completedAt ??= Date.now()
+      .then((outcome) => {
+        this.settleOutcome(record, outcome)
         settle()
-        return text
+        return outcome.text
       })
       .catch((err) => {
-        if (record.status !== "stopped") {
-          record.status = "error"
-          record.error = err instanceof Error ? err.message : String(err)
-        }
-        record.completedAt ??= Date.now()
+        this.failResume(record, err)
         settle()
         return ""
       })
@@ -1538,7 +1586,10 @@ export class AgentManager {
    * current tool execution and appears as a user message. If the session isn't
    * ready yet, the message is queued on `pendingSteers` and flushed when the
    * session is created. Returns false if the agent can't accept steering
-   * (unknown id, or no longer running/queued).
+   * (unknown id, or no longer running/queued). Fires `onSteered` on either
+   * accepted path, so the UI viewers, an `@handle` and the RPC all report
+   * the steer the same way without each emitting by hand. The steer tools
+   * bypass this method because they await delivery.
    */
   steer(id: string, message: string): boolean {
     const record = this.agents.get(id)
@@ -1550,6 +1601,7 @@ export class AgentManager {
       if (!record.pendingSteers) record.pendingSteers = []
       record.pendingSteers.push(message)
     }
+    this.onSteered?.(record, message)
     return true
   }
 

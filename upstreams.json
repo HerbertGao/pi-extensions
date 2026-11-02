@@ -10,7 +10,7 @@
     {
       "name": "pi-subagents",
       "repository": "https://github.com/tintinweb/pi-subagents",
-      "reviewedCommit": "ca93a5247e72e7053fcd10bea7125d6c4205f949",
+      "reviewedCommit": "fc089c4b7ab0f1185453b2e53027997c1f637e38",
       "watch": "npm"
     },
     {

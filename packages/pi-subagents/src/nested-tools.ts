@@ -112,6 +112,7 @@ export interface NestedAgentManager {
     id: string,
     prompt: string,
     signal?: AbortSignal,
+    options?: { maxTurns?: number },
   ): Promise<AgentRecord | undefined>
 }
 
@@ -242,10 +243,17 @@ export function createNestedSubagentTools(
             true,
           )
         }
+        // Frontmatter authoritative, as on the spawn path; the manager falls
+        // back to the limit the child was spawned with, then the default.
         const resumed = await context.manager.resume(
           params.resume,
           params.prompt,
           signal,
+          {
+            maxTurns:
+              getAgentConfigIn(loadRegistry(), existing.type)?.maxTurns ??
+              params.max_turns,
+          },
         )
         return resumed
           ? textResult(
