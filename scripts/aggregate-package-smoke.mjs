@@ -460,7 +460,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   evaluateAstGrepRules, detectFileKind, FactStore, getFactStoreEvictionReporter,
   setFactStoreEvictionReporter, registerSessionRoot, isOutsideAllSessionRoots,
   shouldInitializeSessionRoot, clearSessionRoots, mergeInstanceRoots,
-  getLSPService, resetLSPService, validateWorkspaceEdit };
+  getLSPService, resetLSPService, validateWorkspaceEdit, relativeInside, isUnderDir };
 `
   const lensProbe = await createLensJiti(lensEntry, {
     moduleCache: false,
@@ -560,6 +560,66 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error("pi-lens flagged a parameterized SQL execute")
   }
+
+  function lensRuleDiagnostics(file, source) {
+    const rootNode = astGrepNapi.getLang(file, sgModule)?.parse(source).root()
+    if (!rootNode) throw new Error(`pi-lens could not parse ${file}`)
+    return astGrepNapi.evaluateAstGrepRules(
+      file,
+      rootNode,
+      stageDir,
+      lensFileKinds.detectFileKind(file),
+    )
+  }
+  const identityFilter = lensRuleDiagnostics(
+    "identity-filter.ts",
+    "const values = arr.filter((x: string | undefined) => x).map(String)\n",
+  )
+  if (
+    !identityFilter.some((diagnostic) =>
+      diagnostic.message.includes("arr.filter(x => x).map"),
+    )
+  ) {
+    throw new Error("pi-lens no longer flags an identity filter().map()")
+  }
+  const genericFilter = lensRuleDiagnostics(
+    "generic-filter.ts",
+    "const values = arr.filter(onlyPositive).map(double)\n",
+  )
+  if (
+    genericFilter.some((diagnostic) =>
+      diagnostic.message.includes("arr.filter(x => x).map"),
+    )
+  ) {
+    throw new Error("pi-lens flagged a non-identity filter().map()")
+  }
+  const assignReduce = lensRuleDiagnostics(
+    "assign-reduce.js",
+    "const out = items.reduce((acc, item) => Object.assign({}, acc, item), {})\n",
+  )
+  if (
+    !assignReduce.some((diagnostic) =>
+      diagnostic.message.includes("Copying the reduce accumulator"),
+    )
+  ) {
+    throw new Error(
+      "pi-lens did not flag an Object.assign copy of a reduce accumulator",
+    )
+  }
+  const lensContainRoot = join(stageDir, "lens-contain")
+  const lensDotDotName = join(lensContainRoot, "..pkg", "file.ts")
+  assert.equal(lensProbe.isUnderDir(lensDotDotName, lensContainRoot), true)
+  assert.equal(
+    lensProbe.relativeInside(lensContainRoot, lensDotDotName),
+    "..pkg/file.ts",
+  )
+  assert.equal(
+    lensProbe.relativeInside(
+      lensContainRoot,
+      join(lensContainRoot, "..", "outside.ts"),
+    ),
+    undefined,
+  )
 
   const lensBiomeConfigPath = join(lensRoot, "config/biome/core.jsonc")
   const lensBiomeConfig = await readFile(lensBiomeConfigPath, "utf8")
@@ -2727,7 +2787,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const qoderProbe = await createQoderJiti(qoderEntry, {
     moduleCache: false,
   }).evalModule(
-    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError };\n`,
+    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl };\n`,
     { filename: qoderEntry, async: true, forceTranspile: true },
   )
   assert.deepEqual(
@@ -2771,6 +2831,73 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ),
     undefined,
   )
+  const qoderEndpoints = qoderProbe.parseQoderRegionEndpoints({
+    inferNodes: ["https://infer.example/"],
+    security: ["https://sec.example"],
+    dataNodeMap: { remote_agent: ["https://agent.example"] },
+  })
+  assert.deepEqual(
+    qoderProbe.chatEndpointCandidates(qoderEndpoints, "https://static.example"),
+    [
+      "https://static.example/",
+      "https://agent.example/",
+      "https://infer.example/",
+      "https://sec.example/",
+    ],
+  )
+  assert.equal(
+    qoderProbe
+      .chatEndpointCandidates(qoderEndpoints, "https://static.example")
+      .find((url) => qoderEndpoints.remoteAgentNodes.includes(url)),
+    "https://agent.example/",
+  )
+  assert.equal(
+    qoderProbe.isDailyChatLimitRejection(
+      JSON.stringify({
+        code: "110",
+        message: "Billing daily count exceeded",
+      }),
+    ),
+    true,
+  )
+  assert.equal(qoderProbe.isDailyChatLimitRejection({ code: 110 }), true)
+  assert.equal(
+    qoderProbe.isDailyChatLimitRejection(
+      qoderBusyBody({ isQueued: true, serviceAvailable: true, waitTime: 1 }),
+    ),
+    false,
+  )
+  const qoderCachePath = join(stageDir, "qoder-endpoints-cache.json")
+  const previousQoderCachePath = process.env.QODER_ENDPOINTS_CACHE_PATH
+  process.env.QODER_ENDPOINTS_CACHE_PATH = qoderCachePath
+  try {
+    await writeFile(
+      qoderCachePath,
+      `${JSON.stringify({
+        version: 1,
+        modes: {
+          qoder: {
+            chatBaseUrl: "https://agent.example/",
+            updatedAt: 1_000,
+          },
+        },
+      })}\n`,
+    )
+    assert.equal(
+      qoderProbe.getCachedChatBaseUrl("qoder", 1_000 + 60 * 60 * 1000),
+      "https://agent.example/",
+    )
+    assert.equal(
+      qoderProbe.getCachedChatBaseUrl("qoder", 1_000 + 60 * 60 * 1000 + 1),
+      undefined,
+    )
+  } finally {
+    if (previousQoderCachePath === undefined) {
+      delete process.env.QODER_ENDPOINTS_CACHE_PATH
+    } else {
+      process.env.QODER_ENDPOINTS_CACHE_PATH = previousQoderCachePath
+    }
+  }
   const commandCodeEntry = resolve(
     packageRoot,
     "node_modules/pi-commandcode-provider/index.ts",

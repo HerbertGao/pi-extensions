@@ -50,7 +50,7 @@ test("pin is the checked PyPI release and stays out of npm", () => {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("#"))
-  assert.deepEqual(requirements, ["graphifyy==0.9.97"])
+  assert.deepEqual(requirements, ["graphifyy==0.9.100"])
 
   const aggregate = readFileSync(
     join(root, "packages/pi-extensions/package.json"),
@@ -127,7 +127,7 @@ exit 0
     })
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(readFileSync(uvLog, "utf8").trim().split("\n"), [
-      "tool install graphifyy==0.9.97",
+      "tool install graphifyy==0.9.100",
       "tool dir --bin",
     ])
     assert.equal(
