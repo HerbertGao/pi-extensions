@@ -1,5 +1,11 @@
 # @herbertgao/pi-bark
 
+## 0.2.2
+
+### Patch Changes
+
+- [#346](https://github.com/HerbertGao/pi-extensions/pull/346) [`641894f`](https://github.com/HerbertGao/pi-extensions/commit/641894ff5dc34a38ab41905f27a3077cc865ab91) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Document Pi 1.5.0 as the tested host and publish each package changelog so Pi can show Extension Updates after an update. Agency tools and clef keep the same TypeBox schemas, built from typebox because Pi 1.5 no longer re-exports Type. Peer ranges stay open. The BTW fullscreen handoff resolves `@narumitw/pi-tui-kit@0.68.1` inside the existing `^0.68.0` range.
+
 ## 0.2.1
 
 ### Patch Changes

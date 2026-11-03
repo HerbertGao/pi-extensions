@@ -1,5 +1,15 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.13-local.1
+
+### Minor Changes
+
+- [#348](https://github.com/HerbertGao/pi-extensions/pull/348) [`140f4fb`](https://github.com/HerbertGao/pi-extensions/commit/140f4fbc8600deaaf6f5ac253088e043b5194dc4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Separate the completed thinking preview from the in-progress preview, and add an opt-in footer chip for this conversation's token total. Agent summary numbers keep their semantic colors.
+
+### Patch Changes
+
+- [#346](https://github.com/HerbertGao/pi-extensions/pull/346) [`641894f`](https://github.com/HerbertGao/pi-extensions/commit/641894ff5dc34a38ab41905f27a3077cc865ab91) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Document Pi 1.5.0 as the tested host and publish each package changelog so Pi can show Extension Updates after an update. Agency tools and clef keep the same TypeBox schemas, built from typebox because Pi 1.5 no longer re-exports Type. Peer ranges stay open. The BTW fullscreen handoff resolves `@narumitw/pi-tui-kit@0.68.1` inside the existing `^0.68.0` range.
+
 ## 1.0.12-local.1
 
 ### Patch Changes
