@@ -1,5 +1,20 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.1
+
+### Patch Changes
+
+- [#346](https://github.com/HerbertGao/pi-extensions/pull/346) [`641894f`](https://github.com/HerbertGao/pi-extensions/commit/641894ff5dc34a38ab41905f27a3077cc865ab91) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Document Pi 1.5.0 as the tested host and publish each package changelog so Pi can show Extension Updates after an update. Agency tools and clef keep the same TypeBox schemas, built from typebox because Pi 1.5 no longer re-exports Type. Peer ranges stay open. The BTW fullscreen handoff resolves `@narumitw/pi-tui-kit@0.68.1` inside the existing `^0.68.0` range.
+
+- [#348](https://github.com/HerbertGao/pi-extensions/pull/348) [`140f4fb`](https://github.com/HerbertGao/pi-extensions/commit/140f4fbc8600deaaf6f5ac253088e043b5194dc4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-provider-qoder 0.6.9. A queued busy wait that does not fit in a safe millisecond count uses the retry-after interval instead.
+
+- Updated dependencies [[`641894f`](https://github.com/HerbertGao/pi-extensions/commit/641894ff5dc34a38ab41905f27a3077cc865ab91), [`140f4fb`](https://github.com/HerbertGao/pi-extensions/commit/140f4fbc8600deaaf6f5ac253088e043b5194dc4)]:
+  - @herbertgao/pi-agency@0.1.3
+  - @herbertgao/pi-bark@0.2.2
+  - @herbertgao/pi-cc-extensions@1.1.0
+  - @herbertgao/pi-impeccable@0.1.1
+  - @herbertgao/sol-pi@0.4.3
+
 ## 2026.11.0
 
 ### Minor Changes
