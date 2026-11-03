@@ -289,6 +289,10 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
 
+### 2026-11-03 pi-tui-kit resolution
+
+Accept resolved `@narumitw/pi-tui-kit@0.68.1` (integrity `sha512-JBVHOY4jf3NS65hLGXX3zy4VZTmRbZpYaSgJZ4+hDmZtnNkxszpxMD7loI1AA3+Y3Nb3DXQnRMASMPUhizDjsw==`, MIT, no gitHead) under the existing aggregate and `@narumitw/pi-btw@0.63.3` range `^0.68.0`. `fullscreen-handoff` is byte-identical to `0.68.0`. The only published code change unreferences the paste-start timer. Dependencies stay `diff@9.0.0`, `grok-mermaid@0.2.3`, and `highlight.js@11.12.0`. Caffeinate still resolves `@narumitw/pi-tui-kit@0.59.0`. This package is not one of the Issue #345 companion bumps.
+
 ### 2026-11-02 issue #338 review
 
 Release updates. SoL-Pi stays at review cursor `219568034fa5`. No new optional product is imported.

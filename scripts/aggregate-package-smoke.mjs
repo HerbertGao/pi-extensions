@@ -1706,11 +1706,11 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "./fullscreen-handoff",
   )
   if (
-    handoffModule.manifest.version !== "0.68.0" ||
+    handoffModule.manifest.version !== "0.68.1" ||
     handoffModule.manifest.license !== "MIT"
   ) {
     throw new Error(
-      `Expected pi-btw to load pi-tui-kit 0.68.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+      `Expected pi-btw to load pi-tui-kit 0.68.1 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
     )
   }
   const { createFullscreenHandoff } = await import(

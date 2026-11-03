@@ -31,6 +31,7 @@
       "peerDependencies": {
         "@earendil-works/pi-ai": "*",
         "@earendil-works/pi-coding-agent": "*",
+        "typebox": "*",
       },
     },
     "packages/pi-bark": {
@@ -436,7 +437,7 @@
 
     "@narumitw/pi-caffeinate": ["@narumitw/pi-caffeinate@0.49.13", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.59.0", "dbus-native": "^0.16.2" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-0c0ePl6w4VnDCk4kAQRC097XWXT+UOcYowLt8gU2/vIzhs6pi89SXd6BBywVSub7RHK+kzxOI10oxnQ6THn8ag=="],
 
-    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.68.0", "", { "dependencies": { "diff": "9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-AIPMCkgLLUg5bZj0GeM0F5wIIz+x9f73OlScEkwzSph7UMJ4ngJH3p5Ca54ebHWAGWxpeaNHNOqB+mD6yvXhDA=="],
+    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.68.1", "", { "dependencies": { "diff": "9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-JBVHOY4jf3NS65hLGXX3zy4VZTmRbZpYaSgJZ4+hDmZtnNkxszpxMD7loI1AA3+Y3Nb3DXQnRMASMPUhizDjsw=="],
 
     "@nodelib/fs.scandir": ["@nodelib/fs.scandir@2.1.5", "", { "dependencies": { "@nodelib/fs.stat": "2.0.5", "run-parallel": "^1.1.9" } }, "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="],
 
