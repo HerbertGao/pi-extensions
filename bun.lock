@@ -108,7 +108,7 @@
         "pi-commandcode-provider": "0.7.11",
         "pi-lens": "4.4.8",
         "pi-next-cue": "1.0.8",
-        "pi-provider-qoder": "0.6.8",
+        "pi-provider-qoder": "0.6.9",
         "pi-typesafe": "0.13.1",
         "pi-web-access": "0.46.0",
         "pidusage": "^4.0.1",
@@ -1267,7 +1267,7 @@
 
     "pi-next-cue": ["pi-next-cue@1.0.8", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=1.2.0" } }, "sha512-GjVBAEINsd/2bp1aVhTTSOHnSkDeuKW4JEu1wuTNPh5VIa1D/jUUPyVRsE54AlazTN4w644xtR6V7GCKORYgVg=="],
 
-    "pi-provider-qoder": ["pi-provider-qoder@0.6.8", "", {}, "sha512-eXAqlwzs81xuCgzIndlkXZ9sO+mJ2a/zhvFrQYRQI92tUYBnKZLN9rtcoQa97I+FmCpnAacayN+pb1prnfgsRA=="],
+    "pi-provider-qoder": ["pi-provider-qoder@0.6.9", "", {}, "sha512-1eq9Efwy5o2KTVJ5npaJT33Tj8rqKLotOM3iII883DUWWkbLHYY0LHQumAKzAmlYr7Onk+saVenEXmvvPdRe5g=="],
 
     "pi-typesafe": ["pi-typesafe@0.13.1", "", { "dependencies": { "@typesafe-ai/sdk": "^0.7.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.85.1 <1", "@earendil-works/pi-tui": ">=0.85.1 <1", "typebox": "*" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"] }, "sha512-Ns5lR/P/g2lVEX8b4vdFMcRXdfAhTAY00hJ0rUqvBPaLz/WbPJNvog3OGUn8Igme6Ip4fFt6UfAAHI2zHpJUPg=="],
 

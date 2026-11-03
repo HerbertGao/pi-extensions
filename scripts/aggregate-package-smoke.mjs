@@ -2819,6 +2819,19 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     qoderProbe.formatQueuedBusyError(queued).message,
     "Qoder model is busy: request queued (10605 CALL_COUNT_LIMIT (standard), 3 ahead, ~2s wait, rate limit, retry-after-ms=2400)",
   )
+  assert.deepEqual(
+    qoderProbe.parseModelBusyRejection(
+      qoderBusyBody({
+        isQueued: true,
+        serviceAvailable: true,
+        waitTime: 1e300,
+        retryAfterSeconds: 30,
+        queueCount: 0,
+        queueType: "p4",
+      }),
+    ),
+    { kind: "queued", waitMs: 30000, queueCount: 0, queueType: "p4" },
+  )
   assert.equal(
     qoderProbe.parseModelBusyRejection(
       qoderBusyBody({ isQueued: true, serviceAvailable: false, waitTime: 1 }),

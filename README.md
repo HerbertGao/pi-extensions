@@ -55,7 +55,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.13.1`       | Structured TypeSafe/Jev decisions.                |
 | [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.8`        | Code diagnostics and skills.                      |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.46.0`       | Web search and content access.                    |
-| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.8`        | Qoder account models for global and China.        |
+| [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.9`        | Qoder account models for global and China.        |
 
 ## Companion tools
 

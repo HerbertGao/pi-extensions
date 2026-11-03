@@ -33,7 +33,7 @@ Run `/reload` after installation.
 | Settings panel              | `Style / Features / UI / Diff / Thinking / Footer` tabs                                                                                      | `/ccstyle`                                      |
 | Context inspection          | Usage breakdown and previews for the system prompt, memory, skills, tools definition, and messages                                           | `/context`                                      |
 | Session/Subagent references | Search and inject effective context from previous Sessions or existing SubAgents                                                             | `@`                                             |
-| Status bar                  | Shows model, context, cache, cost, and git; also works with `@narumitw/pi-usage` for live quota. Git/cache Nerd Font icons can be turned off | `/ccstyle`                                      |
+| Status bar                  | Shows model, context, cache, cost, the conversation token total, and git; also works with `@narumitw/pi-usage` for live quota. Git/cache Nerd Font icons can be turned off | `/ccstyle`                                      |
 | Theme                       | Bundled CC Dark and CC Light themes                                                                                                          | `/settings` → Theme                             |
 
 Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-examples-default.md) · [compact](./docs/tool-render-examples-compact.md)
@@ -77,7 +77,8 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 
   // thinking
   "useSummaryTitlesAsThinkingTitle": true, // use latest summary as thinking title
-  "previewLines": 3,                       // preview lines; 0 hides
+  "previewLines": 3,                       // preview lines while thinking; 0 hides
+  "completedPreviewLines": null,           // completed preview lines; null follows previewLines, 0 hides. Panel accepts any number or follow
   "animationIntervalMs": 90,               // title animation interval (ms)
 
   // footer
@@ -85,12 +86,13 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "footerTokenRate": true,                 // output rate chip; false hides it
   "footerTokenRateMode": "average",        // average: whole-prompt avg; live: trailing 1s rate
   "footerTokenRateTtft": true,             // append TTFT to the rate chip; false shows tok/s only
+  "footerSessionTokens": false,            // conversation token total chip (∑); sums usage.totalTokens from session entries. Off by default
   "footerCurrency": "USD",                 // display currency for the footer cost
   "footerCurrencyRate": null,              // display units per 1 cost unit; null changes the symbol only
   "footerNerdIcons": true,                 // Nerd Font glyphs for git/cache; false = plain text
   "footerGitStatsMode": "working",         // working (default): uncommitted; branch: cumulative net changes
   "footerHiddenKeys": [],                  // hidden chip keys
-  "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "pi-usage"], // chip order per line; builtins and plugins share one layout
+  "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "tokens", "pi-usage"], // chip order per line; builtins and plugins share one layout
   "footerLine2Keys": ["cwd", "git"],       // cwd: directory and session; git: branch and changes. Either can move to any line
   "footerLine3Keys": [],                   // painted only when a chip is visible
 }
@@ -126,7 +128,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.12 (MIT), upstream baseline [`90957cd`](https://github.com/minuque/pi-cc-extensions/commit/90957cd445403bc493e8aaee2231e1932ac26d46), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.13 (MIT), upstream baseline [`2ee840f`](https://github.com/minuque/pi-cc-extensions/commit/2ee840f0049be01e352a86f96a6c6e8be9f74670), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License
