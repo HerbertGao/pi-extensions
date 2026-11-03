@@ -33,7 +33,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 | 配置面板              | `Style / Features / UI / Diff / Thinking / Footer` 六页签                       | `/ccstyle`                                      |
 | 上下文检查            | 查看上下文占用，并预览 System prompt、Memory、Skills、Tools definition 和消息内容 | `/context`                                      |
 | Session/Subagent 引用 | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                             | `@`                                             |
-| 状态栏                | 显示：模型、上下文、缓存、费用、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存图标可关 Nerd Font | `/ccstyle`                              |
+| 状态栏                | 显示：模型、上下文、缓存、费用、本次对话累计 token、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存图标可关 Nerd Font | `/ccstyle`                              |
 | 主题                  | 随包提供内置 CC Dark、CC Light 主题                                             | `/settings` → Theme                             |
 
 `on` / `compact` 两种模式的渲染样例：[默认模式](./docs/tool-render-examples-default.md) · [紧凑模式](./docs/tool-render-examples-compact.md)
@@ -77,19 +77,22 @@ pi install git:github.com/HerbertGao/pi-extensions
 
   // thinking
   "useSummaryTitlesAsThinkingTitle": true, // 用最新摘要作思考标题
-  "previewLines": 3,                       // 预览行数，0 隐藏
+  "previewLines": 3,                       // 思考中的预览行数，0 隐藏
+  "completedPreviewLines": null,           // 完成态预览行数，0 隐藏；null 跟随 previewLines。面板可输入任意值或 follow
   "animationIntervalMs": 90,               // 标题动画间隔（毫秒）
 
   // footer
   "enableCustomFooter": true,              // 自定义状态栏
-  "footerTokenRate": true,                  // 输出速率芯片；false 隐藏
-  "footerTokenRateMode": "average",         // average：整段指令平均（avg）；live：最近 1 秒瞬时（live）
+  "footerTokenRate": true,                 // 输出速率芯片；false 隐藏
+  "footerTokenRateMode": "average",        // average：整段指令平均（avg）；live：最近 1 秒瞬时（live）
+  "footerTokenRateTtft": true,             // 速率芯片是否带 TTFT；false 只显示 tok/s
+  "footerSessionTokens": false,            // 本次对话累计 token 芯片（∑）；累加会话条目的 usage.totalTokens，默认关
   "footerCurrency": "USD",                 // 底栏费用的显示币种
   "footerCurrencyRate": null,              // 1 单位费用换成多少显示币种；null 只换符号、不乘倍率
   "footerNerdIcons": true,                 // git/缓存用 Nerd Font 图标；false 为纯文本
   "footerGitStatsMode": "working",         // working（默认）：未提交改动；branch：分支累计净改动
   "footerHiddenKeys": [],                  // 隐藏的芯片 key
-  "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "pi-usage"], // 每行芯片顺序；内置项与插件同一套排布
+  "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "tokens", "pi-usage"], // 每行芯片顺序；内置项与插件同一套排布
   "footerLine2Keys": ["cwd", "git"],       // cwd：目录和会话名；git：分支和改动。可换到任意行
   "footerLine3Keys": []                    // 有可见芯片才占行
 }
@@ -125,7 +128,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.12（MIT），上游基线 [`90957cd`](https://github.com/minuque/pi-cc-extensions/commit/90957cd445403bc493e8aaee2231e1932ac26d46)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.13（MIT），上游基线 [`2ee840f`](https://github.com/minuque/pi-cc-extensions/commit/2ee840f0049be01e352a86f96a6c6e8be9f74670)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

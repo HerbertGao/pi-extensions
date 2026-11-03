@@ -213,7 +213,7 @@ THE SOFTWARE.
 
 ## `pi-provider-qoder`
 
-The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.8 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`4172035919e24dc8bc4d16173ce30a533744e323`](https://github.com/simonsmh/pi-provider-qoder/commit/4172035919e24dc8bc4d16173ce30a533744e323).
+The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.9 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`b4dd6a1e42763ccc5ead629d6ec171b07e09105d`](https://github.com/simonsmh/pi-provider-qoder/commit/b4dd6a1e42763ccc5ead629d6ec171b07e09105d).
 
 ## `@herbertgao/pi-impeccable`
 

@@ -332,6 +332,7 @@ test("resume (session_tree) under compact rebuilds summary over compact-thinking
 		installCompactThinking(pi, {
 			useSummaryTitlesAsThinkingTitle: false,
 			previewLines: 0,
+			completedPreviewLines: null,
 			animationIntervalMs: 30,
 		});
 		await emit("session_start", {}, ctx);
