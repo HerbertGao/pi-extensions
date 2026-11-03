@@ -1,4 +1,4 @@
-import { Type } from "@earendil-works/pi-ai"
+import { Type } from "typebox"
 import { Text } from "@earendil-works/pi-tui"
 import {
   formatAnswers,

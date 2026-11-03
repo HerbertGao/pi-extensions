@@ -10,6 +10,7 @@ import {
 	type BashOperations,
 	createBashToolDefinition,
 	type ExtensionAPI,
+	initTheme,
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import {
@@ -21,6 +22,9 @@ import {
 import { withFusedFileQueue } from "../src/sol-pi/extensions/action-fusion/file-queue.ts";
 import { runFusedMutation } from "../src/sol-pi/extensions/action-fusion/then-run.ts";
 import { componentText, fakeToolContext, plainTheme, type ToolExecuteContext } from "./helpers.ts";
+
+// Pi 1.5 write/edit call renderers highlight through the process theme.
+initTheme("dark");
 
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));

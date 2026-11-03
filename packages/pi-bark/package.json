@@ -23,6 +23,7 @@
     "assets",
     "src",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "type": "module",

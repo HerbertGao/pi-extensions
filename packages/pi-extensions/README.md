@@ -8,7 +8,7 @@ Aggregate installer for HerbertGao-maintained Pi extensions and pinned upstream 
 pi install npm:@herbertgao/pi-extensions
 ```
 
-Requires Node.js 22.19.0 or newer and Pi 1.2.0 or newer.
+Requires Node.js 22.19.0 or newer and Pi 1.5.0 or newer.
 
 ## Native MCP
 
@@ -77,7 +77,7 @@ Impeccable `4.8.0` is vendored as `@herbertgao/pi-impeccable` and loaded with `/
 
 Pi stacks widgets by key. While tasks are visible, three other above-editor widgets can show at the same time: `pi-next-cue`'s one-line `hint` (default placement is above the editor), `@herbertgao/pi-subagents`' `agents` list, and pi-cc's empty `compact-thinking-render-loop` hook. The subagents fleet bar stays below the editor. None of these replace the `tasks` widget.
 
-`TaskExecute` needs `@herbertgao/pi-subagents` loaded in the same session. It does not import `@tintinweb/pi-subagents`. It uses the in-process bus (`subagents:rpc:ping`, `spawn`, `stop`, and `consume`) and enables execution only when that bus answers protocol version 2, which this aggregate's subagents fork does. The other task tools, the widget, and `/tasks` work without it. If subagents is missing or the protocol diverges, the tool text still names `@tintinweb/pi-subagents`; that string is upstream copy and is not shown when protocol v2 matches. Peers are `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`, satisfied by the Pi 1.2 host. No extra runtime dependency is promoted.
+`TaskExecute` needs `@herbertgao/pi-subagents` loaded in the same session. It does not import `@tintinweb/pi-subagents`. It uses the in-process bus (`subagents:rpc:ping`, `spawn`, `stop`, and `consume`) and enables execution only when that bus answers protocol version 2, which this aggregate's subagents fork does. The other task tools, the widget, and `/tasks` work without it. If subagents is missing or the protocol diverges, the tool text still names `@tintinweb/pi-subagents`; that string is upstream copy and is not shown when protocol v2 matches. Peers are `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`, satisfied by the Pi 1.5.0 host. No extra runtime dependency is promoted.
 
 ### Command Code
 

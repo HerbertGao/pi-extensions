@@ -69,14 +69,14 @@ Read our paper: [SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient A
 
 - Node.js 22.19.0 or newer
 - npm
-- `@earendil-works/pi-coding-agent` 1.2.0 (the monorepo's tested host; runtime peers remain `*`)
+- `@earendil-works/pi-coding-agent` 1.5.0 (the monorepo's tested host; runtime peers remain `*`)
 
 ### Install
 
 Install the tested Pi release:
 
 ```bash
-npm install --global @earendil-works/pi-coding-agent@1.2.0
+npm install --global @earendil-works/pi-coding-agent@1.5.0
 ```
 
 Install this independently maintained package, or use `@herbertgao/pi-extensions` for the collection:
@@ -155,7 +155,7 @@ bun audit
 node packages/sol-pi/scripts/check-pi-compat.mjs
 ```
 
-For package-only checks, run `bun run --cwd packages/sol-pi typecheck` and `bun run --cwd packages/sol-pi test`, then inspect the package with `npm pack --dry-run` from `packages/sol-pi`. Root development dependencies provide Pi 1.2.0; runtime Pi packages remain peer dependencies so Pi owns their installation and upgrades.
+For package-only checks, run `bun run --cwd packages/sol-pi typecheck` and `bun run --cwd packages/sol-pi test`, then inspect the package with `npm pack --dry-run` from `packages/sol-pi`. Root development dependencies provide Pi 1.5.0; runtime Pi packages remain peer dependencies so Pi owns their installation and upgrades.
 
 ## Project Status
 
