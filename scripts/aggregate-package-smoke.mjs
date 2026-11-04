@@ -2637,12 +2637,14 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "QODERCN_API_KEY",
     "QODERCN_PERSONAL_ACCESS_TOKEN",
     "QODERCN_PAT",
+    "PI_PROVIDER_QODER_SKIP_UPDATE_CHECK",
   ]
   const previousQoderEnv = qoderEnvNames.map((name) => [
     name,
     process.env[name],
   ])
   for (const name of qoderEnvNames) delete process.env[name]
+  process.env.PI_PROVIDER_QODER_SKIP_UPDATE_CHECK = "1"
   const commandCodeModelsCache = join(stageDir, "commandcode-models.json")
   await writeFile(
     commandCodeModelsCache,
@@ -2787,7 +2789,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const qoderProbe = await createQoderJiti(qoderEntry, {
     moduleCache: false,
   }).evalModule(
-    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl };\n`,
+    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl, formatUpdateNotice, checkForUpdate };\n`,
     { filename: qoderEntry, async: true, forceTranspile: true },
   )
   assert.deepEqual(
@@ -2911,6 +2913,74 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       process.env.QODER_ENDPOINTS_CACHE_PATH = previousQoderCachePath
     }
   }
+  assert.equal(
+    qoderProbe.formatUpdateNotice("0.6.10", "0.6.10", "/usr/local/bin/pi"),
+    null,
+  )
+  assert.equal(
+    qoderProbe.formatUpdateNotice("0.6.10", "0.6.9", "/usr/local/bin/pi"),
+    null,
+  )
+  assert.equal(
+    qoderProbe.formatUpdateNotice("0.6.10", "0.6.11", "/usr/bin/pi"),
+    "[pi-provider-qoder] 0.6.11 is available (running 0.6.10). Upgrade: pi install npm:pi-provider-qoder",
+  )
+  assert.equal(
+    qoderProbe.formatUpdateNotice("0.6.10", "0.6.11", "/opt/bin/omp"),
+    "[pi-provider-qoder] 0.6.11 is available (running 0.6.10). Upgrade: omp plugin upgrade pi-provider-qoder",
+  )
+  assert.equal(
+    qoderProbe.formatUpdateNotice("0.6.10", "0.6.11", "/usr/bin/node"),
+    "[pi-provider-qoder] 0.6.11 is available (running 0.6.10). Upgrade: omp plugin upgrade pi-provider-qoder (pi: pi install npm:pi-provider-qoder)",
+  )
+  let qoderUpdateFetches = 0
+  assert.equal(
+    await qoderProbe.checkForUpdate({
+      disabled: true,
+      currentVersion: "0.6.10",
+      fetchImpl: async () => {
+        qoderUpdateFetches += 1
+        throw new Error("disabled update check must not fetch")
+      },
+    }),
+    null,
+  )
+  assert.equal(qoderUpdateFetches, 0)
+  assert.equal(
+    await qoderProbe.checkForUpdate({
+      currentVersion: "0.6.10",
+      hostExecutable: "/usr/bin/pi",
+      timeoutMs: 50,
+      fetchImpl: async () => ({
+        ok: true,
+        json: async () => ({ version: "0.6.11" }),
+      }),
+    }),
+    "[pi-provider-qoder] 0.6.11 is available (running 0.6.10). Upgrade: pi install npm:pi-provider-qoder",
+  )
+  assert.equal(
+    await qoderProbe.checkForUpdate({
+      currentVersion: "0.6.10",
+      timeoutMs: 50,
+      fetchImpl: async () => {
+        throw new Error("offline")
+      },
+    }),
+    null,
+  )
+  assert.equal(
+    await qoderProbe.checkForUpdate({
+      currentVersion: "0.6.10",
+      timeoutMs: 20,
+      fetchImpl: (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener("abort", () => {
+            reject(new Error("aborted"))
+          })
+        }),
+    }),
+    null,
+  )
   const commandCodeEntry = resolve(
     packageRoot,
     "node_modules/pi-commandcode-provider/index.ts",
@@ -3444,6 +3514,8 @@ if (bun) {
       assert.equal(backendFromEnvironment(), "openrouter")
       assert.equal(modelFromEnvironment(), "jev-1.14")
       assert.equal(sentModelId("openrouter", "jev-1.14"), "typesafe/jev-1.14")
+      assert.equal(backendHost("nace"), "console.nace.ai")
+      assert.equal(sentModelId("nace"), "drex-v2.0")
       process.env.PI_TYPESAFE_BACKEND = "not-a-backend"
       assert.throws(() => backendFromEnvironment(), /Unknown judgment backend/)
     } finally {
@@ -3501,6 +3573,86 @@ if (bun) {
       /no request was submitted/,
     )
     assert.equal(dailySubmissions.length, 1)
+    const naceSubmissions = []
+    const naceClient = createTypeSafe({
+      apiKey: "offline-fixture-key",
+      backend: "nace",
+      maxRequests: 1,
+      fetch: async (url, options) => {
+        naceSubmissions.push({
+          url: String(url),
+          body: JSON.parse(options.body),
+        })
+        return new Response(
+          JSON.stringify({
+            model: "drex-v2.0",
+            answers: { urgent: { type: "noul", noul: 0.4 } },
+            usage: { input_tokens: 3, output_tokens: 1 },
+          }),
+          { headers: { "content-type": "application/json" } },
+        )
+      },
+    })
+    const naceEvaluation = await naceClient.evaluate(request)
+    assert.equal(naceEvaluation.answers.urgent.noul, 0.4)
+    assert.equal(naceSubmissions.length, 1)
+    assert.equal(new URL(naceSubmissions[0].url).host, "console.nace.ai")
+    assert.equal(naceSubmissions[0].body.model, "drex-v2.0")
+    await assert.rejects(
+      naceClient.evaluate(request),
+      /Nace\.AI request limit reached/,
+    )
+    assert.equal(naceSubmissions.length, 1)
+    const {
+      authState,
+      clearAuthState,
+      describeAuth,
+      recordAuthFailure,
+      recordAuthVerified,
+    } = await import(pathToFileURL(join(typesafeRoot, "dist/index.js")))
+    const { AUTH_REJECTION_TTL_MS, isKeyRejection } = await import(
+      pathToFileURL(join(typesafeRoot, "dist/auth.js"))
+    )
+    assert.equal(isKeyRejection(401), true)
+    assert.equal(isKeyRejection(403), false)
+    assert.equal(isKeyRejection(undefined), false)
+    const originalTypesafeKey = process.env.TYPESAFE_API_KEY
+    process.env.TYPESAFE_API_KEY = "offline-fixture-key"
+    try {
+      clearAuthState()
+      recordAuthVerified(new Date("2026-11-04T00:00:00.000Z"))
+      recordAuthFailure(
+        { code: "http", message: "forbidden", status: 403 },
+        new Date("2026-11-04T00:05:00.000Z"),
+      )
+      const forbidden = authState()
+      assert.equal(forbidden.usable, true)
+      assert.equal(forbidden.verified, true)
+      assert.equal(describeAuth(forbidden).level, "ok")
+      recordAuthFailure(
+        { code: "http", message: "unauthorized", status: 401 },
+        new Date(),
+      )
+      const rejected = authState()
+      assert.equal(rejected.usable, false)
+      assert.equal(rejected.verified, false)
+      const rejectedReport = describeAuth(rejected)
+      assert.equal(rejectedReport.level, "error")
+      assert.match(rejectedReport.text, /was rejected/)
+      recordAuthFailure(
+        { code: "http", message: "unauthorized", status: 401 },
+        new Date(Date.now() - AUTH_REJECTION_TTL_MS - 1_000),
+      )
+      const expired = authState()
+      assert.equal(expired.usable, true)
+      const expiredReport = describeAuth(expired)
+      assert.equal(expiredReport.level, "warning")
+      assert.match(expiredReport.text, /rejection expired/)
+      clearAuthState()
+    } finally {
+      if (originalTypesafeKey === undefined) delete process.env.TYPESAFE_API_KEY
+      else process.env.TYPESAFE_API_KEY = originalTypesafeKey
+    }
     process.env.PI_CODING_AGENT_DIR = join(installDir, "typesafe-fixture")
   } finally {
     if (originalTypesafeDir === undefined)
