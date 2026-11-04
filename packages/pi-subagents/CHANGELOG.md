@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.0-local.1
+
+### Minor Changes
+
+- [#350](https://github.com/HerbertGao/pi-extensions/pull/350) [`7cda824`](https://github.com/HerbertGao/pi-extensions/commit/7cda82499d91253636153397d00d63ad7d40ace6) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay subagents onto upstream 0.23.0. A direct mention of an agent that inherits context now includes the conversation. Resume reopens an evicted agent from its saved session, and a saved result still answers after the live record is gone. Explore uses the session model. Claude Code tool names and bare MCP tool entries select the tools they name. Unconsumed results and a failed worktree cleanup still stay recoverable.
+
 ## 0.22.1-local.1
 
 ### Minor Changes

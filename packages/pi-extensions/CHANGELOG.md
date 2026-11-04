@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.2
+
+### Patch Changes
+
+- [#350](https://github.com/HerbertGao/pi-extensions/pull/350) [`7cda824`](https://github.com/HerbertGao/pi-extensions/commit/7cda82499d91253636153397d00d63ad7d40ace6) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-provider-qoder 0.6.10 and pi-typesafe 0.14.0. Qoder logs one line when a newer npm release exists, and that lookup can be skipped. TypeSafe treats only a recent HTTP 401 as a rejected key, and adds Nace.AI as a judgment backend.
+
+- Updated dependencies [[`7cda824`](https://github.com/HerbertGao/pi-extensions/commit/7cda82499d91253636153397d00d63ad7d40ace6)]:
+  - @herbertgao/pi-subagents@0.23.0
+
 ## 2026.11.1
 
 ### Patch Changes
