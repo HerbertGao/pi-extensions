@@ -41,6 +41,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { extensionCanonicalName, runAgent } from "../src/agent-runner.js"
 import { registerAgents } from "../src/agent-types.js"
+import { loadCustomAgents } from "../src/custom-agents.js"
 import type { AgentConfig } from "../src/types.js"
 import { registerFauxProvider } from "./helpers/pi-ai.js"
 
@@ -225,6 +226,62 @@ describe("agent-runner end-to-end (real pi-mono session + real extension)", () =
     })
     expect(active).toContain("exposure_off_by_default")
     expect(active).not.toContain("exposure_direct") // narrowed away
+  })
+
+  // A Claude Code agent file, parsed by the real loader and run in a real session (#396).
+  describe("Claude Code agent files", () => {
+    function parse(frontmatter: string): Partial<AgentConfig> {
+      mkdirSync(join(cwd, ".pi", "agents"), { recursive: true })
+      writeFileSync(
+        join(cwd, ".pi", "agents", "cc.md"),
+        `---\n${frontmatter}\n---\nPrompt.`,
+      )
+      const { builtinToolNames, disallowedTools, mcpToolPatterns } =
+        loadCustomAgents(cwd).get("cc")!
+      return { builtinToolNames, disallowedTools, mcpToolPatterns }
+    }
+
+    it("tools: Read, Grep, Glob, Bash, Edit, Write activates the matching pi built-ins", async () => {
+      const active = await activeToolsFor({
+        extensions: false,
+        ...parse("tools: Read, Grep, Glob, Bash, Edit, Write"),
+      })
+      expect(active).toEqual(
+        expect.arrayContaining([
+          "read",
+          "grep",
+          "find",
+          "bash",
+          "edit",
+          "write",
+        ]),
+      )
+      expect(active).not.toContain("ls")
+    })
+
+    it("disallowedTools: Write, Edit removes those built-ins", async () => {
+      const active = await activeToolsFor({
+        extensions: false,
+        ...parse("disallowedTools: Write, Edit"),
+      })
+      expect(active).not.toContain("write")
+      expect(active).not.toContain("edit")
+      expect(active).toContain("read")
+    })
+
+    // pi's own built-in extensions load by default, so only an agent without
+    // extensions can resolve to zero tools at spawn. A refused spawn creates no session.
+    it("tools: WebFetch with extensions: false is refused", async () => {
+      lastSession = undefined
+      await activeToolsFor({ extensions: false, ...parse("tools: WebFetch") })
+      expect(lastSession).toBeUndefined()
+    })
+
+    it("tools: WebFetch with pi's default extensions starts", async () => {
+      lastSession = undefined
+      await activeToolsFor({ extensions: true, ...parse("tools: WebFetch") })
+      expect(lastSession).toBeDefined()
+    })
   })
 
   // An append-mode child inherits the parent's rendered prompt as its preamble, and
@@ -506,6 +563,19 @@ describe("agent-runner end-to-end (real pi-mono session + real extension)", () =
         }
         expect(registered).not.toContain("codemode")
         expect(registered).not.toContain("tool_search")
+        expect(await started(marker)).toBe(false)
+      })
+
+      it("isolated: true keeps the built-in MCP and its bridges out of the subagent", async () => {
+        // `extensions: true` on purpose: `isolated` must override it, not rely on
+        // the agent file leaving extensions off.
+        const marker = writeMcpConfig(cwd)
+        const active = await withEmptyAgentDir(() =>
+          activeToolsFor({ extensions: true, isolated: true }, true),
+        )
+        expect(registered).not.toContain("codemode")
+        expect(registered).not.toContain("tool_search")
+        expect(active.filter((n) => n.startsWith("mcp__"))).toEqual([])
         expect(await started(marker)).toBe(false)
       })
 

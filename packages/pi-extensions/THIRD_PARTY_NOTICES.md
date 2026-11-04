@@ -109,7 +109,7 @@ THE SOFTWARE.
 
 ## `pi-typesafe`
 
-The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.13.1 under its original MIT license:
+The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.14.0 under its original MIT license:
 
 MIT License
 
@@ -213,7 +213,7 @@ THE SOFTWARE.
 
 ## `pi-provider-qoder`
 
-The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.9 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`b4dd6a1e42763ccc5ead629d6ec171b07e09105d`](https://github.com/simonsmh/pi-provider-qoder/commit/b4dd6a1e42763ccc5ead629d6ec171b07e09105d).
+The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.10 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`5275508caeabb311062f84080e0b618d25a301cc`](https://github.com/simonsmh/pi-provider-qoder/commit/5275508caeabb311062f84080e0b618d25a301cc).
 
 ## `@herbertgao/pi-impeccable`
 
