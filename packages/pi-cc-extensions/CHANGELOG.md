@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.14-local.1
+
+### Patch Changes
+
+- [#353](https://github.com/HerbertGao/pi-extensions/pull/353) [`d7118e9`](https://github.com/HerbertGao/pi-extensions/commit/d7118e94347a57977fdaaedd81ea8bd6a02f5976) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Finish a compact summary from the turn's real activity and place it above the exposed lines. An abort during the pre-write snapshot still prevents the file from being written. A write that already reached disk still reports success.
+
 ## 1.0.13-local.1
 
 ### Minor Changes

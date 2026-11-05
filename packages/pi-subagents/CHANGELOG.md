@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.1-local.1
+
+### Minor Changes
+
+- [#353](https://github.com/HerbertGao/pi-extensions/pull/353) [`d7118e9`](https://github.com/HerbertGao/pi-extensions/commit/d7118e94347a57977fdaaedd81ea8bd6a02f5976) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Draw conversation-viewer tool calls with the session's own tool renderers, and unfold elided output with ctrl+o. After a reload, get_subagent_result still finds a saved agent by its handle or alias. Unconsumed results and a failed worktree cleanup stay recoverable.
+
 ## 0.23.0-local.1
 
 ### Minor Changes
