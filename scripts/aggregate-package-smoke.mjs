@@ -1221,7 +1221,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.3"
+  const expectedBtwVersion = "0.63.4"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1237,7 +1237,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = "^0.68.0"
+  const expectedTuiKitRange = "^0.69.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
       expectedTuiKitRange ||
@@ -1267,6 +1267,14 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   ) {
     throw new Error(
       "Bundled pi-caffeinate does not match its pinned MIT package contract",
+    )
+  }
+  if (
+    caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"] !==
+    expectedTuiKitRange
+  ) {
+    throw new Error(
+      `Expected pi-caffeinate pi-tui-kit dependency ${expectedTuiKitRange}, got ${caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"]}`,
     )
   }
   const caffeinateEntryRelative = "./dist/index.ts"
@@ -1706,11 +1714,36 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "./fullscreen-handoff",
   )
   if (
-    handoffModule.manifest.version !== "0.68.1" ||
+    handoffModule.manifest.version !== "0.69.0" ||
     handoffModule.manifest.license !== "MIT"
   ) {
     throw new Error(
-      `Expected pi-btw to load pi-tui-kit 0.68.1 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+      `Expected pi-btw to load pi-tui-kit 0.69.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+    )
+  }
+  const { getKeybindings } = await import(
+    pathToFileURL(btwRequire.resolve("@earendil-works/pi-tui")).href
+  )
+  const { componentKeyAvailable } = await import(
+    pathToFileURL(
+      join(dirname(handoffModule.file), "components", "host-input.js"),
+    ).href
+  )
+  const viewportBindings = getKeybindings()
+  const pageDownKey = viewportBindings.getKeys("tui.altScreen.pageDown")[0]
+  const searchKey = viewportBindings.getKeys("tui.altScreen.search")[0]
+  const fullscreenHost = { mode: "fullscreen", terminal: {} }
+  if (
+    !pageDownKey ||
+    !searchKey ||
+    componentKeyAvailable({ mode: "inline", terminal: {} }, pageDownKey) !==
+      true ||
+    componentKeyAvailable(fullscreenHost, pageDownKey) !== false ||
+    componentKeyAvailable(fullscreenHost, pageDownKey, true) !== true ||
+    componentKeyAvailable(fullscreenHost, searchKey, true) !== false
+  ) {
+    throw new Error(
+      "pi-tui-kit searchable selectors no longer keep viewport keys while reserving search",
     )
   }
   const { createFullscreenHandoff } = await import(
@@ -3066,6 +3099,84 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     }),
     "user_env",
   )
+  const commandCodeJiti = createCommandCodeJiti(commandCodeEntry, {
+    moduleCache: false,
+  })
+  const { tasteLearningEnabled } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/core.ts"),
+  )
+  assert.equal(tasteLearningEnabled({}), false)
+  assert.equal(
+    tasteLearningEnabled({ COMMANDCODE_TASTE_LEARNING: "true" }),
+    false,
+  )
+  assert.equal(tasteLearningEnabled({ COMMANDCODE_TASTE_LEARNING: "1" }), true)
+  assert.equal(
+    tasteLearningEnabled({
+      COMMANDCODE_TASTE_LEARNING: "1",
+      CMD_ZDR: "1",
+    }),
+    false,
+  )
+  assert.equal(
+    tasteLearningEnabled({
+      COMMANDCODE_TASTE_LEARNING: "1",
+      COMMANDCODE_ZDR: "1",
+    }),
+    false,
+  )
+  const { redactDiagnosticText } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/runtime.ts"),
+  )
+  assert.equal(
+    redactDiagnosticText(
+      "see https://user:secret@api.commandcode.ai/v1/models?api_key=abc#frag Bearer tok-123",
+    ),
+    "see https://api.commandcode.ai/v1/models Bearer [redacted]",
+  )
+  const { commandCodeCostRatesAt, commandCodeNativeCostRatesAt } =
+    await commandCodeJiti.import(join(dirname(commandCodeEntry), "src/cost.ts"))
+  const commandCodeRates = {
+    input: 1,
+    output: 2,
+    cacheRead: 3,
+    cacheWrite: 4,
+    tiers: [
+      {
+        inputTokensAbove: 1000,
+        input: 10,
+        output: 20,
+        cacheRead: 30,
+        cacheWrite: 40,
+      },
+    ],
+  }
+  const commandCodePeak = Date.UTC(2026, 0, 5, 2, 0, 0)
+  const commandCodeOffPeak = Date.UTC(2026, 0, 5, 12, 0, 0)
+  const peakedRates = commandCodeCostRatesAt(
+    "deepseek/deepseek-v4-pro",
+    commandCodeRates,
+    commandCodePeak,
+  )
+  assert.equal(peakedRates.input, 2)
+  assert.equal(peakedRates.tiers[0].input, 20)
+  assert.equal(commandCodeRates.tiers[0].input, 10)
+  assert.equal(
+    commandCodeCostRatesAt(
+      "deepseek/deepseek-v4-pro",
+      commandCodeRates,
+      commandCodeOffPeak,
+    ),
+    commandCodeRates,
+  )
+  const nativeRates = commandCodeNativeCostRatesAt(
+    "deepseek/deepseek-v4-pro",
+    commandCodeRates,
+    commandCodePeak,
+  )
+  nativeRates.tiers[0].input = 0
+  assert.equal(commandCodeRates.tiers[0].input, 10)
+  assert.equal(peakedRates.tiers[0].input, 20)
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),
     { moduleCache: false },

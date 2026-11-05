@@ -8,16 +8,17 @@
 
 import { type KeyId, matchesKey } from "@earendil-works/pi-tui"
 
-/** The `tui.select.*` keybinding ids the viewer resolves. */
-export type ViewerScrollKeybinding =
+/** The pi keybinding ids the viewer resolves. */
+export type ViewerKeybindingId =
   | "tui.select.up"
   | "tui.select.down"
   | "tui.select.pageUp"
   | "tui.select.pageDown"
+  | "app.tools.expand"
 
 /** Structural subset of pi-tui's `KeybindingsManager` (which satisfies it). */
 export interface ViewerKeybindings {
-  matches(data: string, keybinding: ViewerScrollKeybinding): boolean
+  matches(data: string, keybinding: ViewerKeybindingId): boolean
 }
 
 export interface ViewerKeys {
@@ -25,12 +26,14 @@ export interface ViewerKeys {
   scrollDown(data: string): boolean
   pageUp(data: string): boolean
   pageDown(data: string): boolean
+  /** Unfold the output of the viewer's tool blocks, as in the main transcript. */
+  expand(data: string): boolean
 }
 
 export function createViewerKeys(keybindings?: ViewerKeybindings): ViewerKeys {
   const matches = (
     data: string,
-    id: ViewerScrollKeybinding,
+    id: ViewerKeybindingId,
     fallback: KeyId,
   ): boolean =>
     keybindings ? keybindings.matches(data, id) : matchesKey(data, fallback)
@@ -45,5 +48,6 @@ export function createViewerKeys(keybindings?: ViewerKeybindings): ViewerKeys {
     pageDown: (data) =>
       matches(data, "tui.select.pageDown", "pageDown") ||
       matchesKey(data, "shift+down"),
+    expand: (data) => matches(data, "app.tools.expand", "ctrl+o"),
   }
 }
