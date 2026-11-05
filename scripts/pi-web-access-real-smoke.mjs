@@ -890,6 +890,18 @@ async function assertNewReleaseFeatures({
         false,
         "Tabstack must remain explicit-only",
       )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("outcrawl"),
+        false,
+        "Outcrawl must remain explicit-only",
+      )
+      assert.equal(
+        searchProvider.ALL_SEARCH_PROVIDERS.includes("sofya"),
+        false,
+        "Sofya must remain explicit-only",
+      )
+      assert.equal(searchProvider.parseProviderArgument("outcrawl"), "outcrawl")
+      assert.equal(searchProvider.parseProviderArgument("sofya"), "sofya")
       const xcrawl = await searchProvider.search("xcrawl smoke", {
         provider: "xcrawl",
         domainFilter: ["run.xcrawl.com"],
@@ -1129,40 +1141,114 @@ async function assertNewReleaseFeatures({
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.46.0",
+      "0.47.0",
     )
     assert.deepEqual(upgradeNotices, [])
     await writeFile(
       join(upgradeStateDir, "last-seen-version.json"),
+      JSON.stringify({ version: "0.46.0" }),
+    )
+    await upgradeNotice.showUpgradeNotice(
+      upgradeContext,
+      upgradeStateDir,
+      upgradeChangelog,
+      "0.47.0",
+    )
+    assert.equal(upgradeNotices.length, 1)
+    assert.match(upgradeNotices[0], /updated from 0\.46\.0 to 0\.47\.0/)
+    assert.match(upgradeNotices[0], /Sofya/)
+    assert.match(upgradeNotices[0], /100K characters/)
+    await upgradeNotice.showUpgradeNotice(
+      upgradeContext,
+      upgradeStateDir,
+      upgradeChangelog,
+      "0.47.0",
+    )
+    assert.equal(upgradeNotices.length, 1)
+    const skippedUpgradeDir = join(agentDir, "upgrade-notice-skipped")
+    const skippedNotices = []
+    await upgradeNotice.showUpgradeNotice(
+      {
+        hasUI: true,
+        ui: {
+          notify(message) {
+            skippedNotices.push(message)
+          },
+        },
+      },
+      skippedUpgradeDir,
+      upgradeChangelog,
+      "0.47.0",
+    )
+    await writeFile(
+      join(skippedUpgradeDir, "last-seen-version.json"),
       JSON.stringify({ version: "0.45.0" }),
     )
     await upgradeNotice.showUpgradeNotice(
-      upgradeContext,
-      upgradeStateDir,
+      {
+        hasUI: true,
+        ui: {
+          notify(message) {
+            skippedNotices.push(message)
+          },
+        },
+      },
+      skippedUpgradeDir,
       upgradeChangelog,
-      "0.46.0",
+      "0.47.0",
     )
-    assert.equal(upgradeNotices.length, 1)
-    assert.match(upgradeNotices[0], /updated from 0\.45\.0 to 0\.46\.0/)
-    assert.match(upgradeNotices[0], /Read more pages that block bots/)
-    await upgradeNotice.showUpgradeNotice(
-      upgradeContext,
-      upgradeStateDir,
-      upgradeChangelog,
-      "0.46.0",
-    )
-    assert.equal(upgradeNotices.length, 1)
+    assert.equal(skippedNotices.length, 1)
+    assert.match(skippedNotices[0], /Read more pages that block bots/)
+    assert.match(skippedNotices[0], /Sofya/)
     await writeFile(
       join(upgradeStateDir, "last-seen-version.json"),
-      JSON.stringify({ version: "0.47.0" }),
+      JSON.stringify({ version: "0.48.0" }),
     )
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.46.0",
+      "0.47.0",
     )
     assert.equal(upgradeNotices.length, 1)
+
+    const githubExtractSource = await readFile(
+      join(dirname(webAccessEntry), "github-extract.ts"),
+      "utf8",
+    )
+    assert.match(
+      githubExtractSource,
+      /clonePath: join\(tmpdir\(\), "pi-github-repos"\)/,
+    )
+    assert.equal(githubExtractSource.includes('"/tmp/pi-github-repos"'), false)
+    assert.match(githubExtractSource, /README truncated at 100K chars/)
+    assert.equal(
+      githubExtractSource.includes("README truncated at 8K chars"),
+      false,
+    )
+
+    const previousConfig = await readFile(configPath, "utf8")
+    assert.equal(utils.getWebSearchConfigPath(), configPath)
+    await writeJson(configPath, {
+      proxy: "http://127.0.0.1:9",
+      lockProxy: true,
+    })
+    assert.throws(
+      () => utils.runWithProxy("http://127.0.0.1:10", () => undefined),
+      /omit proxy to use the configured proxy/,
+    )
+    assert.throws(
+      () => utils.runWithProxy("", () => undefined),
+      /omit proxy to use the configured proxy/,
+    )
+    await writeJson(configPath, { lockProxy: true })
+    assert.throws(() => utils.loadConfiguredProxy(), /no proxy is configured/)
+    await writeJson(configPath, {
+      lockProxy: "yes",
+      proxy: "http://127.0.0.1:9",
+    })
+    assert.throws(() => utils.loadConfiguredProxy(), /must be true or false/)
+    await writeFile(configPath, previousConfig)
 
     const extract = await jiti.import(
       join(dirname(webAccessEntry), "extract.ts"),
