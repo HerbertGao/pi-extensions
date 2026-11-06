@@ -34,7 +34,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 | 上下文检查            | 查看上下文占用，并预览 System prompt、Memory、Skills、Tools definition 和消息内容 | `/context`                                      |
 | Session/Subagent 引用 | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                             | `@`                                             |
 | 状态栏                | 显示：模型、上下文、缓存、费用、本次对话累计 token、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存图标可关 Nerd Font | `/ccstyle`                              |
-| 主题                  | 随包提供内置 CC Dark、CC Light 主题                                             | `/settings` → Theme                             |
+| 主题                  | 随包提供 4 个主题：CC Dark、CC Light、CC Dark HC、CC Light HC                   | `/settings` → Theme                             |
 
 `on` / `compact` 两种模式的渲染样例：[默认模式](./docs/tool-render-examples-default.md) · [紧凑模式](./docs/tool-render-examples-compact.md)
 
@@ -128,7 +128,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.14（MIT），上游基线 [`562d687`](https://github.com/minuque/pi-cc-extensions/commit/562d687829a0048081efd71d7433dcda73d7f085)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.15（MIT），上游基线 [`b996151`](https://github.com/minuque/pi-cc-extensions/commit/b996151bb63028c270340bde3e9526a62c634d2f)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

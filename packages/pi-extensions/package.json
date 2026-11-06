@@ -69,14 +69,14 @@
     "jiti": "^2.7.0",
     "js-yaml": "^5.2.2",
     "linkedom": "^0.16.0",
-    "minimatch": "^11.0.1",
+    "minimatch": "^11.0.4",
     "nanoid": "^5.0.0",
     "p-limit": "^6.1.0",
     "pi-antigravity": "0.11.0",
-    "pi-commandcode-provider": "0.7.12",
-    "pi-lens": "4.4.8",
+    "pi-commandcode-provider": "0.8.0",
+    "pi-lens": "4.4.9",
     "pi-next-cue": "1.0.8",
-    "pi-provider-qoder": "0.6.10",
+    "pi-provider-qoder": "0.6.12",
     "pi-typesafe": "0.14.0",
     "pi-web-access": "0.47.0",
     "pidusage": "^4.0.1",
@@ -85,7 +85,7 @@
     "unbash": "4.0.10",
     "undici": "^8.11.2",
     "unpdf": "^1.6.2",
-    "vscode-jsonrpc": "^9.0.0",
+    "vscode-jsonrpc": "^10.0.0",
     "ws": "^8.21.0",
     "zod": "^3.25.0 || ^4.0.0"
   },
@@ -162,7 +162,9 @@
     ],
     "themes": [
       "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-dark.json",
-      "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-light.json"
+      "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-light.json",
+      "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-dark-hc.json",
+      "./node_modules/@herbertgao/pi-cc-extensions/themes/cc-light-hc.json"
     ],
     "skills": [
       "./node_modules/@dietrichgebert/ponytail/skills",

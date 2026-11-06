@@ -6,6 +6,7 @@ import { config } from "../extensions/config/config.ts";
 import { installDefaultMode } from "../extensions/renderer/default-mode.ts";
 import { installToolGrouping, ToolGroupComponent } from "../extensions/renderer/tool/grouping.ts";
 import { WriteExecutionMetadataStore } from "../extensions/renderer/tool/diff/index.ts";
+import { isExpandedToolIoView } from "../extensions/renderer/tool/tool-io.ts";
 import {
 	askUserAnswerText,
 	askUserCollapsedLines,
@@ -177,6 +178,81 @@ test("单工具卡：标题带问题数，结果是问答树", () => {
 		assert.ok(lines.some((line: string) => /└ 3 answered/.test(line)));
 		assert.equal(
 			lines.some((line: string) => /lines returned/.test(line)),
+			false,
+		);
+	} finally {
+		hooks.shutdown();
+		config.mode = previousMode;
+	}
+});
+
+test("等待中的问题折叠时清掉展开视图", () => {
+	const previousMode = config.mode;
+	config.mode = "on";
+	const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+	try {
+		const tool = new ToolExecutionComponent(
+			"ask_user_question",
+			"ask-wait",
+			{ questions },
+			{},
+			undefined,
+			toolUi(),
+			process.cwd(),
+		) as any;
+		const linesOf = () =>
+			tool
+				.render(120)
+				.map(stripAnsi)
+				.map((line: string) => line.replace(/\s+$/, ""))
+				.filter((line: string) => line.trim().length > 0);
+
+		tool.markExecutionStarted();
+		tool.render(120);
+		tool.setExpanded(true);
+		tool.updateResult({ content: [], isError: false }, true);
+
+		const view = tool.rendererState.ccstyleIoView;
+		assert.equal(isExpandedToolIoView(view), true);
+		assert.equal(tool.resultRendererComponent, view);
+		const expanded = linesOf();
+		assert.ok(
+			expanded.some((line: string) => line.includes("Which library should we use?")),
+			`展开应看到问题原文: ${JSON.stringify(expanded)}`,
+		);
+		assert.ok(
+			expanded.some((line: string) => /^\s*Pending…$/.test(line)),
+			`等待中的输出是 Pending…: ${JSON.stringify(expanded)}`,
+		);
+
+		tool.setExpanded(false);
+		const collapsed = linesOf();
+		assert.equal(tool.rendererState.ccstyleIoView, undefined);
+		assert.ok(
+			collapsed.some((line: string) => /Pending… · .*to show more$/.test(line)),
+			`折叠后仍是等待中: ${JSON.stringify(collapsed)}`,
+		);
+		assert.equal(
+			collapsed.some((line: string) => /Done/.test(line)),
+			false,
+		);
+
+		tool.setExpanded(true);
+		const again = linesOf();
+		assert.equal(isExpandedToolIoView(tool.rendererState.ccstyleIoView), true);
+		assert.ok(
+			again.some((line: string) => line.includes("Which library should we use?")),
+			`再次展开仍能看到问题: ${JSON.stringify(again)}`,
+		);
+
+		tool.setExpanded(false);
+		tool.updateResult(answered);
+		const done = linesOf();
+		assert.equal(tool.rendererState.ccstyleIoView, undefined);
+		assert.ok(done.some((line: string) => /├ .* -> Read/.test(line)));
+		assert.ok(done.some((line: string) => /└ 3 answered/.test(line)));
+		assert.equal(
+			done.some((line: string) => /Pending…/.test(line)),
 			false,
 		);
 	} finally {

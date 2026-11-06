@@ -187,7 +187,7 @@ THE SOFTWARE.
 
 ## `pi-commandcode-provider`
 
-The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.7.11 under its original MIT license. The imported npm package corresponds to upstream tag `v0.7.11` at commit [`f4ab05c0a799fd2c991711e72704d5ee219c62ce`](https://github.com/patlux/pi-commandcode-provider/commit/f4ab05c0a799fd2c991711e72704d5ee219c62ce).
+The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.0 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.0` at commit [`d779459494e9b1b7e8419cc53587878e89e36520`](https://github.com/patlux/pi-commandcode-provider/commit/d779459494e9b1b7e8419cc53587878e89e36520). npm publishes no gitHead; the published tarball matches that tag.
 
 MIT License
 
@@ -213,7 +213,7 @@ THE SOFTWARE.
 
 ## `pi-provider-qoder`
 
-The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.10 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`5275508caeabb311062f84080e0b618d25a301cc`](https://github.com/simonsmh/pi-provider-qoder/commit/5275508caeabb311062f84080e0b618d25a301cc).
+The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.12 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`a8de674d2fdc1f7715ab8d794e51e8e620469ed9`](https://github.com/simonsmh/pi-provider-qoder/commit/a8de674d2fdc1f7715ab8d794e51e8e620469ed9).
 
 ## `@herbertgao/pi-impeccable`
 
