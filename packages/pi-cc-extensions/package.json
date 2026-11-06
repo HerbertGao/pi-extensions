@@ -35,7 +35,9 @@
 		],
 		"themes": [
 			"./themes/cc-dark.json",
-			"./themes/cc-light.json"
+			"./themes/cc-light.json",
+			"./themes/cc-dark-hc.json",
+			"./themes/cc-light-hc.json"
 		],
 		"image": "https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-cc-extensions/assets/readme/preview.webp",
 		"video": "https://github.com/minuque/pi-cc-extensions/releases/download/v0.9.4/demo.mp4"
@@ -72,10 +74,10 @@
 	},
 	"x-upstream": {
 		"package": "pi-cc-extensions",
-		"version": "1.0.14",
-		"reviewedVersion": "1.0.14",
+		"version": "1.0.15",
+		"reviewedVersion": "1.0.15",
 		"repository": "https://github.com/minuque/pi-cc-extensions",
-		"commit": "562d687829a0048081efd71d7433dcda73d7f085",
+		"commit": "b996151bb63028c270340bde3e9526a62c634d2f",
 		"trackVersion": true
 	}
 }

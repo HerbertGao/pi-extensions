@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { stripVTControlCharacters } from "node:util"
 import {
   mkdir,
@@ -372,15 +372,18 @@ try {
       throw new Error(`Bundled pi-lens contains a nested ${dependency} host`)
     }
   }
-  // Keep pi-lens' minimatch range exact; the aggregate already provides its
-  // compatible Pi TUI, typebox, and jiti hosts.
+  // Keep pi-lens' minimatch and vscode-jsonrpc ranges exact; the aggregate
+  // already provides its compatible Pi TUI, typebox, and jiti hosts.
   const lensMinimatchRange = lensManifest.dependencies?.minimatch
+  const lensJsonRpcRange = lensManifest.dependencies?.["vscode-jsonrpc"]
   if (
     !lensMinimatchRange ||
-    sourceManifest.dependencies.minimatch !== lensMinimatchRange
+    sourceManifest.dependencies.minimatch !== lensMinimatchRange ||
+    !lensJsonRpcRange ||
+    sourceManifest.dependencies["vscode-jsonrpc"] !== lensJsonRpcRange
   ) {
     throw new Error(
-      `Expected promoted pi-lens dependency minimatch@${lensMinimatchRange}, got ${sourceManifest.dependencies.minimatch}`,
+      `Expected promoted pi-lens dependencies minimatch@${lensMinimatchRange} and vscode-jsonrpc@${lensJsonRpcRange}, got minimatch@${sourceManifest.dependencies.minimatch} and vscode-jsonrpc@${sourceManifest.dependencies["vscode-jsonrpc"]}`,
     )
   }
   const expectedLensSkillGroups = [
@@ -482,6 +485,22 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ) {
       throw new Error(`pi-lens lost NAPI ${language} routing for ${file}`)
     }
+  }
+  for (const file of [
+    "src/Widget.groovy",
+    "src/Widget.gvy",
+    "src/Widget.gy",
+    "src/Widget.gsh",
+    "Jenkinsfile",
+    "build.gradle",
+    "settings.gradle",
+  ]) {
+    if (lensProbe.detectFileKind(file) !== "groovy") {
+      throw new Error(`pi-lens no longer classifies ${file} as groovy`)
+    }
+  }
+  if (lensProbe.detectFileKind("build.gradle.kts") === "groovy") {
+    throw new Error("pi-lens classified Kotlin Gradle script as groovy")
   }
   await Promise.all(
     [
@@ -2474,7 +2493,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (
     !tifanNotices.includes("`pi-commandcode-provider`") ||
     !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
-    !tifanNotices.includes("f4ab05c0a799fd2c991711e72704d5ee219c62ce")
+    !tifanNotices.includes("d779459494e9b1b7e8419cc53587878e89e36520")
   ) {
     throw new Error("Aggregate Command Code provider notice is incomplete")
   }
@@ -2757,6 +2776,8 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     ["pi-commandcode-provider/index.ts", "commands", "commandcode-quota"],
     ["pi-commandcode-provider/index.ts", "commands", "commandcode-refresh"],
     ["pi-commandcode-provider/index.ts", "commands", "commandcode-status"],
+    ["pi-commandcode-provider/index.ts", "commands", "commandcode-endpoint"],
+    ["pi-commandcode-provider/index.ts", "commands", "commandcode-diagnostics"],
   ]
   for (const [relativePath, registry, name] of requiredChildRegistrations) {
     const entry = resolve(packageRoot, "node_modules", relativePath)
@@ -2822,7 +2843,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const qoderProbe = await createQoderJiti(qoderEntry, {
     moduleCache: false,
   }).evalModule(
-    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl, formatUpdateNotice, checkForUpdate };\n`,
+    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl, formatUpdateNotice, checkForUpdate, lostToolArgumentStream };\n`,
     { filename: qoderEntry, async: true, forceTranspile: true },
   )
   assert.deepEqual(
@@ -3014,6 +3035,10 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     }),
     null,
   )
+  assert.equal(
+    qoderProbe.lostToolArgumentStream().message,
+    "Qoder server error: tool-call argument stream was cut off (unparseable upstream payload)",
+  )
   const commandCodeEntry = resolve(
     packageRoot,
     "node_modules/pi-commandcode-provider/index.ts",
@@ -3043,6 +3068,8 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "commandcode-quota",
     "commandcode-refresh",
     "commandcode-status",
+    "commandcode-endpoint",
+    "commandcode-diagnostics",
   ]) {
     assert.equal(loadedCommandCode?.commands.has(commandName), true)
     for (const extension of result.extensions) {
@@ -3102,28 +3129,90 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const commandCodeJiti = createCommandCodeJiti(commandCodeEntry, {
     moduleCache: false,
   })
-  const { tasteLearningEnabled } = await commandCodeJiti.import(
-    join(dirname(commandCodeEntry), "src/core.ts"),
+  assert.equal(await pathExists(join(commandCodeRoot, "src/core.ts")), false)
+  const commandCodeSources = []
+  const collectCommandCodeSources = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = join(directory, entry.name)
+      if (entry.isDirectory()) collectCommandCodeSources(entryPath)
+      else if (entry.name.endsWith(".ts")) {
+        commandCodeSources.push(readFileSync(entryPath, "utf8"))
+      }
+    }
+  }
+  collectCommandCodeSources(join(commandCodeRoot, "src"))
+  commandCodeSources.push(commandCodeIndex)
+  const commandCodeRuntimeSource = commandCodeSources.join("\n")
+  if (
+    commandCodeRuntimeSource.includes("/alpha/generate") ||
+    commandCodeRuntimeSource.includes("COMMANDCODE_TASTE_LEARNING") ||
+    commandCodeRuntimeSource.includes("tasteLearningEnabled")
+  ) {
+    throw new Error(
+      "Command Code still ships the retired generate transport or taste-learning opt-in",
+    )
+  }
+  const { createCommandCodeTransportRouter } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/transport.ts"),
   )
-  assert.equal(tasteLearningEnabled({}), false)
-  assert.equal(
-    tasteLearningEnabled({ COMMANDCODE_TASTE_LEARNING: "true" }),
-    false,
+  const commandCodeFetches = []
+  const commandCodeOutput = {
+    events: [],
+    push(event) {
+      this.events.push(event)
+    },
+    end() {
+      this.events.push({ type: "ended" })
+    },
+  }
+  const commandCodeRouter = createCommandCodeTransportRouter({
+    createStream: () => commandCodeOutput,
+    streamProvider: async function* (_model, _context, options) {
+      await options.fetch(
+        "https://api.commandcode.ai/provider/v1/chat/completions",
+      )
+      yield { type: "done" }
+    },
+  })
+  commandCodeRouter.stream(
+    {
+      id: "smoke-model",
+      api: "commandcode-custom",
+      provider: "commandcode",
+    },
+    {},
+    {
+      fetch: async (input) => {
+        commandCodeFetches.push(String(input))
+        return new Response(
+          JSON.stringify({ error: { code: "upgrade_required" } }),
+          { status: 403 },
+        )
+      },
+    },
   )
-  assert.equal(tasteLearningEnabled({ COMMANDCODE_TASTE_LEARNING: "1" }), true)
-  assert.equal(
-    tasteLearningEnabled({
-      COMMANDCODE_TASTE_LEARNING: "1",
-      CMD_ZDR: "1",
-    }),
-    false,
+  const waitForCommandCodeEnd = async (attempt = 0) => {
+    if (
+      commandCodeOutput.events.some((event) => event.type === "ended") ||
+      attempt >= 20
+    ) {
+      return
+    }
+    await new Promise((done) => {
+      setImmediate(done)
+    })
+    await waitForCommandCodeEnd(attempt + 1)
+  }
+  await waitForCommandCodeEnd()
+  assert.deepEqual(commandCodeFetches, [
+    "https://api.commandcode.ai/provider/v1/chat/completions",
+  ])
+  const commandCodeUpgrade = commandCodeOutput.events.find(
+    (event) => event.type === "error",
   )
   assert.equal(
-    tasteLearningEnabled({
-      COMMANDCODE_TASTE_LEARNING: "1",
-      COMMANDCODE_ZDR: "1",
-    }),
-    false,
+    commandCodeUpgrade?.error?.errorMessage,
+    "Command Code Provider API access is required (403 upgrade_required). The Go plan does not include API use. Use a plan with documented Provider API access and retry. If you changed accounts, sign in again. See https://commandcode.ai/docs/provider.",
   )
   const { redactDiagnosticText } = await commandCodeJiti.import(
     join(dirname(commandCodeEntry), "src/runtime.ts"),
