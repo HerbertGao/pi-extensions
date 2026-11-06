@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-extensions",
-  "version": "2026.11.3",
+  "version": "2026.11.4",
   "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
   "keywords": [
     "extensions",
@@ -41,7 +41,7 @@
     "@dietrichgebert/ponytail": "5.3.3",
     "@herbertgao/pi-agency": "0.1.3",
     "@herbertgao/pi-bark": "0.2.2",
-    "@herbertgao/pi-cc-extensions": "1.0.14-local.1",
+    "@herbertgao/pi-cc-extensions": "1.0.15-local.1",
     "@herbertgao/pi-impeccable": "0.1.1",
     "@herbertgao/pi-subagents": "0.23.1-local.1",
     "@herbertgao/sol-pi": "0.4.3",
