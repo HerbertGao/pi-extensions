@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.15-local.1
+
+### Minor Changes
+
+- [#356](https://github.com/HerbertGao/pi-extensions/pull/356) [`b167a96`](https://github.com/HerbertGao/pi-extensions/commit/b167a9639df433cd722fb12b7fb6368404178a0a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.15. A running tool can expand to its full command and live output, and the package includes CC Dark HC and CC Light HC. Expanding a card in the lower half of the screen keeps following. Regular mode still does not enable terminal mouse reporting.
+
 ## 1.0.14-local.1
 
 ### Patch Changes

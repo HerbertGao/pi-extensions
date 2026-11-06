@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.4
+
+### Patch Changes
+
+- [#356](https://github.com/HerbertGao/pi-extensions/pull/356) [`b167a96`](https://github.com/HerbertGao/pi-extensions/commit/b167a9639df433cd722fb12b7fb6368404178a0a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-lens 4.4.9, pi-provider-qoder 0.6.12, and pi-commandcode-provider 0.8.0. Groovy files classify as Groovy. A cut-off Qoder tool-call argument stream is a retryable server error. Command Code stays on the Provider API and does not fall back to the generate transport.
+
+- Updated dependencies [[`b167a96`](https://github.com/HerbertGao/pi-extensions/commit/b167a9639df433cd722fb12b7fb6368404178a0a)]:
+  - @herbertgao/pi-cc-extensions@1.1.0
+
 ## 2026.11.3
 
 ### Patch Changes
