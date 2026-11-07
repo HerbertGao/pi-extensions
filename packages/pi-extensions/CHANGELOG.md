@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.5
+
+### Patch Changes
+
+- [#359](https://github.com/HerbertGao/pi-extensions/pull/359) [`e4a2bb0`](https://github.com/HerbertGao/pi-extensions/commit/e4a2bb00fb6beb76933e75a6bfcd801e17e281ce) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-btw 0.63.5, pi-antigravity 0.12.0, and pi-lens 4.4.10. BTW loads its fullscreen UI on first use and requires pi-tui-kit ^0.69.1. Antigravity keeps a refreshed catalog from restoring a removed model and rejects image symlink destinations. pi-lens lists Groovy classes and methods, and read widening can be turned off without disabling the read-before-edit guard.
+
 ## 2026.11.4
 
 ### Patch Changes
