@@ -59,6 +59,21 @@ function qoderBusyBody(queue) {
   }
 }
 
+function versionParts(version) {
+  return version.split(".").map((part) => Number(part))
+}
+
+function versionAtLeast(version, minimum) {
+  const left = versionParts(version)
+  const right = versionParts(minimum)
+  for (let index = 0; index < 3; index += 1) {
+    const current = left[index] ?? 0
+    const required = right[index] ?? 0
+    if (current !== required) return current > required
+  }
+  return true
+}
+
 async function pathExists(path) {
   try {
     await stat(path)
@@ -501,6 +516,27 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   }
   if (lensProbe.detectFileKind("build.gradle.kts") === "groovy") {
     throw new Error("pi-lens classified Kotlin Gradle script as groovy")
+  }
+  for (const file of ["widget.mts", "widget.cts"]) {
+    if (
+      lensProbe.detectFileKind(file) !==
+        lensProbe.detectFileKind("widget.ts") ||
+      lensProbe.ruleLanguageForFile(file) !==
+        lensProbe.ruleLanguageForFile("widget.ts")
+    ) {
+      throw new Error(
+        `pi-lens did not give ${file} the TypeScript file kind and rule language`,
+      )
+    }
+  }
+  await stat(join(lensRoot, "vendor/grammars/tree-sitter-groovy.wasm"))
+  const lensBundle = await readFile(lensEntry, "utf8")
+  if (
+    !lensBundle.includes("tree-sitter-groovy.wasm") ||
+    !lensBundle.includes("(class_declaration") ||
+    !lensBundle.includes("quoted_identifier")
+  ) {
+    throw new Error("pi-lens no longer vendors Groovy class and method queries")
   }
   await Promise.all(
     [
@@ -1240,7 +1276,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.4"
+  const expectedBtwVersion = "0.63.5"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1256,7 +1292,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = "^0.69.0"
+  const expectedTuiKitRange = "^0.69.1"
   if (
     sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
       expectedTuiKitRange ||
@@ -1288,12 +1324,9 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "Bundled pi-caffeinate does not match its pinned MIT package contract",
     )
   }
-  if (
-    caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"] !==
-    expectedTuiKitRange
-  ) {
+  if (caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"] !== "^0.69.0") {
     throw new Error(
-      `Expected pi-caffeinate pi-tui-kit dependency ${expectedTuiKitRange}, got ${caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"]}`,
+      `Expected pi-caffeinate pi-tui-kit dependency ^0.69.0, got ${caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"]}`,
     )
   }
   const caffeinateEntryRelative = "./dist/index.ts"
@@ -1386,25 +1419,72 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     fsCache: false,
     moduleCache: false,
   })
-  // 0.58.1's public entry is the bundled dist. Add test-only exports in memory
-  // so these regressions exercise that exact artifact rather than its src mirror.
-  const btwProbe = await btwJiti.evalModule(
-    `${btwDistSource}\nexport { BtwTranscriptPager, FullscreenUiDisposedError, appendMainContextUpdate, createBtwFullscreenTui, createSideThread, normalizedKeyId, pickMainEntry, resolveBtwShortcuts, runBtwFullscreen, runBtwMenuPreservingEditor, updateBtwSettings };\n`,
-    { filename: btwEntry, async: true, forceTranspile: true },
+  if (
+    /from "\.\/chunks\/fullscreen-ui-/.test(btwDistSource) ||
+    !btwDistSource.includes('await import("./chunks/fullscreen-ui-')
+  ) {
+    throw new Error("pi-btw entry no longer loads fullscreen UI on first use")
+  }
+  const btwPublishedChunk = (source, name) => {
+    const patterns = [
+      new RegExp(`\\{[^}]*\\b${name}\\b[^}]*\\} from "(\\./chunks/[^"]+)"`),
+      new RegExp(
+        `\\{[^}]*\\b${name}\\b[^}]*\\} = await import\\("(\\./chunks/[^"]+)"\\)`,
+      ),
+      new RegExp(
+        `\\{[^}]*\\b${name}\\b[^}]*\\}[\\s\\S]{0,240}?import\\("(\\./chunks/[^"]+)"\\)`,
+      ),
+    ]
+    for (const pattern of patterns) {
+      const match = source.match(pattern)
+      if (match) return join(dirname(btwEntry), match[1])
+    }
+    throw new Error(`pi-btw dist does not load ${name} from a published chunk`)
+  }
+  // 0.63.5's public entry lazy-loads fullscreen, menu, and transcript chunks.
+  // Exercise those published chunks rather than the src mirror.
+  const sideModule = await btwJiti.import(
+    btwPublishedChunk(btwDistSource, "createSideThread"),
+  )
+  const { appendMainContextUpdate, createSideThread, updateBtwSettings } =
+    sideModule
+  const fullscreenChunkPath = btwPublishedChunk(
+    btwDistSource,
+    "runBtwFullscreen",
+  )
+  const fullscreenSource = await readFile(fullscreenChunkPath, "utf8")
+  const fullscreenProbe = await btwJiti.evalModule(
+    `${fullscreenSource}\nexport { FullscreenUiDisposedError, createBtwFullscreenTui, normalizedKeyId, runBtwFullscreen };\n`,
+    { filename: fullscreenChunkPath, async: true, forceTranspile: true },
   )
   const {
-    BtwTranscriptPager,
     FullscreenUiDisposedError,
-    appendMainContextUpdate,
     createBtwFullscreenTui,
-    createSideThread,
     normalizedKeyId,
-    pickMainEntry,
-    resolveBtwShortcuts,
     runBtwFullscreen,
-    runBtwMenuPreservingEditor,
-    updateBtwSettings,
-  } = btwProbe
+  } = fullscreenProbe
+  const shortcutImport = fullscreenSource.match(
+    /resolveBtwShortcuts[\s\S]*?from "(\.\/[^"]+)"/,
+  )
+  if (!shortcutImport) {
+    throw new Error("pi-btw fullscreen chunk does not load resolveBtwShortcuts")
+  }
+  const { resolveBtwShortcuts } = await btwJiti.import(
+    join(dirname(fullscreenChunkPath), shortcutImport[1]),
+  )
+  const { runBtwMenuPreservingEditor } = await btwJiti.import(
+    btwPublishedChunk(btwDistSource, "runBtwMenuPreservingEditor"),
+  )
+  const { BtwTranscriptPager } = await btwJiti.import(
+    btwPublishedChunk(btwDistSource, "BtwTranscriptPager"),
+  )
+  const { pickMainEntry } = await btwJiti.import(
+    btwPublishedChunk(btwDistSource, "pickMainEntry"),
+  )
+  const btwEntryProbe = await btwJiti.evalModule(
+    `${btwDistSource}\nexport { runFullscreenOnFirstUse };\n`,
+    { filename: btwEntry, async: true, forceTranspile: true },
+  )
   const importShortcuts = resolveBtwShortcuts({}, { getKeys: () => [] })
   if (
     importShortcuts.keys.importMainUpdates.length !== 1 ||
@@ -1726,6 +1806,33 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "pi-btw started a fullscreen flow that was already disposed",
     )
   }
+  let lazyFullscreenCalls = 0
+  let lazyAbort = false
+  try {
+    await btwEntryProbe.runFullscreenOnFirstUse(
+      {
+        signal: AbortSignal.abort(),
+        ui: {
+          getEditorText: () => "main draft",
+          custom: async () => {
+            lazyFullscreenCalls += 1
+            return {}
+          },
+        },
+      },
+      async () => "ran",
+    )
+  } catch (error) {
+    lazyAbort =
+      error instanceof DOMException &&
+      error.name === "AbortError" &&
+      error.message === "Pi BTW session ended"
+  }
+  if (!lazyAbort || lazyFullscreenCalls !== 0) {
+    throw new Error(
+      "pi-btw first-use fullscreen opened a session that had already ended",
+    )
+  }
 
   const handoffModule = resolveBundledImport(
     btwRequire,
@@ -1733,11 +1840,11 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "./fullscreen-handoff",
   )
   if (
-    handoffModule.manifest.version !== "0.69.0" ||
+    handoffModule.manifest.version !== "0.69.1" ||
     handoffModule.manifest.license !== "MIT"
   ) {
     throw new Error(
-      `Expected pi-btw to load pi-tui-kit 0.69.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+      `Expected pi-btw to load pi-tui-kit 0.69.1 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
     )
   }
   const { getKeybindings } = await import(
@@ -2801,8 +2908,63 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (!loadedLens.commands.has("lens-widget-toggle")) {
     throw new Error("Packed pi-lens did not register lens-widget-toggle")
   }
+  const readExpansionFlag = loadedLens.flags.get("no-read-expansion")
+  if (
+    readExpansionFlag?.default !== false ||
+    !readExpansionFlag.description?.includes("read-before-edit")
+  ) {
+    throw new Error(
+      "pi-lens no longer registers --no-read-expansion with the read-before-edit guard left on",
+    )
+  }
 
   const antigravityRoot = join(packageRoot, "node_modules/pi-antigravity")
+  const antigravityManifestPath = join(antigravityRoot, "package.json")
+  const antigravityManifest = parseJson(
+    await readFile(antigravityManifestPath, "utf8"),
+    antigravityManifestPath,
+  )
+  if (
+    antigravityManifest.version !==
+      sourceManifest.dependencies["pi-antigravity"] ||
+    antigravityManifest.license !== "MIT" ||
+    antigravityManifest.dependencies?.undici !== "^8.12.3" ||
+    antigravityManifest.dependencies?.typebox !== undefined ||
+    antigravityManifest.peerDependencies?.typebox !== "*" ||
+    sourceManifest.dependencies.typebox !== undefined ||
+    sourceManifest.peerDependencies.typebox !== "*"
+  ) {
+    throw new Error(
+      "pi-antigravity must keep patched undici while typebox stays a host peer",
+    )
+  }
+  const undiciManifestPath = aggregateRequire.resolve("undici/package.json")
+  const undiciManifest = parseJson(
+    await readFile(undiciManifestPath, "utf8"),
+    undiciManifestPath,
+  )
+  if (!versionAtLeast(undiciManifest.version, "8.12.3")) {
+    throw new Error(
+      `Expected resolved undici >=8.12.3, got ${undiciManifest.version}`,
+    )
+  }
+  const nestedUndiciManifest = join(
+    antigravityRoot,
+    "node_modules",
+    "undici",
+    "package.json",
+  )
+  if (await pathExists(nestedUndiciManifest)) {
+    const nestedUndici = parseJson(
+      await readFile(nestedUndiciManifest, "utf8"),
+      nestedUndiciManifest,
+    )
+    if (!versionAtLeast(nestedUndici.version, "8.12.3")) {
+      throw new Error(
+        `pi-antigravity nested undici ${nestedUndici.version} is older than 8.12.3`,
+      )
+    }
+  }
   for (const [feature, toolName] of [
     ["google-search", "google_search"],
     ["generate-image", "generate_image"],
@@ -3326,9 +3488,8 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     if (previousPiOffline === undefined) delete process.env.PI_OFFLINE
     else process.env.PI_OFFLINE = previousPiOffline
   }
-  const { isExtraToolEnabled } = await antigravityJiti.import(
-    join(antigravityRoot, "src/utils/util.ts"),
-  )
+  const { extraToolExposure, isExtraToolEnabled } =
+    await antigravityJiti.import(join(antigravityRoot, "src/utils/util.ts"))
   const extraToolFlags = [
     "ANTIGRAVITY_NO_EXTRA_TOOLS",
     "ANTIGRAVITY_NO_SEARCH_TOOL",
@@ -3337,8 +3498,12 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const previousExtraToolFlags = extraToolFlags.map((name) => process.env[name])
   try {
     for (const name of extraToolFlags) delete process.env[name]
+    delete process.env.ANTIGRAVITY_DEFER_TOOLS
     assert.equal(isExtraToolEnabled("SEARCH"), true)
     assert.equal(isExtraToolEnabled("IMAGE"), true)
+    assert.deepEqual(extraToolExposure(), {})
+    process.env.ANTIGRAVITY_DEFER_TOOLS = "1"
+    assert.deepEqual(extraToolExposure(), { exposure: "deferred" })
     process.env.ANTIGRAVITY_NO_SEARCH_TOOL = "1"
     assert.equal(isExtraToolEnabled("SEARCH"), false)
     assert.equal(isExtraToolEnabled("IMAGE"), true)
@@ -3354,6 +3519,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       if (previousExtraToolFlags[index] === undefined) delete process.env[name]
       else process.env[name] = previousExtraToolFlags[index]
     })
+    delete process.env.ANTIGRAVITY_DEFER_TOOLS
   }
   const imageApi = await antigravityJiti.import(
     join(antigravityRoot, "src/image/native.ts"),
@@ -3369,6 +3535,37 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     imageSafety.resolveImageSavePath(stageDir, "ok.png"),
     join(stageDir, "ok.png"),
   )
+  const imageLink = join(stageDir, "image-link.png")
+  await symlink(join(stageDir, "missing-image.png"), imageLink)
+  await assert.rejects(
+    imageSafety.writeImage(
+      imageLink,
+      { data: "aGVsbG8=", mimeType: "image/png" },
+      stageDir,
+    ),
+    /symlink/,
+  )
+  const {
+    applyAntigravityCatalog,
+    getAntigravityRequestModelId,
+    getFallbackRuntimeModel,
+    resetAntigravityCatalogForTests,
+  } = await antigravityJiti.import(
+    join(antigravityRoot, "src/models/models.ts"),
+  )
+  try {
+    applyAntigravityCatalog({
+      models: [{ id: "gemini-4-argon" }],
+      routing: {},
+    })
+    assert.throws(
+      () => getAntigravityRequestModelId("gemini-3.5-flash", "low"),
+      /absent from the current catalog/,
+    )
+    assert.equal(getFallbackRuntimeModel("gemini-3.8-flash-low"), undefined)
+  } finally {
+    resetAntigravityCatalogForTests()
+  }
   assert.throws(() => imageSafety.assertSafeImageModel("gpt-4o"), /Unsupported/)
   assert.throws(() => imageSafety.assertSafeAspectRatio("1x1"), /Unsupported/)
   const imageModel = {

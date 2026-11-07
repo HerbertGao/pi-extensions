@@ -84,7 +84,7 @@ THE SOFTWARE.
 
 ## `pi-antigravity`
 
-The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.11.0 under its original attribution:
+The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.12.0 under its original attribution:
 
 MIT License
 
