@@ -16,7 +16,7 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "b996151bb63028c270340bde3e9526a62c634d2f",
+      "reviewedCommit": "5e3ef6b9f96d198f93ec242eac81ff21bebdb4e1",
       "watch": "npm"
     },
     {

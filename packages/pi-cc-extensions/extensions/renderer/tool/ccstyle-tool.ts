@@ -4,6 +4,7 @@
  */
 import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { config, getToolDisplayConfig, type CompactStyleMode } from "../../config/config.ts";
+import { expandedLineLimit } from "../transcript-scope.ts";
 import { isToolCallHovered } from "../mouse/hover.ts";
 import {
 	ASK_USER_QUESTION_TOOL_NAME,
@@ -126,7 +127,7 @@ function renderExpandedTaskResult(
 	if (toolName === "TaskList") {
 		const tasks = parseTaskList(text);
 		if (!tasks.length) return undefined;
-		const limit = Math.max(1, config.expandedPreviewMaxLines);
+		const limit = Math.max(1, expandedLineLimit(config.expandedPreviewMaxLines));
 		const rows = tasks.slice(0, limit).map((task) => {
 			const color =
 				task.status === "completed"
@@ -196,8 +197,8 @@ function shellDurationText(toolName: string, context: any, isPartial: boolean): 
 
 /**
  * 运行中的展开视图：与结束后同一份 Input / Output。
- * 还没输出、或正文 trim 后为空时用 Pending… 占位：空白会被视图画成 Done，像已经跑完了。
- * trim 只用来判空；非空正文原样保留，不整段去掉缩进和空白。
+ * 还没输出时用 Pending… 占位：空正文会被视图画成 Done，像已经跑完了。
+ * 纯空白（空格、换行、tab）同样算还没输出；非空正文保留原始缩进，不整体 trim。
  * shell 的已用时间挂到视图尾部；取值函数每帧重算，秒数才跟着动画 tick 走。
  */
 function renderRunningExpandedResult(toolName: string, result: any, context: any, theme: any): any {
@@ -474,8 +475,12 @@ export function createCcstyleTool(
 					cachedWidth = width;
 					cachedIcon = icon;
 					// 路径按最终可用宽度中间截断，避免整行二次截断隐藏文件名。
-					cachedLine = `${lead}${icon} ${renderToolSummary(summary, mainWidth, theme.fg.bind(theme))}${extraStyled}`;
-					return [truncateToWidth(cachedLine, viewportWidth, "")];
+					cachedLine = truncateToWidth(
+						`${lead}${icon} ${renderToolSummary(summary, mainWidth, theme.fg.bind(theme))}${extraStyled}`,
+						viewportWidth,
+						"",
+					);
+					return [cachedLine];
 				},
 				invalidate() {
 					cachedLine = undefined;
@@ -541,7 +546,7 @@ export function createCcstyleTool(
 				if (options?.isPartial) {
 					// 等待回答时也能展开看问题原文（Input 即 args.questions）；折叠态 1 格缩进。
 					if (expanded) return renderRunningExpandedResult(toolName, result, context, theme);
-					// 折叠后清掉展开视图，与其它运行中工具一致。
+					// 折叠后清掉展开视图，与通用 partial 折叠一致。
 					if (context?.state) context.state.ccstyleIoView = undefined;
 					return renderRunningCollapsedResult({ toolName, context, theme, prefix: " ↳ " });
 				}

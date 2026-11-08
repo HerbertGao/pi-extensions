@@ -32,8 +32,9 @@ pi install git:github.com/HerbertGao/pi-extensions
 | Fullscreen mode       | 工具卡/group 单击展开与收起、预览、hover 高亮、回到底部按钮                 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
 | 配置面板              | `Style / Features / UI / Diff / Thinking / Footer` 六页签                       | `/ccstyle`                                      |
 | 上下文检查            | 查看上下文占用，并预览 System prompt、Memory、Skills、Tools definition 和消息内容 | `/context`                                      |
+| 会话记录浏览          | 全屏浏览完整会话记录，工具输出全展开                                             | `Ctrl+O`                                        |
 | Session/Subagent 引用 | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                             | `@`                                             |
-| 状态栏                | 显示：模型、上下文、缓存、费用、本次对话累计 token、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存图标可关 Nerd Font | `/ccstyle`                              |
+| 状态栏                | 显示：模型、上下文、缓存、费用、本次对话累计 token、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存/token 图标可关 Nerd Font | `/ccstyle`                              |
 | 主题                  | 随包提供 4 个主题：CC Dark、CC Light、CC Dark HC、CC Light HC                   | `/settings` → Theme                             |
 
 `on` / `compact` 两种模式的渲染样例：[默认模式](./docs/tool-render-examples-default.md) · [紧凑模式](./docs/tool-render-examples-compact.md)
@@ -86,10 +87,10 @@ pi install git:github.com/HerbertGao/pi-extensions
   "footerTokenRate": true,                 // 输出速率芯片；false 隐藏
   "footerTokenRateMode": "average",        // average：整段指令平均（avg）；live：最近 1 秒瞬时（live）
   "footerTokenRateTtft": true,             // 速率芯片是否带 TTFT；false 只显示 tok/s
-  "footerSessionTokens": false,            // 本次对话累计 token 芯片（∑）；累加会话条目的 usage.totalTokens，默认关
+  "footerSessionTokens": false,            // 本次对话累计 token 芯片（Nerd Font 图标，纯文本为 Σ）；累加会话条目的 usage.totalTokens，默认关
   "footerCurrency": "USD",                 // 底栏费用的显示币种
   "footerCurrencyRate": null,              // 1 单位费用换成多少显示币种；null 只换符号、不乘倍率
-  "footerNerdIcons": true,                 // git/缓存用 Nerd Font 图标；false 为纯文本
+  "footerNerdIcons": true,                 // git/缓存/token 用 Nerd Font 图标；false 为纯文本
   "footerGitStatsMode": "working",         // working（默认）：未提交改动；branch：分支累计净改动
   "footerHiddenKeys": [],                  // 隐藏的芯片 key
   "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "tokens", "pi-usage"], // 每行芯片顺序；内置项与插件同一套排布
@@ -128,7 +129,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.15（MIT），上游基线 [`b996151`](https://github.com/minuque/pi-cc-extensions/commit/b996151bb63028c270340bde3e9526a62c634d2f)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.16（MIT），上游基线 [`5e3ef6b`](https://github.com/minuque/pi-cc-extensions/commit/5e3ef6b9f96d198f93ec242eac81ff21bebdb4e1)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

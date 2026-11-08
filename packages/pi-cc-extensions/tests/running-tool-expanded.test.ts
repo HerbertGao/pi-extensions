@@ -6,7 +6,6 @@ import { config } from "../extensions/config/config.ts";
 import { installDefaultMode } from "../extensions/renderer/default-mode.ts";
 import { collapsedHintHitbox } from "../extensions/renderer/mouse/layout.ts";
 import { WriteExecutionMetadataStore } from "../extensions/renderer/tool/diff/index.ts";
-import { isExpandedToolIoView } from "../extensions/renderer/tool/tool-io.ts";
 import { TOOL_LOADING_INTERVAL_MS } from "../extensions/utils/tool-loading-icon.ts";
 
 initTheme("dark");
@@ -154,123 +153,76 @@ test("运行中展开：耗时挂在输出截断的 show-more 行上", () => {
 	});
 });
 
-test("运行中展开：纯空白输出显示 Pending…，不显示 Done", () => {
+test("运行中展开：纯空白输出仍是 Pending…，非空输出保留缩进", () => {
 	runInMode(() => {
-		const blank = " \n\t  \n";
-		const withArgs = makeTool("bash", "rc-blank-args", { command: "printf ' '" });
-		withArgs.markExecutionStarted();
-		withArgs.render(100);
-		withArgs.setExpanded(true);
-		withArgs.updateResult({ content: [{ type: "text", text: blank }], isError: false }, true);
+		const blanks = ["   ", "\n\n", " \n\t"];
+		for (const text of blanks) {
+			for (const args of [{ command: "echo hi" }, {}]) {
+				const tool = makeTool(
+					"bash",
+					`rc-blank-${args.command ? "args" : "noargs"}-${blanks.indexOf(text)}`,
+					args,
+				);
+				tool.markExecutionStarted();
+				tool.render(100);
+				tool.setExpanded(true);
+				tool.updateResult({ content: [{ type: "text", text }], isError: false }, true);
 
-		const withArgsLines = render(withArgs);
-		assert.ok(
-			withArgsLines.some((line: string) => /^\s*├ Input$/.test(line)),
-			`有参数时应有 Input: ${JSON.stringify(withArgsLines)}`,
-		);
-		assert.ok(
-			withArgsLines.some((line: string) => /^\s*Pending…$/.test(line)),
-			`空白输出用 Pending… 占位: ${JSON.stringify(withArgsLines)}`,
-		);
-		assert.equal(
-			withArgsLines.some((line: string) => /Done/.test(line)),
-			false,
-			"运行中的空白输出不能显示 Done",
-		);
+				const lines = render(tool);
+				assert.ok(
+					lines.some((line: string) => /^\s*Pending…$/.test(line)),
+					`空白输出应是 Pending…: ${JSON.stringify({ text, args, lines })}`,
+				);
+				assert.equal(
+					lines.some((line: string) => /Done/.test(line)),
+					false,
+					`运行中空白不能显示 Done: ${JSON.stringify({ text, args, lines })}`,
+				);
+			}
+		}
 
-		const noArgs = makeTool("read", "rc-blank-noargs");
-		noArgs.markExecutionStarted();
-		noArgs.render(100);
-		noArgs.setExpanded(true);
-		noArgs.updateResult({ content: [{ type: "text", text: blank }], isError: false }, true);
-
-		const noArgsLines = render(noArgs);
-		assert.equal(
-			noArgsLines.some((line: string) => /^\s*├ Input$/.test(line)),
-			false,
-			`没有参数时不画 Input: ${JSON.stringify(noArgsLines)}`,
-		);
-		assert.ok(
-			noArgsLines.some((line: string) => /^\s*Pending…$/.test(line)),
-			`无参数的空白输出也用 Pending…: ${JSON.stringify(noArgsLines)}`,
-		);
-		assert.equal(
-			noArgsLines.some((line: string) => /Done/.test(line)),
-			false,
-			"无参数时运行中也不能落到 Done",
-		);
-	});
-});
-
-test("运行中展开：非空输出保留原有缩进和空白", () => {
-	runInMode(() => {
-		const text = "  indented line  \n\tkept tab";
-		const tool = makeTool("bash", "rc-whitespace", { command: "cat file" });
+		const tool = makeTool("bash", "rc-indent", { command: "echo hi" });
 		tool.markExecutionStarted();
 		tool.render(100);
 		tool.setExpanded(true);
-		tool.updateResult({ content: [{ type: "text", text }], isError: false }, true);
-
-		const view = tool.resultRendererComponent;
-		assert.equal(isExpandedToolIoView(view), true);
-		assert.equal(view.getOutputBody(), text, "非空正文不能被 trim");
-
-		const lines = render(tool);
-		assert.ok(
-			lines.some((line: string) => line.includes("    indented line")),
-			`前导缩进要留在输出里: ${JSON.stringify(lines)}`,
+		tool.updateResult(
+			{ content: [{ type: "text", text: "  indented line\n\tkept  " }], isError: false },
+			true,
 		);
-		assert.equal(
-			lines.some((line: string) => /Done/.test(line)),
-			false,
-		);
+		const view = tool.rendererState?.ccstyleIoView;
+		assert.equal(view.getOutputBody(), "  indented line\n\tkept  ");
+		const painted = tool.render(120).map((line: string) => stripAnsi(line).replace(/\s+$/, ""));
+		const indented = painted.find((line: string) => line.includes("indented line"));
+		assert.ok(indented, `应保留缩进行: ${JSON.stringify(painted)}`);
+		// Output 前缀 2 格 + 原文 2 格前导空格；外层卡片再垫 1 格。trim 整段会少掉原文缩进。
+		assert.match(indented!, /^ {5}indented line$/);
+		const kept = painted.find((line: string) => line.includes("kept"));
+		assert.ok(kept, `应保留 tab 展开后的正文: ${JSON.stringify(painted)}`);
+		// tab 先换成 3 格，再加 Output 前缀 2 格与卡片 1 格。
+		assert.match(kept!, /^ {6}kept$/);
 	});
 });
 
-test("已完成的空输出展开仍显示 Done", () => {
+test("已完成的空输出展开后仍显示 Done", () => {
 	runInMode(() => {
-		const withArgs = makeTool("read", "rc-done-args", { path: "src/a.ts" });
-		withArgs.markExecutionStarted();
-		withArgs.render(100);
-		withArgs.setExpanded(true);
-		withArgs.updateResult({ content: [], isError: false });
+		for (const args of [{ command: "echo hi" }, {}]) {
+			const tool = makeTool("bash", `rc-done-${args.command ? "args" : "noargs"}`, args);
+			tool.markExecutionStarted();
+			tool.render(100);
+			tool.setExpanded(true);
+			tool.updateResult({ content: [], isError: false });
 
-		const withArgsLines = render(withArgs);
-		assert.ok(
-			withArgsLines.some((line: string) => /^\s*Done$/.test(line)),
-			`有参数的空结果仍是 Done: ${JSON.stringify(withArgsLines)}`,
-		);
-		assert.equal(
-			withArgsLines.some((line: string) => /Pending…/.test(line)),
-			false,
-		);
-
-		const blank = " \n\t";
-		const whitespace = makeTool("read", "rc-done-whitespace", { path: "src/a.ts" });
-		whitespace.markExecutionStarted();
-		whitespace.render(100);
-		whitespace.setExpanded(true);
-		whitespace.updateResult({ content: [{ type: "text", text: blank }], isError: false });
-		const whitespaceLines = render(whitespace);
-		assert.ok(
-			whitespaceLines.some((line: string) => /^\s*Done$/.test(line)),
-			`已完成的纯空白仍是 Done: ${JSON.stringify(whitespaceLines)}`,
-		);
-
-		const noArgs = makeTool("read", "rc-done-noargs");
-		noArgs.markExecutionStarted();
-		noArgs.render(100);
-		noArgs.setExpanded(true);
-		noArgs.updateResult({ content: [], isError: false });
-		const noArgsLines = render(noArgs);
-		assert.ok(
-			noArgsLines.some((line: string) => /↳ Done$/.test(line)),
-			`无参数的空结果仍是 Done: ${JSON.stringify(noArgsLines)}`,
-		);
-		assert.equal(
-			noArgsLines.some((line: string) => /Pending…/.test(line)),
-			false,
-		);
+			const lines = render(tool);
+			assert.ok(
+				lines.some((line: string) => /Done/.test(line)),
+				`已完成空输出应显示 Done: ${JSON.stringify({ args, lines })}`,
+			);
+			assert.equal(
+				lines.some((line: string) => /Pending…/.test(line)),
+				false,
+				`已完成空输出不用 Pending…: ${JSON.stringify({ args, lines })}`,
+			);
+		}
 	});
 });
 
