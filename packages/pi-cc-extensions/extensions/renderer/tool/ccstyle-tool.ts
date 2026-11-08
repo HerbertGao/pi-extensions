@@ -183,6 +183,33 @@ function toolElapsedMs(context: any, isPartial: boolean): number | undefined {
 }
 
 /**
+ * 把原卡的 shell 时钟抄到浏览层副本上。
+ *
+ * 副本是新建的 ToolExecutionComponent，rendererState 是空的。renderCall 见到
+ * executionStarted 且没有开始时间就会写成 Date.now()，运行中的卡、以及只靠
+ * 时钟记耗时的完成态，会显示成将近 0。完成态的 durationMs 在结果上，跟 result
+ * 一起走，这里不抄。只抄这两个字段：共享整个 state 会把展开视图和视觉状态串到对话区那张卡上。
+ * 必须在副本 markExecutionStarted / updateResult 之前抄，否则第一次绘制会先写上现在并缓存错误耗时。
+ */
+export function copyShellTimingState(from: any, to: any): void {
+	const source = from?.rendererState;
+	const target = to?.rendererState;
+	if (!source || !target || source === target) return;
+	if (
+		typeof source.ccstyleShellStartedAt === "number" &&
+		Number.isFinite(source.ccstyleShellStartedAt)
+	) {
+		target.ccstyleShellStartedAt = source.ccstyleShellStartedAt;
+	}
+	if (
+		typeof source.ccstyleShellEndedAt === "number" &&
+		Number.isFinite(source.ccstyleShellEndedAt)
+	) {
+		target.ccstyleShellEndedAt = source.ccstyleShellEndedAt;
+	}
+}
+
+/**
  * shell 的耗时文本。Pi 原生 shell 渲染器会在结果底部报一行，ccstyle 的通用折叠行把它盖掉了。
  *
  * 两条路都要：新 Pi 在渲染上下文里给 `durationMs`（单调，restore 出来的行也带得到），优先用它；

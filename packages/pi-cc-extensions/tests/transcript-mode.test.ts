@@ -30,6 +30,7 @@ import {
 	TranscriptView,
 } from "../extensions/renderer/transcript-mode.ts";
 import { expandedLineLimit, withTranscriptScope } from "../extensions/renderer/transcript-scope.ts";
+import { clearAllAnimations } from "../extensions/renderer/tool/tool-state.ts";
 
 initTheme("dark");
 
@@ -261,6 +262,140 @@ test("compact 模式：工具副本不被整轮折叠，对话区仍是摘要", 
 		assert.match(text, /done-output/);
 		assert.deepEqual(live.render(120), [], "对话区不受影响");
 	} finally {
+		hooks.shutdown();
+		config.mode = previousMode;
+	}
+});
+
+test("浏览层：运行中的 shell 沿用原卡已用时间，并且继续走", () => {
+	const previousMode = config.mode;
+	const originalNow = Date.now;
+	let now = 10_000;
+	Date.now = () => now;
+	config.mode = "on";
+	const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+	try {
+		const cwd = process.cwd();
+		const live = new ToolExecutionComponent(
+			"bash",
+			"sh-overlay-run",
+			{ command: "sleep 5" },
+			{},
+			createBashToolDefinition(cwd),
+			toolUi,
+			cwd,
+		) as any;
+		live.markExecutionStarted();
+		live.render(120);
+		now = 14_000;
+		live.updateResult({ content: [{ type: "text", text: "" }], isError: false }, true);
+		assert.match(stripAnsi(live.render(120).join("\n")), /4\.0s/);
+		const startedAt = live.rendererState.ccstyleShellStartedAt;
+
+		const chat = new Container();
+		chat.children.push(live);
+		const clone = collectTranscriptItems(chat)[0]!.view;
+		const text = withTranscriptScope(() => clone.render(120))
+			.map(stripAnsi)
+			.join("\n");
+		assert.match(text, /4\.0s/);
+		assert.doesNotMatch(text, /0ms/);
+		assert.equal(clone.rendererState.ccstyleShellStartedAt, startedAt);
+		assert.notEqual(clone.rendererState, live.rendererState, "不共享 state，避免串到对话区");
+
+		now = 16_500;
+		const later = withTranscriptScope(() => clone.render(120))
+			.map(stripAnsi)
+			.join("\n");
+		assert.match(later, /6\.5s/);
+		assert.equal(live.rendererState.ccstyleShellStartedAt, startedAt);
+		assert.match(stripAnsi(live.render(120).join("\n")), /6\.5s/);
+	} finally {
+		Date.now = originalNow;
+		clearAllAnimations();
+		hooks.shutdown();
+		config.mode = previousMode;
+	}
+});
+
+test("浏览层：只靠时钟的完成态 shell 不从打开时重计", () => {
+	const previousMode = config.mode;
+	const originalNow = Date.now;
+	let now = 10_000;
+	Date.now = () => now;
+	config.mode = "on";
+	const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+	try {
+		const cwd = process.cwd();
+		const live = new ToolExecutionComponent(
+			"bash",
+			"sh-overlay-clock",
+			{ command: "npm test" },
+			{},
+			createBashToolDefinition(cwd),
+			toolUi,
+			cwd,
+		) as any;
+		live.markExecutionStarted();
+		live.render(120);
+		now = 11_234;
+		live.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
+		assert.match(stripAnsi(live.render(120).join("\n")), /1\.2s/);
+		now = 99_000;
+
+		const chat = new Container();
+		chat.children.push(live);
+		const clone = collectTranscriptItems(chat)[0]!.view;
+		const text = withTranscriptScope(() => clone.render(120))
+			.map(stripAnsi)
+			.join("\n");
+		assert.match(text, /1\.2s/);
+		assert.doesNotMatch(text, /89\.0s|0ms/);
+		assert.equal(
+			clone.rendererState.ccstyleShellStartedAt,
+			live.rendererState.ccstyleShellStartedAt,
+		);
+		assert.equal(clone.rendererState.ccstyleShellEndedAt, live.rendererState.ccstyleShellEndedAt);
+	} finally {
+		Date.now = originalNow;
+		clearAllAnimations();
+		hooks.shutdown();
+		config.mode = previousMode;
+	}
+});
+
+test("浏览层：restore 的 shell 仍用结果上的 durationMs", () => {
+	const previousMode = config.mode;
+	config.mode = "on";
+	const hooks = installDefaultMode(new WriteExecutionMetadataStore());
+	try {
+		const cwd = process.cwd();
+		const live = new ToolExecutionComponent(
+			"bash",
+			"sh-overlay-restored",
+			{ command: "ls" },
+			{},
+			createBashToolDefinition(cwd),
+			toolUi,
+			cwd,
+		) as any;
+		live.updateResult({
+			content: [{ type: "text", text: "a" }],
+			isError: false,
+			durationMs: 2_500,
+		});
+		assert.match(stripAnsi(live.render(120).join("\n")), /2\.5s/);
+
+		const chat = new Container();
+		chat.children.push(live);
+		const clone = collectTranscriptItems(chat)[0]!.view;
+		const text = withTranscriptScope(() => clone.render(120))
+			.map(stripAnsi)
+			.join("\n");
+		assert.match(text, /2\.5s/);
+		assert.doesNotMatch(text, /0ms/);
+	} finally {
+		clearAllAnimations();
 		hooks.shutdown();
 		config.mode = previousMode;
 	}

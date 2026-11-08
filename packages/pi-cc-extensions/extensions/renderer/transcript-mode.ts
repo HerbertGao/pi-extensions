@@ -6,6 +6,7 @@
  *
  * 弹层不走对话区的渲染流程：照着对话区现有组件新建一份副本来画。
  * - 工具卡：按原参数与结果新建 ToolExecutionComponent，全部展开；
+ *   shell 的开始/结束时钟一并抄过来，耗时不从副本首次绘制重新计；
  * - 模型回复：按原消息新建 AssistantMessageComponent，思考块完整显示；
  * - 其余（用户消息、提示、摘要）：不受展开影响，直接画原组件；
  * - compact 挂进对话区的回合尾行：跳过。
@@ -27,6 +28,7 @@ import { walkComponentTree } from "../utils/component-tree.ts";
 import { isCompactRoundTail } from "./compact-mode.ts";
 import { stripToolFrameMarkers } from "./mouse/packets.ts";
 import { fullscreenLazyTui, getToolMouseTui } from "./mouse/scroll.ts";
+import { copyShellTimingState } from "./tool/ccstyle-tool.ts";
 import { ToolGroupComponent } from "./tool/grouping.ts";
 import { expandShortcutText } from "./tool/names.ts";
 import { markTranscriptComponent, withTranscriptScope } from "./transcript-scope.ts";
@@ -102,12 +104,15 @@ function reuseOrClone(live: any, signature: unknown[], build: () => any): any {
 }
 
 function cloneTool(live: any): any {
+	const timing = live?.rendererState;
 	const signature = [
 		live.args,
 		live.result,
 		live.isPartial,
 		live.executionStarted,
 		live.argsComplete,
+		timing?.ccstyleShellStartedAt,
+		timing?.ccstyleShellEndedAt,
 	];
 	return reuseOrClone(live, signature, () => {
 		const view: any = new ToolExecutionComponent(
@@ -123,6 +128,9 @@ function cloneTool(live: any): any {
 			live.ui,
 			live.cwd,
 		);
+		// 构造时 executionStarted 还是 false，不会先把开始时间写成现在。
+		// 抄完再打执行标记和结果，完成态的耗时行才会用原卡的时钟。
+		copyShellTimingState(live, view);
 		if (live.argsComplete) view.setArgsComplete();
 		if (live.executionStarted) view.markExecutionStarted();
 		if (live.result) view.updateResult(live.result, live.isPartial === true);
