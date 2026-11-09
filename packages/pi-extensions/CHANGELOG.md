@@ -1,5 +1,13 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.6
+
+### Patch Changes
+
+- Updated dependencies [[`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4), [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4), [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4), [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4)]:
+  - @herbertgao/pi-impeccable@0.2.0
+  - @herbertgao/pi-cc-extensions@1.1.0
+
 ## 2026.11.5
 
 ### Patch Changes

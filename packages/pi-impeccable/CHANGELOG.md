@@ -1,5 +1,15 @@
 # @herbertgao/pi-impeccable
 
+## 0.2.0
+
+### Minor Changes
+
+- [#362](https://github.com/HerbertGao/pi-extensions/pull/362) [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor the official Impeccable 4.8.1 Pi skill. The launcher pins engine 0.1.19 and skips a sibling binary from another engine version. Live mode can stage removal of a picked element.
+
+### Patch Changes
+
+- [#362](https://github.com/HerbertGao/pi-extensions/pull/362) [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Keep a staged Live removal in the page when Go cleans the selected element, so Undo and Discard can restore it.
+
 ## 0.1.1
 
 ### Patch Changes
