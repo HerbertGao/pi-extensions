@@ -217,4 +217,4 @@ The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provi
 
 ## `@herbertgao/pi-impeccable`
 
-The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.8.0` at commit `414603bf14c7a344edb466bb1f85690c77ce8b7d`, under the Apache License 2.0. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.
+The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.8.1` at commit `924bbd194d02e5e15a227e75b5901fb0d7a4ecad`, under the Apache License 2.0. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.

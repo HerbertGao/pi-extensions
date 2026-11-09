@@ -1,6 +1,6 @@
 # @herbertgao/pi-impeccable
 
-The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `skill-v4.8.0` release. It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
+The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `skill-v4.8.1` release. It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
 
 ## Install
 
@@ -27,7 +27,7 @@ Upstream `pin` and `unpin` only discover skill installations in project harness 
 
 ## Updates and provenance
 
-This package vendors the complete official Pi payload: 58 files from commit [`414603bf14c7a344edb466bb1f85690c77ce8b7d`](https://github.com/pbakaus/impeccable/commit/414603bf14c7a344edb466bb1f85690c77ce8b7d). Updates are reviewed and released through this repository rather than the upstream auto-updater.
+This package vendors the complete official Pi payload: 58 files from commit [`924bbd194d02e5e15a227e75b5901fb0d7a4ecad`](https://github.com/pbakaus/impeccable/commit/924bbd194d02e5e15a227e75b5901fb0d7a4ecad). Updates are reviewed and released through this repository rather than the upstream auto-updater.
 
 ## License
 

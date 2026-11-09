@@ -47,7 +47,7 @@ Antigravity `0.12.0` enriches search citations by visiting source sites by defau
 
 Ponytail `5.3.2` updates the Pi skill guidance, including how to turn it off. Its Pi extension entry is unchanged; the new Claude Code band/board hooks are not registered by this aggregate.
 
-Impeccable `4.8.0` is vendored as `@herbertgao/pi-impeccable` and loaded with `/skill:impeccable`. Its native engine downloads to `~/.impeccable` on first use after SHA-256 verification; set `IMPECCABLE_BIN` for offline or preinstalled setups. The package does not install automatic post-edit hooks, and upstream `pin`/`unpin` do not discover npm-loaded skills.
+Impeccable `4.8.1` is vendored as `@herbertgao/pi-impeccable` and loaded with `/skill:impeccable`. Its native engine downloads to `~/.impeccable` on first use after SHA-256 verification; set `IMPECCABLE_BIN` for offline or preinstalled setups. The launcher skips a sibling engine binary that reports a different version. The package does not install automatic post-edit hooks, and upstream `pin`/`unpin` do not discover npm-loaded skills.
 
 ### Agency Agents
 

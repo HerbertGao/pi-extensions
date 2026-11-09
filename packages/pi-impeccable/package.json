@@ -46,9 +46,9 @@
   },
   "x-upstream": {
     "package": "impeccable",
-    "version": "4.8.0",
-    "reviewedVersion": "4.8.0",
+    "version": "4.8.1",
+    "reviewedVersion": "4.8.1",
     "repository": "https://github.com/pbakaus/impeccable",
-    "commit": "414603bf14c7a344edb466bb1f85690c77ce8b7d"
+    "commit": "924bbd194d02e5e15a227e75b5901fb0d7a4ecad"
   }
 }
