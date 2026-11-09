@@ -1,5 +1,15 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.16-local.1
+
+### Minor Changes
+
+- [#362](https://github.com/HerbertGao/pi-extensions/pull/362) [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.16. Ctrl+O opens a fullscreen transcript with tools expanded and leaves the live transcript unchanged. The session token chip follows the Nerd Font switch, compact summaries wait until a declared tool is mounted, and diff colors follow success and error. Regular mode still does not enable terminal mouse reporting.
+
+### Patch Changes
+
+- [#362](https://github.com/HerbertGao/pi-extensions/pull/362) [`47bf3d5`](https://github.com/HerbertGao/pi-extensions/commit/47bf3d5c5d482a4fcb1e60a994455a4fc6bbe5e4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Keep a shell tool's elapsed time when Ctrl+O opens the fullscreen transcript.
+
 ## 1.0.15-local.1
 
 ### Minor Changes
