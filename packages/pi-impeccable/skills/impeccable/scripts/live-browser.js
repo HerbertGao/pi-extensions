@@ -980,8 +980,14 @@
     if (!root || root.nodeType !== 1) return;
     // A removed element is gone as far as the agent is concerned: drop it from
     // the clone rather than describing a hidden child it might regenerate.
-    for (const removed of root.querySelectorAll('[' + REMOVED_ATTR + ']')) removed.remove();
-    root.removeAttribute(REMOVED_ATTR);
+    // handleGo also runs this helper on the live selection. A connected node is
+    // the page, and a staged removal stays in the DOM, hidden, so Undo and
+    // Discard can restore it by clearing the attribute. Detaching it would
+    // also make a framework reconcile a missing child.
+    if (!root.isConnected) {
+      for (const removed of root.querySelectorAll('[' + REMOVED_ATTR + ']')) removed.remove();
+      root.removeAttribute(REMOVED_ATTR);
+    }
     unwrapMixedContentTextNodes(root);
     const nodes = [root, ...root.querySelectorAll('[data-impeccable-editable], [data-impeccable-original-text], [data-impeccable-text-wrap]')];
     for (const node of nodes) {

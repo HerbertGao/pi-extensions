@@ -27,7 +27,7 @@ Upstream `pin` and `unpin` only discover skill installations in project harness 
 
 ## Updates and provenance
 
-This package vendors the complete official Pi payload: 58 files from commit [`924bbd194d02e5e15a227e75b5901fb0d7a4ecad`](https://github.com/pbakaus/impeccable/commit/924bbd194d02e5e15a227e75b5901fb0d7a4ecad). Updates are reviewed and released through this repository rather than the upstream auto-updater.
+This package vendors the official Pi payload: 58 files from commit [`924bbd194d02e5e15a227e75b5901fb0d7a4ecad`](https://github.com/pbakaus/impeccable/commit/924bbd194d02e5e15a227e75b5901fb0d7a4ecad). `scripts/live-browser.js` has one local fix on top of that commit: Go still cleans edit markers on the live selection, but it no longer detaches a staged removal, so Undo and Discard can restore the hidden node. The review cursor stays at that commit. Updates are reviewed and released through this repository rather than the upstream auto-updater.
 
 ## License
 
