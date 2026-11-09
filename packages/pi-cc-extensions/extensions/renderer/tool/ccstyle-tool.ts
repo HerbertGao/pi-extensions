@@ -4,6 +4,7 @@
  */
 import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { config, getToolDisplayConfig, type CompactStyleMode } from "../../config/config.ts";
+import { expandedLineLimit } from "../transcript-scope.ts";
 import { isToolCallHovered } from "../mouse/hover.ts";
 import {
 	ASK_USER_QUESTION_TOOL_NAME,
@@ -126,7 +127,7 @@ function renderExpandedTaskResult(
 	if (toolName === "TaskList") {
 		const tasks = parseTaskList(text);
 		if (!tasks.length) return undefined;
-		const limit = Math.max(1, config.expandedPreviewMaxLines);
+		const limit = Math.max(1, expandedLineLimit(config.expandedPreviewMaxLines));
 		const rows = tasks.slice(0, limit).map((task) => {
 			const color =
 				task.status === "completed"
@@ -182,6 +183,33 @@ function toolElapsedMs(context: any, isPartial: boolean): number | undefined {
 }
 
 /**
+ * 把原卡的 shell 时钟抄到浏览层副本上。
+ *
+ * 副本是新建的 ToolExecutionComponent，rendererState 是空的。renderCall 见到
+ * executionStarted 且没有开始时间就会写成 Date.now()，运行中的卡、以及只靠
+ * 时钟记耗时的完成态，会显示成将近 0。完成态的 durationMs 在结果上，跟 result
+ * 一起走，这里不抄。只抄这两个字段：共享整个 state 会把展开视图和视觉状态串到对话区那张卡上。
+ * 必须在副本 markExecutionStarted / updateResult 之前抄，否则第一次绘制会先写上现在并缓存错误耗时。
+ */
+export function copyShellTimingState(from: any, to: any): void {
+	const source = from?.rendererState;
+	const target = to?.rendererState;
+	if (!source || !target || source === target) return;
+	if (
+		typeof source.ccstyleShellStartedAt === "number" &&
+		Number.isFinite(source.ccstyleShellStartedAt)
+	) {
+		target.ccstyleShellStartedAt = source.ccstyleShellStartedAt;
+	}
+	if (
+		typeof source.ccstyleShellEndedAt === "number" &&
+		Number.isFinite(source.ccstyleShellEndedAt)
+	) {
+		target.ccstyleShellEndedAt = source.ccstyleShellEndedAt;
+	}
+}
+
+/**
  * shell 的耗时文本。Pi 原生 shell 渲染器会在结果底部报一行，ccstyle 的通用折叠行把它盖掉了。
  *
  * 两条路都要：新 Pi 在渲染上下文里给 `durationMs`（单调，restore 出来的行也带得到），优先用它；
@@ -196,8 +224,8 @@ function shellDurationText(toolName: string, context: any, isPartial: boolean): 
 
 /**
  * 运行中的展开视图：与结束后同一份 Input / Output。
- * 还没输出、或正文 trim 后为空时用 Pending… 占位：空白会被视图画成 Done，像已经跑完了。
- * trim 只用来判空；非空正文原样保留，不整段去掉缩进和空白。
+ * 还没输出时用 Pending… 占位：空正文会被视图画成 Done，像已经跑完了。
+ * 纯空白（空格、换行、tab）同样算还没输出；非空正文保留原始缩进，不整体 trim。
  * shell 的已用时间挂到视图尾部；取值函数每帧重算，秒数才跟着动画 tick 走。
  */
 function renderRunningExpandedResult(toolName: string, result: any, context: any, theme: any): any {
@@ -474,8 +502,12 @@ export function createCcstyleTool(
 					cachedWidth = width;
 					cachedIcon = icon;
 					// 路径按最终可用宽度中间截断，避免整行二次截断隐藏文件名。
-					cachedLine = `${lead}${icon} ${renderToolSummary(summary, mainWidth, theme.fg.bind(theme))}${extraStyled}`;
-					return [truncateToWidth(cachedLine, viewportWidth, "")];
+					cachedLine = truncateToWidth(
+						`${lead}${icon} ${renderToolSummary(summary, mainWidth, theme.fg.bind(theme))}${extraStyled}`,
+						viewportWidth,
+						"",
+					);
+					return [cachedLine];
 				},
 				invalidate() {
 					cachedLine = undefined;
@@ -541,7 +573,7 @@ export function createCcstyleTool(
 				if (options?.isPartial) {
 					// 等待回答时也能展开看问题原文（Input 即 args.questions）；折叠态 1 格缩进。
 					if (expanded) return renderRunningExpandedResult(toolName, result, context, theme);
-					// 折叠后清掉展开视图，与其它运行中工具一致。
+					// 折叠后清掉展开视图，与通用 partial 折叠一致。
 					if (context?.state) context.state.ccstyleIoView = undefined;
 					return renderRunningCollapsedResult({ toolName, context, theme, prefix: " ↳ " });
 				}
