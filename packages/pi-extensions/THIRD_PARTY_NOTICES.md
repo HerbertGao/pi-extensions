@@ -187,7 +187,7 @@ THE SOFTWARE.
 
 ## `pi-commandcode-provider`
 
-The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.0 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.0` at commit [`d779459494e9b1b7e8419cc53587878e89e36520`](https://github.com/patlux/pi-commandcode-provider/commit/d779459494e9b1b7e8419cc53587878e89e36520). npm publishes no gitHead; the published tarball matches that tag.
+The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.1 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.1` at commit [`e8ebc6e802246c41f16d88862bb17521655b3d90`](https://github.com/patlux/pi-commandcode-provider/commit/e8ebc6e802246c41f16d88862bb17521655b3d90). npm publishes no gitHead; the published tarball matches that tag.
 
 MIT License
 
@@ -217,4 +217,4 @@ The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provi
 
 ## `@herbertgao/pi-impeccable`
 
-The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.8.1` at commit `924bbd194d02e5e15a227e75b5901fb0d7a4ecad`, under the Apache License 2.0. `scripts/live-browser.js` includes one local fix that keeps a staged removal in the live DOM. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.
+The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.8.2` at commit `035c8f319edd019936525a062fe99e83ca8d12c6`, under the Apache License 2.0. `scripts/live-browser.js` includes one local fix that keeps a staged removal in the live DOM. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.

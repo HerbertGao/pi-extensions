@@ -2600,7 +2600,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (
     !tifanNotices.includes("`pi-commandcode-provider`") ||
     !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
-    !tifanNotices.includes("d779459494e9b1b7e8419cc53587878e89e36520")
+    !tifanNotices.includes("e8ebc6e802246c41f16d88862bb17521655b3d90")
   ) {
     throw new Error("Aggregate Command Code provider notice is incomplete")
   }

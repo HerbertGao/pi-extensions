@@ -42,7 +42,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@juicesharp/rpiv-ask-user-question`](https://github.com/juicesharp/rpiv-mono) | `2.15.0`       | Structured user questionnaires.                   |
 | [`@narumitw/pi-btw`](https://github.com/narumiruna/pi-extensions)               | `0.63.5`       | Parallel side questions outside main history.     |
 | [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions)        | `0.49.14`      | Keep the computer awake during Pi agent runs.     |
-| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.14`       | Priority service tier for selected models.        |
+| [`@pi-plugins/fast-mode`](https://github.com/k3dom/pi-plugins)                  | `0.1.15`       | Priority service tier for selected models.        |
 | [`@tifan/pi-copy-response`](https://github.com/tifandotme/pi-extensions)        | `0.2.7`        | Pick and copy an assistant response.              |
 | [`@tifan/pi-handoff`](https://github.com/tifandotme/pi-extensions)              | `2.2.2`        | Session handoffs and queries.                     |
 | [`@tifan/pi-mermaid-open`](https://github.com/tifandotme/pi-extensions)         | `0.2.2`        | Extract and open Mermaid diagrams.                |
@@ -50,10 +50,10 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`@tifan/pi-rename`](https://github.com/tifandotme/pi-extensions)               | `0.6.0`        | Generate session names and rename Herdr.          |
 | [`@tintinweb/pi-tasks`](https://github.com/tintinweb/pi-tasks)                  | `0.9.1`        | Task lists and subagent task execution.           |
 | [`pi-antigravity`](https://www.npmjs.com/package/pi-antigravity)                | `0.12.0`       | Antigravity models, search, and image generation. |
-| [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider)  | `0.8.0`        | Command Code subscription models and `/login`.    |
+| [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider)  | `0.8.1`        | Command Code subscription models and `/login`.    |
 | [`pi-next-cue`](https://www.npmjs.com/package/pi-next-cue)                      | `1.0.8`        | Predict the next prompt; Tab fills, Enter sends.  |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                     | `0.14.0`       | Structured TypeSafe/Jev decisions.                |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.10`       | Code diagnostics and skills.                      |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                | `4.4.11`       | Code diagnostics and skills.                      |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                  | `0.47.0`       | Web search and content access.                    |
 | [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)            | `0.6.12`       | Qoder account models for global and China.        |
 
