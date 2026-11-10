@@ -35,10 +35,10 @@ const unwrapMixedContentTextNodes = extractFunction(
 const productionStrip = extractFunction("stripManualEditRuntimeState")
 const restoreRemovedElement = extractFunction("restoreRemovedElement")
 
-// The published 4.8.1 helper dropped every marked descendant before asking
+// The published 4.8.2 helper dropped every marked descendant before asking
 // whether the root was still the live page. Replaying that unconditional
 // removal against the same assertions is the regression.
-function published481Strip(stripSource) {
+function published482Strip(stripSource) {
   const guarded = /if \(!root\.isConnected\) \{\n([\s\S]*?)\n {4}\}/
   const match = stripSource.match(guarded)
   assert.ok(match, "the shipped helper must keep the live-page guard")
@@ -191,8 +191,8 @@ test("staged removal stays in the live DOM across Go, Undo, and Discard", () => 
   assertRemovalContract(runReport(productionStrip))
 })
 
-test("the published 4.8.1 strip fails those same live-removal assertions", () => {
-  const report = runReport(published481Strip(productionStrip))
+test("the published 4.8.2 strip fails those same live-removal assertions", () => {
+  const report = runReport(published482Strip(productionStrip))
   assert.equal(report.liveAfterGo.childConnected, false)
   assert.equal(report.liveAfterGo.nestedConnected, false)
   assert.equal(report.liveAfterGo.childInParent, false)

@@ -41,7 +41,7 @@ function platform() {
 }
 
 function manifestDigest(asset) {
-  const version = "0.1.19"
+  const version = "0.1.21"
   const text = spawnSync("cat", [join(skillScripts, "engine-checksums.txt")], {
     encoding: "utf8",
   }).stdout
@@ -111,7 +111,7 @@ test("launcher skips a sibling engine that reports another version", () => {
     assert.equal(result.stdout, "")
     assert.match(result.stderr, /skipping/)
     assert.match(result.stderr, /0\.1\.18/)
-    assert.match(result.stderr, /0\.1\.19/)
+    assert.match(result.stderr, /0\.1\.21/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -123,7 +123,7 @@ test("launcher runs a sibling engine that reports the pinned version", () => {
   try {
     writeExecutable(
       join(scripts, "bin", `${os}-${arch}`, "impeccable"),
-      siblingSource("0.1.19"),
+      siblingSource("0.1.21"),
     )
     const result = run(scripts, home, cache, ["live"])
     assert.equal(result.status, 0, result.stderr)
@@ -151,13 +151,13 @@ test("a verified cache stamp with the wrong size does not skip the hash", () => 
   const { dir, scripts, home, cache } = stage()
   const { os, arch } = platform()
   try {
-    const cached = join(cache, "bin", "0.1.19", "impeccable")
+    const cached = join(cache, "bin", "0.1.21", "impeccable")
     writeExecutable(cached, "#!/bin/sh\nprintf 'CACHE\\n'\nexit 0\n")
     const size = spawnSync("wc", ["-c", cached], { encoding: "utf8" })
     const bytes = Number(size.stdout.trim().split(/\s+/)[0])
     const expected = manifestDigest(`impeccable-${os}-${arch}`)
     writeFileSync(
-      join(cache, "bin", "0.1.19", "impeccable.verified"),
+      join(cache, "bin", "0.1.21", "impeccable.verified"),
       `${expected} ${bytes + 1}\n`,
     )
     const result = run(scripts, home, cache, ["live"])
@@ -173,13 +173,13 @@ test("a verified cache stamp with the recorded size runs without hashing", () =>
   const { dir, scripts, home, cache } = stage()
   const { os, arch } = platform()
   try {
-    const cached = join(cache, "bin", "0.1.19", "impeccable")
+    const cached = join(cache, "bin", "0.1.21", "impeccable")
     writeExecutable(cached, "#!/bin/sh\nprintf 'CACHE\\n'\nexit 0\n")
     const size = spawnSync("wc", ["-c", cached], { encoding: "utf8" })
     const bytes = Number(size.stdout.trim().split(/\s+/)[0])
     const expected = manifestDigest(`impeccable-${os}-${arch}`)
     writeFileSync(
-      join(cache, "bin", "0.1.19", "impeccable.verified"),
+      join(cache, "bin", "0.1.21", "impeccable.verified"),
       `${expected} ${bytes}\n`,
     )
     const result = run(scripts, home, cache, ["live"])
