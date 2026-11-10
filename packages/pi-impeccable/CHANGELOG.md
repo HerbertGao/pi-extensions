@@ -1,5 +1,11 @@
 # @herbertgao/pi-impeccable
 
+## 0.3.0
+
+### Minor Changes
+
+- [#365](https://github.com/HerbertGao/pi-extensions/pull/365) [`e29681d`](https://github.com/HerbertGao/pi-extensions/commit/e29681dc3de160f3710545f573a5c28bb1988ca3) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor the official Impeccable 4.8.2 Pi skill. The launcher pins engine 0.1.21 and skips a sibling binary from another engine version. The local Go staged-removal fix is kept: a connected live selection is not detached, so Undo and Discard can restore it.
+
 ## 0.2.0
 
 ### Minor Changes
