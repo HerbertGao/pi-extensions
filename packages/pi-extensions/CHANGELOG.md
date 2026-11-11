@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.8
+
+### Patch Changes
+
+- [#368](https://github.com/HerbertGao/pi-extensions/pull/368) [`6a7741f`](https://github.com/HerbertGao/pi-extensions/commit/6a7741f944d09ac27bae47165a4c534086b6679e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-btw 0.63.7 and pi-lens 4.4.12. The main-thread tree picker walks a deep session without overflowing the call stack and joins copy text only when copying. pi-lens names a function an edit made more complex than the default branch, and AST replace no longer requests strict sampling.
+
+- [#368](https://github.com/HerbertGao/pi-extensions/pull/368) [`6a7741f`](https://github.com/HerbertGao/pi-extensions/commit/6a7741f944d09ac27bae47165a4c534086b6679e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin graphifyy 0.9.106. The CLI stays outside the npm aggregate and requires Python >=3.10,<3.15 so installers keep a tree-sitter wheel.
+
+- Updated dependencies [[`6a7741f`](https://github.com/HerbertGao/pi-extensions/commit/6a7741f944d09ac27bae47165a4c534086b6679e)]:
+  - @herbertgao/pi-subagents@0.23.1
+
 ## 2026.11.7
 
 ### Patch Changes
