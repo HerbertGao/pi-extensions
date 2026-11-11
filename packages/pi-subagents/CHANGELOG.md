@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.2-local.1
+
+### Patch Changes
+
+- [#368](https://github.com/HerbertGao/pi-extensions/pull/368) [`6a7741f`](https://github.com/HerbertGao/pi-extensions/commit/6a7741f944d09ac27bae47165a4c534086b6679e) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Resolve the conversation viewer's jump-to-latest and scroll-to-top keys through the user's `tui.altScreen` bindings. The away-from-latest divider names that jump key, and Home and End still work as aliases.
+
 ## 0.23.1-local.1
 
 ### Minor Changes
