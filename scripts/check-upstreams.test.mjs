@@ -27,7 +27,7 @@ test("a newer graphifyy release opens the tracking issue", () => {
     readFileSync(new URL("../pins/graphifyy", import.meta.url), "utf8"),
     "graphifyy",
   )
-  assert.equal(pinned, "0.9.105")
+  assert.equal(pinned, "0.9.106")
 
   const releaseUpdates = []
   const errors = []
@@ -35,10 +35,10 @@ test("a newer graphifyy release opens the tracking issue", () => {
     releaseUpdates,
     errors,
     { package: "graphifyy", version: pinned },
-    "0.9.106",
+    "0.9.107",
   )
   assert.deepEqual(releaseUpdates, [
-    "`graphifyy`: PyPI is `0.9.106` (pinned `0.9.105`).",
+    "`graphifyy`: PyPI is `0.9.107` (pinned `0.9.106`).",
   ])
   assert.equal(issueSyncAction(releaseUpdates, errors), "open")
 
@@ -87,7 +87,7 @@ test("graphifyy is a pypi pin outside the npm aggregate", () => {
   assert.deepEqual(errors, [])
   assert.deepEqual(
     pypi.map((entry) => [entry.package, entry.version, entry.watch]),
-    [["graphifyy", "0.9.105", "pypi"]],
+    [["graphifyy", "0.9.106", "pypi"]],
   )
 
   const vendored = validate([], monitor, {
