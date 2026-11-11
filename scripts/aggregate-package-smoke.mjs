@@ -27,6 +27,22 @@ import { run } from "./process.mjs"
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const aggregateDir = join(root, "packages", "pi-extensions")
 
+function lensComplexityValues(cyclomatic, nesting) {
+  return { name: "get", cyclomatic, nesting }
+}
+
+function btwMessageNode(id, content, extra = {}) {
+  return {
+    entry: {
+      id,
+      type: "message",
+      message: { role: "user", content },
+    },
+    children: [],
+    ...extra,
+  }
+}
+
 const proxy =
   process.env.HTTPS_PROXY ||
   process.env.https_proxy ||
@@ -478,7 +494,8 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   evaluateAstGrepRules, detectFileKind, FactStore, getFactStoreEvictionReporter,
   setFactStoreEvictionReporter, registerSessionRoot, isOutsideAllSessionRoots,
   shouldInitializeSessionRoot, clearSessionRoots, mergeInstanceRoots,
-  getLSPService, resetLSPService, validateWorkspaceEdit, relativeInside, isUnderDir };
+  getLSPService, resetLSPService, validateWorkspaceEdit, relativeInside, isUnderDir,
+  worsenedFunctions, formatComplexityAdvisory };
 `
   const lensProbe = await createLensJiti(lensEntry, {
     moduleCache: false,
@@ -801,6 +818,63 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     instanceRoots.at(-1) !== join(stageDir, "instance-40")
   ) {
     throw new Error("pi-lens lost its bounded instance-root accounting")
+  }
+  const complexityBaseline = {
+    last: new Map([["Store.get", lensComplexityValues(12, 1)]]),
+    main: {
+      kind: "file",
+      ref: "main",
+      functions: new Map([["Store.get", lensComplexityValues(12, 1)]]),
+    },
+  }
+  const worsened = lensProbe.worsenedFunctions(
+    complexityBaseline,
+    new Map([["Store.get", lensComplexityValues(19, 1)]]),
+    { cyclomatic: 15, nesting: 6 },
+  )
+  const advisory = lensProbe.formatComplexityAdvisory(worsened, "main")
+  const improved = lensProbe.worsenedFunctions(
+    complexityBaseline,
+    new Map([["Store.get", lensComplexityValues(10, 1)]]),
+    { cyclomatic: 15, nesting: 6 },
+  )
+  const stillBetterThanMain = lensProbe.worsenedFunctions(
+    {
+      last: new Map([["Store.get", lensComplexityValues(12, 1)]]),
+      main: {
+        kind: "file",
+        ref: "main",
+        functions: new Map([["Store.get", lensComplexityValues(20, 1)]]),
+      },
+    },
+    new Map([["Store.get", lensComplexityValues(19, 1)]]),
+    { cyclomatic: 15, nesting: 6 },
+  )
+  if (
+    advisory !== "⚠ complexity vs main: Store.get cc 12→19 (≥15)" ||
+    improved.length !== 0 ||
+    lensProbe.formatComplexityAdvisory(improved, "main") !== undefined ||
+    stillBetterThanMain.length !== 0
+  ) {
+    throw new Error(
+      "pi-lens did not name only functions an edit made worse than main",
+    )
+  }
+  const astReplaceAt = lensBundle.lastIndexOf('name: "ast_grep_replace"')
+  const astReplaceTool = lensBundle.slice(astReplaceAt, astReplaceAt + 1200)
+  const markAt = lensBundle.indexOf(
+    'resolveLensToolName("lens_diagnostic_mark"',
+  )
+  const markTool = lensBundle.slice(markAt, markAt + 500)
+  if (
+    astReplaceAt < 0 ||
+    markAt < 0 ||
+    astReplaceTool.includes("constrainedSampling") ||
+    !markTool.includes("constrainedSampling: CONSTRAINED_JSON_SCHEMA_SAMPLING")
+  ) {
+    throw new Error(
+      "pi-lens strict sampling no longer matches the reviewed tool split",
+    )
   }
   const lensLspFirst = lensProbe
   const lensLspSecond = await createLensJiti(lensEntry, {
@@ -1276,7 +1350,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.5"
+  const expectedBtwVersion = "0.63.7"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1441,7 +1515,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     }
     throw new Error(`pi-btw dist does not load ${name} from a published chunk`)
   }
-  // 0.63.5's public entry lazy-loads fullscreen, menu, and transcript chunks.
+  // 0.63.7's public entry lazy-loads fullscreen, menu, and transcript chunks.
   // Exercise those published chunks rather than the src mirror.
   const sideModule = await btwJiti.import(
     btwPublishedChunk(btwDistSource, "createSideThread"),
@@ -1478,9 +1552,9 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const { BtwTranscriptPager } = await btwJiti.import(
     btwPublishedChunk(btwDistSource, "BtwTranscriptPager"),
   )
-  const { pickMainEntry } = await btwJiti.import(
-    btwPublishedChunk(btwDistSource, "pickMainEntry"),
-  )
+  const pickerChunk = btwPublishedChunk(btwDistSource, "pickMainEntry")
+  const { pickMainEntry, prepareTreeSnapshot } =
+    await btwJiti.import(pickerChunk)
   const btwEntryProbe = await btwJiti.evalModule(
     `${btwDistSource}\nexport { runFullscreenOnFirstUse };\n`,
     { filename: btwEntry, async: true, forceTranspile: true },
@@ -1708,6 +1782,39 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     mainTreeNotifications[0]?.message !== "No main-thread entries are available"
   ) {
     throw new Error("pi-btw empty main tree did not return to its menu safely")
+  }
+  let deep = btwMessageNode("leaf", "end")
+  for (let index = 0; index < 20000; index++) {
+    deep = btwMessageNode(`n${index}`, "x", { children: [deep] })
+  }
+  const deepSnapshot = prepareTreeSnapshot([deep])
+  let depth = 0
+  let node = deepSnapshot.tree[0]
+  while (node) {
+    depth += 1
+    node = node.children[0]
+  }
+  const multi = prepareTreeSnapshot([
+    btwMessageNode("multi", [
+      { type: "text", text: "alpha" },
+      { type: "text", text: "beta" },
+    ]),
+  ])
+  const labeled = prepareTreeSnapshot([
+    btwMessageNode("labeled", "hi", { label: "saved" }),
+  ])
+  const unlabeled = prepareTreeSnapshot([btwMessageNode("plain", "hi")])
+  const multiSource = multi.rawCopyText.get("multi")
+  if (
+    depth !== 20001 ||
+    !Array.isArray(multiSource) ||
+    multiSource.join("") !== "alphabeta" ||
+    labeled.savedLabels.get("labeled")?.label !== "saved" ||
+    unlabeled.savedLabels.has("plain")
+  ) {
+    throw new Error(
+      "pi-btw main-tree snapshot did not walk a deep history or retain copy fragments",
+    )
   }
 
   const { initTheme } = await btwJiti.import("@earendil-works/pi-coding-agent")
