@@ -1350,7 +1350,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     await readFile(btwManifestPath, "utf8"),
     btwManifestPath,
   )
-  const expectedBtwVersion = "0.63.7"
+  const expectedBtwVersion = "0.63.8"
   if (
     sourceManifest.dependencies["@narumitw/pi-btw"] !== expectedBtwVersion ||
     btwManifest.version !== expectedBtwVersion
@@ -1366,7 +1366,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (!btwManifest.pi?.extensions?.includes(btwEntryRelative)) {
     throw new Error("Bundled pi-btw no longer declares its expected Pi entry")
   }
-  const expectedTuiKitRange = "^0.69.1"
+  const expectedTuiKitRange = "^0.70.0"
   if (
     sourceManifest.dependencies["@narumitw/pi-tui-kit"] !==
       expectedTuiKitRange ||
@@ -1398,9 +1398,9 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "Bundled pi-caffeinate does not match its pinned MIT package contract",
     )
   }
-  if (caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"] !== "^0.69.0") {
+  if (caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"] !== "^0.70.0") {
     throw new Error(
-      `Expected pi-caffeinate pi-tui-kit dependency ^0.69.0, got ${caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"]}`,
+      `Expected pi-caffeinate pi-tui-kit dependency ^0.70.0, got ${caffeinateManifest.dependencies?.["@narumitw/pi-tui-kit"]}`,
     )
   }
   const caffeinateEntryRelative = "./dist/index.ts"
@@ -1515,7 +1515,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     }
     throw new Error(`pi-btw dist does not load ${name} from a published chunk`)
   }
-  // 0.63.7's public entry lazy-loads fullscreen, menu, and transcript chunks.
+  // 0.63.8's public entry still lazy-loads fullscreen, menu, and transcript chunks.
   // Exercise those published chunks rather than the src mirror.
   const sideModule = await btwJiti.import(
     btwPublishedChunk(btwDistSource, "createSideThread"),
@@ -1947,11 +1947,11 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "./fullscreen-handoff",
   )
   if (
-    handoffModule.manifest.version !== "0.69.1" ||
+    handoffModule.manifest.version !== "0.70.0" ||
     handoffModule.manifest.license !== "MIT"
   ) {
     throw new Error(
-      `Expected pi-btw to load pi-tui-kit 0.69.1 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+      `Expected pi-btw to load pi-tui-kit 0.70.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
     )
   }
   const { getKeybindings } = await import(
@@ -2063,9 +2063,60 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "@narumitw/pi-tui-kit",
     "./testing",
   )
-  const { defineMenu, runMenu } = await import(
+  const { defineMenu, EditorStatusWidget, runMenu } = await import(
     pathToFileURL(kitMenuModule.file).href
   )
+  const kitWidgetTheme = { fg: (_name, text) => text }
+  const kitWidgetState = { collapsed: false }
+  const kitWidget = new EditorStatusWidget({
+    theme: kitWidgetTheme,
+    name: "Smoke",
+    summary: "1/2",
+    state: kitWidgetState,
+    renderBody: () => ["body line"],
+  })
+  const kitWidgetOpen = kitWidget.render(40).join("\n")
+  const kitWidgetClick = {
+    x: 1,
+    y: 0,
+    width: 40,
+    height: 8,
+    button: "left",
+    shift: false,
+    alt: false,
+    ctrl: false,
+    screenX: 1,
+    screenY: 0,
+  }
+  kitWidget.handleMouse({ ...kitWidgetClick, type: "press" })
+  const kitWidgetClicked = kitWidget.handleMouse({
+    ...kitWidgetClick,
+    type: "click",
+  })
+  const kitWidgetClosed = kitWidget.render(40).join("\n")
+  const kitPlainWidget = new EditorStatusWidget({
+    theme: kitWidgetTheme,
+    renderBody: () => ["plain body"],
+  })
+  const kitPlainCollapsed = kitPlainWidget.setCollapsed(true)
+  const kitPlainText = kitPlainWidget.render(40).join("\n")
+  kitWidget.dispose()
+  kitPlainWidget.dispose()
+  if (
+    !kitWidgetOpen.includes("▾ Smoke · 1/2") ||
+    !kitWidgetOpen.includes("body line") ||
+    kitWidgetClicked?.handled !== true ||
+    kitWidgetState.collapsed !== true ||
+    !kitWidgetClosed.includes("▸ Smoke · 1/2") ||
+    kitWidgetClosed.includes("body line") ||
+    kitPlainCollapsed !== false ||
+    kitPlainWidget.collapsed !== false ||
+    !kitPlainText.includes("plain body")
+  ) {
+    throw new Error(
+      "pi-tui-kit named editor status did not collapse to its divider",
+    )
+  }
   const { createTuiHarness } = await import(
     pathToFileURL(kitTestingModule.file).href
   )
@@ -2707,7 +2758,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (
     !tifanNotices.includes("`pi-commandcode-provider`") ||
     !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
-    !tifanNotices.includes("e8ebc6e802246c41f16d88862bb17521655b3d90")
+    !tifanNotices.includes("7616ecd7a5100242411242b506623d025ae0181e")
   ) {
     throw new Error("Aggregate Command Code provider notice is incomplete")
   }
@@ -3535,6 +3586,30 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   nativeRates.tiers[0].input = 0
   assert.equal(commandCodeRates.tiers[0].input, 10)
   assert.equal(peakedRates.tiers[0].input, 20)
+  const { MODEL_COSTS, PRICING_LAST_VERIFIED } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/pricing.ts"),
+  )
+  assert.equal(PRICING_LAST_VERIFIED, "2026-11-11")
+  assert.deepEqual(MODEL_COSTS["claude-fable-5-2"], {
+    input: 8,
+    output: 40,
+    cacheRead: 0.2,
+    cacheWrite: 10,
+  })
+  assert.deepEqual(MODEL_COSTS["google/gemini-4-carbon"], {
+    input: 2,
+    output: 10,
+    cacheRead: 0.1,
+    cacheWrite: 0,
+  })
+  assert.deepEqual(MODEL_COSTS["meta/muse-ember"], {
+    input: 0.1,
+    output: 0.5,
+    cacheRead: 0.004,
+    cacheWrite: 0,
+  })
+  assert.equal(Object.hasOwn(MODEL_COSTS, "stealth/crouton-alpha"), false)
+  assert.equal(Object.hasOwn(MODEL_COSTS, "reflection/beam:free"), false)
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),
     { moduleCache: false },
