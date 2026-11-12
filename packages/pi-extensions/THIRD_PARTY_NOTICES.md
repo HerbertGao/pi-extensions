@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 ## `@narumitw/pi-caffeinate`
 
-The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.13 under its original MIT license:
+The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.15 under its original MIT license:
 
 MIT License
 
@@ -187,7 +187,7 @@ THE SOFTWARE.
 
 ## `pi-commandcode-provider`
 
-The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.1 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.1` at commit [`e8ebc6e802246c41f16d88862bb17521655b3d90`](https://github.com/patlux/pi-commandcode-provider/commit/e8ebc6e802246c41f16d88862bb17521655b3d90). npm publishes no gitHead; the published tarball matches that tag.
+The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.2 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.2` at commit [`7616ecd7a5100242411242b506623d025ae0181e`](https://github.com/patlux/pi-commandcode-provider/commit/7616ecd7a5100242411242b506623d025ae0181e). npm publishes no gitHead; the published tarball matches that tag.
 
 MIT License
 

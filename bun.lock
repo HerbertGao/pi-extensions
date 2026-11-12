@@ -67,7 +67,7 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.11.7",
+      "version": "2026.11.8",
       "dependencies": {
         "@ast-grep/cli": "0.51.1",
         "@ast-grep/napi": "^0.51.0",
@@ -76,16 +76,16 @@
         "@herbertgao/pi-bark": "0.2.2",
         "@herbertgao/pi-cc-extensions": "1.0.16-local.1",
         "@herbertgao/pi-impeccable": "0.3.0",
-        "@herbertgao/pi-subagents": "0.23.1-local.1",
+        "@herbertgao/pi-subagents": "0.23.2-local.1",
         "@herbertgao/sol-pi": "0.4.3",
         "@juicesharp/rpiv-ask-user-question": "2.15.0",
         "@juicesharp/rpiv-config": "^2.15.0",
         "@modelcontextprotocol/sdk": "^1.32.1",
         "@mozilla/readability": "^0.6.0",
         "@napi-rs/keyring": "^2.1.0",
-        "@narumitw/pi-btw": "0.63.7",
-        "@narumitw/pi-caffeinate": "0.49.14",
-        "@narumitw/pi-tui-kit": "^0.69.1",
+        "@narumitw/pi-btw": "0.63.8",
+        "@narumitw/pi-caffeinate": "0.49.15",
+        "@narumitw/pi-tui-kit": "^0.70.0",
         "@pi-plugins/fast-mode": "0.1.15",
         "@shikijs/cli": "^4.0.2",
         "@tifan/pi-copy-response": "0.2.7",
@@ -106,7 +106,7 @@
         "nanoid": "^5.0.0",
         "p-limit": "^6.1.0",
         "pi-antigravity": "0.12.0",
-        "pi-commandcode-provider": "0.8.1",
+        "pi-commandcode-provider": "0.8.2",
         "pi-lens": "4.4.12",
         "pi-next-cue": "1.0.8",
         "pi-provider-qoder": "0.6.12",
@@ -140,7 +140,7 @@
     },
     "packages/pi-subagents": {
       "name": "@herbertgao/pi-subagents",
-      "version": "0.23.1-local.1",
+      "version": "0.23.2-local.1",
       "dependencies": {
         "croner": "^10.0.1",
         "nanoid": "^5.1.16",
@@ -434,11 +434,11 @@
 
     "@napi-rs/keyring-win32-x64-msvc": ["@napi-rs/keyring-win32-x64-msvc@2.1.0", "", { "os": "win32", "cpu": "x64" }, "sha512-3zYwO7dhJiUNyv2te81ujXm2vGxHwgx+z2eBm0dTYe3aWpvKQVzpfxCp/7cViJs8duVYE04wVOgXiRhRCMEq2w=="],
 
-    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.63.7", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.69.1" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-92FK3XJnZIW+GZLGlWhiKxMlOIC9zYvumL5TA7/PlDEcdOe4IVDJcFWE4QdySVyadGIr3SgJG0WLOm8B6jQJQg=="],
+    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.63.8", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.70.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-dskbX1uMMY03ZF2v+EvkIc94L7PM+dfAEu8AL3771TXEa94SwsjPnjN7/DUDDHglmyWA7l/w/7UWh4EcPZYxlQ=="],
 
-    "@narumitw/pi-caffeinate": ["@narumitw/pi-caffeinate@0.49.14", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.69.0", "dbus-native": "^0.16.3" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-h1lNQd6EVhUmisTmqEs8tsA/0lHiSC3QUBYPyecrNvEwBZE/bUh3wTEhdIs+qmxuGyljcf4+9ZeSsnlzbV0XWA=="],
+    "@narumitw/pi-caffeinate": ["@narumitw/pi-caffeinate@0.49.15", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.70.0", "dbus-native": "^0.16.3" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-ium0FipKppoaywC9i0VH2uqULqGYSPta8LuPkJObwEfYUh4dKUtVWgycarG6HvNCWt2/wIZFU+hb/xb84wdvWA=="],
 
-    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.69.1", "", { "dependencies": { "diff": "9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-/dUHk99dB26rqUjeln5XZMXcwFkYmeQyQd16+8KUaHDQ/tVJHZKO/H+FEYfy05j+HaujP8OafQlgYDgGaOusdw=="],
+    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.70.0", "", { "dependencies": { "diff": "9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-57spb4lO7mxmz0tCzn0M+EoCqMYnZUKQ3hiw7Y19xAHq88+BVZO831sE1TuyZ8ALuFcPs4lwIV4YUphpf1Farw=="],
 
     "@nodelib/fs.scandir": ["@nodelib/fs.scandir@2.1.5", "", { "dependencies": { "@nodelib/fs.stat": "2.0.5", "run-parallel": "^1.1.9" } }, "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="],
 
@@ -1262,7 +1262,7 @@
 
     "pi-antigravity": ["pi-antigravity@0.12.0", "", { "dependencies": { "typebox": "^1.3.27", "undici": "^8.12.3" }, "peerDependencies": { "@earendil-works/pi-ai": ">=0.80.0", "@earendil-works/pi-coding-agent": ">=0.80.0" } }, "sha512-DtTldnzjz5vuL+S+aIF3it4EnwzlvQiez/dYR39tUnd7cUsTEfLz4yDkw1K3Q/sBz+9tLMi2YmB8JxJiLazinw=="],
 
-    "pi-commandcode-provider": ["pi-commandcode-provider@0.8.1", "", { "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"] }, "sha512-6a+Z5uol6LFoqsxUI58ycb1Q643Xxh3RZLqQyEf6md02Xy0kNmwnO86KQ6yyaTWh+PdSwvXwCo9Q7AzcwrEdmQ=="],
+    "pi-commandcode-provider": ["pi-commandcode-provider@0.8.2", "", { "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"] }, "sha512-0w7y18oqQOeu/zxf1hKFQphaubCCasmp0A4YnwolaSgOfLgMpeBHfYDUmqyogMMXp1xWFBhSTCVFebWotMvdMg=="],
 
     "pi-lens": ["pi-lens@4.4.12", "", { "dependencies": { "@ast-grep/cli": "0.51.1", "@ast-grep/napi": "^0.51.0", "js-yaml": "^5.2.2", "minimatch": "^11.0.4", "pidusage": "^4.0.1", "vscode-jsonrpc": "^10.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-6bVSQDGT+p5peOnyJRGUhgiOuu6mHtE0klkX8+4hms2ZCW7CtmnPbCEs0TNKWq1k8+lF/Kem+/xmxY0mJQ3TIQ=="],
 
@@ -1574,8 +1574,6 @@
 
     "@manypkg/get-packages/fs-extra": ["fs-extra@8.1.0", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^4.0.0", "universalify": "^0.1.0" } }, "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g=="],
 
-    "@narumitw/pi-caffeinate/@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.69.0", "", { "dependencies": { "diff": "9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-qmNILlOxCpxcGDOnez4XxtYn51wGVZVd3ogTDNWxJ5T7YZLJsT3PhMSS2vYwd4lsDQC9dr6UDymt7HL+4v5jUg=="],
-
     "@narumitw/pi-tui-kit/diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
 
     "@narumitw/pi-tui-kit/highlight.js": ["highlight.js@11.12.0", "", {}, "sha512-nbfWpyRMcMrPMmDwJB+dhX/eiaPKtc2RB+0QZskqJ3WjRA/FDS0e9hZrx8EC/lbEv8gXy98FcDbNa/dspAaJMg=="],
@@ -1629,10 +1627,6 @@
     "@herbertgao/pi-cc-extensions/@biomejs/biome/@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.5", "", { "os": "win32", "cpu": "x64" }, "sha512-bIBFo+n6MIxdNcVFy5CrurbKiZQiUciK3bt8+O9I4wjFZNTfXLpi+giq47522eXqW5NBc9ulx7dR1SlZKi2J5g=="],
 
     "@herbertgao/pi-cc-extensions/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
-
-    "@narumitw/pi-caffeinate/@narumitw/pi-tui-kit/diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
-
-    "@narumitw/pi-caffeinate/@narumitw/pi-tui-kit/highlight.js": ["highlight.js@11.12.0", "", {}, "sha512-nbfWpyRMcMrPMmDwJB+dhX/eiaPKtc2RB+0QZskqJ3WjRA/FDS0e9hZrx8EC/lbEv8gXy98FcDbNa/dspAaJMg=="],
 
     "defuddle/linkedom/css-select": ["css-select@7.0.0", "", { "dependencies": { "boolbase": "^2.0.0", "css-what": "^8.0.0", "domhandler": "^6.0.1", "domutils": "^4.0.2", "nth-check": "^3.0.1" } }, "sha512-snmjEVXy+1LnwXdxhYvTMj1d9tOh4HxkA1YmoayVBeeyR2C14Pum7fcxJIm4SswYspVy866eYNwlH6xC3/VH5g=="],
 
