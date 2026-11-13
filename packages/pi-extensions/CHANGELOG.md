@@ -1,5 +1,15 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.10
+
+### Patch Changes
+
+- [#374](https://github.com/HerbertGao/pi-extensions/pull/374) [`4d323bd`](https://github.com/HerbertGao/pi-extensions/commit/4d323bdfd68139885b475e721ad150d9ee4958ea) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin graphifyy 0.9.108. The CLI stays outside the npm aggregate. Warm AST caches rebuild, a query filter that matches nothing says so, and Python stays on >=3.10,<3.15.
+
+- Updated dependencies [[`4d323bd`](https://github.com/HerbertGao/pi-extensions/commit/4d323bdfd68139885b475e721ad150d9ee4958ea), [`4d323bd`](https://github.com/HerbertGao/pi-extensions/commit/4d323bdfd68139885b475e721ad150d9ee4958ea)]:
+  - @herbertgao/pi-cc-extensions@1.1.0
+  - @herbertgao/pi-subagents@0.24.0
+
 ## 2026.11.9
 
 ### Patch Changes
