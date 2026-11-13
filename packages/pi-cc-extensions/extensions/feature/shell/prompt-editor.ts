@@ -62,6 +62,19 @@ const promptEditorFactory: EditorFactory = (tui, theme, keybindings) => {
 /** 是否正占着插槽；占据前的工厂用于原样还回去。 */
 let active = false;
 let previousEditorFactory: EditorFactory | undefined;
+/**
+ * 对话框还开着时，强制卸载只是把还原排进队列，插槽看起来仍是本扩展的工厂。
+ * 记下这件事，好让同一次面板里再打开时能盖过这个排队，并仍还回原来的工厂。
+ */
+let releasePending = false;
+
+/** 排队的还原已经落到插槽上时，丢掉这次等待，避免下一轮安装沿用过期工厂。 */
+function noteLandedRelease(ctx: ExtensionContext): void {
+	if (!releasePending) return;
+	if (ctx.ui.getEditorComponent?.() === promptEditorFactory) return;
+	releasePending = false;
+	previousEditorFactory = undefined;
+}
 
 /**
  * 撤销本扩展占据的插槽；从未占用就不碰插槽。
@@ -74,13 +87,22 @@ let previousEditorFactory: EditorFactory | undefined;
  * 我们已经不在槽里，再写一次会把 pi 刚重置的结果又覆盖掉；此时只清状态。
  * 用户主动改设置时传 force：pi 1.5 会把对话框开着时的替换排队到关闭后落地，
  * 期间 getEditorComponent() 仍是旧工厂，无法据此判断要不要还回去。
+ * 强制卸载先留着占据前的工厂：同一次对话框里再打开时，插槽还没变，不能把
+ * 仍显示着的本扩展工厂当成要还回去的那一个。
  */
 function releasePromptEditor(ctx: ExtensionContext, force = false): void {
+	noteLandedRelease(ctx);
 	if (!active) return;
 	const previous = previousEditorFactory;
+	if (!force && ctx.ui.getEditorComponent?.() === previous) {
+		active = false;
+		previousEditorFactory = undefined;
+		releasePending = false;
+		return;
+	}
 	active = false;
-	previousEditorFactory = undefined;
-	if (!force && ctx.ui.getEditorComponent?.() === previous) return;
+	releasePending = force;
+	if (!force) previousEditorFactory = undefined;
 	ctx.ui.setEditorComponent(previous);
 }
 
@@ -96,16 +118,21 @@ function releasePromptEditor(ctx: ExtensionContext, force = false): void {
  */
 export function applyPromptEditor(ctx: ExtensionContext, options?: { force?: boolean }): void {
 	if (!ctx?.hasUI || typeof ctx.ui?.setEditorComponent !== "function") return;
+	noteLandedRelease(ctx);
 	if (!config.enableEditorPrefix) {
 		releasePromptEditor(ctx, options?.force);
 		return;
 	}
 	const current = ctx.ui.getEditorComponent?.();
-	if (current === promptEditorFactory) return;
+	// 插槽已经是本扩展的工厂时不重建，除非刚刚的强制卸载还排在对话框关闭之后。
+	// 那种情况下 getEditorComponent() 仍是旧工厂，不盖过队列的话，关闭后面板会执行卸载。
+	if (current === promptEditorFactory && !(options?.force && releasePending)) return;
 	try {
 		// pi 的插槽是硬替换、没有栈，先记住是谁占着，撤销时还回去。
-		previousEditorFactory = current;
+		// 强制卸载还没落地时，看得见的工厂仍是我们自己，要还回去的是卸载时留着的那个。
+		if (!releasePending) previousEditorFactory = current;
 		active = true;
+		releasePending = false;
 		ctx.ui.setEditorComponent(promptEditorFactory);
 	} catch (err) {
 		ctx.ui.notify(

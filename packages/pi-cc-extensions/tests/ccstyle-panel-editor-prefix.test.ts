@@ -166,3 +166,34 @@ test("面板里连续开关：以最后一次选择为准", async () => {
 
 	assert.equal(ctx.ui.getEditorComponent(), otherFactory);
 });
+
+test("面板里关掉再打开：关闭后仍是本扩展的编辑器，并记得原工厂", async () => {
+	const otherFactory: EditorFactory = () => ({});
+	const slot = fakePanelUi();
+	const { ctx } = slot;
+
+	config.enableEditorPrefix = false;
+	clearPromptEditor(ctx as never);
+	ctx.ui.setEditorComponent(otherFactory);
+	config.enableEditorPrefix = true;
+	applyPromptEditor(ctx as never);
+	assert.notEqual(ctx.ui.getEditorComponent(), otherFactory);
+
+	const closePanel = showCcstylePanel(ctx, hooks);
+	const panel = slot.panel;
+	selectEditorPrefixRow(panel);
+	panel.handleInput("\r");
+	assert.equal(config.enableEditorPrefix, false);
+	panel.handleInput("\r");
+	assert.equal(config.enableEditorPrefix, true);
+
+	panel.handleInput("\x1b");
+	await closePanel;
+
+	assert.notEqual(ctx.ui.getEditorComponent(), otherFactory);
+	assert.equal(typeof ctx.ui.getEditorComponent(), "function");
+
+	config.enableEditorPrefix = false;
+	clearPromptEditor(ctx as never);
+	assert.equal(ctx.ui.getEditorComponent(), otherFactory);
+});
