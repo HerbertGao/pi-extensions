@@ -28,11 +28,11 @@ Run `/reload` after installation.
 | Feature                     | Description                                                                                                                                  | Entry point                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Claude Code UI              | Tool summaries, expand/collapse, rich edit/write diffs, and `on` / `compact` / `off` modes                                                   | `/ccstyle`                                      |
-| Markdown enhancements       | Mermaid dialects and circled-number conversion                                                                                               | Automatic; turn off with `enableMarkdownEnhance: false` |
-| Fullscreen mode             | Tool card/group expand and collapse on click, previews, hover highlight, and a back-to-bottom button                                         | `TUIMODE=fullscreen` or `--tui-mode fullscreen` |
+| Markdown enhancements       | Mermaid dialects in non-standard fences (`statediagram`, `classdiagram`…) and circled-number conversion; plain mermaid goes to pi | Automatic; turn off with `enableMarkdownEnhance: false` |
+| Fullscreen mode             | Tool card/group expand and collapse on click, previews, hover highlight, and a back-to-bottom button                                         | `--tui-mode fullscreen` (default since pi 1.5) |
 | Settings panel              | `Style / Features / UI / Diff / Thinking / Footer` tabs                                                                                      | `/ccstyle`                                      |
 | Context inspection          | Usage breakdown and previews for the system prompt, memory, skills, tools definition, and messages                                           | `/context`                                      |
-| Transcript browsing         | Full-screen transcript browsing with every tool output expanded                                                                              | `Ctrl+O`                                        |
+| Transcript browsing         | Full-screen transcript browsing with every tool output expanded; the key goes to pi while a long `!` output can be expanded                  | `Ctrl+O`                                        |
 | Session/Subagent references | Search and inject effective context from previous Sessions or existing SubAgents                                                             | `@`                                             |
 | Status bar                  | Shows model, context, cache, cost, the conversation token total, and git; also works with `@narumitw/pi-usage` for live quota. Git/cache/token Nerd Font icons can be turned off | `/ccstyle`                                      |
 | Theme                       | Bundled themes: CC Dark, CC Light, CC Dark HC, CC Light HC                                                                                   | `/settings` → Theme                             |
@@ -92,6 +92,8 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "footerCurrencyRate": null,              // display units per 1 cost unit; null changes the symbol only
   "footerNerdIcons": true,                 // Nerd Font glyphs for git/cache/tokens; false = plain text
   "footerGitStatsMode": "working",         // working (default): uncommitted; branch: cumulative net changes
+  "footerContextLimit": "window",          // context chip limit: window (default); compaction: auto-compaction point (window − compaction.reserveTokens); both: compaction point, window in brackets
+                                           // Pi compacts only after crossing that point, so the text can briefly exceed 100% (e.g. 104%/184k); the bar clamps at 100%
   "footerHiddenKeys": [],                  // hidden chip keys
   "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "tokens", "pi-usage"], // chip order per line; builtins and plugins share one layout
   "footerLine2Keys": ["cwd", "git"],       // cwd: directory and session; git: branch and changes. Either can move to any line
@@ -103,7 +105,7 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
 > **Fullscreen**: expanded diffs always show every line. When expanded Input/Output exceeds the line cap, the footer shows `… +N more lines`; click for the full preview, click again to collapse.
 
 > [!NOTE]
-> **Mermaid rendering**: set `markdown.mermaid` to `final` via `~/.pi/agent/settings.json` or `/settings`. Default `streaming` redraws every frame; `final` renders once.
+> **Mermaid rendering**: set `markdown.mermaid` to `final` (`/settings`) so it renders once instead of every frame.
 
 ## Local development
 
@@ -117,7 +119,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Compatibility
 
-- Node.js `>=22.19.0`; the monorepo uses Pi `1.5.0`, with published Pi peer versions kept at `*`.
+- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.17 passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
 
 ## Recommended companions
 
@@ -129,7 +131,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.16 (MIT), upstream baseline [`5e3ef6b`](https://github.com/minuque/pi-cc-extensions/commit/5e3ef6b9f96d198f93ec242eac81ff21bebdb4e1), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.17 (MIT), upstream baseline [`04c4274`](https://github.com/minuque/pi-cc-extensions/commit/04c4274d08135b5880bad285f92b11e9b22d115e), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

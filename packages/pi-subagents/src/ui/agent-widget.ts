@@ -235,6 +235,7 @@ export function getPromptModeLabel(type: SubagentType): string | undefined {
 export function buildInvocationTags(invocation: AgentInvocation | undefined): {
   modelName?: string
   modelId?: string
+  thinking?: string
   tags: string[]
 } {
   const tags: string[] = []
@@ -257,6 +258,7 @@ export function buildInvocationTags(invocation: AgentInvocation | undefined): {
   return {
     modelName: asked(invocation.modelName, invocation.requestedModel),
     modelId: asked(invocation.modelId, invocation.requestedModel),
+    thinking,
     tags,
   }
 }
@@ -558,12 +560,12 @@ export class AgentWidget {
       const parts: string[] = []
       if (this.showModel()) {
         // Leading, and paired: a thinking level means nothing without the model
-        // it applies to. The tag is taken from buildInvocationTags rather than
-        // rebuilt so the "(asked X)" annotation survives.
-        const { modelName, tags } = buildInvocationTags(a.invocation)
+        // it applies to. Both come from buildInvocationTags so the "(asked X)"
+        // annotation survives. The level is bare, not "thinking: high", as on
+        // the fleet row; the tag list keeps the label for the viewer and tool result.
+        const { modelName, thinking } = buildInvocationTags(a.invocation)
         if (modelName) parts.push(modelName)
-        const thinkingTag = tags.find((tag) => tag.startsWith("thinking: "))
-        if (thinkingTag) parts.push(thinkingTag)
+        if (thinking) parts.push(thinking)
       }
       if (bg) parts.push(formatTurns(bg.turnCount, bg.maxTurns))
       if (toolUses > 0)

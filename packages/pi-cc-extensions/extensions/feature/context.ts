@@ -11,6 +11,7 @@ import {
 import { Key, Markdown, matchesKey, visibleWidth } from "@earendil-works/pi-tui";
 import { type Color, rgbColor } from "@earendil-works/pi-tui";
 import { padLine } from "../utils/format.ts";
+import { setInjectedKeybindings } from "../utils/keybindings.ts";
 
 export type ContextPart = {
 	label: string;
@@ -101,7 +102,8 @@ export async function showTextPreview(
 	activeContextOverlays++;
 	try {
 		await ctx.ui.custom(
-			(tui, theme, _keybindings, done) => {
+			(tui, theme, injectedKeybindings, done) => {
+				setInjectedKeybindings(injectedKeybindings);
 				ensureFullscreenMouseMotion(tui);
 				let scrollOffset = 0;
 				let pageSize = 1;
@@ -384,6 +386,7 @@ export async function showTextPreview(
 					maxHeight: "80%",
 					margin: 2,
 				},
+				blocked: { kind: "question", message: "Reviewing context" },
 			},
 		);
 	} finally {
@@ -697,7 +700,8 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 				let action;
 				try {
 					action = await ctx.ui.custom(
-						(tui, theme, _keybindings, done) => {
+						(tui, theme, injectedKeybindings, done) => {
+							setInjectedKeybindings(injectedKeybindings);
 							ensureFullscreenMouseMotion(tui);
 							let previewHitboxes: Array<{
 								key: PreviewKey;
@@ -905,6 +909,7 @@ export default function contextUsageExtension(pi: ExtensionAPI) {
 								maxHeight: "90%",
 								margin: 1,
 							},
+							blocked: { kind: "question", message: "Reviewing context" },
 						},
 					);
 				} finally {

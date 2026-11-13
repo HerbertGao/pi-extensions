@@ -28,11 +28,11 @@ pi install git:github.com/HerbertGao/pi-extensions
 | 功能                  | 说明                                                                            | 入口                                            |
 | --------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Claude Code UI        | 工具摘要、折叠展开、rich edit/write diff，以及`on` / `compact` / `off` 三种模式 | `/ccstyle`                                      |
-| Markdown 增强         | Mermaid 方言渲染、圈数字转半角括号                                                         | 自动生效；`enableMarkdownEnhance: false` 关闭   |
-| Fullscreen mode       | 工具卡/group 单击展开与收起、预览、hover 高亮、回到底部按钮                 | `TUIMODE=fullscreen` 或 `--tui-mode fullscreen` |
+| Markdown 增强         | 方言 fence 的 Mermaid 渲染（`statediagram`、`classdiagram` 等）、圈数字转半角括号；标准 mermaid 交给 pi | 自动生效；`enableMarkdownEnhance: false` 关闭   |
+| Fullscreen mode       | 工具卡/group 单击展开与收起、预览、hover 高亮、回到底部按钮                 | `--tui-mode fullscreen`（pi 1.5 起默认） |
 | 配置面板              | `Style / Features / UI / Diff / Thinking / Footer` 六页签                       | `/ccstyle`                                      |
 | 上下文检查            | 查看上下文占用，并预览 System prompt、Memory、Skills、Tools definition 和消息内容 | `/context`                                      |
-| 会话记录浏览          | 全屏浏览完整会话记录，工具输出全展开                                             | `Ctrl+O`                                        |
+| 会话记录浏览          | 全屏浏览完整会话记录，工具输出全展开；对话区有可展开的 `!` 输出时把键让给 pi | `Ctrl+O`                                        |
 | Session/Subagent 引用 | 搜索并注入历史 Session 或现有 SubAgent 的有效上下文                             | `@`                                             |
 | 状态栏                | 显示：模型、上下文、缓存、费用、本次对话累计 token、git并适配 @narumitw/pi-usage 实时显示额度；git/缓存/token 图标可关 Nerd Font | `/ccstyle`                              |
 | 主题                  | 随包提供 4 个主题：CC Dark、CC Light、CC Dark HC、CC Light HC                   | `/settings` → Theme                             |
@@ -92,6 +92,8 @@ pi install git:github.com/HerbertGao/pi-extensions
   "footerCurrencyRate": null,              // 1 单位费用换成多少显示币种；null 只换符号、不乘倍率
   "footerNerdIcons": true,                 // git/缓存/token 用 Nerd Font 图标；false 为纯文本
   "footerGitStatsMode": "working",         // working（默认）：未提交改动；branch：分支累计净改动
+  "footerContextLimit": "window",          // 上下文芯片分母：window（默认）：完整上下文窗口；compaction：自动压缩触发点（窗口 − compaction.reserveTokens）；both：压缩点并在括号中显示完整窗口
+                                           // Pi 越过压缩点后才压缩，所以文字可能短暂超过 100%（如 104%/184k）；条形图封顶 100%
   "footerHiddenKeys": [],                  // 隐藏的芯片 key
   "footerLine1Keys": ["model", "context", "cache", "rate", "cost", "tokens", "pi-usage"], // 每行芯片顺序；内置项与插件同一套排布
   "footerLine2Keys": ["cwd", "git"],       // cwd：目录和会话名；git：分支和改动。可换到任意行
@@ -103,7 +105,7 @@ pi install git:github.com/HerbertGao/pi-extensions
 > **全屏模式**：展开态 diff 全量显示。Input/Output 超行时末行给 `… +N more lines`，单击看全量，再击收起。
 
 > [!NOTE]
-> **Mermaid 渲染**：`markdown.mermaid` 建议设为 `final`（`~/.pi/agent/settings.json` 或 `/settings`）。默认 `streaming` 逐帧重绘，`final` 只渲染最终版。
+> **Mermaid 渲染**：`markdown.mermaid` 建议设 `final`（`/settings`），避免流式逐帧重绘。
 
 ## 本地开发
 
@@ -117,7 +119,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 兼容性
 
-- Node.js `>=22.19.0`；monorepo 使用 Pi `1.5.0`，发布包的 Pi peer 版本保持 `*`。
+- Node.js `>=22.19.0`；monorepo 的类型检查使用 Pi `1.5.0`，发布包的 Pi peer 版本保持 `*`。1.0.17 会把注入式按键提示、`messageTypes` 和等待输入状态交给支持它们的 Pi 1.5.x。
 
 ## 推荐搭配
 
@@ -129,7 +131,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.16（MIT），上游基线 [`5e3ef6b`](https://github.com/minuque/pi-cc-extensions/commit/5e3ef6b9f96d198f93ec242eac81ff21bebdb4e1)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.17（MIT），上游基线 [`04c4274`](https://github.com/minuque/pi-cc-extensions/commit/04c4274d08135b5880bad285f92b11e9b22d115e)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

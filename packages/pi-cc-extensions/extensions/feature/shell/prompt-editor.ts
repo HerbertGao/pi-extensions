@@ -15,6 +15,7 @@
  */
 import { CustomEditor, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { config } from "../../config/config.ts";
+import { setInjectedKeybindings } from "../../utils/keybindings.ts";
 
 /** `❯ ` 固定 2 列：glyph + 尾随空格。 */
 const PROMPT_GLYPH = "❯";
@@ -52,12 +53,28 @@ export class PromptEditor extends CustomEditor {
 
 type EditorFactory = Parameters<ExtensionContext["ui"]["setEditorComponent"]>[0];
 
-const promptEditorFactory: EditorFactory = (tui, theme, keybindings) =>
-	new PromptEditor(tui, theme, keybindings, { embedWorkingStatus: true });
+const promptEditorFactory: EditorFactory = (tui, theme, keybindings) => {
+	// pi 把用户的 KeybindingsManager 注进来，顺带作为全扩展的按键提示取源。
+	setInjectedKeybindings(keybindings);
+	return new PromptEditor(tui, theme, keybindings, { embedWorkingStatus: true });
+};
 
 /** 是否正占着插槽；占据前的工厂用于原样还回去。 */
 let active = false;
 let previousEditorFactory: EditorFactory | undefined;
+/**
+ * 对话框还开着时，强制卸载只是把还原排进队列，插槽看起来仍是本扩展的工厂。
+ * 记下这件事，好让同一次面板里再打开时能盖过这个排队，并仍还回原来的工厂。
+ */
+let releasePending = false;
+
+/** 排队的还原已经落到插槽上时，丢掉这次等待，避免下一轮安装沿用过期工厂。 */
+function noteLandedRelease(ctx: ExtensionContext): void {
+	if (!releasePending) return;
+	if (ctx.ui.getEditorComponent?.() === promptEditorFactory) return;
+	releasePending = false;
+	previousEditorFactory = undefined;
+}
 
 /**
  * 撤销本扩展占据的插槽；从未占用就不碰插槽。
@@ -68,39 +85,54 @@ let previousEditorFactory: EditorFactory | undefined;
  *
  * 例外：插槽被 pi 重置回占据前的工厂时（/new、/reload 走 resetExtensionUI），
  * 我们已经不在槽里，再写一次会把 pi 刚重置的结果又覆盖掉；此时只清状态。
+ * 用户主动改设置时传 force：pi 1.5 会把对话框开着时的替换排队到关闭后落地，
+ * 期间 getEditorComponent() 仍是旧工厂，无法据此判断要不要还回去。
+ * 强制卸载先留着占据前的工厂：同一次对话框里再打开时，插槽还没变，不能把
+ * 仍显示着的本扩展工厂当成要还回去的那一个。
  */
-function releasePromptEditor(ctx: ExtensionContext): void {
+function releasePromptEditor(ctx: ExtensionContext, force = false): void {
+	noteLandedRelease(ctx);
 	if (!active) return;
 	const previous = previousEditorFactory;
+	if (!force && ctx.ui.getEditorComponent?.() === previous) {
+		active = false;
+		previousEditorFactory = undefined;
+		releasePending = false;
+		return;
+	}
 	active = false;
-	previousEditorFactory = undefined;
-	if (ctx.ui.getEditorComponent?.() === previous) return;
+	releasePending = force;
+	if (!force) previousEditorFactory = undefined;
 	ctx.ui.setEditorComponent(previous);
 }
 
 /**
  * 应用输入框前缀；enableEditorPrefix=false 时只撤自己装的那层。
  *
- * 只在没有扩展对话框开着时调用：pi 的 setEditorComponent 会清空 editorContainer 并
- * 抢走焦点，把正在设置面板里的对话框踢出渲染树，对话框的 done() 再也走不到，
- * `ctx.ui.custom()` 的 Promise 永不落定，后续输入全部卡死。设置面板自己不做替换，
- * 等 `ctx.ui.custom()` 返回后再调本函数。
+ * 面板开着时也能直接替换：pi 1.5.0 起 setEditorComponent 不会再把现有对话框踢出渲染树，
+ * 新编辑器等对话框关闭后才出现（issue #11431）；早于该版本时 `ctx.ui.custom()` 的 Promise
+ * 会永不落定，只能在面板关闭后再调用。
  *
  * 插槽已经装着本扩展的编辑器时直接返回：重复安装只会重建实例，丢掉撤销栈、
  * 历史等编辑器状态，还会打断其他扩展包在外层的编辑器。
  */
-export function applyPromptEditor(ctx: ExtensionContext): void {
+export function applyPromptEditor(ctx: ExtensionContext, options?: { force?: boolean }): void {
 	if (!ctx?.hasUI || typeof ctx.ui?.setEditorComponent !== "function") return;
+	noteLandedRelease(ctx);
 	if (!config.enableEditorPrefix) {
-		releasePromptEditor(ctx);
+		releasePromptEditor(ctx, options?.force);
 		return;
 	}
 	const current = ctx.ui.getEditorComponent?.();
-	if (current === promptEditorFactory) return;
+	// 插槽已经是本扩展的工厂时不重建，除非刚刚的强制卸载还排在对话框关闭之后。
+	// 那种情况下 getEditorComponent() 仍是旧工厂，不盖过队列的话，关闭后面板会执行卸载。
+	if (current === promptEditorFactory && !(options?.force && releasePending)) return;
 	try {
 		// pi 的插槽是硬替换、没有栈，先记住是谁占着，撤销时还回去。
-		previousEditorFactory = current;
+		// 强制卸载还没落地时，看得见的工厂仍是我们自己，要还回去的是卸载时留着的那个。
+		if (!releasePending) previousEditorFactory = current;
 		active = true;
+		releasePending = false;
 		ctx.ui.setEditorComponent(promptEditorFactory);
 	} catch (err) {
 		ctx.ui.notify(
@@ -111,7 +143,7 @@ export function applyPromptEditor(ctx: ExtensionContext): void {
 }
 
 /** 恢复本扩展占据前的编辑器；未占用时不动作。 */
-export function clearPromptEditor(ctx: ExtensionContext): void {
+export function clearPromptEditor(ctx: ExtensionContext, options?: { force?: boolean }): void {
 	if (!ctx?.hasUI || typeof ctx.ui?.setEditorComponent !== "function") return;
-	releasePromptEditor(ctx);
+	releasePromptEditor(ctx, options?.force);
 }
