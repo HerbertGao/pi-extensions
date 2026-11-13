@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.17-local.1
+
+### Minor Changes
+
+- [#374](https://github.com/HerbertGao/pi-extensions/pull/374) [`4d323bd`](https://github.com/HerbertGao/pi-extensions/commit/4d323bdfd68139885b475e721ad150d9ee4958ea) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.17. Ctrl+O leaves a long finished bang-command output to Pi and still opens the fullscreen transcript otherwise. The context chip can use Pi's auto-compaction point as its limit. Plain mermaid fences use Pi's renderer, and dialect fences stay here. Turning the editor prefix off and back on in one /ccstyle panel keeps the last choice. Regular mode still does not enable terminal mouse reporting.
+
 ## 1.0.16-local.1
 
 ### Minor Changes

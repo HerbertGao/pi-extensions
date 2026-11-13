@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.0-local.1
+
+### Minor Changes
+
+- [#374](https://github.com/HerbertGao/pi-extensions/pull/374) [`4d323bd`](https://github.com/HerbertGao/pi-extensions/commit/4d323bdfd68139885b475e721ad150d9ee4958ea) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-subagents 0.24.0. A nested spawn over the nested concurrency limit is refused instead of queued, and Fleet view lists those nested agents under their parent with the model and thinking level. Unconsumed results and a failed worktree cleanup still stay recoverable.
+
 ## 0.23.2-local.1
 
 ### Patch Changes
