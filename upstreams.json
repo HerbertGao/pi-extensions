@@ -10,13 +10,13 @@
     {
       "name": "pi-subagents",
       "repository": "https://github.com/tintinweb/pi-subagents",
-      "reviewedCommit": "a35acfb3b699e49f579f494473c38c87592f6c8e",
+      "reviewedCommit": "f0b5304bbfcf4598007a85773a2eac8539536fdd",
       "watch": "npm"
     },
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "5e3ef6b9f96d198f93ec242eac81ff21bebdb4e1",
+      "reviewedCommit": "04c4274d08135b5880bad285f92b11e9b22d115e",
       "watch": "npm"
     },
     {

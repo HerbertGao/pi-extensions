@@ -233,9 +233,10 @@ describe("AgentWidget", () => {
       listAgents: () => [makeRecord("bg", { isBackground: true })],
     }
 
-    expect(renderLines(manager, "bg", () => "background", true)).toContain(
-      "sonnet 4.6 · thinking: high",
-    )
+    const on = renderLines(manager, "bg", () => "background", true)
+    // Bare level, not "thinking: high" — the label is dropped on this surface.
+    expect(on).toContain("sonnet 4.6 · high")
+    expect(on).not.toContain("thinking:")
   })
 
   it("renders the row exactly as before when showModel is off", () => {
@@ -268,8 +269,9 @@ describe("AgentWidget", () => {
     }
     const manager = { listAgents: () => [record] }
 
+    // Label stripped, but the "(asked max)" annotation survives the strip.
     expect(renderLines(manager, "bg", () => "background", true)).toContain(
-      "haiku 4.5 · thinking: high (asked max)",
+      "haiku 4.5 · high (asked max)",
     )
   })
 

@@ -30,6 +30,7 @@ import {
 } from "../feature/shell/footer-layout.ts";
 import { applyPromptEditor, clearPromptEditor } from "../feature/shell/prompt-editor.ts";
 import { applyStartupHeader, clearStartupHeader } from "../feature/shell/startup-header.ts";
+import { setInjectedKeybindings } from "../utils/keybindings.ts";
 import type { ToolGroupingHooks } from "../renderer/tool/grouping.ts";
 import {
 	config,
@@ -42,6 +43,7 @@ import {
 	EXPANDED_INPUT_MAX_LINES_VALUES,
 	EXPANDED_OUTPUT_MAX_LINES_VALUES,
 	EXPANDED_PREVIEW_MAX_LINES_VALUES,
+	FOOTER_CONTEXT_LIMITS,
 	FOOTER_GIT_STATS_MODES,
 	FOOTER_TOKEN_RATE_MODES,
 	formatExcludeRenderers,
@@ -60,6 +62,7 @@ import {
 	type Config,
 	type DiffIndicatorMode,
 	type DiffViewMode,
+	type FooterContextLimit,
 	type FooterGitStatsMode,
 	type FooterTokenRateMode,
 	type ScrollButtonMode,
@@ -117,6 +120,14 @@ function footerSessionTokensDescription(enabled: boolean): string {
 	return enabled
 		? "Cumulative tokens used in this conversation, summed from the session's usage.totalTokens. Turn off to hide it."
 		: "Conversation token total hidden.";
+}
+
+function footerContextLimitDescription(mode: FooterContextLimit): string {
+	if (mode === "compaction")
+		return "Context chip measures against Pi's auto-compaction point (window minus compaction.reserveTokens).";
+	if (mode === "both")
+		return "Context chip measures against the auto-compaction point and shows the full window in brackets.";
+	return "Context chip measures against the full model context window (default).";
 }
 
 function footerGitStatsDescription(mode: FooterGitStatsMode): string {
@@ -449,12 +460,10 @@ export async function showCcstylePanel(
 		return;
 	}
 
-	// 编辑器插槽只能在面板关闭后替换：面板自己就挂在 editorContainer 上，面板开着时调
-	// setEditorComponent 会把面板踢出渲染树、done() 再也走不到，`ctx.ui.custom()` 永不落定，
-	// 整个输入管线随之卡死。
-	let editorPrefixChanged = false;
-
-	await ctx.ui.custom((tui: any, theme: any, _keybindings: any, done: () => void) => {
+	// 面板是一次提问：告诉宿主 pi 在等用户输入（OSC 7501）。
+	const blocked = { blocked: { kind: "question", message: "Adjusting ccstyle settings" } };
+	await ctx.ui.custom((tui: any, theme: any, keys: any, done: () => void) => {
+		setInjectedKeybindings(keys);
 		const modeSetting = {
 			id: "mode",
 			label: "Mode",
@@ -788,6 +797,13 @@ export async function showCcstylePanel(
 			currentValue: config.footerGitStatsMode,
 			values: FOOTER_GIT_STATS_MODES,
 		};
+		const footerContextLimitSetting = {
+			id: "footerContextLimit",
+			label: "Context limit",
+			description: footerContextLimitDescription(config.footerContextLimit),
+			currentValue: config.footerContextLimit,
+			values: FOOTER_CONTEXT_LIMITS,
+		};
 		const footerTokenRateSetting = {
 			id: "footerTokenRate",
 			label: "Token rate",
@@ -881,6 +897,15 @@ export async function showCcstylePanel(
 				ctx.ui.notify(`Updated ${id}: ${footerCurrencyRateSetting.currentValue}`, "info");
 				return;
 			}
+			if (id === "footerContextLimit") {
+				updateConfig({ footerContextLimit: value as FooterContextLimit });
+				footerContextLimitSetting.currentValue = config.footerContextLimit;
+				footerContextLimitSetting.description = footerContextLimitDescription(
+					config.footerContextLimit,
+				);
+				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
+				return;
+			}
 			if (id === "footerGitStatsMode") {
 				updateConfig({ footerGitStatsMode: value as FooterGitStatsMode });
 				footerGitStatsSetting.currentValue = config.footerGitStatsMode;
@@ -929,7 +954,9 @@ export async function showCcstylePanel(
 				editorPrefixSetting.description = enabled
 					? "Show ❯ before the input line; color follows thinking level / bash mode."
 					: "Plain input line, no ❯ glyph.";
-				editorPrefixChanged = true;
+				// pi 1.5.0 起 setEditorComponent 不会再把面板踢出渲染树：新编辑器等面板关闭后再出现。
+				if (config.enableEditorPrefix) applyPromptEditor(ctx, { force: true });
+				else clearPromptEditor(ctx, { force: true });
 				ctx.ui.notify(`Updated ${id}: ${value}`, "info");
 				return;
 			}
@@ -1156,6 +1183,7 @@ export async function showCcstylePanel(
 				label: "Footer",
 				items: [
 					customFooterSetting,
+					footerContextLimitSetting,
 					footerTokenRateSetting,
 					footerTokenRateModeSetting,
 					footerTokenRateTtftSetting,
@@ -1269,12 +1297,7 @@ export async function showCcstylePanel(
 				tui.requestRender();
 			},
 		};
-	});
-	// 面板已经卸下，插槽此时替换才不会踢掉对话框。
-	if (editorPrefixChanged) {
-		if (config.enableEditorPrefix) applyPromptEditor(ctx);
-		else clearPromptEditor(ctx);
-	}
+	}, blocked);
 	// 面板卸下后主 transcript 重新挂载；再刷一次，吃掉打开期间扫树失败的切换。
 	hooks.refreshCurrentTranscript(ctx, toolGrouping);
 }
