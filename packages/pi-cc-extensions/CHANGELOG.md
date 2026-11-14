@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.18-local.1
+
+### Patch Changes
+
+- [#377](https://github.com/HerbertGao/pi-extensions/pull/377) [`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.18. Expanded cards drop the blank row between Input and Output. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. Regular mode still does not enable terminal mouse reporting.
+
 ## 1.0.17-local.1
 
 ### Minor Changes
