@@ -2022,7 +2022,16 @@ describe("collisions with another extension", () => {
           return options.find((o) => o === "Settings")
         }),
         custom: vi.fn(async (factory: any) => {
-          built = factory({ requestRender: () => {} }, {}, {}, () => {})
+          // pi always hands the page a theme and a keybindings manager.
+          const theme = { fg: (_color: string, text: string) => text }
+          const kb = {
+            matches: (data: string, id: string) =>
+              id === "tui.select.down" && data === "\x1b[B",
+            getKeys: () => [],
+          }
+          built = factory({ requestRender: () => {} }, theme, kb, () => {})
+          // Down from the filter onto row 0, then Space re-applies its value.
+          built.handleInput("\x1b[B")
           built.handleInput(" ")
           return undefined
         }),

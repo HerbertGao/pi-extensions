@@ -5,6 +5,7 @@ import {
   cpSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs"
@@ -40,8 +41,10 @@ function platform() {
   return { os, arch }
 }
 
+const engineVersion = readFileSync(join(skillScripts, "VERSION"), "utf8").trim()
+
 function manifestDigest(asset) {
-  const version = "0.1.21"
+  const version = engineVersion
   const text = spawnSync("cat", [join(skillScripts, "engine-checksums.txt")], {
     encoding: "utf8",
   }).stdout
@@ -111,7 +114,10 @@ test("launcher skips a sibling engine that reports another version", () => {
     assert.equal(result.stdout, "")
     assert.match(result.stderr, /skipping/)
     assert.match(result.stderr, /0\.1\.18/)
-    assert.match(result.stderr, /0\.1\.21/)
+    assert.match(
+      result.stderr,
+      new RegExp(engineVersion.replaceAll(".", "\\.")),
+    )
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -123,7 +129,7 @@ test("launcher runs a sibling engine that reports the pinned version", () => {
   try {
     writeExecutable(
       join(scripts, "bin", `${os}-${arch}`, "impeccable"),
-      siblingSource("0.1.21"),
+      siblingSource(engineVersion),
     )
     const result = run(scripts, home, cache, ["live"])
     assert.equal(result.status, 0, result.stderr)
@@ -151,13 +157,13 @@ test("a verified cache stamp with the wrong size does not skip the hash", () => 
   const { dir, scripts, home, cache } = stage()
   const { os, arch } = platform()
   try {
-    const cached = join(cache, "bin", "0.1.21", "impeccable")
+    const cached = join(cache, "bin", engineVersion, "impeccable")
     writeExecutable(cached, "#!/bin/sh\nprintf 'CACHE\\n'\nexit 0\n")
     const size = spawnSync("wc", ["-c", cached], { encoding: "utf8" })
     const bytes = Number(size.stdout.trim().split(/\s+/)[0])
     const expected = manifestDigest(`impeccable-${os}-${arch}`)
     writeFileSync(
-      join(cache, "bin", "0.1.21", "impeccable.verified"),
+      join(cache, "bin", engineVersion, "impeccable.verified"),
       `${expected} ${bytes + 1}\n`,
     )
     const result = run(scripts, home, cache, ["live"])
@@ -173,19 +179,55 @@ test("a verified cache stamp with the recorded size runs without hashing", () =>
   const { dir, scripts, home, cache } = stage()
   const { os, arch } = platform()
   try {
-    const cached = join(cache, "bin", "0.1.21", "impeccable")
+    const cached = join(cache, "bin", engineVersion, "impeccable")
     writeExecutable(cached, "#!/bin/sh\nprintf 'CACHE\\n'\nexit 0\n")
     const size = spawnSync("wc", ["-c", cached], { encoding: "utf8" })
     const bytes = Number(size.stdout.trim().split(/\s+/)[0])
     const expected = manifestDigest(`impeccable-${os}-${arch}`)
     writeFileSync(
-      join(cache, "bin", "0.1.21", "impeccable.verified"),
+      join(cache, "bin", engineVersion, "impeccable.verified"),
       `${expected} ${bytes}\n`,
     )
     const result = run(scripts, home, cache, ["live"])
     assert.equal(result.status, 0, result.stderr)
     assert.equal(result.stdout, "CACHE\n")
     assert.doesNotMatch(result.stderr, /cannot verify/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("a GitHub HTTP 503 names GitHub and does not blame the local setup", () => {
+  const { dir, scripts, home, cache } = stage()
+  const fakeBin = join(dir, "fake-bin")
+  writeExecutable(
+    join(fakeBin, "curl"),
+    [
+      "#!/bin/sh",
+      "out=",
+      "while [ $# -gt 0 ]; do",
+      '  case "$1" in',
+      "    -o) out=$2; shift 2 ;;",
+      "    *) shift ;;",
+      "  esac",
+      "done",
+      'printf "x" > "$out"',
+      "printf '%s\\n' '503 https://github.com/pbakaus/impeccable/releases/download/engine/file'",
+      "exit 22",
+      "",
+    ].join("\n"),
+  )
+  try {
+    const result = run(scripts, home, cache, ["live"], {
+      PATH: `${fakeBin}:/usr/bin:/bin`,
+    })
+    assert.equal(result.status, 127, result.stderr)
+    assert.match(
+      result.stderr,
+      /GitHub's downloads are failing right now \(HTTP 503 from github.com\)/,
+    )
+    assert.match(result.stderr, /not a problem with your setup/)
+    assert.doesNotMatch(result.stderr, /check network access/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

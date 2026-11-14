@@ -1,6 +1,6 @@
 # @herbertgao/pi-impeccable
 
-The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `skill-v4.8.2` release. It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
+The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `skill-v4.9.1` release. It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
 
 ## Install
 
@@ -27,7 +27,7 @@ Upstream `pin` and `unpin` only discover skill installations in project harness 
 
 ## Updates and provenance
 
-This package vendors the official Pi payload: 58 files from commit [`035c8f319edd019936525a062fe99e83ca8d12c6`](https://github.com/pbakaus/impeccable/commit/035c8f319edd019936525a062fe99e83ca8d12c6). `scripts/live-browser.js` has one local fix on top of that commit: Go still cleans edit markers on the live selection, but it no longer detaches a staged removal, so Undo and Discard can restore the hidden node. The review cursor stays at that commit. Updates are reviewed and released through this repository rather than the upstream auto-updater.
+This package vendors the official Pi payload: 59 files from commit [`acb4cfe14470b1fdf51e855431af618d936b7db8`](https://github.com/pbakaus/impeccable/commit/acb4cfe14470b1fdf51e855431af618d936b7db8). `scripts/live-browser.js` has one local fix on top of that commit: Go still cleans edit markers on the live selection, but it no longer detaches a staged removal, so Undo and Discard can restore the hidden node. The review cursor stays at that commit. Updates are reviewed and released through this repository rather than the upstream auto-updater. The launcher pins engine `0.1.24`. `/impeccable foundations` walks a product-foundations checklist, and a hidden live bar stops capturing page clicks.
 
 ## License
 

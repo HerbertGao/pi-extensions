@@ -2758,7 +2758,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (
     !tifanNotices.includes("`pi-commandcode-provider`") ||
     !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
-    !tifanNotices.includes("7616ecd7a5100242411242b506623d025ae0181e")
+    !tifanNotices.includes("2a5c55d8b2b74f01573cbf5735dca78b67f5efd1")
   ) {
     throw new Error("Aggregate Command Code provider notice is incomplete")
   }
@@ -3589,7 +3589,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const { MODEL_COSTS, PRICING_LAST_VERIFIED } = await commandCodeJiti.import(
     join(dirname(commandCodeEntry), "src/pricing.ts"),
   )
-  assert.equal(PRICING_LAST_VERIFIED, "2026-11-11")
+  assert.equal(PRICING_LAST_VERIFIED, "2026-11-13")
   assert.deepEqual(MODEL_COSTS["claude-fable-5-2"], {
     input: 8,
     output: 40,
@@ -3610,6 +3610,79 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   })
   assert.equal(Object.hasOwn(MODEL_COSTS, "stealth/crouton-alpha"), false)
   assert.equal(Object.hasOwn(MODEL_COSTS, "reflection/beam:free"), false)
+  assert.deepEqual(MODEL_COSTS["thinkingmachines/inkling-2-small:free"], {
+    input: 0,
+    output: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+  })
+  const { rewriteResponsesBody } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/responses-compat.ts"),
+  )
+  const glmBody = JSON.stringify({
+    model: "zai-org/GLM-5.3",
+    input: [
+      { role: "system", content: "stay" },
+      { role: "user", content: "hi" },
+      { type: "message", role: "assistant", content: "ok" },
+    ],
+    reasoning: { effort: "none" },
+  })
+  const glmRewritten = JSON.parse(rewriteResponsesBody(glmBody))
+  assert.equal(glmRewritten.reasoning, undefined)
+  assert.deepEqual(glmRewritten.input[0], {
+    type: "message",
+    role: "system",
+    content: "stay",
+  })
+  assert.deepEqual(glmRewritten.input[1], {
+    type: "message",
+    role: "user",
+    content: "hi",
+  })
+  assert.deepEqual(glmRewritten.input[2], {
+    type: "message",
+    role: "assistant",
+    content: "ok",
+  })
+  const glmLow = JSON.stringify({
+    model: "zai-org/GLM-5.3",
+    input: [{ role: "user", content: "hi" }],
+    reasoning: { effort: "low" },
+  })
+  const glmLowRewritten = JSON.parse(rewriteResponsesBody(glmLow))
+  assert.deepEqual(glmLowRewritten.reasoning, { effort: "low" })
+  assert.equal(glmLowRewritten.input[0].type, "message")
+  const mistralBody = JSON.stringify({
+    model: "mistral/mistral-large-4",
+    input: [{ role: "user", content: "hi" }],
+    reasoning: { effort: "none" },
+  })
+  const mistralRewritten = JSON.parse(rewriteResponsesBody(mistralBody))
+  assert.equal(mistralRewritten.reasoning, undefined)
+  assert.deepEqual(mistralRewritten.input, [{ role: "user", content: "hi" }])
+  const otherBody = JSON.stringify({
+    model: "claude-fable-5-2",
+    input: [{ role: "user", content: "hi" }],
+    reasoning: { effort: "none" },
+  })
+  assert.equal(rewriteResponsesBody(otherBody), otherBody)
+  assert.equal(rewriteResponsesBody("not-json"), "not-json")
+  const { MODEL_INPUT_MODALITIES, MODEL_REASONING } =
+    await commandCodeJiti.import(
+      join(dirname(commandCodeEntry), "src/commandcode-catalog.ts"),
+    )
+  assert.equal(
+    Object.hasOwn(
+      MODEL_INPUT_MODALITIES,
+      "thinkingmachines/inkling-2-small:free",
+    ),
+    false,
+  )
+  assert.equal(
+    Object.hasOwn(MODEL_REASONING, "thinkingmachines/inkling-2-small:free"),
+    false,
+  )
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),
     { moduleCache: false },
