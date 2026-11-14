@@ -73,7 +73,7 @@
     "nanoid": "^5.0.0",
     "p-limit": "^6.1.0",
     "pi-antigravity": "0.12.0",
-    "pi-commandcode-provider": "0.8.2",
+    "pi-commandcode-provider": "0.8.3",
     "pi-lens": "4.4.12",
     "pi-next-cue": "1.0.8",
     "pi-provider-qoder": "0.6.12",

@@ -10,19 +10,19 @@
     {
       "name": "pi-subagents",
       "repository": "https://github.com/tintinweb/pi-subagents",
-      "reviewedCommit": "f0b5304bbfcf4598007a85773a2eac8539536fdd",
+      "reviewedCommit": "b8efc069f05efe50b58a4b74140116c1c9a9dcc1",
       "watch": "npm"
     },
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "04c4274d08135b5880bad285f92b11e9b22d115e",
+      "reviewedCommit": "a251f652e8cdbb8d395b3df81ca714ed8711df5d",
       "watch": "npm"
     },
     {
       "name": "impeccable",
       "repository": "https://github.com/pbakaus/impeccable",
-      "reviewedCommit": "035c8f319edd019936525a062fe99e83ca8d12c6",
+      "reviewedCommit": "acb4cfe14470b1fdf51e855431af618d936b7db8",
       "watch": "npm"
     },
     {
