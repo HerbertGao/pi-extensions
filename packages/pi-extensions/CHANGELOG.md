@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.11
+
+### Patch Changes
+
+- [#377](https://github.com/HerbertGao/pi-extensions/pull/377) [`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-commandcode-provider 0.8.3. GLM-5.3 Responses requests tag untyped messages and drop an inert reasoning effort of none. Mistral Large 4 drops that same effort. Inkling 2 Small Free is priced at zero and stays text-only.
+
+- Updated dependencies [[`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419), [`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419), [`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419)]:
+  - @herbertgao/pi-impeccable@0.4.0
+  - @herbertgao/pi-cc-extensions@1.0.17
+  - @herbertgao/pi-subagents@0.24.0
+
 ## 2026.11.10
 
 ### Patch Changes

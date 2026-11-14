@@ -1,5 +1,11 @@
 # @herbertgao/pi-impeccable
 
+## 0.4.0
+
+### Minor Changes
+
+- [#377](https://github.com/HerbertGao/pi-extensions/pull/377) [`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor the official Impeccable 4.9.1 Pi skill. The launcher pins engine 0.1.24, and a GitHub HTTP 5xx during download says the outage is on GitHub's side. `/impeccable foundations` walks a product-foundations checklist. Hiding the live bar stops capturing clicks. The local Go staged-removal fix is kept.
+
 ## 0.3.0
 
 ### Minor Changes

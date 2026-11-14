@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.0-local.1
+
+### Minor Changes
+
+- [#377](https://github.com/HerbertGao/pi-extensions/pull/377) [`b02be94`](https://github.com/HerbertGao/pi-extensions/commit/b02be9410f637abc110fd2ee02def0f9d75fd419) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-subagents 0.25.0. The built-in general-purpose agent can spawn its own subagents, and Settings writes the global file unless the project already has one. A finished nested agent is dropped with its parent on a session switch. Unconsumed top-level results and a failed worktree cleanup still stay recoverable.
+
 ## 0.24.0-local.1
 
 ### Minor Changes
