@@ -83,7 +83,7 @@ function noteLandedRelease(ctx: ExtensionContext): void {
  * 那种结构里无法只拆内层，直接还回占据前的工厂；外层扩展会在下次终端输入时
  * 自己重新包装，前缀不会因此复活。
  *
- * 例外：插槽被 pi 重置回占据前的工厂时（/new、/reload 走 resetExtensionUI），
+ * 例外：插槽已被 pi 重置时（/new、/reload 走 resetExtensionUI，它把插槽置成 undefined），
  * 我们已经不在槽里，再写一次会把 pi 刚重置的结果又覆盖掉；此时只清状态。
  * 用户主动改设置时传 force：pi 1.5 会把对话框开着时的替换排队到关闭后落地，
  * 期间 getEditorComponent() 仍是旧工厂，无法据此判断要不要还回去。
@@ -94,7 +94,10 @@ function releasePromptEditor(ctx: ExtensionContext, force = false): void {
 	noteLandedRelease(ctx);
 	if (!active) return;
 	const previous = previousEditorFactory;
-	if (!force && ctx.ui.getEditorComponent?.() === previous) {
+	const current = ctx.ui.getEditorComponent?.();
+	// /new and /reload reset the slot to undefined without setEditorComponent.
+	// Writing the old factory back would undo that reset.
+	if (!force && (current === undefined || current === previous)) {
 		active = false;
 		previousEditorFactory = undefined;
 		releasePending = false;

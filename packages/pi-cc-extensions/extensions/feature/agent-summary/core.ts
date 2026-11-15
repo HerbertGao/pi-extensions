@@ -1,9 +1,9 @@
 /**
  * Agent 回合摘要：统计一次 agent 运行的工具使用并格式化成摘要文本。
  *
- * 分类：bash / read / edit / write / other（精确工具名；MCP 风格名归 other）。
- * 计数：bash/powershell 按调用次数；read/edit/write 按非空 path/file_path 去重；other 按调用次数。
- * 失败单独累计；另记回合耗时。
+ * 分类：bash / read / edit / other（精确工具名；MCP 风格名归 other）。write 并入 edit。
+ * 计数：bash/powershell 按调用次数；read/edit（含 write）按非空 path/file_path 去重；other 按调用次数。
+ * 失败单独累计；另记回合耗时与结束时刻。
  *
  * 呈现：`summarySegments` 分段（文字 + 语义色），渲染层自己拼行并上色。
  * 不要经 Markdown 渲染：pi 的 Markdown 组件会剥掉输入里的终端序列，数字会失去语义色。
@@ -12,25 +12,25 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 /** 工具分类。 */
-export type AgentToolCategory = "bash" | "read" | "edit" | "write" | "other";
+export type AgentToolCategory = "bash" | "read" | "edit" | "other";
 
 /** 一次 agent 回合的统计快照。 */
 export type AgentSummaryData = {
 	commands: number;
 	reads: number;
 	edits: number;
-	writes: number;
 	others: number;
 	failed: number;
 	durationMs: number;
+	/** 回合结束时刻（epoch ms）。存进 entry，会话恢复时才能显示原来的时刻而不是“现在几点”。 */
+	endedAt: number;
 };
 
 export function classifyTool(toolName: string): AgentToolCategory {
 	const base = toolName.split(".").pop() ?? toolName;
 	if (base === "bash" || base === "powershell") return "bash";
 	if (base === "read") return "read";
-	if (base === "edit") return "edit";
-	if (base === "write") return "write";
+	if (base === "edit" || base === "write") return "edit";
 	return "other";
 }
 
@@ -49,7 +49,6 @@ export class AgentRunSummary {
 	commandCount = 0;
 	readFiles = new Set<string>();
 	editFiles = new Set<string>();
-	writeFiles = new Set<string>();
 	otherCount = 0;
 	failedCount = 0;
 
@@ -73,9 +72,6 @@ export class AgentRunSummary {
 			case "edit":
 				if (path) this.editFiles.add(path);
 				break;
-			case "write":
-				if (path) this.writeFiles.add(path);
-				break;
 			default:
 				this.otherCount++;
 		}
@@ -91,23 +87,22 @@ export class AgentRunSummary {
 			commands: this.commandCount,
 			reads: this.readFiles.size,
 			edits: this.editFiles.size,
-			writes: this.writeFiles.size,
 			others: this.otherCount,
 			failed: this.failedCount,
 			durationMs: now - this.startedAt,
+			endedAt: now,
 		};
 	}
 }
 
 const plural = (count: number) => (count === 1 ? "" : "s");
 
-/** 输出顺序：bash → read → edit → write → other → failed。 */
+/** 输出顺序：bash → read → edit → other → failed。 */
 function summaryParts(data: AgentSummaryData): string[] {
 	const parts: string[] = [];
 	if (data.commands) parts.push(`ran ${data.commands} command${plural(data.commands)}`);
 	if (data.reads) parts.push(`read ${data.reads} file${plural(data.reads)}`);
 	if (data.edits) parts.push(`edited ${data.edits} file${plural(data.edits)}`);
-	if (data.writes) parts.push(`wrote ${data.writes} file${plural(data.writes)}`);
 	if (data.others) parts.push(`${data.others} other tool${plural(data.others)}`);
 	if (data.failed) parts.push(`${data.failed} failed`);
 	return parts;
