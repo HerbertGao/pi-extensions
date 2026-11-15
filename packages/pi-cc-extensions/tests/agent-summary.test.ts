@@ -88,6 +88,25 @@ test("summarySegments：bash→read→edit→other→failed，首段大写", () 
 	);
 });
 
+test("summarySegments：旧 entry 的 writes 计入 edit，只写文件的回合仍有摘要", () => {
+	const writeOnly = {
+		commands: 0,
+		reads: 0,
+		edits: 0,
+		writes: 1,
+		others: 0,
+		failed: 0,
+		durationMs: 15_000,
+	};
+	assert.deepEqual(summarySegments(writeOnly as unknown as AgentSummaryData), [
+		{ text: "Edited 1 file", tone: "success" },
+	]);
+	assert.deepEqual(
+		summarySegments({ ...writeOnly, edits: 1, writes: 1 } as unknown as AgentSummaryData),
+		[{ text: "Edited 2 files", tone: "success" }],
+	);
+});
+
 test("bindAgentSummary 事件绑定：agent_start 重置、agent_end 回调", async () => {
 	const handlers = new Map<string, Function>();
 	const fakePi = {
@@ -207,6 +226,27 @@ test("agent-summary 注册 renderer，agent_end 输出引用块", async () => {
 	assert.equal(
 		stripAnsi((legacy as any).render(120).map(String).join("\n")).trim(),
 		"│ Ran 1 command · 15s",
+	);
+
+	// 1.0.18 把 write 单独记在 writes。只写文件时 edits 为 0，摘要不能整行消失。
+	const legacyWrite = renderer(
+		{
+			data: {
+				commands: 0,
+				reads: 0,
+				edits: 0,
+				writes: 2,
+				others: 0,
+				failed: 0,
+				durationMs: 15_000,
+			},
+		},
+		{ expanded: false },
+		theme,
+	);
+	assert.equal(
+		stripAnsi((legacyWrite as any).render(120).map(String).join("\n")).trim(),
+		"│ Edited 2 files · 15s",
 	);
 
 	assert.equal(

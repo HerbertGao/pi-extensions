@@ -827,6 +827,39 @@ test("分组展开卡：带鼠标标记的空行不留在图片上方，图片�
 	}
 });
 
+test("分组展开卡：多行图片后面仍给下一项留出空行", () => {
+	setToolTuiFullscreen(false);
+	const hooks = installToolGrouping(() => true);
+	hooks.setTheme({
+		fg: (_color: string, text: string) => text,
+		bg: (_slot: string, text: string) => text,
+	});
+	try {
+		const parent = new Container() as any;
+		const read = started("read", "sep-read");
+		const bash = started("bash", "sep-bash", { command: "true" });
+		const image = "\x1b_Ga=T,f=100,q=2,C=1,c=10,r=3;AAAA\x1b\\";
+		read.render = () => [" ✓ Read shot.png", " └ Output", image, "", ""];
+		bash.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
+		parent.addChild(read);
+		parent.addChild(bash);
+		const group = parent.children[0] as ToolGroupComponent;
+		group.setExpanded(true);
+		const lines: string[] = group.render(100);
+		const imageRow = lines.findIndex((line) => line.includes("\x1b_G"));
+		const nextTool = lines.findIndex((line, index) => index > imageRow && line.includes("bash"));
+		assert.ok(imageRow >= 0 && nextTool > imageRow + 2, lines.join("\n"));
+		const between = lines.slice(imageRow + 3, nextTool);
+		assert.ok(
+			between.some((line) => !line.includes("\x1b_G") && visibleWidth(line) > 0),
+			`图片占位行之后应有可见空行: ${between.join(" | ")}`,
+		);
+	} finally {
+		hooks.shutdown();
+		setToolTuiFullscreen(undefined as any);
+	}
+});
+
 test("多工具展开：子卡首行只剩图标时不额外占一行（issue: 重复显示 icon）", () => {
 	const hooks = installToolGrouping(() => true);
 	try {

@@ -470,7 +470,10 @@ function isBlankRail(line: string): boolean {
  */
 function panelRows(rows: string[], last: boolean): string[] {
 	if (!last) {
-		return rows.length && isBlankRail(rows[rows.length - 1]) ? rows : [...rows, ""];
+		// 多行图片的占位行是零宽空行，看起来像空 rail，但终端里它被图片盖住，
+		// 不是已经留出的间隔。末行属于图片块时仍要补一行可见空行。
+		const endsOnImage = rows.length > 0 && imageBlockRows(rows).has(rows.length - 1);
+		return rows.length && !endsOnImage && isBlankRail(rows[rows.length - 1]) ? rows : [...rows, ""];
 	}
 	const end = Math.max(1, contentRowRange(rows).last + 1);
 	return end >= rows.length ? rows : rows.slice(0, end);

@@ -97,12 +97,24 @@ export class AgentRunSummary {
 
 const plural = (count: number) => (count === 1 ? "" : "s");
 
+/**
+ * 新快照把 write 记在 edits 里。1.0.18 及更早的 entry 另有 writes：
+ * 那是独立计数，文件集合已经丢了，只能把两个数相加。只写文件的旧回合
+ * edits 为 0，不加上去的话摘要段为空，整行连耗时一起消失。
+ */
+function editCount(data: AgentSummaryData): number {
+	const legacyWrites = (data as { writes?: unknown }).writes;
+	const writes = typeof legacyWrites === "number" && legacyWrites > 0 ? legacyWrites : 0;
+	return (data.edits || 0) + writes;
+}
+
 /** 输出顺序：bash → read → edit → other → failed。 */
 function summaryParts(data: AgentSummaryData): string[] {
 	const parts: string[] = [];
+	const edits = editCount(data);
 	if (data.commands) parts.push(`ran ${data.commands} command${plural(data.commands)}`);
 	if (data.reads) parts.push(`read ${data.reads} file${plural(data.reads)}`);
-	if (data.edits) parts.push(`edited ${data.edits} file${plural(data.edits)}`);
+	if (edits) parts.push(`edited ${edits} file${plural(edits)}`);
 	if (data.others) parts.push(`${data.others} other tool${plural(data.others)}`);
 	if (data.failed) parts.push(`${data.failed} failed`);
 	return parts;
