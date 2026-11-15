@@ -16,7 +16,7 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "a251f652e8cdbb8d395b3df81ca714ed8711df5d",
+      "reviewedCommit": "47ee4dd86f386fb13a4e38b99d003bb8e6b29a22",
       "watch": "npm"
     },
     {
@@ -34,7 +34,7 @@
     {
       "name": "pi-antigravity",
       "repository": "https://github.com/Rahularya01/pi-antigravity",
-      "reviewedCommit": "a8f7af58543012afe94721be0c94ab17dc0587fc",
+      "reviewedCommit": "1e7697b23a0bf4c7c0bc1e2cc00238c8b422dfb9",
       "watch": "npm"
     }
   ],

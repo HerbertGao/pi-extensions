@@ -678,6 +678,32 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
       "pi-lens did not flag an Object.assign copy of a reduce accumulator",
     )
   }
+  const asyncArrayCallback = lensRuleDiagnostics(
+    "async-array-callback.ts",
+    "const values = arr.map(async (x: string) => { await f(x) })\n",
+  )
+  if (
+    asyncArrayCallback.some((diagnostic) =>
+      diagnostic.message.includes("return statements must be enforced"),
+    )
+  ) {
+    throw new Error(
+      "pi-lens flagged an async array callback for a missing return",
+    )
+  }
+  const syncArrayCallback = lensRuleDiagnostics(
+    "sync-array-callback.ts",
+    "const values = arr.map((x: string) => { x + 1 })\n",
+  )
+  if (
+    !syncArrayCallback.some((diagnostic) =>
+      diagnostic.message.includes("return statements must be enforced"),
+    )
+  ) {
+    throw new Error(
+      "pi-lens no longer flags a sync array callback that does not return",
+    )
+  }
   const lensContainRoot = join(stageDir, "lens-contain")
   const lensDotDotName = join(lensContainRoot, "..pkg", "file.ts")
   assert.equal(lensProbe.isUnderDir(lensDotDotName, lensContainRoot), true)
@@ -3125,6 +3151,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   }
   for (const [feature, toolName] of [
     ["google-search", "google_search"],
+    ["read-url-content", "read_url_content"],
     ["generate-image", "generate_image"],
   ]) {
     const featureEntry = join(antigravityRoot, `src/features/${feature}.ts`)
@@ -3690,7 +3717,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const { defaultUserAgent } = await antigravityJiti.import(
     join(antigravityRoot, "src/client/client.ts"),
   )
-  assert.match(defaultUserAgent(), /^antigravity\/cli\/1\.4\.0 /)
+  assert.match(defaultUserAgent(), /^antigravity\/cli\/1\.5\.5 /)
   const { buildAntigravityCatalog } = await antigravityJiti.import(
     join(antigravityRoot, "src/models/grouping.ts"),
   )
@@ -3749,6 +3776,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "ANTIGRAVITY_NO_EXTRA_TOOLS",
     "ANTIGRAVITY_NO_SEARCH_TOOL",
     "ANTIGRAVITY_NO_IMAGE_TOOL",
+    "ANTIGRAVITY_NO_FETCH_TOOL",
   ]
   const previousExtraToolFlags = extraToolFlags.map((name) => process.env[name])
   try {
@@ -3756,6 +3784,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     delete process.env.ANTIGRAVITY_DEFER_TOOLS
     assert.equal(isExtraToolEnabled("SEARCH"), true)
     assert.equal(isExtraToolEnabled("IMAGE"), true)
+    assert.equal(isExtraToolEnabled("FETCH"), true)
     assert.deepEqual(extraToolExposure(), {})
     process.env.ANTIGRAVITY_DEFER_TOOLS = "1"
     assert.deepEqual(extraToolExposure(), { exposure: "deferred" })
@@ -3766,9 +3795,15 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     process.env.ANTIGRAVITY_NO_IMAGE_TOOL = "1"
     assert.equal(isExtraToolEnabled("IMAGE"), false)
     assert.equal(isExtraToolEnabled("SEARCH"), true)
+    delete process.env.ANTIGRAVITY_NO_IMAGE_TOOL
+    process.env.ANTIGRAVITY_NO_FETCH_TOOL = "1"
+    assert.equal(isExtraToolEnabled("FETCH"), false)
+    assert.equal(isExtraToolEnabled("SEARCH"), true)
+    delete process.env.ANTIGRAVITY_NO_FETCH_TOOL
     process.env.ANTIGRAVITY_NO_EXTRA_TOOLS = "1"
     assert.equal(isExtraToolEnabled("SEARCH"), false)
     assert.equal(isExtraToolEnabled("IMAGE"), false)
+    assert.equal(isExtraToolEnabled("FETCH"), false)
   } finally {
     extraToolFlags.forEach((name, index) => {
       if (previousExtraToolFlags[index] === undefined) delete process.env[name]
@@ -3776,6 +3811,21 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     })
     delete process.env.ANTIGRAVITY_DEFER_TOOLS
   }
+  const { validateFetchTarget } = await antigravityJiti.import(
+    join(antigravityRoot, "src/web-fetch/web-fetch.ts"),
+  )
+  assert.equal(
+    validateFetchTarget("https://example.com/docs"),
+    "https://example.com/docs",
+  )
+  assert.throws(
+    () => validateFetchTarget("http://127.0.0.1/secret"),
+    /private or local/,
+  )
+  assert.throws(
+    () => validateFetchTarget("https://user:pass@example.com/a"),
+    /embedded credentials/,
+  )
   const imageApi = await antigravityJiti.import(
     join(antigravityRoot, "src/image/native.ts"),
   )

@@ -11,23 +11,24 @@ import {
 	summarySegments,
 	type AgentSummaryData,
 } from "../extensions/feature/agent-summary/core.ts";
+import { formatClockTime } from "../extensions/utils/format.ts";
 
 function stripAnsi(text: string): string {
 	return text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
-test("classifyTool：bash/read/edit/write/other", () => {
+test("classifyTool：bash/read/edit/other；write 并入 edit", () => {
 	assert.equal(classifyTool("bash"), "bash");
 	assert.equal(classifyTool("powershell"), "bash");
 	assert.equal(classifyTool("read"), "read");
 	assert.equal(classifyTool("edit"), "edit");
-	assert.equal(classifyTool("write"), "write");
+	assert.equal(classifyTool("write"), "edit");
 	assert.equal(classifyTool("grep"), "other");
 	// MCP 风格名不是精确工具名：归 other
 	assert.equal(classifyTool("mcp__server__read"), "other");
 });
 
-test("AgentRunSummary：bash/powershell 计数；read/edit/write 按路径去重；other 计数", () => {
+test("AgentRunSummary：bash/powershell 计数；read/edit（含 write）按路径去重；other 计数", () => {
 	const summary = new AgentRunSummary(1_000);
 	summary.recordToolStart("bash", { command: "npm test" });
 	summary.recordToolStart("powershell", { command: "Get-ChildItem" });
@@ -36,46 +37,73 @@ test("AgentRunSummary：bash/powershell 计数；read/edit/write 按路径去重
 	summary.recordToolStart("read", { path: "a.ts" }); // 去重
 	summary.recordToolStart("read", { path: "b.ts" });
 	summary.recordToolStart("edit", { file_path: "c.ts" }); // file_path 别名
+	summary.recordToolStart("write", { path: "c.ts" }); // 与 edit 合并去重
 	summary.recordToolStart("write", { path: "d.ts" });
 	summary.recordToolStart("write", { path: "d.ts" }); // 去重
 	summary.recordToolStart("grep", { pattern: "x" });
 	summary.recordToolResult(true);
 	summary.recordToolResult(false);
 
-	assert.equal(summary.toolCount, 10);
+	assert.equal(summary.toolCount, 11);
 	const data = summary.snapshot(61_000);
 	assert.deepEqual(data, {
 		commands: 3,
 		reads: 2,
-		edits: 1,
-		writes: 1,
+		edits: 2,
 		others: 1,
 		failed: 1,
 		durationMs: 60_000,
+		endedAt: 61_000,
 	} satisfies AgentSummaryData);
 });
 
-test("summarySegments：bash→read→edit→write→other→failed，首段大写", () => {
+test("formatClockTime：h:mm AM/PM，非法值返回空串", () => {
+	assert.equal(formatClockTime(new Date(2025, 0, 2, 18, 51).getTime()), "6:51 PM");
+	assert.equal(formatClockTime(new Date(2025, 0, 2, 0, 5).getTime()), "12:05 AM");
+	assert.equal(formatClockTime(new Date(2025, 0, 2, 12, 0).getTime()), "12:00 PM");
+	assert.equal(formatClockTime(Number.NaN), "");
+	assert.equal(formatClockTime(0), "");
+});
+
+test("summarySegments：bash→read→edit→other→failed，首段大写", () => {
 	const data: AgentSummaryData = {
 		commands: 3,
 		reads: 2,
-		edits: 1,
-		writes: 1,
+		edits: 2,
 		others: 1,
 		failed: 1,
 		durationMs: 42_000,
+		endedAt: 43_000,
 	};
 	assert.deepEqual(summarySegments(data), [
 		{ text: "Ran 3 commands", tone: "success" },
 		{ text: "read 2 files", tone: "success" },
-		{ text: "edited 1 file", tone: "success" },
-		{ text: "wrote 1 file", tone: "success" },
+		{ text: "edited 2 files", tone: "success" },
 		{ text: "1 other tool", tone: "success" },
 		{ text: "1 failed", tone: "failed" },
 	]);
 	assert.deepEqual(
-		summarySegments({ ...data, commands: 0, reads: 0, edits: 0, writes: 0, others: 0, failed: 0 }),
+		summarySegments({ ...data, commands: 0, reads: 0, edits: 0, others: 0, failed: 0 }),
 		[],
+	);
+});
+
+test("summarySegments：旧 entry 的 writes 计入 edit，只写文件的回合仍有摘要", () => {
+	const writeOnly = {
+		commands: 0,
+		reads: 0,
+		edits: 0,
+		writes: 1,
+		others: 0,
+		failed: 0,
+		durationMs: 15_000,
+	};
+	assert.deepEqual(summarySegments(writeOnly as unknown as AgentSummaryData), [
+		{ text: "Edited 1 file", tone: "success" },
+	]);
+	assert.deepEqual(
+		summarySegments({ ...writeOnly, edits: 1, writes: 1 } as unknown as AgentSummaryData),
+		[{ text: "Edited 2 files", tone: "success" }],
 	);
 });
 
@@ -113,11 +141,12 @@ test("bindAgentSummary 事件绑定：agent_start 重置、agent_end 回调", as
 		commands: 1,
 		reads: 0,
 		edits: 0,
-		writes: 0,
 		others: 1,
 		failed: 0,
 		durationMs: calls[1].durationMs,
+		endedAt: calls[1].endedAt,
 	});
+	assert.ok(Number.isFinite(calls[1].endedAt));
 });
 
 test("agent-summary 注册 renderer，agent_end 输出引用块", async () => {
@@ -154,9 +183,72 @@ test("agent-summary 注册 renderer，agent_end 输出引用块", async () => {
 	assert.match(raw, /\x1b\[32m1\x1b\[0m command/);
 	assert.match(raw, /│/);
 	const plain = stripAnsi(raw);
-	assert.doesNotMatch(plain, /[┌├└]/);
-	assert.doesNotMatch(plain, /TIP/);
 	assert.match(plain, /Ran 1 command, read 1 file/);
+	// 末尾追加完成时刻：耗时 + done h:mm AM/PM
+	assert.match(plain, /· done (?:1[0-2]|[1-9]):[0-5]\d (?:AM|PM)/);
+
+	// 固定时刻下整行形状；不足 1 秒不报耗时，只留完成时刻，不出双分隔。
+	const fixed = renderer(
+		{
+			data: {
+				commands: 1,
+				reads: 0,
+				edits: 0,
+				others: 0,
+				failed: 0,
+				durationMs: 500,
+				endedAt: new Date(2025, 0, 2, 18, 51).getTime(),
+			},
+		},
+		{ expanded: false },
+		theme,
+	);
+	assert.equal(
+		stripAnsi((fixed as any).render(120).map(String).join("\n")).trim(),
+		"│ Ran 1 command · done 6:51 PM",
+	);
+
+	// 旧版本写的 entry 没有 endedAt：只显示耗时，不显示完成时刻。
+	const legacy = renderer(
+		{
+			data: {
+				commands: 1,
+				reads: 0,
+				edits: 0,
+				others: 0,
+				failed: 0,
+				durationMs: 15_000,
+			},
+		},
+		{ expanded: false },
+		theme,
+	);
+	assert.equal(
+		stripAnsi((legacy as any).render(120).map(String).join("\n")).trim(),
+		"│ Ran 1 command · 15s",
+	);
+
+	// 1.0.18 把 write 单独记在 writes。只写文件时 edits 为 0，摘要不能整行消失。
+	const legacyWrite = renderer(
+		{
+			data: {
+				commands: 0,
+				reads: 0,
+				edits: 0,
+				writes: 2,
+				others: 0,
+				failed: 0,
+				durationMs: 15_000,
+			},
+		},
+		{ expanded: false },
+		theme,
+	);
+	assert.equal(
+		stripAnsi((legacyWrite as any).render(120).map(String).join("\n")).trim(),
+		"│ Edited 2 files · 15s",
+	);
+
 	assert.equal(
 		renderer(
 			{
@@ -164,7 +256,6 @@ test("agent-summary 注册 renderer，agent_end 输出引用块", async () => {
 					commands: 0,
 					reads: 0,
 					edits: 0,
-					writes: 0,
 					others: 0,
 					failed: 0,
 					durationMs: 0,

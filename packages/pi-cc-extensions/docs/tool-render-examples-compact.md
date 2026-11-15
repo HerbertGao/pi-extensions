@@ -2,7 +2,7 @@
 
 > 由真实 renderer 驱动生成的示例快照，已剥离 ANSI。
 > 实际 TUI 中包含状态色、背景色和 hover 高亮；Braille loading 帧与耗时快照取固定时钟。
-> 当前版本：ccstyle 1.0.17 · mode=`compact`。
+> 当前版本：ccstyle 1.0.18 · mode=`compact`。
 > renderer 变更后请运行 `npm run docs:tool-render` 同步本文件。
 
 ## 1. 消息折叠摘要行
@@ -113,7 +113,7 @@ edit/write 折叠预览与展开正文复用 mode=on 的 Diff 配置。计数只
 - 连续含 toolCall 的 assistant 消息累加进同一回合摘要，直到出现可见最终文本。
 - 用户消息是回合的硬边界：steer 消息插进回合中间、或上一回合没正文就收尾时，回合就地收口、后续消息另起一回合。区间里的用户消息不会被当成外来行挪走，摘要行与展开面板都留在自己回合的位置上。
 - 运行时长跨消息累加（thinking query + 回合挂钟 floor）。
-- 最终 agent 回合摘要仍由 `feature/agent-summary` 独占（bash/read/edit/write/other）。
+- 最终 agent 回合摘要仍由 `feature/agent-summary` 独占（bash/read/edit（含 write）/other）。
 - mode 切回 `on`/`off` 后，assistant 与 tool 均恢复对应原生/default 渲染。
 
 ## 6. Working footer

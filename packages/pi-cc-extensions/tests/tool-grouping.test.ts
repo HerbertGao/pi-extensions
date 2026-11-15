@@ -18,9 +18,11 @@ import {
 import { installToolGrouping, ToolGroupComponent } from "../extensions/renderer/tool/grouping.ts";
 import { solidPngBase64 } from "./helpers/png.ts";
 import {
+	collapseHintText,
 	humanizeToolLabel,
 	renderToolSummary,
 	setToolTuiFullscreen,
+	showMoreHintText,
 	toolCallSummary,
 } from "../extensions/renderer/tool/names.ts";
 
@@ -49,7 +51,6 @@ test("restored tools still render as running with the braille loader", () => {
 			.filter((line: string) => line.trim());
 		assert.match(rendered[0], /2 running/);
 		assert.ok(rendered.some((line: string) => /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/.test(line)));
-		assert.doesNotMatch(rendered.join("\n"), /queued/);
 	} finally {
 		hooks.shutdown();
 	}
@@ -196,6 +197,11 @@ test("expanded native cards align nested trees through interleaved ANSI padding"
 		assert.match(expanded, /^ │ ├ Input\s*$/m, "nested tree aligns with the status dot");
 		assert.match(expanded, /^ │ │ path: sample\.ts\s*$/m);
 		assert.match(expanded, /^ │   ok\s*$/m, "output content retains its relative indent");
+		assert.match(
+			expanded,
+			/^ │   ok\s*\n │\s*\n └ /m,
+			"one blank rail row separates a tool's output from the next tool line",
+		);
 	} finally {
 		hooks.shutdown();
 	}
@@ -410,7 +416,7 @@ test("off refresh ungroups, reload rescans existing tools, and stale shutdown pr
 	assert.equal(prototype.addChild, originalAdd);
 });
 
-test("pending and expanded groups bypass settled render caching", () => {
+test("pending groups bypass settled render caching", () => {
 	const hooks = installToolGrouping(() => true);
 	try {
 		const parent = new Container() as any;
@@ -426,8 +432,9 @@ test("pending and expanded groups bypass settled render caching", () => {
 		read.updateResult({ content: [], isError: false });
 		bash.updateResult({ content: [], isError: false });
 		group.setExpanded(true);
-		const expanded = group.render(120);
-		assert.notStrictEqual(group.render(120), expanded, "expanded child output is not memoized");
+		const expanded = group.render(120).join("\n");
+		assert.ok(expanded.includes(collapseHintText()), "expanded render carries the collapse hint");
+		assert.ok(!expanded.includes(showMoreHintText()), "settled collapsed rows are not reused");
 	} finally {
 		hooks.shutdown();
 	}
@@ -817,6 +824,39 @@ test("分组展开卡：带鼠标标记的空行不留在图片上方，图片�
 		);
 	} finally {
 		hooks.shutdown();
+	}
+});
+
+test("分组展开卡：多行图片后面仍给下一项留出空行", () => {
+	setToolTuiFullscreen(false);
+	const hooks = installToolGrouping(() => true);
+	hooks.setTheme({
+		fg: (_color: string, text: string) => text,
+		bg: (_slot: string, text: string) => text,
+	});
+	try {
+		const parent = new Container() as any;
+		const read = started("read", "sep-read");
+		const bash = started("bash", "sep-bash", { command: "true" });
+		const image = "\x1b_Ga=T,f=100,q=2,C=1,c=10,r=3;AAAA\x1b\\";
+		read.render = () => [" ✓ Read shot.png", " └ Output", image, "", ""];
+		bash.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
+		parent.addChild(read);
+		parent.addChild(bash);
+		const group = parent.children[0] as ToolGroupComponent;
+		group.setExpanded(true);
+		const lines: string[] = group.render(100);
+		const imageRow = lines.findIndex((line) => line.includes("\x1b_G"));
+		const nextTool = lines.findIndex((line, index) => index > imageRow && line.includes("bash"));
+		assert.ok(imageRow >= 0 && nextTool > imageRow + 2, lines.join("\n"));
+		const between = lines.slice(imageRow + 3, nextTool);
+		assert.ok(
+			between.some((line) => !line.includes("\x1b_G") && visibleWidth(line) > 0),
+			`图片占位行之后应有可见空行: ${between.join(" | ")}`,
+		);
+	} finally {
+		hooks.shutdown();
+		setToolTuiFullscreen(undefined as any);
 	}
 });
 

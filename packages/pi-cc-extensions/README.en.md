@@ -119,7 +119,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Compatibility
 
-- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.18 drops the blank rail between Input and Output on an expanded card. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. 1.0.17 still passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
+- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.19 appends the completion time to a round summary and counts a write together with a later edit of the same file. After `/new` or `/reload` resets the editor, the old editor is not written back. 1.0.18 drops the blank rail between Input and Output on an expanded card. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. 1.0.17 still passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
 
 ## Recommended companions
 
@@ -131,7 +131,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.18 (MIT), upstream baseline [`a251f65`](https://github.com/minuque/pi-cc-extensions/commit/a251f652e8cdbb8d395b3df81ca714ed8711df5d), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.19 (MIT), upstream baseline [`47ee4dd`](https://github.com/minuque/pi-cc-extensions/commit/47ee4dd86f386fb13a4e38b99d003bb8e6b29a22), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

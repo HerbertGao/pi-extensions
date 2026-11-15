@@ -119,7 +119,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 兼容性
 
-- Node.js `>=22.19.0`；monorepo 的类型检查使用 Pi `1.5.0`，发布包的 Pi peer 版本保持 `*`。1.0.18 去掉展开卡里 Input 与 Output 之间的空 rail 行。分组展开卡里的内联图片与 Output 正文对齐，全屏时图片行保留卡片底色。1.0.17 仍会把注入式按键提示、`messageTypes` 和等待输入状态交给支持它们的 Pi 1.5.x。
+- Node.js `>=22.19.0`；monorepo 的类型检查使用 Pi `1.5.0`，发布包的 Pi peer 版本保持 `*`。1.0.19 在回合摘要末尾追加完成时刻，并把同一文件的 write 与后续 edit 计为一次。`/new` 或 `/reload` 重置输入框后不再写回旧编辑器。1.0.18 去掉展开卡里 Input 与 Output 之间的空 rail 行。分组展开卡里的内联图片与 Output 正文对齐，全屏时图片行保留卡片底色。1.0.17 仍会把注入式按键提示、`messageTypes` 和等待输入状态交给支持它们的 Pi 1.5.x。
 
 ## 推荐搭配
 
@@ -131,7 +131,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.18（MIT），上游基线 [`a251f65`](https://github.com/minuque/pi-cc-extensions/commit/a251f652e8cdbb8d395b3df81ca714ed8711df5d)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.19（MIT），上游基线 [`47ee4dd`](https://github.com/minuque/pi-cc-extensions/commit/47ee4dd86f386fb13a4e38b99d003bb8e6b29a22)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证
