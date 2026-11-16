@@ -900,6 +900,17 @@ async function assertNewReleaseFeatures({
         false,
         "Sofya must remain explicit-only",
       )
+      for (const explicitProvider of ["cloro", "autom", "specstream"]) {
+        assert.equal(
+          searchProvider.ALL_SEARCH_PROVIDERS.includes(explicitProvider),
+          false,
+          `${explicitProvider} must remain explicit-only`,
+        )
+        assert.equal(
+          searchProvider.parseProviderArgument(explicitProvider),
+          explicitProvider,
+        )
+      }
       assert.equal(searchProvider.parseProviderArgument("outcrawl"), "outcrawl")
       assert.equal(searchProvider.parseProviderArgument("sofya"), "sofya")
       const xcrawl = await searchProvider.search("xcrawl smoke", {
@@ -1093,6 +1104,69 @@ async function assertNewReleaseFeatures({
         : String(duckduckgoTimeoutError),
       /DuckDuckGo request timed out after/,
     )
+    assert.doesNotMatch(
+      duckduckgoTimeoutError instanceof Error
+        ? duckduckgoTimeoutError.message
+        : String(duckduckgoTimeoutError),
+      /Aborted/,
+    )
+
+    let duckduckgoDefaultNow = 0
+    const duckduckgoDefaultSleeps = []
+    const duckduckgoDefault = new duckduckgoLimit.DuckDuckGoRateLimit({
+      now: () => duckduckgoDefaultNow,
+      sleep: async (ms) => {
+        duckduckgoDefaultSleeps.push(ms)
+        duckduckgoDefaultNow += ms
+      },
+    })
+    await duckduckgoDefault.run(async () => {})
+    await duckduckgoDefault.run(async () => {})
+    assert.deepEqual(duckduckgoDefaultSleeps, [10_000])
+    for (let start = 0; start < 8; start += 1) {
+      await duckduckgoDefault.run(async () => {})
+    }
+    let duckduckgoBusyStarted = false
+    await assert.rejects(
+      duckduckgoDefault.run(async () => {
+        duckduckgoBusyStarted = true
+      }),
+      /rate limited/,
+    )
+    assert.equal(duckduckgoBusyStarted, false)
+
+    let duckduckgoCooldownNow = 5_000
+    const duckduckgoCooldown = new duckduckgoLimit.DuckDuckGoRateLimit({
+      now: () => duckduckgoCooldownNow,
+      sleep: async () => {},
+      minIntervalMs: 0,
+    })
+    await assert.rejects(
+      duckduckgoCooldown.run(async () => {
+        throw new duckduckgoLimit.DuckDuckGoBotCheckError(202)
+      }),
+      /HTTP 202, rate limited/,
+    )
+    await assert.rejects(
+      duckduckgoCooldown.run(async () => {}),
+      /not retrying for 30m/,
+    )
+
+    const domainFilter = await jiti.import(
+      join(dirname(webAccessEntry), "domain-filter-normalization.ts"),
+    )
+    assert.deepEqual(
+      domainFilter
+        .applyDomainFilter(
+          [
+            { url: "https://docs.example/guide", title: "keep" },
+            { url: "https://other.example/result", title: "drop" },
+          ],
+          ["docs.example"],
+        )
+        .map((result) => result.title),
+      ["keep"],
+    )
 
     const sourceCheck = await jiti.import(
       join(dirname(webAccessEntry), "source-check.ts"),
@@ -1141,28 +1215,28 @@ async function assertNewReleaseFeatures({
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.47.0",
+      "0.48.0",
     )
     assert.deepEqual(upgradeNotices, [])
     await writeFile(
       join(upgradeStateDir, "last-seen-version.json"),
-      JSON.stringify({ version: "0.46.0" }),
+      JSON.stringify({ version: "0.47.0" }),
     )
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.47.0",
+      "0.48.0",
     )
     assert.equal(upgradeNotices.length, 1)
-    assert.match(upgradeNotices[0], /updated from 0\.46\.0 to 0\.47\.0/)
-    assert.match(upgradeNotices[0], /Sofya/)
-    assert.match(upgradeNotices[0], /100K characters/)
+    assert.match(upgradeNotices[0], /updated from 0\.47\.0 to 0\.48\.0/)
+    assert.match(upgradeNotices[0], /SpecStream/)
+    assert.match(upgradeNotices[0], /DuckDuckGo/)
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.47.0",
+      "0.48.0",
     )
     assert.equal(upgradeNotices.length, 1)
     const skippedUpgradeDir = join(agentDir, "upgrade-notice-skipped")
@@ -1178,7 +1252,7 @@ async function assertNewReleaseFeatures({
       },
       skippedUpgradeDir,
       upgradeChangelog,
-      "0.47.0",
+      "0.48.0",
     )
     await writeFile(
       join(skippedUpgradeDir, "last-seen-version.json"),
@@ -1195,20 +1269,22 @@ async function assertNewReleaseFeatures({
       },
       skippedUpgradeDir,
       upgradeChangelog,
-      "0.47.0",
+      "0.48.0",
     )
     assert.equal(skippedNotices.length, 1)
-    assert.match(skippedNotices[0], /Read more pages that block bots/)
-    assert.match(skippedNotices[0], /Sofya/)
+    assert.match(skippedNotices[0], /updated from 0\.45\.0 to 0\.48\.0/)
+    assert.match(skippedNotices[0], /SpecStream/)
+    assert.match(skippedNotices[0], /\.\.\.and 9 more/)
+    assert.doesNotMatch(skippedNotices[0], /Read more pages that block bots/)
     await writeFile(
       join(upgradeStateDir, "last-seen-version.json"),
-      JSON.stringify({ version: "0.48.0" }),
+      JSON.stringify({ version: "0.49.0" }),
     )
     await upgradeNotice.showUpgradeNotice(
       upgradeContext,
       upgradeStateDir,
       upgradeChangelog,
-      "0.47.0",
+      "0.48.0",
     )
     assert.equal(upgradeNotices.length, 1)
 
@@ -1320,6 +1396,18 @@ async function assertNewReleaseFeatures({
       /Defuddle failed to process document: Unknown pseudo-class :a/,
     )
     assert.doesNotMatch(defuddleFailure.content, /Copyright 2026/)
+    const extractSource = await readFile(
+      join(dirname(webAccessEntry), "extract.ts"),
+      "utf8",
+    )
+    assert.match(
+      extractSource,
+      /extractedText < visibleTextLength\(parseHTML\(text\)\.document\) \* 0\.5/,
+    )
+    assert.match(
+      extractSource,
+      /markdownTextLength\(defuddleResult\.content\) >= extractedText \* 1\.5/,
+    )
 
     const relativeCanonicalHtml = `<!doctype html><html><head><title>Relative canonical</title><link rel="canonical" href="/canonical-article"></head><body><main><h1>Relative canonical</h1><p>${paragraph.repeat(20)}</p></main></body></html>`
     const relativeCanonicalErrors = []

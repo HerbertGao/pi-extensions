@@ -36,9 +36,9 @@ const productionStrip = extractFunction("stripManualEditRuntimeState")
 const restoreRemovedElement = extractFunction("restoreRemovedElement")
 
 // The published helper still drops every marked descendant before asking
-// whether the root is the live page. 4.9.1 leaves that function identical to
-// 4.8.2. Replaying the unconditional removal against the same assertions is
-// the regression.
+// whether the root is the live page. 4.9.2 leaves that function identical to
+// 4.9.1 and 4.8.2. Replaying the unconditional removal against the same
+// assertions is the regression.
 function published482Strip(stripSource) {
   const guarded = /if \(!root\.isConnected\) \{\n([\s\S]*?)\n {4}\}/
   const match = stripSource.match(guarded)

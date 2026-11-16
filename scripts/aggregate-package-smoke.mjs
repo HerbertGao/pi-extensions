@@ -2784,7 +2784,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (
     !tifanNotices.includes("`pi-commandcode-provider`") ||
     !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
-    !tifanNotices.includes("2a5c55d8b2b74f01573cbf5735dca78b67f5efd1")
+    !tifanNotices.includes("3b60d881ae9c9f30846410fe9161e490cd34acc7")
   ) {
     throw new Error("Aggregate Command Code provider notice is incomplete")
   }
@@ -3695,20 +3695,119 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   })
   assert.equal(rewriteResponsesBody(otherBody), otherBody)
   assert.equal(rewriteResponsesBody("not-json"), "not-json")
-  const { MODEL_INPUT_MODALITIES, MODEL_REASONING } =
-    await commandCodeJiti.import(
-      join(dirname(commandCodeEntry), "src/commandcode-catalog.ts"),
-    )
-  assert.equal(
-    Object.hasOwn(
-      MODEL_INPUT_MODALITIES,
-      "thinkingmachines/inkling-2-small:free",
-    ),
-    false,
+  const {
+    COMMAND_CODE_CLI_VERSION,
+    MODEL_EFFORTS,
+    MODEL_INPUT_MODALITIES,
+    MODEL_MAX_OUTPUT_TOKENS,
+    MODEL_REASONING,
+  } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/commandcode-catalog.ts"),
   )
+  assert.equal(COMMAND_CODE_CLI_VERSION, "1.89.1")
+  assert.deepEqual(
+    MODEL_INPUT_MODALITIES["thinkingmachines/inkling-2-small:free"],
+    ["text", "image"],
+  )
+  assert.deepEqual(MODEL_INPUT_MODALITIES["claude-fable-5-2"], [
+    "text",
+    "image",
+  ])
+  assert.deepEqual(MODEL_INPUT_MODALITIES["google/gemini-4-carbon"], [
+    "text",
+    "image",
+  ])
+  assert.deepEqual(MODEL_INPUT_MODALITIES["meta/muse-ember"], ["text", "image"])
+  assert.equal(MODEL_REASONING["thinkingmachines/inkling-2-small:free"], true)
+  assert.equal(MODEL_REASONING["claude-fable-5-2"], true)
+  assert.equal(MODEL_REASONING["google/gemini-4-carbon"], true)
+  assert.equal(MODEL_REASONING["meta/muse-ember"], true)
+  assert.deepEqual(MODEL_EFFORTS["claude-fable-5-2"], [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ])
+  assert.deepEqual(MODEL_EFFORTS["google/gemini-4-carbon"], [
+    "low",
+    "medium",
+    "high",
+  ])
+  assert.deepEqual(MODEL_EFFORTS["meta/muse-ember"], [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ])
+  assert.deepEqual(MODEL_EFFORTS["thinkingmachines/inkling-2-small:free"], [
+    "low",
+    "medium",
+    "high",
+    "max",
+  ])
   assert.equal(
-    Object.hasOwn(MODEL_REASONING, "thinkingmachines/inkling-2-small:free"),
-    false,
+    MODEL_MAX_OUTPUT_TOKENS["thinkingmachines/inkling-2-small:free"],
+    131_072,
+  )
+  for (const retiredId of ["reflection/beam:free", "stealth/crouton-alpha"]) {
+    assert.equal(Object.hasOwn(MODEL_INPUT_MODALITIES, retiredId), false)
+    assert.equal(Object.hasOwn(MODEL_REASONING, retiredId), false)
+    assert.equal(Object.hasOwn(MODEL_EFFORTS, retiredId), false)
+    assert.equal(Object.hasOwn(MODEL_MAX_OUTPUT_TOKENS, retiredId), false)
+  }
+  const { refreshToken } = await commandCodeJiti.import(
+    join(dirname(commandCodeEntry), "src/oauth.ts"),
+  )
+  const storedCommandCodeKey = {
+    refresh: "stored-key",
+    access: "stored-key",
+    expires: 1,
+  }
+  const whoamiCalls = []
+  const refreshedCommandCode = await refreshToken(
+    storedCommandCodeKey,
+    undefined,
+    {
+      fetchImpl: async (url, init) => {
+        whoamiCalls.push({
+          url: String(url),
+          authorization: new Headers(init?.headers).get("authorization"),
+        })
+        return new Response("ok", { status: 200 })
+      },
+      apiBase: "https://api.commandcode.test",
+      timeoutMs: 1_000,
+    },
+  )
+  assert.equal(refreshedCommandCode.refresh, "stored-key")
+  assert.equal(refreshedCommandCode.access, "stored-key")
+  assert.deepEqual(whoamiCalls, [
+    {
+      url: "https://api.commandcode.test/alpha/whoami",
+      authorization: "Bearer stored-key",
+    },
+  ])
+  await assert.rejects(
+    refreshToken(storedCommandCodeKey, undefined, {
+      fetchImpl: async () => new Response("no", { status: 401 }),
+      apiBase: "https://api.commandcode.test",
+      timeoutMs: 1_000,
+    }),
+    /401 invalid_token/,
+  )
+  await assert.rejects(
+    refreshToken(storedCommandCodeKey, undefined, {
+      fetchImpl: async () => new Response("down", { status: 503 }),
+      apiBase: "https://api.commandcode.test",
+      timeoutMs: 1_000,
+    }),
+    (error) => {
+      assert.match(error.message, /\(503\)/)
+      assert.doesNotMatch(error.message, /invalid_token/)
+      return true
+    },
   )
   const antigravityJiti = createRecapJiti(
     join(antigravityRoot, "src/index.ts"),
