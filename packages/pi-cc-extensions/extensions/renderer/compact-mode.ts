@@ -1648,9 +1648,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	/**
 	 * 可以并入的活动回合。被用户消息隔开时返回 undefined，调用方收掉旧回合另起一个，
 	 * 保证回合不跨用户消息——否则区间里的用户消息会被当成外来行挪到回合末尾之后。
+	 * 外层工具已经封口的回合同样不能并入：工具还在跑时 seal 只挂起收尾，activeRound
+	 * 仍指着它；下一条带思考或内层工具的消息必须另起摘要，计数才不会跨过 ask/write。
 	 */
 	const joinableActiveRound = (component: any): CompactRound | undefined =>
-		activeRound && !crossesUserMessage(activeRound, component) ? activeRound : undefined;
+		activeRound && !activeRound.outerSealed && !crossesUserMessage(activeRound, component)
+			? activeRound
+			: undefined;
 
 	/** 取并入目标；旧回合被用户消息隔开时先收尾（静默期一转场，新回合立即接手）。 */
 	const joinOrCreateRound = (component: any, message: any): CompactRound => {
@@ -1772,10 +1776,12 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			last = i;
 		}
 		const outer = outerFirst(children);
-		// 外露行压在摘要行上方就前移；已经在下方就别再越过它，否则每帧来回搬。
+		// 目标位要和下面的 insertAt 一致。非活回合有外露行时，摘要插在那一行之前；
+		// 尾还在数组里，所以「已经贴在外露行前面」是 outer - 1，不是 last + 1。
+		// 中间夹着通知时 last + 1 对不上，每帧都会把摘要摘下来再插回去。
 		let desired = pinToEnd || last < 0 ? children.length - 1 : last + 1;
-		if (!pinToEnd && outer >= 0 && outer < current) desired = outer;
-		if (current === desired) return;
+		if (!pinToEnd && outer >= 0) desired = current < outer ? outer - 1 : outer;
+		if (current >= 0 && current === desired) return;
 		if (current >= 0) children.splice(current, 1);
 		let first = -1;
 		last = -1;

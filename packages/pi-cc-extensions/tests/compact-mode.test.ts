@@ -2872,6 +2872,146 @@ test("compact：流式消息里冒出外层调用也封口，ask 之后的计数
 	}
 });
 
+test("compact：外层工具封口后，前面的工具还在跑时后续消息另起摘要", () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const first: any = {
+			role: "assistant",
+			timestamp: Date.now(),
+			stopReason: "toolUse",
+			content: [],
+		};
+		const anchor = new AssistantMessageComponent({ ...first, content: [] }, true) as any;
+		chat.addChild(anchor);
+		first.content.push({ type: "thinking", thinking: "plan" });
+		anchor.updateContent(first, true);
+		first.content.push({ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } });
+		anchor.updateContent(first, true);
+		const bash = tool("bash", "b1", { command: "one" });
+		chat.addChild(bash);
+		bash.markExecutionStarted();
+		anchor.updateContent(first, false);
+
+		const askMessage: any = {
+			role: "assistant",
+			timestamp: Date.now(),
+			stopReason: "toolUse",
+			content: [
+				{
+					type: "toolCall",
+					id: "ask-1",
+					name: "ask_user_question",
+					arguments: { questions: [{ question: "Which library?" }] },
+				},
+			],
+		};
+		const askAnchor = new AssistantMessageComponent({ ...askMessage, content: [] }, true) as any;
+		chat.addChild(askAnchor);
+		askAnchor.updateContent(askMessage, false);
+		const ask = tool("ask_user_question", "ask-1", askMessage.content[0].arguments);
+		chat.addChild(ask);
+		ask.markExecutionStarted();
+
+		const sealed = renderText(chat).join("\n");
+		assert.match(sealed, /Running\.\.\./, `封口时前面的 bash 还在跑: ${sealed}`);
+		assert.doesNotMatch(sealed, /Ran for/, `还在跑的回合不能提前定稿: ${sealed}`);
+
+		const next: any = {
+			role: "assistant",
+			timestamp: Date.now(),
+			stopReason: "toolUse",
+			content: [],
+		};
+		const nextAnchor = new AssistantMessageComponent({ ...next, content: [] }, true) as any;
+		chat.addChild(nextAnchor);
+		next.content.push({ type: "thinking", thinking: "after" });
+		next.content.push({ type: "toolCall", id: "b2", name: "bash", arguments: { command: "two" } });
+		nextAnchor.updateContent(next, false);
+		const bash2 = tool("bash", "b2", { command: "two" });
+		chat.addChild(bash2);
+		bash2.markExecutionStarted();
+
+		const lines = renderText(chat);
+		const summaries = lines.filter((line) => /Running\.\.\./.test(line));
+		assert.equal(summaries.length, 2, `封口后的消息应另起摘要: ${lines.join(" | ")}`);
+		assert.ok(
+			summaries.every((line) => /bash×1/.test(line)),
+			`计数不能跨 ask 累加: ${lines.join(" | ")}`,
+		);
+		assert.doesNotMatch(lines.join("\n"), /bash×2/);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
+test("compact：摘要已经贴在外层工具前时，中间的通知不再每帧搬动摘要行", () => {
+	const { restore } = installHooks();
+	const chat = new Container() as any;
+	setToolMouseTui({ children: [chat] });
+	try {
+		const message: any = {
+			role: "assistant",
+			timestamp: Date.now(),
+			stopReason: "toolUse",
+			content: [
+				{ type: "thinking", thinking: "plan" },
+				{ type: "toolCall", id: "b1", name: "bash", arguments: { command: "one" } },
+				{ type: "toolCall", id: "w1", name: "write", arguments: { path: "a.ts", content: "x" } },
+			],
+		};
+		const anchor = new AssistantMessageComponent({ ...message, content: [] }, true) as any;
+		chat.addChild(anchor);
+		const bash = tool("bash", "b1", { command: "one" });
+		const write = tool("write", "w1", { path: "a.ts", content: "x" });
+		chat.addChild(bash);
+		chat.addChild(write);
+		bash.markExecutionStarted();
+		bash.updateResult({ content: [{ type: "text", text: "ok" }], isError: false });
+		write.markExecutionStarted();
+		write.updateResult({ content: [], details: { diff: "+x" }, isError: false });
+		anchor.updateContent(message, false);
+
+		const summary = () =>
+			chat.children.find((child: any) => /Ran for/.test(renderText(child).join("\n")));
+		const tail = summary();
+		assert.ok(tail, `应收成摘要行: ${renderText(chat).join(" | ")}`);
+		const notice = new CustomMessageComponent(
+			{ role: "custom", customType: "test-notice", content: [], display: true } as any,
+			undefined,
+		) as any;
+		const tailAt = chat.children.indexOf(tail);
+		chat.children.splice(tailAt, 0, notice);
+
+		let splices = 0;
+		const children = chat.children as any[];
+		const originalSplice = children.splice.bind(children) as (...args: any[]) => any[];
+		children.splice = (...args: any[]) => {
+			splices += 1;
+			return originalSplice(...args);
+		};
+		anchor.updateContent(message, false);
+		assert.equal(splices, 0, "摘要已经在外层 write 前面，通知不该让它每帧重插");
+		assert.equal(chat.children.indexOf(tail) + 1, chat.children.indexOf(write));
+		assert.ok(chat.children.indexOf(notice) < chat.children.indexOf(tail));
+
+		chat.children.splice = originalSplice;
+		const writeAt = chat.children.indexOf(write);
+		chat.children.splice(writeAt, 0, notice);
+		anchor.updateContent(message, false);
+		assert.equal(
+			chat.children.indexOf(tail) + 1,
+			chat.children.indexOf(write),
+			"夹在摘要和外层工具之间的通知应让摘要贴到工具前面",
+		);
+	} finally {
+		setToolMouseTui(null);
+		restore();
+	}
+});
+
 test("compact：同一条消息里 ask 排在其它工具之前，摘要仍在 ask 之上", async () => {
 	const { restore } = installHooks();
 	const chat = new Container() as any;
