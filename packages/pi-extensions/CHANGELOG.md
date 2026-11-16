@@ -1,5 +1,25 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.12
+
+### Patch Changes
+
+- [#380](https://github.com/HerbertGao/pi-extensions/pull/380) [`148a621`](https://github.com/HerbertGao/pi-extensions/commit/148a621b39675e5c7aaec52e4a171a6a91ed49b2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-antigravity 0.14.0. The package registers read_url_content and rejects a private or credentialed URL before a request. ANTIGRAVITY_NO_FETCH_TOOL=1 skips that tool. The User-Agent is antigravity/cli/1.5.5.
+
+- [#383](https://github.com/HerbertGao/pi-extensions/pull/383) [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-commandcode-provider 0.8.4. Refresh checks the stored key before returning it, and a revoked key fails with 401 invalid_token. The capability snapshot is command-code@1.89.1, so Fable, Carbon, Muse, and Inkling 2 Small Free accept images and a reasoning effort.
+
+- [#380](https://github.com/HerbertGao/pi-extensions/pull/380) [`148a621`](https://github.com/HerbertGao/pi-extensions/commit/148a621b39675e5c7aaec52e4a171a6a91ed49b2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin graphifyy 0.9.109. The CLI stays outside the npm aggregate. Warm AST caches rebuild. Python stays on >=3.10,<3.15.
+
+- [#383](https://github.com/HerbertGao/pi-extensions/pull/383) [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin graphifyy 0.9.111. The CLI stays outside the npm aggregate. Warm AST caches rebuild. Python is now >=3.11,<3.15. uv still supplies that interpreter.
+
+- [#380](https://github.com/HerbertGao/pi-extensions/pull/380) [`148a621`](https://github.com/HerbertGao/pi-extensions/commit/148a621b39675e5c7aaec52e4a171a6a91ed49b2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-lens 4.5.0. An async array callback with a block body is not flagged for a missing return. A sync block callback that does not return still is. A check that did not finish is not reported as clean.
+
+- [#383](https://github.com/HerbertGao/pi-extensions/pull/383) [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-web-access 0.48.0. SpecStream, Autom, and cloro stay explicit-only. DuckDuckGo searches are spaced at 10 seconds and at most 10 in 10 minutes, and a search timeout can fall through to the next provider.
+
+- Updated dependencies [[`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb), [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb), [`148a621`](https://github.com/HerbertGao/pi-extensions/commit/148a621b39675e5c7aaec52e4a171a6a91ed49b2), [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb)]:
+  - @herbertgao/pi-cc-extensions@1.0.18
+  - @herbertgao/pi-impeccable@0.5.0
+
 ## 2026.11.11
 
 ### Patch Changes
