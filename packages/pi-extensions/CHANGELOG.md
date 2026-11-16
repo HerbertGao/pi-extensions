@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.13
+
+### Patch Changes
+
+- [#385](https://github.com/HerbertGao/pi-extensions/pull/385) [`80c5080`](https://github.com/HerbertGao/pi-extensions/commit/80c5080bedf6f5fdc1a1b408c70e22bdae7157d4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bundle `@herbertgao/pi-inline-skill-commands`, which completes and expands Pi's native `/skill:name` commands inside a larger prompt without adding duplicate `/<name>` aliases.
+
 ## 2026.11.12
 
 ### Patch Changes
