@@ -18,7 +18,7 @@ When migrating from `pi-mcp-adapter`, remove any standalone adapter install as w
 
 ## Bundled extensions
 
-The package bundles 6 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-impeccable`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
+The package bundles 7 active `@herbertgao/*` child packages—`pi-agency`, `pi-bark`, `pi-cc-extensions`, `pi-impeccable`, `pi-inline-skill-commands`, `pi-subagents`, and `sol-pi`—plus the following upstream packages under their original names:
 
 - `pi-antigravity@0.14.0`
 - `pi-commandcode-provider@0.8.4`
@@ -56,6 +56,8 @@ Impeccable `4.9.2` is vendored as `@herbertgao/pi-impeccable` and loaded with `/
 ### Bark notifications
 
 `@herbertgao/pi-bark` sends localized Bark pushes when a user-facing Pi run fully settles or `@juicesharp/rpiv-ask-user-question` needs an answer. Notifications include emoji-labeled machine/path metadata and support the bundled official Pi badge through Bark's `icon` parameter. Configure it in `$PI_CODING_AGENT_DIR/bark.json` (normally `~/.pi/agent/bark.json`); see the [package README](../pi-bark/README.md). Without a valid endpoint it stays inactive.
+
+`@herbertgao/pi-inline-skill-commands` completes and expands Pi's native `/skill:<name>` commands inside a larger prompt. At token boundaries the dropdown lists only skills, completion keeps the surrounding text, and submission expands the skill where it was typed. Commands at the start of the prompt stay native, ordinary commands such as `/model` remain start-only, and no `/<name>` aliases are added, so skill entries are not duplicated. It uses `CustomEditor`'s private autocomplete trigger to fire on `/`; see the [package README](../pi-inline-skill-commands/README.md).
 
 `@narumitw/pi-caffeinate@0.49.15` uses the host platform's sleep inhibitor during each Pi agent run. On macOS, `/caffeinate sleep` keeps the system awake while allowing the display to sleep; `/caffeinate display` also keeps the display awake. It releases the inhibitor when the run or session ends. Its D-Bus dependency remains on the normal socket transport under Node; Bun on Linux/macOS can use FFI and an in-process reader thread for Unix file-descriptor transport, and that thread can be unreferenced so the connection need not keep the process alive. It falls back when FFI is unavailable. No daemon or build step is added. The published extension source is unchanged from 0.49.13 aside from the manifest. It declares `@narumitw/pi-tui-kit@^0.70.0` and `dbus-native@^0.16.3`. BTW `0.63.8` requires the same kit range, so the aggregate resolves one `0.70.0` install for both.
 
