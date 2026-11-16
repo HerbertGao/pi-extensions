@@ -16,6 +16,7 @@ const packages = [
   "pi-bark",
   "pi-cc-extensions",
   "pi-extensions",
+  "pi-inline-skill-commands",
   "pi-subagents",
   "sol-pi",
 ]
