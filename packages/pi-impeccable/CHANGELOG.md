@@ -1,5 +1,11 @@
 # @herbertgao/pi-impeccable
 
+## 0.5.0
+
+### Minor Changes
+
+- [#383](https://github.com/HerbertGao/pi-extensions/pull/383) [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor the official Impeccable 4.9.2 Pi skill. The launcher pins engine 0.1.25. A critique reads the design-review rubric, and a new surface reads the world or comp playbook when that part applies. The local Go staged-removal fix is kept.
+
 ## 0.4.0
 
 ### Minor Changes

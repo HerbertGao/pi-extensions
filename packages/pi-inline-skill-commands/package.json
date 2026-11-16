@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-inline-skill-commands",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Complete and expand Pi's native /skill:name commands within a larger prompt.",
   "keywords": [
     "autocomplete",

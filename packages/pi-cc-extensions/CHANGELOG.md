@@ -1,5 +1,15 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.20-local.1
+
+### Patch Changes
+
+- [#383](https://github.com/HerbertGao/pi-extensions/pull/383) [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - A compact round sealed by an outer tool no longer absorbs the next message while earlier tools are still running. The summary row stays put when it is already in front of that outer tool.
+
+- [#380](https://github.com/HerbertGao/pi-extensions/pull/380) [`148a621`](https://github.com/HerbertGao/pi-extensions/commit/148a621b39675e5c7aaec52e4a171a6a91ed49b2) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.19. Round summaries end with the completion time and count a write together with a later edit of the same file. An older summary that only stored a write count still renders, including its duration. Expanded cards leave a blank row between tool blocks, including after a multi-row image. After /new or /reload resets the editor, the old editor is not written back. Turning the prefix off and back on in one open panel still keeps the last choice. Regular mode still does not enable terminal mouse reporting.
+
+- [#383](https://github.com/HerbertGao/pi-extensions/pull/383) [`34e9a94`](https://github.com/HerbertGao/pi-extensions/commit/34e9a9445806afbd5be85034fe32ceea1919f9eb) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.20. Round summaries show the date with the completion time, and a round seals when an outer tool appears so later work starts a new summary. Expanded cards reuse unchanged rows, and a background row that already fits keeps its styling. An older summary that only stored a write count still renders. Regular mode still does not enable terminal mouse reporting.
+
 ## 1.0.18-local.1
 
 ### Patch Changes
