@@ -1,5 +1,15 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.14
+
+### Patch Changes
+
+- [#390](https://github.com/HerbertGao/pi-extensions/pull/390) [`41ed7b5`](https://github.com/HerbertGao/pi-extensions/commit/41ed7b581cf97b537939972049182036fbd9ee3b) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin fast-mode 0.1.16 and pi-lens 4.5.1. Fast-mode bundles Effect 4.1.4. pi-lens can show diagnostic counts in the footer when asked, and Esc cancels a hung language-server request.
+
+- Updated dependencies [[`77a7633`](https://github.com/HerbertGao/pi-extensions/commit/77a7633b71ce4ffe288fde8c7a4e00786e27c81d), [`41ed7b5`](https://github.com/HerbertGao/pi-extensions/commit/41ed7b581cf97b537939972049182036fbd9ee3b), [`41ed7b5`](https://github.com/HerbertGao/pi-extensions/commit/41ed7b581cf97b537939972049182036fbd9ee3b)]:
+  - @herbertgao/pi-inline-skill-commands@0.1.1
+  - @herbertgao/pi-subagents@0.25.0
+
 ## 2026.11.13
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.0-local.1
+
+### Minor Changes
+
+- [#390](https://github.com/HerbertGao/pi-extensions/pull/390) [`41ed7b5`](https://github.com/HerbertGao/pi-extensions/commit/41ed7b581cf97b537939972049182036fbd9ee3b) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-subagents 0.26.0. Asking for a number of agents runs those agents in parallel unless you ask for a workflow. A workflow schema is checked before the agent starts, a failed call can explain why, and the script reference can move into a skill. Unconsumed results and a failed worktree cleanup still stay recoverable.
+
+### Patch Changes
+
+- [#390](https://github.com/HerbertGao/pi-extensions/pull/390) [`41ed7b5`](https://github.com/HerbertGao/pi-extensions/commit/41ed7b581cf97b537939972049182036fbd9ee3b) Thanks [@HerbertGao](https://github.com/HerbertGao)! - A background workflow card scheduled while fullscreen does not redraw again after the session leaves fullscreen. That extra redraw was clearing scrollback.
+
 ## 0.25.0-local.1
 
 ### Minor Changes
