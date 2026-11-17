@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-extensions",
-  "version": "2026.11.13",
+  "version": "2026.11.14",
   "description": "Aggregate installer for HerbertGao-maintained Pi extensions.",
   "keywords": [
     "extensions",
@@ -43,8 +43,8 @@
     "@herbertgao/pi-bark": "0.2.2",
     "@herbertgao/pi-cc-extensions": "1.0.20-local.1",
     "@herbertgao/pi-impeccable": "0.5.0",
-    "@herbertgao/pi-inline-skill-commands": "0.1.0",
-    "@herbertgao/pi-subagents": "0.25.0-local.1",
+    "@herbertgao/pi-inline-skill-commands": "0.1.1",
+    "@herbertgao/pi-subagents": "0.26.0-local.1",
     "@herbertgao/sol-pi": "0.4.3",
     "@juicesharp/rpiv-ask-user-question": "2.15.0",
     "@juicesharp/rpiv-config": "^2.15.0",
