@@ -63,6 +63,7 @@ import {
   createAgentSession,
   DefaultResourceLoader,
   getAgentDir,
+  type InlineExtension,
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent"
@@ -141,6 +142,10 @@ export interface RunPrintModeOptions {
   signal?: AbortSignal
   /** Additional extension paths loaded only for this test run. */
   extensionPaths?: string[]
+  /** Inline host extensions, e.g. pi's `createToolSearchExtension()`, which SDK sessions do not load. */
+  extensionFactories?: InlineExtension[]
+  /** Faux-mode `defaultTools` setting, e.g. `["+tool_search"]`. */
+  defaultTools?: string[]
   /** Called once after the real parent session is created and extensions are bound. */
   onParentSession?: (
     session: AgentSession,
@@ -399,6 +404,7 @@ export async function runPrintMode(
       EXTENSION_PATH,
       ...(options.extensionPaths ?? []),
     ],
+    extensionFactories: options.extensionFactories,
     systemPromptOverride: () => options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
     appendSystemPromptOverride: () => [],
     noPromptTemplates: true,
@@ -428,6 +434,9 @@ export async function runPrintMode(
       : SettingsManager.inMemory({
           compaction: { enabled: false },
           retry: { enabled: false },
+          ...(options.defaultTools
+            ? { defaultTools: options.defaultTools }
+            : {}),
         }),
   } as any)
   session.setSessionName("print-mode-host")

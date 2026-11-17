@@ -367,6 +367,20 @@ try {
   if (JSON.stringify(lensManifest.bin) !== JSON.stringify(expectedLensBins)) {
     throw new Error("Bundled pi-lens no longer declares its three CLIs")
   }
+  const lensIssuesFooter = await readFile(
+    join(lensRoot, "dist/index.js"),
+    "utf8",
+  )
+  if (
+    !lensIssuesFooter.includes(
+      'globalOptInFlag("lens-issues-status", "Opt-in: publish a compact pi-lens-issues footer status',
+    ) ||
+    !lensIssuesFooter.includes("Default off.")
+  ) {
+    throw new Error(
+      "Bundled pi-lens no longer keeps the diagnostic footer opt-in and off by default",
+    )
+  }
   const expectedLensPeers = {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
@@ -2322,6 +2336,14 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     )
   ) {
     throw new Error("Bundled fast-mode still contains inline TUI dependencies")
+  }
+  if (
+    !fastModeSourceMap.sources?.some((source) =>
+      source.includes("effect@4.1.4"),
+    ) ||
+    fastModeSourceMap.sources?.some((source) => source.includes("effect@4.1.2"))
+  ) {
+    throw new Error("Bundled fast-mode is not built with Effect 4.1.4")
   }
   for (const [dependency, range] of Object.entries(
     fastModeManifest.dependencies ?? {},

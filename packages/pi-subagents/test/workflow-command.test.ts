@@ -65,7 +65,7 @@ function commandCtx() {
       }),
       custom: vi.fn(
         async (factory: (...args: unknown[]) => unknown, options?: unknown) => {
-          const tui = { requestRender: () => {} }
+          const tui = { requestRender: () => {}, terminal: { rows: 40 } }
           const theme = {
             fg: (_c: string, t: string) => t,
             bold: (t: string) => t,
