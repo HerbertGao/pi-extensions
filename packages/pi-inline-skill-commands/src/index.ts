@@ -14,12 +14,29 @@ import type {
   EditorComponent,
 } from "@earendil-works/pi-tui"
 
-const MID_SKILL_TOKEN =
-  /(?:^|[\s\u3000\u00a0\u2007\u202f\u203f\u2060\ufeff，。！？；：、（）【】《》「」『』([{<`])(\/[^\s/]*)$/
-const MID_SKILL_COMMAND =
-  /(^|[\s\u3000\u00a0\u2007\u202f\u203f\u2060\ufeff，。！？；：、（）【】《》「」『』([{<`])(\/skill:([a-z0-9-]{1,64}))(?=\s|$)/
+const MID_SKILL_BOUNDARY =
+  "[\\s\\u3000\\u00a0\\u2007\\u202f\\u203f\\u2060\\ufeff，。！？；：、（）【】《》「」『』([{<`]"
+const MID_SKILL_TOKEN = new RegExp(`(?:^|${MID_SKILL_BOUNDARY})(\\/[^\\s/]*)$`)
+const MID_SKILL_COMMAND = new RegExp(`(^|${MID_SKILL_BOUNDARY})\\/skill:`)
 
-type SkillDefinition = Pick<Skill, "name" | "filePath">
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Match only names Pi actually loaded, longest first, so `/skill:test_x` never falls back
+ * to a shorter `test`. The lookahead still allows sentence punctuation (`.`, `,`, `，`).
+ */
+function buildSkillCommandPattern(skills: SkillMap): RegExp {
+  const names = [...skills.keys()]
+    .toSorted((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+  return new RegExp(
+    `(^|${MID_SKILL_BOUNDARY})(\\/skill:(${names.join("|")}))(?!\\.?[A-Za-z0-9_-])`,
+  )
+}
+
+type SkillDefinition = Pick<Skill, "name" | "filePath" | "baseDir">
 type SkillMap = ReadonlyMap<string, SkillDefinition>
 
 interface TriggerableEditor extends EditorComponent {
@@ -115,23 +132,24 @@ export function expandMidSkillCommand(
   text: string,
   skills: SkillMap,
 ): string | undefined {
-  const match = MID_SKILL_COMMAND.exec(text)
+  // Idempotent: a second copy of this handler must not nest another skill block.
+  if (text.startsWith("<skill ") || skills.size === 0) return undefined
+  const match = buildSkillCommandPattern(skills).exec(text)
   if (!match) return undefined
 
   const boundary = match[1] ?? ""
-  const command = match[2] ?? ""
-  const commandIndex = match.index + boundary.length
-  const prefix = text.slice(0, commandIndex)
+  const prefix = text.slice(0, match.index + boundary.length)
   if (!prefix.trim()) return undefined
 
   const skill = skills.get(match[3] ?? "")
   if (!skill) return undefined
 
   const content = stripFrontmatter(readFileSync(skill.filePath, "utf-8")).trim()
-  const args = text.slice(commandIndex + command.length).trim()
-  let expansion = `<skill name="${skill.name}" location="${skill.filePath}">\n${content}\n</skill>`
-  if (args) expansion += `\n\n${args}`
-  return prefix + expansion
+  // Pi collapses a skill invocation only when the block starts the message. Keep the block
+  // first and the original sentence, command included, as the user message. The references
+  // line matches Pi's own expansion so both paths feed the model the same skill text.
+  const block = `<skill name="${skill.name}" location="${skill.filePath}">\nReferences are relative to ${skill.baseDir}.\n\n${content}\n</skill>`
+  return `${block}\n\n${text.trim()}`
 }
 
 export function wrapMidSkillTrigger<T extends EditorComponent>(editor: T): T {
@@ -157,7 +175,8 @@ export function wrapMidSkillTrigger<T extends EditorComponent>(editor: T): T {
 }
 
 function installMidSkillTrigger(): void {
-  // SAFETY: CustomEditor has these runtime members; the private trigger is feature-checked before use.
+  // SAFETY: `handleInput` is an own property of CustomEditor.prototype and is replaced here;
+  // the trigger members come from Editor.prototype and are feature-checked before use.
   const prototype = CustomEditor.prototype as unknown as TriggerableEditor
   if (prototype.inlineSkillCommandsTriggerInstalled) return
   wrapMidSkillTrigger(prototype)
@@ -179,7 +198,14 @@ async function loadSessionSkills(ctx: ExtensionContext): Promise<SkillMap> {
     noContextFiles: true,
   })
   await loader.reload()
-  return new Map(loader.getSkills().skills.map((skill) => [skill.name, skill]))
+  return new Map(
+    loader
+      .getSkills()
+      .skills.map((skill) => [
+        skill.name,
+        { name: skill.name, filePath: skill.filePath, baseDir: skill.baseDir },
+      ]),
+  )
 }
 
 export default function piInlineSkillCommands(pi: ExtensionAPI): void {
