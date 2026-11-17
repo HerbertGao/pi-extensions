@@ -119,19 +119,17 @@ export function expandMidSkillCommand(
   if (!match) return undefined
 
   const boundary = match[1] ?? ""
-  const command = match[2] ?? ""
-  const commandIndex = match.index + boundary.length
-  const prefix = text.slice(0, commandIndex)
+  const prefix = text.slice(0, match.index + boundary.length)
   if (!prefix.trim()) return undefined
 
   const skill = skills.get(match[3] ?? "")
   if (!skill) return undefined
 
   const content = stripFrontmatter(readFileSync(skill.filePath, "utf-8")).trim()
-  const args = text.slice(commandIndex + command.length).trim()
-  let expansion = `<skill name="${skill.name}" location="${skill.filePath}">\n${content}\n</skill>`
-  if (args) expansion += `\n\n${args}`
-  return prefix + expansion
+  // Pi collapses a skill invocation only when the block starts the message. Keep the block
+  // first and the original sentence, command included, as the user message.
+  const expansion = `<skill name="${skill.name}" location="${skill.filePath}">\n${content}\n</skill>`
+  return `${expansion}\n\n${text.trim()}`
 }
 
 export function wrapMidSkillTrigger<T extends EditorComponent>(editor: T): T {

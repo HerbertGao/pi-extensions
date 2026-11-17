@@ -1,10 +1,12 @@
 # @herbertgao/pi-inline-skill-commands
 
-Use Pi's native `/skill:name` commands within a larger prompt. At token boundaries, autocomplete lists only skills and completion preserves the surrounding text. Submitting expands the skill and retains the text before and after the command.
+Use Pi's native `/skill:name` commands within a larger prompt. At token boundaries, autocomplete lists only skills and completion preserves the surrounding text. Submitting expands the skill as the same collapsed invocation block a start-of-prompt command produces, and keeps your original sentence, command included, as the request below it.
 
 ```text
 Please use /skill:pdf-tools to extract report.pdf
 ```
+
+That prompt renders as the collapsed skill block followed by `Please use /skill:pdf-tools to extract report.pdf`, so the sentence stays readable and the skill still loads.
 
 Commands at the start of the prompt remain entirely native. This package does not add `/<name>` aliases or a second skill list, so it does not duplicate Pi's native skill entries. Ordinary commands such as `/model` remain start-only. URL and path slashes do not trigger skill completion.
 
@@ -20,7 +22,7 @@ For a local checkout:
 pi install /absolute/path/to/pi-extensions/packages/pi-inline-skill-commands
 ```
 
-Restart Pi or run `/reload` after installation. The package is standalone and is not included in the `@herbertgao/pi-extensions` aggregate.
+Restart Pi or run `/reload` after installation. The package is standalone; installing `@herbertgao/pi-extensions` also bundles it.
 
 ## Compatibility
 

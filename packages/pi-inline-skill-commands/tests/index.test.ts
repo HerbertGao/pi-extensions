@@ -9,6 +9,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent"
+import { parseSkillBlock } from "@earendil-works/pi-coding-agent"
 import piInlineSkillCommands, {
   createMidSkillAutocompleteProvider,
   expandMidSkillCommand,
@@ -117,8 +118,20 @@ test("expands a mid-text skill while leaving native start commands alone", (t) =
   )
   assert.equal(
     expandMidSkillCommand("Please use /skill:test to explain this", skills),
-    `Please use <skill name="test" location="${filePath}">\nUse the skill body.\n</skill>\n\nto explain this`,
+    `<skill name="test" location="${filePath}">\nUse the skill body.\n</skill>\n\nPlease use /skill:test to explain this`,
   )
+
+  // Pi collapses a skill invocation only when the block starts the message.
+  const expanded = expandMidSkillCommand(
+    "Please use /skill:test to explain this",
+    skills,
+  )
+  assert.ok(expanded)
+  const parsed = parseSkillBlock(expanded)
+  assert.ok(parsed)
+  assert.equal(parsed.name, "test")
+  assert.equal(parsed.content, "Use the skill body.")
+  assert.equal(parsed.userMessage, "Please use /skill:test to explain this")
 })
 
 test("input handler loads session skills and transforms mid-text commands", async (t) => {
@@ -161,8 +174,12 @@ test("input handler loads session skills and transforms mid-text commands", asyn
   )
   assert.ok(result)
   assert.equal(result.action, "transform")
-  assert.match(result.text, /^Please use <skill name="test" location="/)
-  assert.match(result.text, /<\/skill>\n\nto explain this$/)
+  assert.match(result.text, /^<skill name="test" location="/)
+  assert.match(
+    result.text,
+    /<\/skill>\n\nPlease use \/skill:test to explain this$/,
+  )
+  assert.ok(parseSkillBlock(result.text))
   assert.equal(
     await inputHandler({ text: "/skill:test explain this" }, ctx),
     undefined,
