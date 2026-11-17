@@ -852,7 +852,7 @@ describe("worktree isolation switch", () => {
     try {
       setWorktreeIsolationEnabled(false)
       const wt = await createWorktree(pi, repoDir, "switch-test")
-      expect(wt).toBeDefined()
+      expect(wt?.path).toBeTruthy()
       await cleanupWorktree(pi, repoDir, wt!, "switch test")
     } finally {
       await pruneWorktrees(pi, repoDir)

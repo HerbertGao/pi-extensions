@@ -210,12 +210,10 @@ function loadOneFile(
     builtinToolNames,
     extSelectors,
     mcpToolPatterns,
-    // `disallowedTools` is Claude Code's spelling of the key. Each entry denies the tool
-    // with exactly that name, as in Claude Code, and the pi built-in it maps to, so an
-    // extension tool named `glob` stays denied rather than becoming `find`.
-    disallowedTools: csvListOptional(
-      fm.disallowed_tools ?? fm.disallowedTools,
-    )?.flatMap((n) => [...new Set([n, normalizeToolName(n)])]),
+    // `disallowedTools` is Claude Code's spelling of the key.
+    disallowedTools: deniedToolNames(
+      csvListOptional(fm.disallowed_tools ?? fm.disallowedTools),
+    ),
     extensions: inheritField(fm.extensions ?? fm.inherit_extensions),
     excludeExtensions: csvListOptional(fm.exclude_extensions),
     skills: inheritField(fm.skills ?? fm.inherit_skills),
@@ -414,6 +412,18 @@ function normalizeToolName(name: string): string {
     CLAUDE_CODE_TOOL_ALIASES[lower] ??
     name
   )
+}
+
+/**
+ * A deny list as the runner applies it. Each entry denies the tool with exactly
+ * that name and the pi built-in it maps to, so an extension
+ * tool named `glob` stays denied rather than becoming `find`. Shared by an agent
+ * file's `disallowed_tools` and a workflow `agent({ disallowedTools })`.
+ */
+export function deniedToolNames(
+  names: string[] | undefined,
+): string[] | undefined {
+  return names?.flatMap((n) => [...new Set([n, normalizeToolName(n)])])
 }
 
 /**

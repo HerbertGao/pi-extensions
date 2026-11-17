@@ -26,6 +26,7 @@
   },
   "files": [
     "src/**/*.ts",
+    "skills/**/*",
     "examples/**/*",
     "docs/**/*.md",
     "README.md",
@@ -45,6 +46,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "ajv": "^8.20.0",
     "croner": "^10.0.1",
     "nanoid": "^5.1.16"
   },
@@ -64,15 +66,18 @@
     "extensions": [
       "./src/index.ts"
     ],
+    "skills": [
+      "./skills"
+    ],
     "video": "https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-subagents/media/demo.mp4",
     "image": "https://raw.githubusercontent.com/HerbertGao/pi-extensions/master/packages/pi-subagents/media/screenshot.png"
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.25.0",
-    "reviewedVersion": "0.25.0",
+    "version": "0.26.0",
+    "reviewedVersion": "0.26.0",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "b8efc069f05efe50b58a4b74140116c1c9a9dcc1",
+    "commit": "dbbd769781847f9c0f74ba2a8545ff33c4b26e7c",
     "trackVersion": true
   }
 }
