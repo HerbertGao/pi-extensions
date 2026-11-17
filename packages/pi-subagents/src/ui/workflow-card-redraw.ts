@@ -47,6 +47,9 @@ export class WorkflowCardRedraws {
     if (!card || card.timer || !this.isLive()) return
     const fire = () => {
       card.timer = undefined
+      // The timer was armed in fullscreen. Leaving that mode must not redeem
+      // it: a regular-mode redraw above the viewport clears scrollback.
+      if (!this.isLive()) return
       card.lastAt = Date.now()
       card.invalidate()
     }
@@ -74,6 +77,10 @@ export class WorkflowCardRedraws {
    * mode, and the launch line hides it in fullscreen.
    */
   redrawAll(): void {
-    for (const card of this.cards.values()) card.invalidate()
+    for (const card of this.cards.values()) {
+      clearTimeout(card.timer)
+      card.timer = undefined
+      card.invalidate()
+    }
   }
 }

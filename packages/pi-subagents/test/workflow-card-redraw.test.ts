@@ -60,6 +60,27 @@ describe("WorkflowCardRedraws", () => {
     expect(invalidate).not.toHaveBeenCalled()
   })
 
+  it("drops a fullscreen timer that comes due after leaving live mode", () => {
+    redraws.request("wf")
+    vi.advanceTimersByTime(100)
+    redraws.request("wf")
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    live = false
+    vi.advanceTimersByTime(TICK)
+    expect(invalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels a pending timer when the renderer changes", () => {
+    redraws.request("wf")
+    vi.advanceTimersByTime(100)
+    redraws.request("wf")
+    live = false
+    redraws.redrawAll()
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    vi.advanceTimersByTime(TICK)
+    expect(invalidate).toHaveBeenCalledTimes(2)
+  })
+
   it("flushes at settle in either renderer, cancels a pending redraw, and releases the card", () => {
     redraws.request("wf")
     redraws.request("wf")
