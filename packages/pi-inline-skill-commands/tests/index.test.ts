@@ -10,6 +10,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent"
 import { parseSkillBlock } from "@earendil-works/pi-coding-agent"
+import { CustomEditor } from "@earendil-works/pi-coding-agent"
 import piInlineSkillCommands, {
   createMidSkillAutocompleteProvider,
   expandMidSkillCommand,
@@ -102,7 +103,9 @@ test("expands a mid-text skill while leaving native start commands alone", (t) =
     filePath,
     "---\nname: test\ndescription: Test skill\n---\n\nUse the skill body.\n",
   )
-  const skills = new Map([["test", { name: "test", filePath }]])
+  const skills = new Map([
+    ["test", { name: "test", filePath, baseDir: directory }],
+  ])
 
   assert.equal(
     expandMidSkillCommand("/skill:test explain this", skills),
@@ -118,7 +121,7 @@ test("expands a mid-text skill while leaving native start commands alone", (t) =
   )
   assert.equal(
     expandMidSkillCommand("Please use /skill:test to explain this", skills),
-    `<skill name="test" location="${filePath}">\nUse the skill body.\n</skill>\n\nPlease use /skill:test to explain this`,
+    `<skill name="test" location="${filePath}">\nReferences are relative to ${directory}.\n\nUse the skill body.\n</skill>\n\nPlease use /skill:test to explain this`,
   )
 
   // Pi collapses a skill invocation only when the block starts the message.
@@ -130,8 +133,34 @@ test("expands a mid-text skill while leaving native start commands alone", (t) =
   const parsed = parseSkillBlock(expanded)
   assert.ok(parsed)
   assert.equal(parsed.name, "test")
-  assert.equal(parsed.content, "Use the skill body.")
+  assert.equal(parsed.location, filePath)
+  assert.equal(
+    parsed.content,
+    `References are relative to ${directory}.\n\nUse the skill body.`,
+  )
   assert.equal(parsed.userMessage, "Please use /skill:test to explain this")
+
+  // The command ends at any non-name character, not only whitespace.
+  for (const prompt of [
+    "Please use (/skill:test) here",
+    "Use `/skill:test` here",
+    "请使用，/skill:test，然后总结",
+    "Please use /skill:test?",
+    "Please use /skill:test.",
+  ]) {
+    const result = expandMidSkillCommand(prompt, skills)
+    assert.ok(result, prompt)
+    assert.equal(parseSkillBlock(result)?.userMessage, prompt)
+  }
+
+  // A name character after the command keeps it part of the skill name.
+  assert.equal(
+    expandMidSkillCommand("Please use /skill:testing here", skills),
+    undefined,
+  )
+
+  // A second copy of the handler must not nest another block.
+  assert.equal(expandMidSkillCommand(expanded, skills), undefined)
 })
 
 test("input handler loads session skills and transforms mid-text commands", async (t) => {
@@ -187,6 +216,13 @@ test("input handler loads session skills and transforms mid-text commands", asyn
 })
 
 test("wraps the editor trigger only at mid-text token boundaries", () => {
+  // The trigger wrapper depends on these private members; fail loudly if Pi renames them.
+  const prototype = CustomEditor.prototype as unknown as Record<string, unknown>
+  assert.equal(typeof prototype.handleInput, "function")
+  assert.equal(typeof prototype.tryTriggerAutocomplete, "function")
+  assert.equal(typeof prototype.isShowingAutocomplete, "function")
+  assert.equal(typeof prototype.getCursor, "function")
+
   let text = "Use "
   let cursor = text.length
   let triggers = 0

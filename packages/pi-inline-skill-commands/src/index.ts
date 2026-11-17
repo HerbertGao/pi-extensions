@@ -14,12 +14,14 @@ import type {
   EditorComponent,
 } from "@earendil-works/pi-tui"
 
-const MID_SKILL_TOKEN =
-  /(?:^|[\s\u3000\u00a0\u2007\u202f\u203f\u2060\ufeff，。！？；：、（）【】《》「」『』([{<`])(\/[^\s/]*)$/
-const MID_SKILL_COMMAND =
-  /(^|[\s\u3000\u00a0\u2007\u202f\u203f\u2060\ufeff，。！？；：、（）【】《》「」『』([{<`])(\/skill:([a-z0-9-]{1,64}))(?=\s|$)/
+const MID_SKILL_BOUNDARY =
+  "[\\s\\u3000\\u00a0\\u2007\\u202f\\u203f\\u2060\\ufeff，。！？；：、（）【】《》「」『』([{<`]"
+const MID_SKILL_TOKEN = new RegExp(`(?:^|${MID_SKILL_BOUNDARY})(\\/[^\\s/]*)$`)
+const MID_SKILL_COMMAND = new RegExp(
+  `(^|${MID_SKILL_BOUNDARY})(\\/skill:([a-z0-9-]{1,64}))(?![a-z0-9-])`,
+)
 
-type SkillDefinition = Pick<Skill, "name" | "filePath">
+type SkillDefinition = Pick<Skill, "name" | "filePath" | "baseDir">
 type SkillMap = ReadonlyMap<string, SkillDefinition>
 
 interface TriggerableEditor extends EditorComponent {
@@ -115,6 +117,8 @@ export function expandMidSkillCommand(
   text: string,
   skills: SkillMap,
 ): string | undefined {
+  // Idempotent: a second copy of this handler must not nest another skill block.
+  if (text.startsWith("<skill ")) return undefined
   const match = MID_SKILL_COMMAND.exec(text)
   if (!match) return undefined
 
@@ -127,9 +131,10 @@ export function expandMidSkillCommand(
 
   const content = stripFrontmatter(readFileSync(skill.filePath, "utf-8")).trim()
   // Pi collapses a skill invocation only when the block starts the message. Keep the block
-  // first and the original sentence, command included, as the user message.
-  const expansion = `<skill name="${skill.name}" location="${skill.filePath}">\n${content}\n</skill>`
-  return `${expansion}\n\n${text.trim()}`
+  // first and the original sentence, command included, as the user message. The references
+  // line matches Pi's own expansion so both paths feed the model the same skill text.
+  const block = `<skill name="${skill.name}" location="${skill.filePath}">\nReferences are relative to ${skill.baseDir}.\n\n${content}\n</skill>`
+  return `${block}\n\n${text.trim()}`
 }
 
 export function wrapMidSkillTrigger<T extends EditorComponent>(editor: T): T {
@@ -155,7 +160,8 @@ export function wrapMidSkillTrigger<T extends EditorComponent>(editor: T): T {
 }
 
 function installMidSkillTrigger(): void {
-  // SAFETY: CustomEditor has these runtime members; the private trigger is feature-checked before use.
+  // SAFETY: these members exist on the editor at runtime; the private trigger is feature-checked before use.
+  // `handleInput` is inherited from `Editor`, so this installs a new own property on the subclass prototype.
   const prototype = CustomEditor.prototype as unknown as TriggerableEditor
   if (prototype.inlineSkillCommandsTriggerInstalled) return
   wrapMidSkillTrigger(prototype)
@@ -177,7 +183,14 @@ async function loadSessionSkills(ctx: ExtensionContext): Promise<SkillMap> {
     noContextFiles: true,
   })
   await loader.reload()
-  return new Map(loader.getSkills().skills.map((skill) => [skill.name, skill]))
+  return new Map(
+    loader
+      .getSkills()
+      .skills.map((skill) => [
+        skill.name,
+        { name: skill.name, filePath: skill.filePath, baseDir: skill.baseDir },
+      ]),
+  )
 }
 
 export default function piInlineSkillCommands(pi: ExtensionAPI): void {
