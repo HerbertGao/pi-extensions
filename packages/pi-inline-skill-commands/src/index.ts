@@ -17,9 +17,24 @@ import type {
 const MID_SKILL_BOUNDARY =
   "[\\s\\u3000\\u00a0\\u2007\\u202f\\u203f\\u2060\\ufeff，。！？；：、（）【】《》「」『』([{<`]"
 const MID_SKILL_TOKEN = new RegExp(`(?:^|${MID_SKILL_BOUNDARY})(\\/[^\\s/]*)$`)
-const MID_SKILL_COMMAND = new RegExp(
-  `(^|${MID_SKILL_BOUNDARY})(\\/skill:([a-z0-9-]{1,64}))(?![a-z0-9-])`,
-)
+const MID_SKILL_COMMAND = new RegExp(`(^|${MID_SKILL_BOUNDARY})\\/skill:`)
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Match only names Pi actually loaded, longest first, so `/skill:test_x` never falls back
+ * to a shorter `test`. The lookahead still allows sentence punctuation (`.`, `,`, `，`).
+ */
+function buildSkillCommandPattern(skills: SkillMap): RegExp {
+  const names = [...skills.keys()]
+    .toSorted((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+  return new RegExp(
+    `(^|${MID_SKILL_BOUNDARY})(\\/skill:(${names.join("|")}))(?!\\.?[A-Za-z0-9_-])`,
+  )
+}
 
 type SkillDefinition = Pick<Skill, "name" | "filePath" | "baseDir">
 type SkillMap = ReadonlyMap<string, SkillDefinition>
@@ -118,8 +133,8 @@ export function expandMidSkillCommand(
   skills: SkillMap,
 ): string | undefined {
   // Idempotent: a second copy of this handler must not nest another skill block.
-  if (text.startsWith("<skill ")) return undefined
-  const match = MID_SKILL_COMMAND.exec(text)
+  if (text.startsWith("<skill ") || skills.size === 0) return undefined
+  const match = buildSkillCommandPattern(skills).exec(text)
   if (!match) return undefined
 
   const boundary = match[1] ?? ""
@@ -160,8 +175,8 @@ export function wrapMidSkillTrigger<T extends EditorComponent>(editor: T): T {
 }
 
 function installMidSkillTrigger(): void {
-  // SAFETY: these members exist on the editor at runtime; the private trigger is feature-checked before use.
-  // `handleInput` is inherited from `Editor`, so this installs a new own property on the subclass prototype.
+  // SAFETY: `handleInput` is an own property of CustomEditor.prototype and is replaced here;
+  // the trigger members come from Editor.prototype and are feature-checked before use.
   const prototype = CustomEditor.prototype as unknown as TriggerableEditor
   if (prototype.inlineSkillCommandsTriggerInstalled) return
   wrapMidSkillTrigger(prototype)

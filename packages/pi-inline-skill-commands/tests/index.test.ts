@@ -153,11 +153,32 @@ test("expands a mid-text skill while leaving native start commands alone", (t) =
     assert.equal(parseSkillBlock(result)?.userMessage, prompt)
   }
 
-  // A name character after the command keeps it part of the skill name.
-  assert.equal(
-    expandMidSkillCommand("Please use /skill:testing here", skills),
-    undefined,
-  )
+  // A name character after the command keeps it part of the skill name, so an unknown
+  // longer token is a no-op instead of silently expanding a shorter prefix skill.
+  for (const prompt of [
+    "Please use /skill:testing here",
+    "Please use /skill:test_x here",
+    "Please use /skill:test.notes here",
+  ]) {
+    assert.equal(expandMidSkillCommand(prompt, skills), undefined, prompt)
+  }
+
+  // Loaded names win over a shorter prefix, longest first.
+  const longerFiles = ["test_x", "test.notes"]
+  const withLonger = new Map(skills)
+  for (const name of longerFiles) {
+    const path = join(directory, `${name}.md`)
+    writeFileSync(path, `---\nname: ${name}\ndescription: d\n---\nBody.\n`)
+    withLonger.set(name, { name, filePath: path, baseDir: directory })
+  }
+  for (const name of longerFiles) {
+    const result = expandMidSkillCommand(
+      `Please use /skill:${name} here`,
+      withLonger,
+    )
+    assert.ok(result)
+    assert.equal(parseSkillBlock(result)?.name, name)
+  }
 
   // A second copy of the handler must not nest another block.
   assert.equal(expandMidSkillCommand(expanded, skills), undefined)
@@ -190,6 +211,16 @@ test("input handler loads session skills and transforms mid-text commands", asyn
     },
   } as unknown as ExtensionAPI
   piInlineSkillCommands(pi)
+
+  // A second install (standalone package plus aggregate) chains a second handler.
+  let chainedHandler: InputHandler | undefined
+  const secondPi = {
+    on: (event: string, handler: unknown) => {
+      if (event === "input") chainedHandler = handler as InputHandler
+    },
+  } as unknown as ExtensionAPI
+  piInlineSkillCommands(secondPi)
+
   const ctx = {
     cwd: directory,
     hasUI: false,
@@ -209,6 +240,13 @@ test("input handler loads session skills and transforms mid-text commands", asyn
     /<\/skill>\n\nPlease use \/skill:test to explain this$/,
   )
   assert.ok(parseSkillBlock(result.text))
+
+  assert.ok(chainedHandler)
+  assert.equal(
+    await chainedHandler({ text: result.text }, ctx),
+    undefined,
+    "second handler must not nest another block",
+  )
   assert.equal(
     await inputHandler({ text: "/skill:test explain this" }, ctx),
     undefined,
@@ -218,6 +256,7 @@ test("input handler loads session skills and transforms mid-text commands", asyn
 test("wraps the editor trigger only at mid-text token boundaries", () => {
   // The trigger wrapper depends on these private members; fail loudly if Pi renames them.
   const prototype = CustomEditor.prototype as unknown as Record<string, unknown>
+  assert.equal(Object.hasOwn(prototype, "handleInput"), true)
   assert.equal(typeof prototype.handleInput, "function")
   assert.equal(typeof prototype.tryTriggerAutocomplete, "function")
   assert.equal(typeof prototype.isShowingAutocomplete, "function")
