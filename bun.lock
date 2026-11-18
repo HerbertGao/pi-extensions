@@ -67,7 +67,7 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.11.13",
+      "version": "2026.11.14",
       "dependencies": {
         "@ast-grep/cli": "0.51.1",
         "@ast-grep/napi": "^0.51.0",
@@ -76,8 +76,8 @@
         "@herbertgao/pi-bark": "0.2.2",
         "@herbertgao/pi-cc-extensions": "1.0.20-local.1",
         "@herbertgao/pi-impeccable": "0.5.0",
-        "@herbertgao/pi-inline-skill-commands": "0.1.0",
-        "@herbertgao/pi-subagents": "0.25.0-local.1",
+        "@herbertgao/pi-inline-skill-commands": "0.1.1",
+        "@herbertgao/pi-subagents": "0.26.0-local.1",
         "@herbertgao/sol-pi": "0.4.3",
         "@juicesharp/rpiv-ask-user-question": "2.15.0",
         "@juicesharp/rpiv-config": "^2.15.0",
@@ -109,7 +109,7 @@
         "nanoid": "^5.0.0",
         "p-limit": "^6.1.0",
         "pi-antigravity": "0.14.0",
-        "pi-commandcode-provider": "0.8.4",
+        "pi-commandcode-provider": "0.8.6",
         "pi-lens": "4.5.1",
         "pi-next-cue": "1.0.8",
         "pi-provider-qoder": "0.6.12",
@@ -144,7 +144,7 @@
     },
     "packages/pi-inline-skill-commands": {
       "name": "@herbertgao/pi-inline-skill-commands",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "@types/node": "^24",
         "typescript": "^5.9.3",
@@ -156,7 +156,7 @@
     },
     "packages/pi-subagents": {
       "name": "@herbertgao/pi-subagents",
-      "version": "0.25.0-local.1",
+      "version": "0.26.0-local.1",
       "dependencies": {
         "ajv": "^8.20.0",
         "croner": "^10.0.1",
@@ -1281,7 +1281,7 @@
 
     "pi-antigravity": ["pi-antigravity@0.14.0", "", { "dependencies": { "@mixmark-io/domino": "^2.2.0", "turndown": "^7.2.4", "turndown-plugin-gfm": "^1.0.2", "undici": "^8.12.3" }, "peerDependencies": { "@earendil-works/pi-ai": ">=0.80.0", "@earendil-works/pi-coding-agent": ">=0.80.0", "typebox": "*" } }, "sha512-fpGJemJk/CHGzV88uAj3OfTmWA28OGIEDTKuT8MM8jwQnTH30WFS3sbnRbXdMlq/I56u/j+JNyUogs1KcIZ4oA=="],
 
-    "pi-commandcode-provider": ["pi-commandcode-provider@0.8.4", "", { "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"] }, "sha512-vDV87dlR4j9zl99eP5fdKBdTJsMr+tRDPODHLpZv1lZRI+HP3vhFXJubKX1ttZyGietZYI4bJvQWx+rlFdWNoQ=="],
+    "pi-commandcode-provider": ["pi-commandcode-provider@0.8.6", "", { "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"] }, "sha512-sIKabEyTsXbwlSs6FNSnRaGpImkGLCj774lQHHYQE8aTAhdtMjAXNrkYjAKKYjhxyryfZqozQfvAZoDKAh2bSQ=="],
 
     "pi-lens": ["pi-lens@4.5.1", "", { "dependencies": { "@ast-grep/cli": "0.51.1", "@ast-grep/napi": "^0.51.0", "js-yaml": "^5.2.2", "minimatch": "^11.0.4", "pidusage": "^4.0.1", "vscode-jsonrpc": "^10.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-zuHH/3ce37UTlJGCJzjawrsjOXC8Z9w4BJ/UahtlqE4Q6OB6k6djMwdfCcVrwfJuOcwXLROTVPjyQY9NXpfPcw=="],
 

@@ -21,12 +21,41 @@ import {
 
 // renderer
 import claudeCodeStyle, { getCompactThinkingConfig } from "./renderer/index.ts";
-import markdownEnhance from "./renderer/markdown-enhance.ts";
+import { MARKDOWN_ENHANCE_MESSAGE_TYPES, transformMarkdown } from "./renderer/markdown-enhance.ts";
+import tableCopy from "./renderer/table-copy.ts";
 import {
 	COMPACT_MODE_PATCH_KEY,
 	COMPACT_THINKING_OWNER,
 	patchRegistry,
 } from "./utils/patch-keys.ts";
+
+/**
+ * One registration per extension: table provenance must not replace enhancement.
+ * Pi 1.5.1 is the first release whose types accept the message-type option.
+ * This workspace still typechecks against Pi 1.5.0, so the call is cast.
+ * 1.5.1+ hosts honor the option; 1.5.0 ignores it.
+ */
+export function configureMarkdownRendering(
+	pi: ExtensionAPI,
+	{
+		enableMarkdownEnhance,
+		enableTableCopy,
+	}: { enableMarkdownEnhance: boolean; enableTableCopy: boolean },
+): void {
+	const copy = enableTableCopy ? tableCopy(pi) : undefined;
+	if (!enableMarkdownEnhance && !copy) return;
+	const registerMarkdownTransformer = pi.registerMarkdownTransformer as (
+		transformer: Parameters<ExtensionAPI["registerMarkdownTransformer"]>[0],
+		options?: { messageTypes?: readonly string[] },
+	) => void;
+	registerMarkdownTransformer(
+		(markdown, context) => {
+			copy?.noteSource(context);
+			return enableMarkdownEnhance ? transformMarkdown(markdown, context) : markdown;
+		},
+		{ messageTypes: enableMarkdownEnhance ? MARKDOWN_ENHANCE_MESSAGE_TYPES : ["assistant"] },
+	);
+}
 
 export default function (pi: ExtensionAPI): void {
 	// /reload 或会话切换接手：先释放旧一代 compact 外层，再停旧 thinking
@@ -50,6 +79,7 @@ export default function (pi: ExtensionAPI): void {
 
 	// Renderer 必须先注册 lifecycle handler，shutdown 时才能先解开外层 compact
 	// patch，thinking 随后才能恢复原生原型；bridge 转发给稍后安装的 controller。
+	// 两个 markdown 功能独立开关，但共享同一个 transformer 注册槽位。
 	let compactThinking: CompactThinkingController | undefined;
 	const compactThinkingQuery: CompactThinkingController = {
 		updateConfig: (next) => compactThinking?.updateConfig(next),
@@ -60,7 +90,7 @@ export default function (pi: ExtensionAPI): void {
 		getThinkingAnimationFrame: () => compactThinking?.getThinkingAnimationFrame?.() ?? 0,
 		setCompactSummaryActive: (active) => compactThinking?.setCompactSummaryActive?.(active),
 	};
-	if (config.enableMarkdownEnhance) markdownEnhance(pi);
+	configureMarkdownRendering(pi, config);
 	claudeCodeStyle(pi, undefined, compactThinkingQuery);
 	compactThinking = installCompactThinking(pi, getCompactThinkingConfig());
 

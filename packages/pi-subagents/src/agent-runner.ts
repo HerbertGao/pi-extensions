@@ -1314,17 +1314,26 @@ export async function runAgent(
     }
   }
 
-  // Resolve model: explicit option > config.model > parent model
+  // A reopened conversation carries the model and thinking level it ran with,
+  // and createAgentSession restores both when none is passed — so a reopen keeps
+  // them, as a live resume keeps its session's (#462). Only an explicit option
+  // outranks them; the agent file and the parent do not.
+  const reopening = options.resumeSessionFile !== undefined
+
+  // Resolve model: explicit option > (reopen: the session's own) > config.model > parent model
   const model =
     options.model ??
-    resolveDefaultModel(ctx.model, ctx.modelRegistry, agentConfig?.model)
+    (reopening
+      ? undefined
+      : resolveDefaultModel(ctx.model, ctx.modelRegistry, agentConfig?.model))
 
-  // Resolve thinking level: explicit option > agent config > parent session level.
+  // Resolve thinking level: explicit option > (reopen: the session's own) > agent config > parent session level.
   // Without the parent step, an unset level falls through to pi's
   // defaultThinkingLevel (e.g. "max") instead of matching the spawning session.
   // Same idiom as mention-clone.ts.
   const thinkingLevel =
-    options.thinkingLevel ?? agentConfig?.thinking ?? ctx.thinkingLevel
+    options.thinkingLevel ??
+    (reopening ? undefined : (agentConfig?.thinking ?? ctx.thinkingLevel))
 
   // The `agent({ schema })` contract: this child reports its answer by calling
   // StructuredOutput, and `structuredJson` below is what the caller reads. The
@@ -1536,9 +1545,13 @@ export async function runAgent(
     sessionOpts.thinkingLevel = thinkingLevel
   }
 
-  const { session } = await runInChildSessionContext(() =>
+  const { session, modelFallbackMessage } = await runInChildSessionContext(() =>
     createAgentSession(sessionOpts),
   )
+  // Pi could not use the model the reopened conversation recorded and fell back
+  // to its default. Warned the way pi warns at its own session start, and the
+  // way an out-of-scope model is warned: to the user, not the model.
+  if (modelFallbackMessage) ctx.ui.notify(modelFallbackMessage, "warning")
 
   const baseSessionName = agentConfig?.name ?? type
   session.setSessionName(

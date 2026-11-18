@@ -57,6 +57,7 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "enableWorkingMessage": true,            // Working... bottom token/elapsed
   "enableAliases": true,                   // /clear, /exit aliases
   "enableMarkdownEnhance": true,           // markdown pass: Mermaid dialects and circled-number conversion; false hands it to other extensions
+  "enableTableCopy": false,                // TSV / CSV / Markdown table copy (Fullscreen assistant bodies); enable in /ccstyle Features, restart required
   "enableEditorPrefix": true,              // editor ❯ prefix
 
   // ui
@@ -118,7 +119,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Compatibility
 
-- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.20 shows the date with a round summary's completion time, seals that summary when an outer tool appears, and reuses unchanged expanded-card rows. 1.0.19 appends the completion time to a round summary and counts a write together with a later edit of the same file. After `/new` or `/reload` resets the editor, the old editor is not written back. 1.0.18 drops the blank rail between Input and Output on an expanded card. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. 1.0.17 still passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
+- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.21 leaves whole-table copy off until `/ccstyle` Features turns it on. It applies to fullscreen assistant bodies and shares one transformer slot with Markdown enhancement. 1.0.20 shows the date with a round summary's completion time, seals that summary when an outer tool appears, and reuses unchanged expanded-card rows. 1.0.19 appends the completion time to a round summary and counts a write together with a later edit of the same file. After `/new` or `/reload` resets the editor, the old editor is not written back. 1.0.18 drops the blank rail between Input and Output on an expanded card. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. 1.0.17 still passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
 
 ## Recommended companions
 
@@ -130,7 +131,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.20 (MIT), upstream baseline [`1c3a426`](https://github.com/minuque/pi-cc-extensions/commit/1c3a42614709c1b14a836b669359771c71939200), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.21 (MIT), upstream baseline [`9a0ecdd`](https://github.com/minuque/pi-cc-extensions/commit/9a0ecdd29f9cecca9c34ae591b0de85896f2c07e), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

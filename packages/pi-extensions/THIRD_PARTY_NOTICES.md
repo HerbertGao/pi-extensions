@@ -187,7 +187,7 @@ THE SOFTWARE.
 
 ## `pi-commandcode-provider`
 
-The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.4 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.4` at commit [`3b60d881ae9c9f30846410fe9161e490cd34acc7`](https://github.com/patlux/pi-commandcode-provider/commit/3b60d881ae9c9f30846410fe9161e490cd34acc7). npm publishes no gitHead; the published tarball matches that tag.
+The aggregate bundles [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider) version 0.8.6 under its original MIT license. The imported npm package corresponds to upstream tag `v0.8.6` at commit [`c8c12bdc0984ca8b46f45cc02969560da46e00fe`](https://github.com/patlux/pi-commandcode-provider/commit/c8c12bdc0984ca8b46f45cc02969560da46e00fe). npm publishes no gitHead; the published tarball matches that tag.
 
 MIT License
 

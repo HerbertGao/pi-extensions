@@ -54,11 +54,13 @@ import {
   steerAgent,
 } from "./agent-runner.js"
 import {
-  BUILTIN_TOOL_NAMES,
+  formatAgentTypeList,
   getAgentConfig,
   getAvailableTypes,
   getConfig,
   getFallbackSubagent,
+  getModelLabelFromConfig,
+  getToolDescriptionMode,
   isDefaultsDisabled,
   NO_FALLBACK,
   registerAgents,
@@ -66,6 +68,7 @@ import {
   resolveType,
   setDefaultsDisabled,
   setFallbackSubagent,
+  setToolDescriptionMode,
 } from "./agent-types.js"
 import { inChildSessionContext } from "./child-context.js"
 import { CompletionOutbox, NOTIFICATION_HOLD_MS } from "./completion-outbox.js"
@@ -140,7 +143,6 @@ import {
   partialOutputSuffix,
 } from "./status-note.js"
 import {
-  type AgentConfig,
   type AgentInvocation,
   type AgentMentionMode,
   type AgentRecord,
@@ -473,43 +475,6 @@ function buildNotificationDetails(
         : record.result
       : "No output.",
   }
-}
-
-/**
- * Format an agent's tool scope for the Agent tool description.
- *
- * This suffix describes BUILT-IN scope only — extension tools are resolved when
- * the agent runs (extensions can register asynchronously), so they cannot be
- * enumerated while the description is being built. That is why an agent with
- * `tools: "*, ext:mcp/search"` renders "*" and always has.
- *
- * Two distinctions matter, both of them capability claims the orchestrator acts on:
- *
- * - absent vs empty. `builtinToolNames: undefined` means the agent never narrowed
- *   its tools (the shipped defaults); `[]` is what `tools: none` and an `ext:`-only
- *   `tools:` parse to, and the runtime really does hand those agents no built-ins.
- *   Rendering both "*" tells the orchestrator a tool-less agent can run `bash`.
- * - empty-with-extensions vs empty-without. Zero built-ins does NOT imply zero
- *   tools: `tools: none` alongside `extensions:` still surfaces every extension
- *   tool (see test/fixtures/.pi/agents/tools-none.md, which expects three). Calling
- *   that "none" understates the agent instead of overstating it — better, but still
- *   wrong, and it would route work away from the only agent able to do it. "none"
- *   is therefore reserved for agents that genuinely can call nothing: `isolated`
- *   agents and those with `extensions: false`.
- */
-export function formatToolsSuffix(cfg: AgentConfig | undefined): string {
-  const tools = cfg?.builtinToolNames
-  if (!tools) return "*"
-  if (tools.length === 0) {
-    // `isolated` overrides extensions to false in the runner, so both mean the
-    // agent has no extension tools either — and then it truly has nothing.
-    const noExtensionTools = cfg?.isolated === true || cfg?.extensions === false
-    return noExtensionTools ? "none" : "no built-ins, extension tools only"
-  }
-  const isFullSet =
-    tools.length === BUILTIN_TOOL_NAMES.length &&
-    BUILTIN_TOOL_NAMES.every((t) => tools.includes(t))
-  return isFullSet ? "*" : tools.join(", ")
 }
 
 /** CLI flag that runs a workflow script at session start. */
@@ -1817,17 +1782,6 @@ export default function (pi: ExtensionAPI) {
     reloadCustomAgents() // re-register with new setting
   }
 
-  // ---- Agent tool description mode ----
-  // "full" (default) keeps the rich Claude Code-style description; "compact"
-  // swaps in a ~75% smaller one for small/local models (#91). Read once at
-  // tool registration — flipping it applies on the next pi session.
-  let toolDescriptionMode: ToolDescriptionMode = "full"
-  function getToolDescriptionMode(): ToolDescriptionMode {
-    return toolDescriptionMode
-  }
-  function setToolDescriptionMode(mode: ToolDescriptionMode): void {
-    toolDescriptionMode = mode
-  }
   let workflowToolExposure: WorkflowToolExposureMode = "inline"
   function getWorkflowToolExposure(): WorkflowToolExposureMode {
     return workflowToolExposure
@@ -2018,44 +1972,10 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_end", () => outbox.onAgentEnd())
   pi.on("agent_settled", () => outbox.onAgentEnd())
 
-  /** Build the full type list text dynamically from available agents only. */
-  const buildTypeListText = () => {
-    const available = getAvailableTypes()
-
-    return available
-      .map((name) => {
-        const cfg = getAgentConfig(name)
-        const modelSuffix = cfg?.model
-          ? ` (${getModelLabelFromConfig(cfg.model)})`
-          : ""
-        const toolsSuffix = ` (Tools: ${formatToolsSuffix(cfg)})`
-        return `- ${name}: ${cfg?.description ?? name}${modelSuffix}${toolsSuffix}`
-      })
-      .join("\n")
-  }
-
-  /** First sentence of an agent description — for the compact type list. */
-  const firstSentence = (text: string): string => {
-    const match = text.match(/^.*?[.!?](?=\s|$)/s)
-    return (match ? match[0] : text).replace(/\s+/g, " ").trim()
-  }
-
-  /** Compact type list: one line per agent, first sentence only. */
+  const buildTypeListText = () =>
+    formatAgentTypeList(getAvailableTypes(), getAgentConfig, false)
   const buildCompactTypeListText = () =>
-    getAvailableTypes()
-      .map((name) => {
-        const cfg = getAgentConfig(name)
-        return `- ${name}: ${firstSentence(cfg?.description ?? name)} (Tools: ${formatToolsSuffix(cfg)})`
-      })
-      .join("\n")
-
-  /** Derive a short model label from a model string. */
-  function getModelLabelFromConfig(model: string): string {
-    // Strip provider prefix (e.g. "anthropic/claude-sonnet-4-6" → "claude-sonnet-4-6")
-    const name = model.includes("/") ? model.split("/").pop()! : model
-    // Strip trailing date suffix (e.g. "claude-haiku-4-5-20251001" → "claude-haiku-4-5")
-    return name.replace(/-\d{8}$/, "")
-  }
+    formatAgentTypeList(getAvailableTypes(), getAgentConfig, true)
 
   // Apply persisted settings on startup and emit `subagents:settings_loaded`.
   // Global + project merged; missing → defaults; corrupt file emits a warning
@@ -2520,8 +2440,9 @@ Terse command-style prompts produce shallow, generic work.
       // and picks up the widget, fleet row, transcript, join batching and
       // completion notification unchanged. Only the prompt, the turn budget and
       // run_in_background carry over from the call: like a live resume, it
-      // ignores `subagent_type`, model and the rest, and runs under the agent
-      // type's current definition.
+      // ignores `subagent_type`, model, thinking and the rest. It runs under the
+      // agent type's current prompt and tools, on the model and thinking level
+      // its own session recorded (#462) — see the model resolution below.
       // `schedule` is left to its own branch, which refuses the combination.
       const saved =
         callParams.resume !== undefined &&
@@ -2606,8 +2527,11 @@ Terse command-style prompts produce shallow, generic work.
       )
 
       // Resolve model from agent config first; tool-call params only fill gaps.
-      let model = ctx.model
-      if (resolvedConfig.modelInput) {
+      // A reopen resolves none: runAgent leaves the model and thinking level to
+      // the reopened session, which restores the ones the agent ran with. The
+      // agent file and the parent would both override them (#462).
+      let model = reopenOptions ? undefined : ctx.model
+      if (resolvedConfig.modelInput && !reopenOptions) {
         const resolved = resolveModel(
           resolvedConfig.modelInput,
           ctx.modelRegistry,
@@ -2635,7 +2559,7 @@ Terse command-style prompts produce shallow, generic work.
       if (scopeVerdict.kind === "warn")
         ctx.ui.notify(scopeVerdict.message, "warning")
 
-      const thinking = resolvedConfig.thinking
+      const thinking = reopenOptions ? undefined : resolvedConfig.thinking
       const inheritContext = resolvedConfig.inheritContext
       const runInBackground = resolvedConfig.runInBackground
       const isolated = resolvedConfig.isolated
