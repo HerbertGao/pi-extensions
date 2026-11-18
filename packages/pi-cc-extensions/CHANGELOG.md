@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.21-local.1
+
+### Patch Changes
+
+- [#392](https://github.com/HerbertGao/pi-extensions/pull/392) [`e233ef6`](https://github.com/HerbertGao/pi-extensions/commit/e233ef6cee8184ff322521eae67bfa2b57bf483d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-cc-extensions 1.0.21. Whole-table copy stays off until /ccstyle Features turns it on, and then copies a fullscreen assistant table as TSV, CSV, or Markdown. Markdown enhancement shares that transformer slot. Regular mode still does not enable terminal mouse reporting.
+
 ## 1.0.20-local.1
 
 ### Patch Changes

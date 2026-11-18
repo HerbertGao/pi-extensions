@@ -1,5 +1,17 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.15
+
+### Patch Changes
+
+- [#392](https://github.com/HerbertGao/pi-extensions/pull/392) [`e233ef6`](https://github.com/HerbertGao/pi-extensions/commit/e233ef6cee8184ff322521eae67bfa2b57bf483d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-commandcode-provider 0.8.6. The capability snapshot is command-code@1.89.2, with reviewed prices for Qwen4 Max, Hy4 Flash, and Flint. GLM-5.3 thinking that arrives only as plaintext encrypted_content is shown; other models keep that field hidden.
+
+- [#392](https://github.com/HerbertGao/pi-extensions/pull/392) [`e233ef6`](https://github.com/HerbertGao/pi-extensions/commit/e233ef6cee8184ff322521eae67bfa2b57bf483d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin graphifyy 0.9.112. The CLI stays outside the npm aggregate. Warm AST caches rebuild. Python stays on >=3.11,<3.15. The Pi skill path is unchanged.
+
+- Updated dependencies [[`e233ef6`](https://github.com/HerbertGao/pi-extensions/commit/e233ef6cee8184ff322521eae67bfa2b57bf483d), [`e233ef6`](https://github.com/HerbertGao/pi-extensions/commit/e233ef6cee8184ff322521eae67bfa2b57bf483d)]:
+  - @herbertgao/pi-cc-extensions@1.0.20
+  - @herbertgao/pi-subagents@0.26.0
+
 ## 2026.11.14
 
 ### Patch Changes
