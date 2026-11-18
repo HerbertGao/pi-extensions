@@ -57,6 +57,7 @@ pi install git:github.com/HerbertGao/pi-extensions
   "enableWorkingMessage": true,            // Working... 底部 token/耗时
   "enableAliases": true,                   // /clear、/exit 别名
   "enableMarkdownEnhance": true,           // markdown 转换：Mermaid 方言渲染、圈数字转半角括号；false 让位给其他扩展
+  "enableTableCopy": false,                // TSV / CSV / Markdown 整表复制（Fullscreen 助手正文）；/ccstyle Features 开启，重启生效
   "enableEditorPrefix": true,              // 输入框 ❯ 前缀
 
   // ui
@@ -118,7 +119,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 兼容性
 
-- Node.js `>=22.19.0`；monorepo 的类型检查使用 Pi `1.5.0`，发布包的 Pi peer 版本保持 `*`。1.0.20 的回合摘要完成时刻带上日期，外层工具一出现就封口，展开卡底色在内容没变时复用上一帧。1.0.19 在回合摘要末尾追加完成时刻，并把同一文件的 write 与后续 edit 计为一次。`/new` 或 `/reload` 重置输入框后不再写回旧编辑器。1.0.18 去掉展开卡里 Input 与 Output 之间的空 rail 行。分组展开卡里的内联图片与 Output 正文对齐，全屏时图片行保留卡片底色。1.0.17 仍会把注入式按键提示、`messageTypes` 和等待输入状态交给支持它们的 Pi 1.5.x。
+- Node.js `>=22.19.0`；monorepo 的类型检查使用 Pi `1.5.0`，发布包的 Pi peer 版本保持 `*`。1.0.21 默认关闭整表复制，可在 `/ccstyle` Features 里打开，只作用于全屏助手正文，并和 Markdown 增强共用同一个 transformer 槽位。1.0.20 的回合摘要完成时刻带上日期，外层工具一出现就封口，展开卡底色在内容没变时复用上一帧。1.0.19 在回合摘要末尾追加完成时刻，并把同一文件的 write 与后续 edit 计为一次。`/new` 或 `/reload` 重置输入框后不再写回旧编辑器。1.0.18 去掉展开卡里 Input 与 Output 之间的空 rail 行。分组展开卡里的内联图片与 Output 正文对齐，全屏时图片行保留卡片底色。1.0.17 仍会把注入式按键提示、`messageTypes` 和等待输入状态交给支持它们的 Pi 1.5.x。
 
 ## 推荐搭配
 
@@ -130,7 +131,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.20（MIT），上游基线 [`1c3a426`](https://github.com/minuque/pi-cc-extensions/commit/1c3a42614709c1b14a836b669359771c71939200)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.21（MIT），上游基线 [`9a0ecdd`](https://github.com/minuque/pi-cc-extensions/commit/9a0ecdd29f9cecca9c34ae591b0de85896f2c07e)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

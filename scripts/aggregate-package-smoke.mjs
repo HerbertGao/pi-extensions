@@ -2806,7 +2806,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   if (
     !tifanNotices.includes("`pi-commandcode-provider`") ||
     !tifanNotices.includes("Copyright (c) 2025 Pat Woz") ||
-    !tifanNotices.includes("3b60d881ae9c9f30846410fe9161e490cd34acc7")
+    !tifanNotices.includes("c8c12bdc0984ca8b46f45cc02969560da46e00fe")
   ) {
     throw new Error("Aggregate Command Code provider notice is incomplete")
   }
@@ -3638,7 +3638,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const { MODEL_COSTS, PRICING_LAST_VERIFIED } = await commandCodeJiti.import(
     join(dirname(commandCodeEntry), "src/pricing.ts"),
   )
-  assert.equal(PRICING_LAST_VERIFIED, "2026-11-13")
+  assert.equal(PRICING_LAST_VERIFIED, "2026-11-17")
   assert.deepEqual(MODEL_COSTS["claude-fable-5-2"], {
     input: 8,
     output: 40,
@@ -3665,9 +3665,32 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     cacheRead: 0,
     cacheWrite: 0,
   })
-  const { rewriteResponsesBody } = await commandCodeJiti.import(
-    join(dirname(commandCodeEntry), "src/responses-compat.ts"),
-  )
+  assert.deepEqual(MODEL_COSTS["Qwen/Qwen4-Max"], {
+    input: 1.5,
+    output: 4.5,
+    cacheRead: 0.075,
+    cacheWrite: 1.875,
+  })
+  assert.deepEqual(MODEL_COSTS["tencent/hy4-flash"], {
+    input: 0.07,
+    output: 0.281,
+    cacheRead: 0.003,
+    cacheWrite: 0,
+  })
+  assert.deepEqual(MODEL_COSTS["recursive/flint-v1.0:free"], {
+    input: 0,
+    output: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+  })
+  const { modelWireTraits, rewriteResponsesBody } =
+    await commandCodeJiti.import(
+      join(dirname(commandCodeEntry), "src/responses-compat.ts"),
+    )
+  const { normalizeCommandCodeResponsesResponse } =
+    await commandCodeJiti.import(
+      join(dirname(commandCodeEntry), "src/responses-stream.ts"),
+    )
   const glmBody = JSON.stringify({
     model: "zai-org/GLM-5.3",
     input: [
@@ -3717,6 +3740,54 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   })
   assert.equal(rewriteResponsesBody(otherBody), otherBody)
   assert.equal(rewriteResponsesBody("not-json"), "not-json")
+  assert.deepEqual(modelWireTraits("zai-org/GLM-5.3"), {
+    plaintextReasoningContent: true,
+  })
+  assert.deepEqual(modelWireTraits("mistral/mistral-large-4"), {
+    plaintextReasoningContent: false,
+  })
+  const glmThought = "Count the r's."
+  const glmDone = {
+    type: "response.output_item.done",
+    output_index: 0,
+    item: {
+      id: "rs_glm",
+      type: "reasoning",
+      summary: [],
+      encrypted_content: glmThought,
+    },
+  }
+  const glmFrame = `event: response.output_item.done\ndata: ${JSON.stringify(glmDone)}\n\n`
+  const glmHeaders = { "content-type": "text/event-stream" }
+  const shown = await normalizeCommandCodeResponsesResponse(
+    new Response(glmFrame, { headers: glmHeaders }),
+    undefined,
+    modelWireTraits("zai-org/GLM-5.3"),
+  ).text()
+  assert.match(shown, /event: response\.reasoning_text\.delta/)
+  assert.ok(shown.includes(glmThought))
+  assert.ok(shown.endsWith(glmFrame))
+  const hidden = await normalizeCommandCodeResponsesResponse(
+    new Response(glmFrame, { headers: glmHeaders }),
+    undefined,
+    modelWireTraits("claude-fable-5-2"),
+  ).text()
+  assert.equal(hidden, glmFrame)
+  const summarizedFrame = `event: response.output_item.done\ndata: ${JSON.stringify(
+    {
+      ...glmDone,
+      item: {
+        ...glmDone.item,
+        summary: [{ type: "summary_text", text: "host renders this" }],
+      },
+    },
+  )}\n\n`
+  const kept = await normalizeCommandCodeResponsesResponse(
+    new Response(summarizedFrame, { headers: glmHeaders }),
+    undefined,
+    { plaintextReasoningContent: true },
+  ).text()
+  assert.equal(kept, summarizedFrame)
   const {
     COMMAND_CODE_CLI_VERSION,
     MODEL_EFFORTS,
@@ -3726,7 +3797,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   } = await commandCodeJiti.import(
     join(dirname(commandCodeEntry), "src/commandcode-catalog.ts"),
   )
-  assert.equal(COMMAND_CODE_CLI_VERSION, "1.89.1")
+  assert.equal(COMMAND_CODE_CLI_VERSION, "1.89.2")
   assert.deepEqual(
     MODEL_INPUT_MODALITIES["thinkingmachines/inkling-2-small:free"],
     ["text", "image"],
@@ -3772,6 +3843,35 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   assert.equal(
     MODEL_MAX_OUTPUT_TOKENS["thinkingmachines/inkling-2-small:free"],
     131_072,
+  )
+  assert.deepEqual(MODEL_INPUT_MODALITIES["Qwen/Qwen4-Max"], ["text", "image"])
+  assert.deepEqual(MODEL_INPUT_MODALITIES["tencent/hy4-flash"], [
+    "text",
+    "image",
+  ])
+  assert.equal(
+    Object.hasOwn(MODEL_INPUT_MODALITIES, "recursive/flint-v1.0:free"),
+    false,
+  )
+  assert.equal(MODEL_REASONING["Qwen/Qwen4-Max"], true)
+  assert.equal(MODEL_REASONING["tencent/hy4-flash"], true)
+  assert.equal(MODEL_REASONING["recursive/flint-v1.0:free"], true)
+  assert.deepEqual(MODEL_EFFORTS["Qwen/Qwen4-Max"], [
+    "off",
+    "low",
+    "high",
+    "xhigh",
+  ])
+  assert.deepEqual(MODEL_EFFORTS["tencent/hy4-flash"], ["off", "high"])
+  assert.equal(Object.hasOwn(MODEL_EFFORTS, "recursive/flint-v1.0:free"), false)
+  assert.equal(Object.hasOwn(MODEL_MAX_OUTPUT_TOKENS, "Qwen/Qwen4-Max"), false)
+  assert.equal(
+    Object.hasOwn(MODEL_MAX_OUTPUT_TOKENS, "tencent/hy4-flash"),
+    false,
+  )
+  assert.equal(
+    Object.hasOwn(MODEL_MAX_OUTPUT_TOKENS, "recursive/flint-v1.0:free"),
+    false,
   )
   for (const retiredId of ["reflection/beam:free", "stealth/crouton-alpha"]) {
     assert.equal(Object.hasOwn(MODEL_INPUT_MODALITIES, retiredId), false)
