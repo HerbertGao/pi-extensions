@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.1-local.1
+
+### Patch Changes
+
+- [#392](https://github.com/HerbertGao/pi-extensions/pull/392) [`e233ef6`](https://github.com/HerbertGao/pi-extensions/commit/e233ef6cee8184ff322521eae67bfa2b57bf483d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay upstream pi-subagents 0.26.1. Reopening an agent keeps the model and thinking level from its session, and warns if Pi has to fall back. A mention clone shows the working directory once. The nested Agent tool lists the allowed agent types. A failed worktree cleanup and an unread result still stay recoverable.
+
 ## 0.26.0-local.1
 
 ### Minor Changes
