@@ -937,6 +937,42 @@ describe("register-agents RPC", () => {
     expect(getAgentConfig("MCP Builder")).toBeUndefined()
   })
 
+  it("fails when a name collides with an existing type", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-col", [
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    // The caller must learn the collision: spawning "Explore" would silently
+    // run the default file agent, not the persona.
+    expect(reply).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore"',
+    })
+
+    // A mixed payload says which names did register before failing.
+    await clearEphemeralAgents()
+    const mixed = await register("reg-col2", [
+      { name: "Good Agent", description: "d", systemPrompt: "p" },
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    expect(mixed).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore" (applied: "Good Agent")',
+    })
+  })
+
+  it("fails on duplicate names within one payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-dup", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+      { name: "mcp builder", description: "d", systemPrompt: "p2" },
+    ])
+    expect(reply).toEqual({
+      success: false,
+      error: 'agents[1].name "mcp builder" duplicates agents[0]',
+    })
+  })
+
   it("unregisters over the bus and leaves file-backed types alone", async () => {
     registerRpcHandlers(deps)
     registerAgents(

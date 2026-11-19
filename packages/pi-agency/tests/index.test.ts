@@ -471,6 +471,11 @@ test("register turns personas into session-scoped agent types", async () => {
     (result.content as any)[0].text,
     /- specialized\/specialized-mcp-builder\.md → subagent_type: MCP Builder \(indigo\) \[none\]/,
   )
+  // The lifecycle line is the surface a resumed conversation re-reads.
+  assert.match(
+    (result.content as any)[0].text,
+    /Types vanish at the next session start/,
+  )
 })
 
 test("register defaults to builtin tools and surfaces RPC errors", async () => {

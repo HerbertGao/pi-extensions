@@ -2208,7 +2208,7 @@ Terse command-style prompts produce shallow, generic work.
         }),
       ),
       subagent_type: Type.String({
-        description: `The type of specialized agent to use. Available types: ${getAvailableTypes().join(", ")}. Custom agents from .pi/agents/*.md (project) or ${getAgentDir()}/agents/*.md (global) are also available.`,
+        description: `The type of specialized agent to use. Available types: ${getAvailableTypes().join(", ")}. Custom agents from .pi/agents/*.md (project) or ${getAgentDir()}/agents/*.md (global) are also available, as are types another tool registered for this session — a list outside this description is usable, not invalid.`,
       }),
       model: Type.Optional(
         Type.String({

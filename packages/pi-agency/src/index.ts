@@ -598,12 +598,14 @@ export function agencyTools(
         color: card.color ?? null,
         tools,
       }))
-      const text = results
-        .map(
-          (result) =>
-            `- ${result.persona} → subagent_type: ${result.type}${result.color ? ` (${result.color})` : ""} [${result.tools}]`,
-        )
-        .join("\n")
+      const text =
+        results
+          .map(
+            (result) =>
+              `- ${result.persona} → subagent_type: ${result.type}${result.color ? ` (${result.color})` : ""} [${result.tools}]`,
+          )
+          .join("\n") +
+        "\n\nTypes vanish at the next session start; after a session switch or resume, register again before spawning."
       return {
         content: [{ type: "text", text }],
         details: {},

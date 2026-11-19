@@ -307,11 +307,32 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
       throw new Error('tools must be "none" or "builtin"')
     const builtinToolNames = tools === "none" ? [] : undefined
     const entries = new Map<string, AgentConfig>()
+    const seen = new Map<string, number>()
     agents.forEach((candidate, index) => {
       const [name, config] = ephemeralAgentConfig(candidate, index)
+      const lower = name.toLowerCase()
+      const firstIndex = seen.get(lower)
+      if (firstIndex !== undefined)
+        throw new Error(
+          `agents[${index}].name "${name}" duplicates agents[${firstIndex}]`,
+        )
+      seen.set(lower, index)
       entries.set(name, { ...config, builtinToolNames })
     })
-    return { agents: registerEphemeralAgents(entries) }
+    const applied = registerEphemeralAgents(entries)
+    // A skipped name collides with a file-loaded or default type: fail loudly
+    // rather than let the caller spawn that type believing it is the persona.
+    const skipped = [...entries.keys()].filter(
+      (name) => !applied.includes(name),
+    )
+    if (skipped.length > 0)
+      throw new Error(
+        `agent type already exists: ${skipped.map((name) => `"${name}"`).join(", ")}` +
+          (applied.length > 0
+            ? ` (applied: ${applied.map((name) => `"${name}"`).join(", ")})`
+            : ""),
+      )
+    return { agents: applied }
   })
 
   const unsubUnregisterAgents = handleRpc<{

@@ -86,3 +86,58 @@ describe("ephemeral agent registry", () => {
     expect(getAgentConfig("UI Designer")).toBeUndefined()
   })
 })
+
+describe("ephemeral agent collisions and re-registration", () => {
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  it("reports a name colliding with a default type as skipped, never applied", () => {
+    const applied = registerEphemeralAgents(
+      new Map([["Explore", seat({ name: "Explore" })]]),
+    )
+    expect(applied).toEqual([])
+    // The default Explore stays itself; the persona never runs under its name.
+    expect(getAgentConfig("Explore")?.description).not.toBe(
+      "Seats a catalog persona.",
+    )
+  })
+
+  it("drops a rejected collision from the store, so it cannot resurrect", () => {
+    registerAgents(
+      new Map([
+        [
+          "Custom Seat",
+          seat({ name: "Custom Seat", description: "the user's file agent" }),
+        ],
+      ]),
+    )
+    // The registration is refused…
+    const applied = registerEphemeralAgents(
+      new Map([["Custom Seat", seat({ name: "Custom Seat" })]]),
+    )
+    expect(applied).toEqual([])
+    // …and stays refused after the file agent disappears and a reload runs.
+    registerAgents(new Map())
+    expect(getAgentConfig("Custom Seat")).toBeUndefined()
+  })
+
+  it("replaces a previous registration immediately, without a reload", () => {
+    registerEphemeralAgents(new Map([["MCP Builder", seat()]]))
+    registerEphemeralAgents(
+      new Map([["MCP Builder", seat({ systemPrompt: "Updated." })]]),
+    )
+    expect(getAgentConfig("MCP Builder")?.systemPrompt).toBe("Updated.")
+
+    // A case-variant re-registration replaces in place and leaves no zombie.
+    registerEphemeralAgents(
+      new Map([["mcp builder", seat({ systemPrompt: "Again." })]]),
+    )
+    expect(getAgentConfig("MCP Builder")?.systemPrompt).toBe("Again.")
+    unregisterEphemeralAgents(["MCP Builder"])
+    registerAgents(new Map())
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+    expect(getAgentConfig("mcp builder")).toBeUndefined()
+  })
+})
