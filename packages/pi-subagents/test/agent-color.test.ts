@@ -99,5 +99,9 @@ describe("renderAgentName", () => {
       renderAgentNameLabel("Agent", undefined, theme, {}),
     )
     expect(renderAgentName(undefined, theme, {}, "seat-one")).toBe("seat-one")
+    // A real type is itself the identity: the run's name does not replace it.
+    expect(renderAgentName("Explore", theme, {}, "seat-one")).toBe(
+      renderAgentName("Explore", theme, {}),
+    )
   })
 })

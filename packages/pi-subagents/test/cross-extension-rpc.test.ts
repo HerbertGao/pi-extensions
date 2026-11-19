@@ -3,6 +3,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
+  clearEphemeralAgents,
+  getAgentConfig,
+  registerAgents,
+} from "../src/agent-types.js"
+import {
   type EventBus,
   PROTOCOL_VERSION,
   type RpcDeps,
@@ -842,5 +847,173 @@ describe("cross-extension RPC", () => {
         { model: BLOCKED },
       )
     })
+  })
+})
+
+describe("register-agents RPC", () => {
+  let events: EventBus
+  let deps: RpcDeps
+
+  beforeEach(() => {
+    events = createEventBus()
+    deps = {
+      events,
+      pi: { events },
+      getCtx: () => ({}),
+      manager: {
+        spawn: vi.fn(),
+        awaitStartup: vi.fn().mockResolvedValue(undefined),
+        abort: vi.fn(),
+        getRecord: vi.fn(),
+        consumeResult: vi.fn(),
+        steer: vi.fn(),
+      },
+    }
+  })
+
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  const register = (requestId: string, agents: unknown[], tools?: string) =>
+    new Promise((resolve) => {
+      events.on(`subagents:rpc:register-agents:reply:${requestId}`, resolve)
+      events.emit("subagents:rpc:register-agents", {
+        requestId,
+        agents,
+        ...(tools ? { tools } : {}),
+      })
+    })
+
+  it("registers an ephemeral type from a persona payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-1", [
+      {
+        name: "MCP Builder",
+        description: "Expert MCP developer.",
+        systemPrompt: "You are MCP Builder.",
+        color: "indigo",
+      },
+    ])
+    expect(reply).toEqual({
+      success: true,
+      data: { agents: ["MCP Builder"] },
+    })
+    const config = getAgentConfig("MCP Builder")
+    expect(config?.systemPrompt).toBe("You are MCP Builder.")
+    expect(config?.color).toBe("indigo")
+    expect(config?.promptMode).toBe("replace")
+    expect(config?.extensions).toBe(false)
+  })
+
+  it('maps tools "none" to a fully tool-less type and rejects anything else', async () => {
+    registerRpcHandlers(deps)
+    await register(
+      "reg-2",
+      [{ name: "S", description: "d", systemPrompt: "p" }],
+      "none",
+    )
+    expect(getAgentConfig("S")?.builtinToolNames).toEqual([])
+
+    const rejected = await register(
+      "reg-3",
+      [{ name: "T", description: "d", systemPrompt: "p" }],
+      "everything",
+    )
+    expect(rejected).toEqual({
+      success: false,
+      error: 'tools must be "none" or "builtin"',
+    })
+  })
+
+  it("rejects an invalid payload with an error envelope", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-4", [{ description: "no name" }])
+    expect(reply).toEqual({
+      success: false,
+      error: "agents[0].name must be 1-64 characters",
+    })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+  })
+
+  it("fails when a name collides with an existing type", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-col", [
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    // The caller must learn the collision: spawning "Explore" would silently
+    // run the default file agent, not the persona.
+    expect(reply).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore"',
+    })
+
+    // A mixed payload says which of ITS names did register — an earlier
+    // session type must not leak into the reply or the error.
+    await clearEphemeralAgents()
+    await register("reg-pre", [
+      { name: "Earlier Type", description: "d", systemPrompt: "p" },
+    ])
+    const mixed = await register("reg-col2", [
+      { name: "Good Agent", description: "d", systemPrompt: "p" },
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    expect(mixed).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore" (applied: "Good Agent")',
+    })
+    const scoped = await register("reg-col3", [
+      { name: "Earlier Type", description: "d", systemPrompt: "p2" },
+    ])
+    expect(scoped).toEqual({
+      success: true,
+      data: { agents: ["Earlier Type"] },
+    })
+  })
+
+  it("fails on duplicate names within one payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-dup", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+      { name: "mcp builder", description: "d", systemPrompt: "p2" },
+    ])
+    expect(reply).toEqual({
+      success: false,
+      error: 'agents[1].name "mcp builder" duplicates agents[0]',
+    })
+  })
+
+  it("unregisters over the bus and leaves file-backed types alone", async () => {
+    registerRpcHandlers(deps)
+    registerAgents(
+      new Map([
+        [
+          "Reality Checker",
+          {
+            name: "Reality Checker",
+            description: "file",
+            systemPrompt: "p",
+            promptMode: "replace",
+            extensions: false,
+            skills: false,
+          },
+        ],
+      ]),
+    )
+    await register("reg-5", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+    ])
+
+    const reply = new Promise((resolve) => {
+      events.on("subagents:rpc:unregister-agents:reply:unreg-1", resolve)
+      events.emit("subagents:rpc:unregister-agents", {
+        requestId: "unreg-1",
+        names: ["MCP Builder", "Reality Checker"],
+      })
+    })
+    expect(await reply).toEqual({ success: true })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+    expect(getAgentConfig("Reality Checker")).toBeDefined()
   })
 })

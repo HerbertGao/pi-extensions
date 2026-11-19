@@ -14,9 +14,13 @@
  */
 
 import { isTopLevelAgent } from "./agent-manager.js"
+import {
+  registerEphemeralAgents,
+  unregisterEphemeralAgents,
+} from "./agent-types.js"
 import { type ModelRegistry, resolveModel } from "./model-resolver.js"
 import { checkModelScope } from "./model-scope.js"
-import type { AgentRecord } from "./types.js"
+import type { AgentConfig, AgentRecord } from "./types.js"
 
 /** Minimal event bus interface needed by the RPC handlers. */
 export interface EventBus {
@@ -78,6 +82,8 @@ export interface RpcHandle {
   unsubStop: () => void
   unsubConsume: () => void
   unsubSteer: () => void
+  unsubRegisterAgents: () => void
+  unsubUnregisterAgents: () => void
 }
 
 /**
@@ -103,6 +109,45 @@ function handleRpc<P extends { requestId: string }>(
       })
     }
   })
+}
+
+/** Validate one register-agents payload entry into an AgentConfig. Narrow on
+ * purpose: no tool allowlist beyond none/builtin, no extension or skill access,
+ * replace-mode system prompt — a persona is role text, not an executable agent
+ * definition. */
+export function ephemeralAgentConfig(
+  candidate: unknown,
+  index: number,
+): [string, AgentConfig] {
+  if (typeof candidate !== "object" || candidate === null)
+    throw new Error(`agents[${index}] must be an object`)
+  const { name, description, systemPrompt, color } = candidate as Record<
+    string,
+    unknown
+  >
+  if (typeof name !== "string" || !name.trim() || name.length > 64)
+    throw new Error(`agents[${index}].name must be 1-64 characters`)
+  if (typeof description !== "string" || !description.trim())
+    throw new Error(`agents[${index}].description must be a non-empty string`)
+  if (typeof systemPrompt !== "string" || !systemPrompt.trim())
+    throw new Error(`agents[${index}].systemPrompt must be a non-empty string`)
+  if (color !== undefined && (typeof color !== "string" || !color))
+    throw new Error(
+      `agents[${index}].color must be a non-empty string when given`,
+    )
+  const trimmed = name.trim()
+  return [
+    trimmed,
+    {
+      name: trimmed,
+      description,
+      systemPrompt,
+      color: typeof color === "string" ? color : undefined,
+      promptMode: "replace",
+      extensions: false,
+      skills: false,
+    },
+  ]
 }
 
 /**
@@ -247,5 +292,65 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
       throw new Error("Agent is not running")
   })
 
-  return { unsubPing, unsubSpawn, unsubStop, unsubConsume, unsubSteer }
+  // Register session-scoped agent types from another extension (pi-agency
+  // seating a catalog persona). Additive like consume/steer: outside the ping
+  // version handshake — an older pi-subagents simply never replies and the
+  // caller's timeout is the discovery signal.
+  const unsubRegisterAgents = handleRpc<{
+    requestId: string
+    agents: unknown[]
+    tools?: unknown
+  }>(events, "subagents:rpc:register-agents", ({ agents, tools }) => {
+    if (!Array.isArray(agents) || agents.length === 0)
+      throw new Error("register-agents requires a non-empty agents array")
+    if (tools !== undefined && tools !== "none" && tools !== "builtin")
+      throw new Error('tools must be "none" or "builtin"')
+    const builtinToolNames = tools === "none" ? [] : undefined
+    const entries = new Map<string, AgentConfig>()
+    const seen = new Map<string, number>()
+    agents.forEach((candidate, index) => {
+      const [name, config] = ephemeralAgentConfig(candidate, index)
+      const lower = name.toLowerCase()
+      const firstIndex = seen.get(lower)
+      if (firstIndex !== undefined)
+        throw new Error(
+          `agents[${index}].name "${name}" duplicates agents[${firstIndex}]`,
+        )
+      seen.set(lower, index)
+      entries.set(name, { ...config, builtinToolNames })
+    })
+    const applied = registerEphemeralAgents(entries)
+    // A skipped name collides with a file-loaded or default type: fail loudly
+    // rather than let the caller spawn that type believing it is the persona.
+    const skipped = [...entries.keys()].filter(
+      (name) => !applied.includes(name),
+    )
+    if (skipped.length > 0)
+      throw new Error(
+        `agent type already exists: ${skipped.map((name) => `"${name}"`).join(", ")}` +
+          (applied.length > 0
+            ? ` (applied: ${applied.map((name) => `"${name}"`).join(", ")})`
+            : ""),
+      )
+    return { agents: applied }
+  })
+
+  const unsubUnregisterAgents = handleRpc<{
+    requestId: string
+    names: unknown
+  }>(events, "subagents:rpc:unregister-agents", ({ names }) => {
+    if (!Array.isArray(names) || names.some((n) => typeof n !== "string"))
+      throw new Error("unregister-agents requires an array of type names")
+    unregisterEphemeralAgents(names)
+  })
+
+  return {
+    unsubPing,
+    unsubSpawn,
+    unsubStop,
+    unsubConsume,
+    unsubSteer,
+    unsubRegisterAgents,
+    unsubUnregisterAgents,
+  }
 }

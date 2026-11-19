@@ -713,6 +713,86 @@ test("Agent uses the ccstyle renderer under ccstyle", async () => {
 	await events.get("session_shutdown")?.({}, ctx);
 });
 
+test("Agent title prefers the run's name over its type under ccstyle", async () => {
+	const events = new Map<string, Function>();
+	const pi = {
+		registerCommand() {},
+		registerShortcut() {},
+		on(name: string, handler: Function) {
+			events.set(name, handler);
+		},
+	};
+	claudeCodeStyleExtension(pi as any);
+	const extensionTheme = { fg: (_color: string, text: string) => text };
+	const ui = {
+		theme: extensionTheme,
+		setStatus() {},
+		requestRender() {},
+	};
+	const ctx = { mode: "tui", hasUI: true, ui };
+	await events.get("session_start")?.({}, ctx);
+	const definition = {
+		name: "Agent",
+		renderShell: "default",
+	} as unknown as AnyToolDefinition;
+	const component = new ToolExecutionComponent(
+		"Agent",
+		"agent-renderer-named",
+		{ description: "MCP expert review", subagent_type: "general-purpose", name: "mcp-expert" },
+		{},
+		definition,
+		ui as any,
+		process.cwd(),
+	) as any;
+	component.updateResult({ content: [{ type: "text", text: "raw" }], isError: false });
+	const output = component.render(100).join("\n");
+	// 命名运行标题写 name，不再退回 general-purpose；与 pi-subagents 徽章的优先级一致。
+	assert.match(output, /Subagent mcp-expert/);
+	assert.doesNotMatch(output, /Subagent general-purpose/);
+	assert.match(output, /MCP expert review/);
+	await events.get("session_shutdown")?.({}, ctx);
+});
+
+test("Agent title keeps a real type over the run's name under ccstyle", async () => {
+	const events = new Map<string, Function>();
+	const pi = {
+		registerCommand() {},
+		registerShortcut() {},
+		on(name: string, handler: Function) {
+			events.set(name, handler);
+		},
+	};
+	claudeCodeStyleExtension(pi as any);
+	const extensionTheme = { fg: (_color: string, text: string) => text };
+	const ui = {
+		theme: extensionTheme,
+		setStatus() {},
+		requestRender() {},
+	};
+	const ctx = { mode: "tui", hasUI: true, ui };
+	await events.get("session_start")?.({}, ctx);
+	const definition = {
+		name: "Agent",
+		renderShell: "default",
+	} as unknown as AnyToolDefinition;
+	const component = new ToolExecutionComponent(
+		"Agent",
+		"agent-renderer-typed",
+		{ description: "Code review of session changes", subagent_type: "Code Reviewer", name: "cr" },
+		{},
+		definition,
+		ui as any,
+		process.cwd(),
+	) as any;
+	component.updateResult({ content: [{ type: "text", text: "raw" }], isError: false });
+	const output = component.render(100).join("\n");
+	// 有身份的类型名优先：Code Reviewer 不因 name: cr 变成 cr。
+	assert.match(output, /Subagent Code Reviewer/);
+	assert.doesNotMatch(output, /Subagent cr\b/);
+	assert.match(output, /Code review of session changes/);
+	await events.get("session_shutdown")?.({}, ctx);
+});
+
 for (const [status, label] of [
 	["completed", "Done"],
 	["steered", "Wrapped up (turn limit)"],

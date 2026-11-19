@@ -269,11 +269,16 @@ export function toolCallSummary(
 		return { main: title, detail: "", payload: clip(args.agent_id) };
 	}
 	if (name === "agent" || name === "agents") {
-		const displayName = args.subagent_type ?? args.agent_type ?? args.agent;
+		// general-purpose 是无身份的默认类型，命名运行的 name 优先；其余类型（Code Reviewer 等）
+		// 自身就是身份，类型名优先于 name。`·` 分隔后描述作灰色载荷：单卡与组内行同一写法。
+		const type = args.subagent_type ?? args.agent_type ?? args.agent;
+		const displayName =
+			typeof type === "string" && type.toLowerCase() !== "general-purpose"
+				? type
+				: (args.name ?? type);
 		const description =
 			typeof args.description === "string" ? oneLine(args.description, clipLimit()) : "";
 		if (typeof displayName === "string" && displayName) {
-			// 类型进标题，`·` 分隔后描述作灰色载荷：单卡与组内行同一写法。
 			return {
 				main: `${title} ${displayName}`,
 				detail: "",
