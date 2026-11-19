@@ -40,14 +40,50 @@ async function pathExists(path) {
   }
 }
 
-const majorOf = (value) => Number(value.replace(/^[\^~]/u, "").split(".")[0])
+function versionTuple(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(version)
+  if (!match) throw new Error(`Unparsable version "${version}"`)
+  return match.slice(1).map(Number)
+}
+
+function compareVersions(left, right) {
+  const [a, b] = [versionTuple(left), versionTuple(right)]
+  for (let index = 0; index < 3; index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index]
+  }
+  return 0
+}
+
+// Compatible releases of one caret range: ^1.2.3 admits all 1.x, ^0.2.3 all
+// 0.2.x, and ^0.0.3 only 0.0.3 itself.
+function caretFamily(version) {
+  const [major, minor, patch] = versionTuple(version)
+  if (major > 0) return `${major}`
+  if (minor > 0) return `0.${minor}`
+  return `0.0.${patch}`
+}
+
+// Accepts only the range forms the bundled packages declare today: an exact
+// version, or `^X.Y.Z`. The aggregate may intentionally promote a later patch of
+// the same compatible family; it must never resolve below what the bundled
+// package asked for. Anything else throws so a new syntax is reviewed once.
+function parseDependencySpec(value) {
+  const exact = /^(\d+\.\d+\.\d+)$/u.exec(value)
+  if (exact) return { floor: exact[1], range: false }
+  const caret = /^\^(\d+\.\d+\.\d+)$/u.exec(value)
+  if (caret) return { floor: caret[1], range: true }
+  throw new Error(
+    `Unsupported version or range "${value}"; extend matchesPinnedRange`,
+  )
+}
 
 function matchesPinnedRange(pinned, range) {
-  if (range === pinned) return true
-  // shortcut: compares only the major version of ^/~ ranges; widen when bundled
-  // packages adopt other range syntaxes.
-  if (!/^[\^~]\d/u.test(range)) return true
-  return majorOf(range) === majorOf(pinned)
+  if (pinned === range) return true
+  const child = parseDependencySpec(range)
+  const promoted = parseDependencySpec(pinned)
+  if (caretFamily(promoted.floor) !== caretFamily(child.floor)) return false
+  if (child.range) return true
+  return promoted.range || compareVersions(promoted.floor, child.floor) >= 0
 }
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
@@ -291,15 +327,15 @@ try {
       )
     }
     const entryPrefix = `./node_modules/${packageName}/`
-    const configuredEntries = new Set(
-      manifest.pi.extensions.filter((entry) => entry.startsWith(entryPrefix)),
-    )
-    for (const entry of bundledManifest.pi?.extensions ?? []) {
-      const registered = `${entryPrefix}${entry.replace(/^\.\//u, "")}`
-      if (!configuredEntries.has(registered)) {
-        throw new Error(
-          `Aggregate does not register ${registered} declared by ${packageName}`,
-        )
+    for (const resource of ["extensions", "skills", "themes"]) {
+      const configured = new Set(manifest.pi?.[resource] ?? [])
+      for (const entry of bundledManifest.pi?.[resource] ?? []) {
+        const registered = `${entryPrefix}${entry.replace(/^\.\//u, "")}`
+        if (!configured.has(registered)) {
+          throw new Error(
+            `Aggregate does not register ${registered} declared by ${packageName}`,
+          )
+        }
       }
     }
     for (const [dependency, range] of Object.entries(
