@@ -1,5 +1,18 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.17
+
+### Patch Changes
+
+- [#398](https://github.com/HerbertGao/pi-extensions/pull/398) [`1eccc1a`](https://github.com/HerbertGao/pi-extensions/commit/1eccc1ab99247b9b1f1772ea027f3b8c48cf23ba) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Raise the promoted dependency floors to what the bundled packages require: `nanoid@^5.1.16`, `turndown@^7.2.4`, and `undici@^8.12.3`. The installed versions already meet these floors, so this changes no resolved package today; it removes ranges that could resolve below a bundled package's own requirement, including the patched `undici` floor `pi-antigravity` needs.
+
+- [#397](https://github.com/HerbertGao/pi-extensions/pull/397) [`42647d1`](https://github.com/HerbertGao/pi-extensions/commit/42647d16b171f766da6135fc937bd087e005a161) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Label an `Agent` run by identity: a registered type (Code Reviewer) keeps its type name while a named generic run shows its own `name`, in both the ccstyle transcript row and the pi-subagents badges. The `name` parameter accepts any characters — labels show it as given, `@handles` are slugged. `agency_register` seats catalog personas as session-scoped agent types over the new `subagents:rpc:register-agents` bus channels: the persona body becomes the system prompt, the card name and color become the label and badge, and the types vanish at the next session start without ever shadowing file-loaded agents.
+
+- Updated dependencies [[`42647d1`](https://github.com/HerbertGao/pi-extensions/commit/42647d16b171f766da6135fc937bd087e005a161)]:
+  - @herbertgao/pi-agency@0.1.4
+  - @herbertgao/pi-cc-extensions@1.0.21
+  - @herbertgao/pi-subagents@0.26.1
+
 ## 2026.11.16
 
 ### Patch Changes
