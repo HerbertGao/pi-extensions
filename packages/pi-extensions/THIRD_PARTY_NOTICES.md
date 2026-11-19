@@ -213,8 +213,8 @@ THE SOFTWARE.
 
 ## `pi-provider-qoder`
 
-The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.12 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`a8de674d2fdc1f7715ab8d794e51e8e620469ed9`](https://github.com/simonsmh/pi-provider-qoder/commit/a8de674d2fdc1f7715ab8d794e51e8e620469ed9).
+The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder) version 0.6.13 under its original package name. npm metadata and the repository README declare the MIT license. The published tarball does not include a LICENSE file. The published package corresponds to git commit [`63abcb4ca319bd37cb015a7bf5eee168eef7b306`](https://github.com/simonsmh/pi-provider-qoder/commit/63abcb4ca319bd37cb015a7bf5eee168eef7b306).
 
 ## `@herbertgao/pi-impeccable`
 
-The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.9.2` at commit `bba37e8ff05a099ae8f72db929453b31c82bef20`, under the Apache License 2.0. `scripts/live-browser.js` includes one local fix that keeps a staged removal in the live DOM. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.
+The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.10.0` at commit `ab3617920fcdb5009163a725ba8ff59927a63474`, under the Apache License 2.0. `scripts/live-browser.js` includes one local fix that keeps a staged removal in the live DOM. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.

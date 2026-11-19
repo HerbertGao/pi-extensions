@@ -36,9 +36,9 @@ const productionStrip = extractFunction("stripManualEditRuntimeState")
 const restoreRemovedElement = extractFunction("restoreRemovedElement")
 
 // The published helper still drops every marked descendant before asking
-// whether the root is the live page. 4.9.2 leaves that function identical to
-// 4.9.1 and 4.8.2. Replaying the unconditional removal against the same
-// assertions is the regression.
+// whether the root is the live page. 4.10.0 leaves that function identical to
+// 4.9.2, 4.9.1, and 4.8.2. Replaying the unconditional removal against the
+// same assertions is the regression.
 function published482Strip(stripSource) {
   const guarded = /if \(!root\.isConnected\) \{\n([\s\S]*?)\n {4}\}/
   const match = stripSource.match(guarded)
@@ -201,4 +201,121 @@ test("the published strip fails those same live-removal assertions", () => {
   assert.equal(report.liveAfterGo.childAttr, childRef)
   assert.equal(report.liveAfterGo.editableStripped, true)
   assert.throws(() => assertRemovalContract(report), assert.AssertionError)
+})
+
+function extractBlock(startMarker, endMarker) {
+  const start = source.indexOf(startMarker)
+  assert.notEqual(start, -1, `missing ${startMarker}`)
+  const end = source.indexOf(endMarker, start)
+  assert.notEqual(end, -1, `missing ${endMarker}`)
+  return source.slice(start, end + endMarker.length)
+}
+
+function sessionStorageValue(value) {
+  return { getItem: () => value }
+}
+
+test("a user exit suppresses live reload for one minute", () => {
+  const block = extractBlock(
+    "const EXITED_KEY = 'impeccable-live-exited'",
+    "catch { /* storage blocked */ }",
+  )
+  const run = new Function(
+    "sessionStorage",
+    "now",
+    "TOKEN",
+    `
+    const Date = { now: () => now }
+    ${block.replace("return;", "return true;")}
+    return false
+  `,
+  )
+  assert.equal(run(sessionStorageValue("tok 1000"), 60999, "tok"), true)
+  assert.equal(run(sessionStorageValue("tok 1000"), 61000, "tok"), false)
+  assert.equal(run(sessionStorageValue("other 1000"), 1001, "tok"), false)
+  assert.equal(run(sessionStorageValue(null), 1000, "tok"), false)
+  assert.equal(
+    run(
+      {
+        getItem() {
+          throw new Error("blocked")
+        },
+      },
+      1000,
+      "tok",
+    ),
+    false,
+  )
+})
+
+test("the missing-product notice is shown once per browser", () => {
+  const take = extractFunction("takeContextNotice")
+  const run = new Function(
+    "localStorage",
+    `
+    const CONTEXT_NOTICE_KEY = "impeccable-live-context-notice"
+    let contextNoticeShown = false
+    ${take}
+    return {
+      first: takeContextNotice(),
+      second: takeContextNotice(),
+      stored: localStorage.getItem(CONTEXT_NOTICE_KEY),
+    }
+  `,
+  )
+  const fresh = new Map()
+  const localStorage = {
+    getItem: (key) => (fresh.has(key) ? fresh.get(key) : null),
+    setItem: (key, value) => fresh.set(key, value),
+  }
+  assert.deepEqual(run(localStorage), {
+    first: true,
+    second: false,
+    stored: "1",
+  })
+  const remembered = new Map([["impeccable-live-context-notice", "1"]])
+  assert.deepEqual(
+    run({
+      getItem: (key) => (remembered.has(key) ? remembered.get(key) : null),
+      setItem: (key, value) => remembered.set(key, value),
+    }),
+    { first: false, second: false, stored: "1" },
+  )
+})
+
+test("hover does not widen the live bar, and a coarse pointer gets 44px", () => {
+  const labels = extractFunction("syncGlobalBarExpandedLabels")
+  const seen = []
+  const runLabels = new Function(
+    "applyGlobalBarLabelState",
+    "pageChatExpanded",
+    `
+    ${labels}
+    syncGlobalBarExpandedLabels(true)
+    syncGlobalBarExpandedLabels()
+  `,
+  )
+  runLabels((inactive, chatExpanded) => {
+    seen.push([inactive, chatExpanded])
+  }, true)
+  assert.deepEqual(seen, [
+    [false, true],
+    [false, true],
+  ])
+
+  const runTouch = new Function(
+    "window",
+    `
+    ${extractFunction("touchPrimary")}
+    ${extractFunction("touchTarget")}
+    const button = { style: {} }
+    touchTarget(button)
+    return button.style
+  `,
+  )
+  assert.deepEqual(runTouch({ matchMedia: () => ({ matches: true }) }), {
+    minWidth: "44px",
+    minHeight: "44px",
+  })
+  assert.deepEqual(runTouch({ matchMedia: () => ({ matches: false }) }), {})
 })
