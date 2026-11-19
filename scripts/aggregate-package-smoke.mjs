@@ -64,9 +64,9 @@ function caretFamily(version) {
 }
 
 // Accepts only the range forms the bundled packages declare today: an exact
-// version, or `^X.Y.Z`. The aggregate may intentionally promote a later patch of
-// the same compatible family; it must never resolve below what the bundled
-// package asked for. Anything else throws so a new syntax is reviewed once.
+// version, or `^X.Y.Z`. The promoted floor must sit in the same compatible
+// family and must never resolve below what the bundled package asked for.
+// Anything else throws so a new syntax is reviewed once.
 function parseDependencySpec(value) {
   const exact = /^(\d+\.\d+\.\d+)$/u.exec(value)
   if (exact) return { floor: exact[1], range: false }
@@ -81,9 +81,10 @@ function matchesPinnedRange(pinned, range) {
   if (pinned === range) return true
   const child = parseDependencySpec(range)
   const promoted = parseDependencySpec(pinned)
-  if (caretFamily(promoted.floor) !== caretFamily(child.floor)) return false
-  if (child.range) return true
-  return promoted.range || compareVersions(promoted.floor, child.floor) >= 0
+  return (
+    caretFamily(promoted.floor) === caretFamily(child.floor) &&
+    compareVersions(promoted.floor, child.floor) >= 0
+  )
 }
 
 const stageDir = await mkdtemp(join(tmpdir(), "pi-extensions-smoke-"))
