@@ -3072,6 +3072,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const requiredChildRegistrations = [
     ["@herbertgao/pi-agency/src/index.ts", "tools", "agency_search"],
     ["@herbertgao/pi-agency/src/index.ts", "tools", "agency_dispatch"],
+    ["@herbertgao/pi-agency/src/index.ts", "tools", "agency_register"],
     ["@tifan/pi-copy-response/src/index.ts", "commands", "copy-response"],
     ["@tifan/pi-handoff/src/index.ts", "commands", "__pi-handoff-session"],
     ["@tifan/pi-handoff/src/session-query.ts", "tools", "session_query"],

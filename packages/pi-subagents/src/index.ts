@@ -54,6 +54,7 @@ import {
   steerAgent,
 } from "./agent-runner.js"
 import {
+  clearEphemeralAgents,
   formatAgentTypeList,
   getAgentConfig,
   getAvailableTypes,
@@ -1151,6 +1152,10 @@ export default function (pi: ExtensionAPI) {
     // resumed session all land here, and any of them may follow a `pi install`
     // that added a package the cached root list predates.
     invalidatePackageCache()
+    // Ephemeral types live for the current session only: a new or resumed
+    // session starts clean, so a persona's registration never outlives the
+    // run that seated it.
+    clearEphemeralAgents()
     reloadCustomAgents()
     if (ctx.hasUI) {
       widget.setUICtx(ctx.ui)
@@ -1501,6 +1506,8 @@ export default function (pi: ExtensionAPI) {
     rpcHandle?.unsubPing()
     rpcHandle?.unsubConsume()
     rpcHandle?.unsubSteer()
+    rpcHandle?.unsubRegisterAgents()
+    rpcHandle?.unsubUnregisterAgents()
     rpcHandle = undefined
     currentCtx = undefined
     // Only release the global slot if this activation claimed it — a child
@@ -2197,7 +2204,7 @@ Terse command-style prompts produce shallow, generic work.
       name: Type.Optional(
         Type.String({
           description:
-            'Optional memorable name for this agent, e.g. "auth-audit", so it can be addressed as `@name` at the prompt and by steer_subagent / get_subagent_result. Letters, digits, `_` and `-`. Worth setting when several agents of the same type run at once; omit for one-off work. The agent stays reachable by its type either way.',
+            'Optional memorable name for this agent, e.g. "auth-audit", so it can be addressed as `@name` at the prompt and by steer_subagent / get_subagent_result. Any characters are accepted; the `@handle` is slugged from it (lowercase letters, digits, `_`, `-`) while UI labels show it as given, spaces included. Worth setting when several agents of the same type run at once; omit for one-off work. The agent stays reachable by its type either way.',
         }),
       ),
       subagent_type: Type.String({

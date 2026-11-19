@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import {
   existsSync,
   mkdirSync,
@@ -129,8 +129,11 @@ export function searchCatalog(
     .slice(0, limit)
 }
 
-/** A catalog persona's body without frontmatter. */
-export function loadPersona(root: string, persona: string): string {
+/** A catalog persona, frontmatter and body, path-guarded like every loader here. */
+export function loadPersonaEntry(
+  root: string,
+  persona: string,
+): { name: string; description: string; color?: string; body: string } {
   const base = realRoot(root)
   const file = realpathSync(isAbsolute(persona) ? persona : join(base, persona))
   if (!file.startsWith(base + sep) || !file.endsWith(".md")) {
@@ -143,7 +146,21 @@ export function loadPersona(root: string, persona: string): string {
   if (/<\/?persona>/i.test(body)) {
     throw new Error(`${persona} contains a reserved <persona> delimiter`)
   }
-  return body
+  return {
+    name: frontmatter.name,
+    description:
+      typeof frontmatter.description === "string"
+        ? frontmatter.description
+        : `${persona} has no persona description`,
+    color:
+      typeof frontmatter.color === "string" ? frontmatter.color : undefined,
+    body,
+  }
+}
+
+/** A catalog persona's body without frontmatter. */
+export function loadPersona(root: string, persona: string): string {
+  return loadPersonaEntry(root, persona).body
 }
 
 /** Fills `{{persona}}` and `{{shared}}` in one pass, so inserted text is never rescanned or `$`-expanded. */
@@ -200,7 +217,53 @@ export function dropPlaceholders(args: unknown): any {
   )
 }
 
-export function agencyTools(root = CATALOG_ROOT) {
+/** The slice of pi's event bus the RPC client needs — same shape pi-subagents handles. */
+export interface AgencyEvents {
+  on(event: string, handler: (data: unknown) => void): () => void
+  emit(event: string, data: unknown): void
+}
+
+export type AgencyToolsOptions = {
+  /** pi.events; agency_register needs it to reach pi-subagents' RPC bus. */
+  events?: AgencyEvents
+  /** Reply timeout for the register RPC; tests shrink it. */
+  rpcTimeoutMs?: number
+}
+
+/** Call pi-subagents' register-agents RPC and await its reply envelope. */
+export async function rpcRegisterAgents(
+  events: AgencyEvents,
+  agents: Array<Record<string, string>>,
+  tools: "none" | "builtin",
+  timeoutMs: number,
+): Promise<void> {
+  const requestId = randomUUID()
+  const channel = `subagents:rpc:register-agents:reply:${requestId}`
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout>
+    const unsub = events.on(channel, (raw) => {
+      clearTimeout(timer)
+      unsub()
+      const reply = raw as { success: true } | { success: false; error: string }
+      if (reply.success) resolve()
+      else reject(new Error(reply.error))
+    })
+    timer = setTimeout(() => {
+      unsub()
+      reject(
+        new Error(
+          `pi-subagents did not answer register-agents within ${timeoutMs}ms; it may be missing or too old for ephemeral agent types`,
+        ),
+      )
+    }, timeoutMs)
+    events.emit("subagents:rpc:register-agents", { requestId, agents, tools })
+  })
+}
+
+export function agencyTools(
+  root = CATALOG_ROOT,
+  options: AgencyToolsOptions = {},
+) {
   const search = defineTool({
     name: "agency_search",
     label: "Agency Search",
@@ -397,7 +460,7 @@ export function agencyTools(root = CATALOG_ROOT) {
         for (const run of runs) record(`${run.id}.prompt.txt`, run.prompt)
       }
 
-      const options = Object.fromEntries(
+      const spawnOptions = Object.fromEntries(
         Object.entries({
           model: params.model,
           thinking: params.thinking,
@@ -414,7 +477,7 @@ export function agencyTools(root = CATALOG_ROOT) {
             prompt: run.prompt,
             run_in_background: false,
             isolated: params.isolated ?? true,
-            ...options,
+            ...spawnOptions,
           }),
         ),
       )
@@ -475,11 +538,88 @@ export function agencyTools(root = CATALOG_ROOT) {
     },
   })
 
-  return { search, dispatch }
+  const register = defineTool({
+    name: "agency_register",
+    label: "Agency Register",
+    description:
+      "Register catalog personas as session-scoped pi-subagents agent types and return the type names to pass as `subagent_type` to Agent. The persona's body becomes the type's system prompt, its card name becomes the agent's label, and its card color becomes the badge — so a seat shows as its persona instead of general-purpose. `tools: \"none\"` gives the type no tools at all (advisory seats); the default `\"builtin\"` keeps pi's built-in tools. Types vanish at the next session start and never shadow agents loaded from files. Needs pi-subagents on the session's event bus; if it is missing or too old the call fails and a seat can still be given the persona file's absolute path instead.",
+    promptSnippet: "Seat catalog personas as labeled, colored agent types",
+    prepareArguments: dropPlaceholders,
+    promptGuidelines: [
+      "For Agency Agents personas, use agency_search to pick the seat, agency_register to turn it into a session-scoped agent type, and one Agent call per seat with that type; without registration the call carries the persona's absolute path instead. Reach for agency_dispatch only for bulk work that does not need a run per row.",
+    ],
+    parameters: Type.Object({
+      personas: Type.Array(Type.String(), {
+        minItems: 1,
+        description:
+          "Persona files relative to the catalog, e.g. security/security-appsec-engineer.md, or absolute paths inside it.",
+      }),
+      tools: Type.Optional(
+        Type.Union([Type.Literal("none"), Type.Literal("builtin")], {
+          description:
+            'The type\'s tool surface: "none" for tool-less advisory seats, "builtin" (default) for pi\'s built-in tools.',
+        }),
+      ),
+    }),
+    outputSchema: Type.Object({
+      results: Type.Array(
+        Type.Object({
+          persona: Type.String(),
+          type: Type.String(),
+          color: NullableString,
+          tools: Type.Union([Type.Literal("none"), Type.Literal("builtin")]),
+        }),
+      ),
+    }),
+    async execute(_toolCallId, params) {
+      const events = options.events
+      if (!events) {
+        throw new Error("agency_register needs the pi.events bus")
+      }
+      const tools = params.tools ?? "builtin"
+      const entries = params.personas.map((persona) => {
+        const card = loadPersonaEntry(root, persona)
+        return { persona, card }
+      })
+      await rpcRegisterAgents(
+        events,
+        entries.map(({ card }) => ({
+          name: card.name,
+          description: card.description,
+          systemPrompt: card.body,
+          ...(card.color ? { color: card.color } : {}),
+        })),
+        tools,
+        options.rpcTimeoutMs ?? 2000,
+      )
+      const results = entries.map(({ persona, card }) => ({
+        persona,
+        type: card.name,
+        color: card.color ?? null,
+        tools,
+      }))
+      const text = results
+        .map(
+          (result) =>
+            `- ${result.persona} → subagent_type: ${result.type}${result.color ? ` (${result.color})` : ""} [${result.tools}]`,
+        )
+        .join("\n")
+      return {
+        content: [{ type: "text", text }],
+        details: {},
+        structuredContent: { results },
+      }
+    },
+  })
+
+  return { search, dispatch, register }
 }
 
 export default function piAgency(pi: ExtensionAPI): void {
-  const { search, dispatch } = agencyTools()
+  const { search, dispatch, register } = agencyTools(CATALOG_ROOT, {
+    events: pi.events,
+  })
   pi.registerTool(search)
   pi.registerTool(dispatch)
+  pi.registerTool(register)
 }

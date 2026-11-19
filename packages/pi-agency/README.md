@@ -24,7 +24,9 @@ The catalog location is fixed at `~/.agency-agents`. `agency_dispatch` also need
 - `max_turns` is omitted unless you pass it, so a run decides when it is done; set it only to bound a runaway.
 - `record_dir` must be absolute and used by one dispatch at a time. It receives `<id>.prompt.txt` and `<id>.return.txt` with mode `0600`. The call fails before any dispatch if one of those files already exists.
 
-Both tools return `structuredContent`, so codemode scripts receive objects instead of text.
+`agency_register({ personas, tools? })` registers catalog personas as session-scoped pi-subagents agent types over its RPC bus and returns the type names to pass as `subagent_type`. The persona body becomes the type's system prompt, the card name becomes the label, and the card color becomes the badge — a seat shows as `MCP Builder` with its color instead of `general-purpose`. `tools: "none"` gives the type no tools at all; the default `"builtin"` keeps pi's built-in tools. Types vanish at the next session start, never shadow file-loaded agents, and need `@herbertgao/pi-subagents` on the event bus — an older or upstream pi-subagents answers nothing and the call fails, so the seat falls back to carrying the persona file's absolute path.
+
+All three tools return `structuredContent`, so codemode scripts receive objects instead of text.
 
 ```js
 const { results } = await tools.agency_search({
