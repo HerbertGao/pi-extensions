@@ -1,5 +1,16 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.16
+
+### Patch Changes
+
+- [#395](https://github.com/HerbertGao/pi-extensions/pull/395) [`43a108a`](https://github.com/HerbertGao/pi-extensions/commit/43a108ac173ed4d6fc137433a958ef43c1a64812) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin pi-provider-qoder 0.6.13. A plan-disabled catalog model stays listed so a configured model still resolves, and auto stays hidden unless the server enables it. After login the provider refreshes that catalog, waiting at most 15 seconds, instead of keeping the static fallback until restart.
+
+- [#395](https://github.com/HerbertGao/pi-extensions/pull/395) [`43a108a`](https://github.com/HerbertGao/pi-extensions/commit/43a108ac173ed4d6fc137433a958ef43c1a64812) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Resolve @narumitw/pi-tui-kit 0.70.1 under the existing ^0.70.0 range. A questionnaire summary names the selected option.
+
+- Updated dependencies [[`43a108a`](https://github.com/HerbertGao/pi-extensions/commit/43a108ac173ed4d6fc137433a958ef43c1a64812)]:
+  - @herbertgao/pi-impeccable@0.6.0
+
 ## 2026.11.15
 
 ### Patch Changes

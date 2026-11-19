@@ -1,5 +1,11 @@
 # @herbertgao/pi-impeccable
 
+## 0.6.0
+
+### Minor Changes
+
+- [#395](https://github.com/HerbertGao/pi-extensions/pull/395) [`43a108a`](https://github.com/HerbertGao/pi-extensions/commit/43a108ac173ed4d6fc137433a958ef43c1a64812) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor the official Impeccable 4.10.0 Pi skill. The launcher pins engine 0.1.27. Context loads a long DESIGN.md as a map, and the first launcher failure is not retried. A user exit stays down for a minute and clears the live init flag, so a later inject on the same page can start Live. The missing-PRODUCT.md notice shows once, and hovering the live bar no longer widens it. Go still leaves a staged removal in the page.
+
 ## 0.5.0
 
 ### Minor Changes
