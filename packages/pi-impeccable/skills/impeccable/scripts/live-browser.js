@@ -36,7 +36,10 @@
   const EXITED_KEY = 'impeccable-live-exited';
   try {
     const [t, at] = (sessionStorage.getItem(EXITED_KEY) || '').split(' ');
-    if (t === TOKEN && Date.now() - Number(at) < 60_000) return;
+    if (t === TOKEN && Date.now() - Number(at) < 60_000) {
+      window.__IMPECCABLE_LIVE_INIT__ = false; // reset so a later inject can init
+      return;
+    }
   } catch { /* storage blocked */ }
 
   //

@@ -215,7 +215,11 @@ function sessionStorageValue(value) {
   return { getItem: () => value }
 }
 
-test("a user exit suppresses live reload for one minute", () => {
+function livePage() {
+  return { __IMPECCABLE_LIVE_INIT__: false }
+}
+
+test("a user exit suppresses live reload for one minute and clears the init flag", () => {
   const block = extractBlock(
     "const EXITED_KEY = 'impeccable-live-exited'",
     "catch { /* storage blocked */ }",
@@ -224,17 +228,32 @@ test("a user exit suppresses live reload for one minute", () => {
     "sessionStorage",
     "now",
     "TOKEN",
+    "window",
     `
     const Date = { now: () => now }
-    ${block.replace("return;", "return true;")}
-    return false
+    window.__IMPECCABLE_LIVE_INIT__ = true
+    let suppressed = false
+    ${block.replace("return;", "suppressed = true;")}
+    return { suppressed, init: window.__IMPECCABLE_LIVE_INIT__ }
   `,
   )
-  assert.equal(run(sessionStorageValue("tok 1000"), 60999, "tok"), true)
-  assert.equal(run(sessionStorageValue("tok 1000"), 61000, "tok"), false)
-  assert.equal(run(sessionStorageValue("other 1000"), 1001, "tok"), false)
-  assert.equal(run(sessionStorageValue(null), 1000, "tok"), false)
-  assert.equal(
+  assert.deepEqual(
+    run(sessionStorageValue("tok 1000"), 60999, "tok", livePage()),
+    { suppressed: true, init: false },
+  )
+  assert.deepEqual(
+    run(sessionStorageValue("tok 1000"), 61000, "tok", livePage()),
+    { suppressed: false, init: true },
+  )
+  assert.deepEqual(
+    run(sessionStorageValue("other 1000"), 1001, "tok", livePage()),
+    { suppressed: false, init: true },
+  )
+  assert.deepEqual(run(sessionStorageValue(null), 1000, "tok", livePage()), {
+    suppressed: false,
+    init: true,
+  })
+  assert.deepEqual(
     run(
       {
         getItem() {
@@ -243,8 +262,9 @@ test("a user exit suppresses live reload for one minute", () => {
       },
       1000,
       "tok",
+      livePage(),
     ),
-    false,
+    { suppressed: false, init: true },
   )
 })
 
