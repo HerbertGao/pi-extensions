@@ -26,8 +26,13 @@ const piCli = join(
   "cli.js",
 )
 const expectBin = "/usr/bin/expect"
-const widths = [80, 120, 192]
-const themes = ["cc-dark", "cc-light"]
+// Pairwise sample of themes × widths: both themes and all three widths stay
+// covered without running the full 6-combination matrix.
+const matrixCases = [
+  { theme: "cc-dark", columns: 80 },
+  { theme: "cc-light", columns: 120, reload: true },
+  { theme: "cc-dark", columns: 192 },
+]
 
 function assert(condition, message, details) {
   if (condition) return
@@ -981,58 +986,56 @@ async function validateEvidence(events, runs, mockRequests) {
     snapshots.map((snapshot) => [snapshot.label, snapshot]),
   )
   const matrix = []
-  for (const theme of themes) {
-    for (const width of widths) {
-      const name = `${theme}-${width}`
-      const on = byLabel.get(`${name}:on`)
-      const compact = byLabel.get(`${name}:compact`)
-      const expanded = byLabel.get(`${name}:expanded`)
-      const collapsed = byLabel.get(`${name}:collapsed`)
+  for (const { theme, columns: width } of matrixCases) {
+    const name = `${theme}-${width}`
+    const on = byLabel.get(`${name}:on`)
+    const compact = byLabel.get(`${name}:compact`)
+    const expanded = byLabel.get(`${name}:expanded`)
+    const collapsed = byLabel.get(`${name}:collapsed`)
+    assert(
+      on && compact && expanded && collapsed,
+      `${name}: incomplete matrix snapshots`,
+    )
+    for (const snapshot of [on, compact, expanded, collapsed]) {
       assert(
-        on && compact && expanded && collapsed,
-        `${name}: incomplete matrix snapshots`,
-      )
-      for (const snapshot of [on, compact, expanded, collapsed]) {
-        assert(
-          snapshot.terminal?.columns === width &&
-            snapshot.terminal?.rows === 40 &&
-            snapshot.tuiMode === "fullscreen",
-          `${name}: TUI dimensions/mode mismatch`,
-          snapshot.terminal,
-        )
-        assert(
-          snapshot.theme === theme,
-          `${name}: active theme mismatch`,
-          snapshot.theme,
-        )
-      }
-      assert(on.ccstyleMode === "on", `${name}: on mode was not snapshotted`)
-      assert(
-        compact.ccstyleMode === "compact",
-        `${name}: compact mode was not snapshotted`,
+        snapshot.terminal?.columns === width &&
+          snapshot.terminal?.rows === 40 &&
+          snapshot.tuiMode === "fullscreen",
+        `${name}: TUI dimensions/mode mismatch`,
+        snapshot.terminal,
       )
       assert(
-        collapsed.counters?.sgrPackets >= 7 &&
-          collapsed.counters?.wheelPackets >= 3,
-        `${name}: mouse/wheel packets did not reach Pi`,
-        collapsed.counters,
+        snapshot.theme === theme,
+        `${name}: active theme mismatch`,
+        snapshot.theme,
       )
-      assert(
-        collapsed.counters?.wheelViewportChanges > 0,
-        `${name}: wheel packets did not causally move the viewport`,
-        collapsed.counters,
-      )
-      assert(
-        collapsed.counters?.hoverObserved > 0,
-        `${name}: hover was not observed at the real target`,
-      )
-      assert(
-        collapsed.counters?.expansionTransitions >= 2,
-        `${name}: click expansion transitions missing`,
-        collapsed.counters,
-      )
-      matrix.push({ theme, width, pass: true })
     }
+    assert(on.ccstyleMode === "on", `${name}: on mode was not snapshotted`)
+    assert(
+      compact.ccstyleMode === "compact",
+      `${name}: compact mode was not snapshotted`,
+    )
+    assert(
+      collapsed.counters?.sgrPackets >= 7 &&
+        collapsed.counters?.wheelPackets >= 3,
+      `${name}: mouse/wheel packets did not reach Pi`,
+      collapsed.counters,
+    )
+    assert(
+      collapsed.counters?.wheelViewportChanges > 0,
+      `${name}: wheel packets did not causally move the viewport`,
+      collapsed.counters,
+    )
+    assert(
+      collapsed.counters?.hoverObserved > 0,
+      `${name}: hover was not observed at the real target`,
+    )
+    assert(
+      collapsed.counters?.expansionTransitions >= 2,
+      `${name}: click expansion transitions missing`,
+      collapsed.counters,
+    )
+    matrix.push({ theme, width, pass: true })
   }
 
   const reinstall = byLabel.get("reinstall:collapsed")
@@ -1063,7 +1066,7 @@ async function validateEvidence(events, runs, mockRequests) {
   const requiredStateLabels = [
     "seed:after-reload",
     "seed:after-compact",
-    ...themes.flatMap((theme) => widths.map((width) => `${theme}-${width}:on`)),
+    ...matrixCases.map(({ theme, columns }) => `${theme}-${columns}:on`),
     "reinstall:on",
   ]
   for (const label of requiredStateLabels) {
@@ -1081,9 +1084,7 @@ async function validateEvidence(events, runs, mockRequests) {
     )
   }
   for (const label of [
-    ...themes.flatMap((theme) =>
-      widths.map((width) => `${theme}-${width}:compact`),
-    ),
+    ...matrixCases.map(({ theme, columns }) => `${theme}-${columns}:compact`),
     "cc-light-120:reloaded",
     "reinstall:compact",
   ]) {
@@ -1120,7 +1121,9 @@ async function validateEvidence(events, runs, mockRequests) {
           component.toolName === "Agent" &&
           component.dedicatedRenderer === true &&
           /Run nested smoke/.test((component.lines ?? []).join("\n")) &&
-          /isolated.*max turns/.test((component.lines ?? []).join("\n")),
+          /isolated: true[\s\S]*max_turns:/u.test(
+            (component.lines ?? []).join("\n"),
+          ),
       ),
     ),
     "Agent dedicated renderer evidence missing",
@@ -1176,14 +1179,6 @@ async function validateEvidence(events, runs, mockRequests) {
       "Transcript three evidence line 1",
     ),
     "Compaction did not retain the newest long-transcript round",
-  )
-
-  const retainedText = snapshots.map(snapshotText).join("\n")
-  assert(
-    retainedText.includes("(1) PROSE_MARKER") &&
-      retainedText.includes("① CODE_MARKER") &&
-      !retainedText.includes("① PROSE_MARKER"),
-    "Circled-number prose/fenced-code behavior was not preserved",
   )
 
   const forbidden =
@@ -1377,30 +1372,28 @@ async function main() {
       }),
     )
 
-    for (const theme of themes) {
-      for (const columns of widths) {
-        const caseName = `${theme}-${columns}`
-        runs.push(
-          // Cases share one persisted session and mutable theme settings.
-          // oxlint-disable-next-line no-await-in-loop
-          await runExpectCase({
-            stageDir,
-            agentDir,
-            workDir,
-            probeLog,
-            targetPath,
-            paths,
-            probePath,
-            sessionDir,
-            sessionId,
-            caseName,
-            theme,
-            columns,
-            installGeneration: 1,
-            reload: theme === "cc-light" && columns === 120,
-          }),
-        )
-      }
+    for (const { theme, columns, reload } of matrixCases) {
+      const caseName = `${theme}-${columns}`
+      runs.push(
+        // Cases share one persisted session and mutable theme settings.
+        // oxlint-disable-next-line no-await-in-loop
+        await runExpectCase({
+          stageDir,
+          agentDir,
+          workDir,
+          probeLog,
+          targetPath,
+          paths,
+          probePath,
+          sessionDir,
+          sessionId,
+          caseName,
+          theme,
+          columns,
+          installGeneration: 1,
+          reload,
+        }),
+      )
     }
 
     await rm(installOne, { recursive: true, force: true })

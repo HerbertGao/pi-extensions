@@ -168,8 +168,10 @@ The monitor report is a candidate list, not an instruction to upgrade everything
 For every accepted behavior change, identify an observable regression boundary and add the smallest useful coverage:
 
 - imported source behavior belongs in the package's existing tests;
-- bundled companion behavior belongs in `scripts/aggregate-package-smoke.mjs`;
+- `scripts/aggregate-package-smoke.mjs` covers only the aggregate distribution contract: exact pins, promoted dependencies, bundled Pi entries, license/notice coverage, a clean install loaded by the real Pi loader, minimal tool/command registration, and the final tarball shape;
 - Pi-host integration belongs in an existing real smoke script when it can be deterministic.
+
+Do not add upstream behavior, internal helper, model-table, pricing, or source-text assertions to the aggregate smoke. Those assertions duplicate upstream tests and break on refactors that keep behavior intact. Keep each real smoke script to a few deterministic Pi launches instead of one launch per edge case.
 
 Do not add tests that only mirror version strings or obvious mappings. When behavior changes from present to absent, replace its positive assertion with an explicit negative assertion instead of deleting coverage. Preserve explicit external-validation boundaries for Herdr, OAuth/browser callbacks, clipboard/terminal integration, live providers, or other platform behavior that cannot be deterministic in Actions.
 
