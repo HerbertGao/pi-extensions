@@ -789,6 +789,8 @@ Recommended configuration files may be shipped under `packages/pi-extensions/exa
 
 PRs run `.github/workflows/ci.yml`; pushes to `master` run `.github/workflows/release.yml`. Both call the read-only `checks.yml` workflow, which runs static checks, unit tests, and metadata validation in one matrix runner and aggregate packaging/integration tests in another. Together they cover every command in the local `bun run check`, which remains unchanged. Aggregate smoke failures still upload diagnostics.
 
+`scripts/aggregate-package-smoke.mjs` validates the distribution contract only: exact pins, promoted dependency ranges, bundled Pi entries, license/notice coverage, a clean install loaded by the real Pi loader, minimal tool/command registration, and the final tarball shape. Upstream behavior, internal helpers, model tables, pricing, and source-text assertions belong in the owning package's tests; adding them here duplicates upstream coverage and breaks on refactors that keep behavior intact. The real smoke scripts keep a few deterministic Pi launches instead of one launch per edge case.
+
 Both callers retain a final job named `check` for required status checks. It succeeds only when the shared validation succeeds; failed, cancelled, or skipped validation cannot pass the gate. Do not rename this job without checking branch protection requirements. `NPM_RELEASE_ENABLED` gates only the release job, not validation on `master`.
 
 The release job waits for `check` and alone receives write permissions and OIDC access. Keep publishing in `release.yml` so npm Trusted Publishing identity remains unchanged. Release runs remain serialized per branch, and published versions are still verified against npm after publishing.
