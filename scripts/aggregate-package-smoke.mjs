@@ -1987,11 +1987,11 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     "./fullscreen-handoff",
   )
   if (
-    handoffModule.manifest.version !== "0.70.0" ||
+    handoffModule.manifest.version !== "0.70.1" ||
     handoffModule.manifest.license !== "MIT"
   ) {
     throw new Error(
-      `Expected pi-btw to load pi-tui-kit 0.70.0 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
+      `Expected pi-btw to load pi-tui-kit 0.70.1 MIT for fullscreen handoff, got ${handoffModule.manifest.version} ${handoffModule.manifest.license}`,
     )
   }
   const { getKeybindings } = await import(
@@ -3200,6 +3200,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     assert.equal(registration.config.models.length > 0, true)
     assert.equal(typeof registration.config.streamSimple, "function")
     assert.equal(typeof registration.config.oauth?.login, "function")
+    assert.equal(typeof registration.config.refreshModels, "function")
   }
   const loadedQoder = result.extensions.find(
     (extension) => extension.resolvedPath === qoderEntry,
@@ -3212,7 +3213,7 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
   const qoderProbe = await createQoderJiti(qoderEntry, {
     moduleCache: false,
   }).evalModule(
-    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl, formatUpdateNotice, checkForUpdate, lostToolArgumentStream };\n`,
+    `${await readFile(qoderEntry, "utf8")}\nexport { parseModelBusyRejection, formatQueuedBusyError, parseQoderRegionEndpoints, chatEndpointCandidates, isDailyChatLimitRejection, getCachedChatBaseUrl, formatUpdateNotice, checkForUpdate, lostToolArgumentStream, awaitModelsCacheAfterLogin };\n`,
     { filename: qoderEntry, async: true, forceTranspile: true },
   )
   assert.deepEqual(
@@ -3408,6 +3409,124 @@ export { canHandle, ruleLanguageForFile, AST_GREP_LSP_ONLY_RULE_LANGUAGES, loadS
     qoderProbe.lostToolArgumentStream().message,
     "Qoder server error: tool-call argument stream was cut off (unparseable upstream payload)",
   )
+  const qoderCatalogHome = join(stageDir, "qoder-catalog-home")
+  await mkdir(qoderCatalogHome, { recursive: true })
+  const previousQoderHome = process.env.HOME
+  const previousQoderUserProfile = process.env.USERPROFILE
+  const previousFetch = globalThis.fetch
+  process.env.HOME = qoderCatalogHome
+  process.env.USERPROFILE = qoderCatalogHome
+  const qoderCredential = {
+    type: "oauth",
+    access: "tok",
+    userID: "user",
+    name: "Name",
+    email: "a@b.c",
+  }
+  let qoderCatalog = {
+    chat: [
+      { key: "ultimate", enable: true, display_name: "Ultimate" },
+      { key: "retired", enable: false, display_name: "Retired" },
+      { key: "auto", enable: false, display_name: "Auto" },
+      { key: "ghost", enable: true },
+      { enable: true, display_name: "No Key" },
+    ],
+  }
+  let qoderCatalogDelay = null
+  let qoderCatalogFetches = 0
+  globalThis.fetch = async (url) => {
+    const href = String(url)
+    if (!href.includes("/model/list")) {
+      return { ok: true, json: async () => [] }
+    }
+    qoderCatalogFetches += 1
+    if (qoderCatalogDelay) await qoderCatalogDelay
+    return { ok: true, json: async () => qoderCatalog }
+  }
+  try {
+    const offline = await qoderProbe.refreshQoderModelsForMode("global", {
+      allowNetwork: false,
+      signal: new AbortController().signal,
+      credential: qoderCredential,
+    })
+    assert.equal(qoderCatalogFetches, 0)
+    assert.equal(
+      offline.some((model) => model.id === "Retired"),
+      false,
+    )
+    assert.equal(
+      offline.some((model) => model.id === "Auto"),
+      true,
+    )
+    const aborted = new AbortController()
+    aborted.abort()
+    await qoderProbe.refreshQoderModelsForMode("global", {
+      allowNetwork: true,
+      signal: aborted.signal,
+      credential: qoderCredential,
+    })
+    assert.equal(qoderCatalogFetches, 0)
+    let releaseCatalog
+    qoderCatalogDelay = new Promise((resolveDelay) => {
+      releaseCatalog = resolveDelay
+    })
+    const pending = qoderProbe.refreshQoderModelsForMode("global", {
+      allowNetwork: true,
+      signal: new AbortController().signal,
+      credential: qoderCredential,
+    })
+    let settled = false
+    pending.then(
+      () => {
+        settled = true
+      },
+      () => {
+        settled = true
+      },
+    )
+    await new Promise((finishWait) => setTimeout(finishWait, 30))
+    assert.equal(settled, false)
+    releaseCatalog()
+    assert.deepEqual(
+      (await pending).map((model) => model.id),
+      ["Ultimate", "Retired"],
+    )
+    qoderCatalogDelay = null
+    qoderCatalog = {
+      chat: [
+        { key: "auto", enable: true, display_name: "Auto" },
+        { key: "retired", enable: false, display_name: "Retired" },
+      ],
+    }
+    assert.deepEqual(
+      (
+        await qoderProbe.refreshQoderModelsForMode("global", {
+          allowNetwork: true,
+          signal: new AbortController().signal,
+          credential: qoderCredential,
+        })
+      ).map((model) => model.id),
+      ["Auto", "Retired"],
+    )
+    qoderCatalog = { chat: [] }
+    globalThis.fetch = async () => {
+      throw new Error("catalog offline")
+    }
+    await qoderProbe.awaitModelsCacheAfterLogin(
+      "tok",
+      "user",
+      "Name",
+      "a@b.c",
+      "global",
+    )
+  } finally {
+    globalThis.fetch = previousFetch
+    if (previousQoderHome === undefined) delete process.env.HOME
+    else process.env.HOME = previousQoderHome
+    if (previousQoderUserProfile === undefined) {
+      delete process.env.USERPROFILE
+    } else process.env.USERPROFILE = previousQoderUserProfile
+  }
   const commandCodeEntry = resolve(
     packageRoot,
     "node_modules/pi-commandcode-provider/index.ts",
