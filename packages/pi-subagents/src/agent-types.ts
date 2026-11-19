@@ -155,7 +155,9 @@ export function registerEphemeralAgents(
   for (const name of entries.keys()) {
     if (!applied.includes(name)) ephemeralAgents.delete(name)
   }
-  return applied
+  // Report only this call's names: the overlay re-applies the whole store, so
+  // returning `applied` would list types the caller never sent.
+  return [...entries.keys()].filter((name) => applied.includes(name))
 }
 
 /** Remove ephemeral types by name (case-insensitive); file-backed types stay. */

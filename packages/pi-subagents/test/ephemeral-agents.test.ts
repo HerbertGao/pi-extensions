@@ -104,6 +104,14 @@ describe("ephemeral agent collisions and re-registration", () => {
     )
   })
 
+  it("reports only this call's names, not the whole session store", () => {
+    registerEphemeralAgents(new Map([["MCP Builder", seat()]]))
+    const later = registerEphemeralAgents(
+      new Map([["UI Designer", seat({ name: "UI Designer" })]]),
+    )
+    expect(later).toEqual(["UI Designer"])
+  })
+
   it("drops a rejected collision from the store, so it cannot resurrect", () => {
     registerAgents(
       new Map([

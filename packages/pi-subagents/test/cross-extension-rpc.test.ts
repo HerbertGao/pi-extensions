@@ -949,8 +949,12 @@ describe("register-agents RPC", () => {
       error: 'agent type already exists: "Explore"',
     })
 
-    // A mixed payload says which names did register before failing.
+    // A mixed payload says which of ITS names did register — an earlier
+    // session type must not leak into the reply or the error.
     await clearEphemeralAgents()
+    await register("reg-pre", [
+      { name: "Earlier Type", description: "d", systemPrompt: "p" },
+    ])
     const mixed = await register("reg-col2", [
       { name: "Good Agent", description: "d", systemPrompt: "p" },
       { name: "Explore", description: "d", systemPrompt: "p" },
@@ -958,6 +962,13 @@ describe("register-agents RPC", () => {
     expect(mixed).toEqual({
       success: false,
       error: 'agent type already exists: "Explore" (applied: "Good Agent")',
+    })
+    const scoped = await register("reg-col3", [
+      { name: "Earlier Type", description: "d", systemPrompt: "p2" },
+    ])
+    expect(scoped).toEqual({
+      success: true,
+      data: { agents: ["Earlier Type"] },
     })
   })
 
