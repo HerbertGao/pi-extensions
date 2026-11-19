@@ -1,5 +1,11 @@
 # @herbertgao/pi-agency
 
+## 0.1.4
+
+### Patch Changes
+
+- [#397](https://github.com/HerbertGao/pi-extensions/pull/397) [`42647d1`](https://github.com/HerbertGao/pi-extensions/commit/42647d16b171f766da6135fc937bd087e005a161) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Label an `Agent` run by identity: a registered type (Code Reviewer) keeps its type name while a named generic run shows its own `name`, in both the ccstyle transcript row and the pi-subagents badges. The `name` parameter accepts any characters — labels show it as given, `@handles` are slugged. `agency_register` seats catalog personas as session-scoped agent types over the new `subagents:rpc:register-agents` bus channels: the persona body becomes the system prompt, the card name and color become the label and badge, and the types vanish at the next session start without ever shadowing file-loaded agents.
+
 ## 0.1.3
 
 ### Patch Changes
