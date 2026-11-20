@@ -313,3 +313,44 @@ test("clearAgentBadges drops the table for a fresh session", async () => {
 		unsub();
 	}
 });
+
+test("a superseded pull's timeout never wipes the newer pull's fill", async () => {
+	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+	const holder = { agents: [{ name: "Code Reviewer", color: "purple" }] };
+	// 复刻 Bugbot 抓到的竞态：第一次拉取（session_start 时 RPC 未挂上）无应答，
+	// 第二次拉取（subagents:ready 之后）成功；前者的超时绝不能清掉后者的结果。
+	let pulls = 0;
+	const racingBus = {
+		handlers: new Map<string, (data: unknown) => void>(),
+		on(event: string, handler: (data: unknown) => void) {
+			this.handlers.set(event, handler);
+			return () => this.handlers.delete(event);
+		},
+		emit(event: string, data: any) {
+			if (event === "subagents:rpc:list-agents") {
+				pulls++;
+				if (pulls > 1) {
+					this.handlers.get(`${event}:reply:${data.requestId}`)?.({
+						success: true,
+						data: { agents: holder.agents },
+					});
+				} // 第一步：沉默
+			} else {
+				this.handlers.get(event)?.({});
+			}
+		},
+	};
+	const unsub = initAgentBadges(racingBus, 30); // doomed 定时器 30ms
+	try {
+		racingBus.emit("subagents:ready", {}); // pull 1：无应答（超时挂起）
+		await sleep(5);
+		racingBus.emit("subagents:agents-changed", {}); // pull 2：成功填充
+		await sleep(80); // pull 1 的超时在此期间到点
+		assert.ok(
+			agentBadge("Code Reviewer", theme) !== undefined,
+			"superseded timeout must not wipe the fresh fill",
+		);
+	} finally {
+		unsub();
+	}
+});

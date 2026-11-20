@@ -147,20 +147,28 @@ function fillCache(agents: Array<Record<string, unknown>>): void {
 	}
 }
 
+/** Monotonic pull generation: only the LATEST pull may mutate the cache. A
+ * superseded pull is inert — its timeout must not wipe a newer pull's fill (the
+ * aggregate loads cc-extensions before pi-subagents, so the session-start pull
+ * races subagents:ready), and its late reply must not overwrite it. */
+let fetchGeneration = 0;
+
 async function fetchAgentBadges(events: BadgeEvents, timeoutMs = 2000): Promise<void> {
+	const generation = ++fetchGeneration;
 	const requestId = `ccstyle-badges-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 	const channel = `subagents:rpc:list-agents:reply:${requestId}`;
 	return new Promise((resolve) => {
 		let timer: ReturnType<typeof setTimeout>;
-		// Silence or a bad reply clears the cache: a session where pi-subagents is
-		// filtered out must fall back to plain rows, not keep the previous
-		// session's colors for types that can no longer spawn. (Replies arrive in
-		// pull order on this in-process bus, so an older snapshot can never
-		// overwrite a newer one; timeouts unsubscribe, so a late reply is dropped.)
-		const clearAndResolve = () => {
-			badgeCache.clear();
+		const superseded = () => generation !== fetchGeneration;
+		// Silence or a bad reply from the LATEST pull clears the cache: a session
+		// where pi-subagents is filtered out must fall back to plain rows, not
+		// keep the previous session's colors for types that can no longer spawn.
+		const apply = (mutate: () => void) => {
+			if (superseded()) return resolve();
+			mutate();
 			resolve();
 		};
+		const clearAndResolve = () => apply(() => badgeCache.clear());
 		const unsub = events.on(channel, (raw) => {
 			clearTimeout(timer);
 			unsub();
@@ -172,7 +180,8 @@ async function fetchAgentBadges(events: BadgeEvents, timeoutMs = 2000): Promise<
 				clearAndResolve();
 				return;
 			}
-			if (reply.success && Array.isArray(reply.data?.agents)) fillCache(reply.data.agents);
+			if (reply.success && Array.isArray(reply.data?.agents))
+				apply(() => fillCache(reply.data!.agents!));
 			else clearAndResolve();
 		});
 		timer = setTimeout(() => {
