@@ -160,14 +160,19 @@ export function registerEphemeralAgents(
   return [...entries.keys()].filter((name) => applied.includes(name))
 }
 
-/** Remove ephemeral types by name (case-insensitive); file-backed types stay. */
-export function unregisterEphemeralAgents(names: readonly string[]): void {
+/** Remove ephemeral types by name (case-insensitive); file-backed types stay.
+ * Returns how many were actually removed, so callers can emit change events
+ * only for real mutations. */
+export function unregisterEphemeralAgents(names: readonly string[]): number {
+  let removed = 0
   for (const name of names) {
     const key = resolveKeyIn(ephemeralAgents, name)
     if (!key) continue
     ephemeralAgents.delete(key)
     if (ephemeralOwned.delete(key)) agents.delete(key)
+    removed++
   }
+  return removed
 }
 
 /** Drop every ephemeral type; file-backed types stay. Called on session_start. */

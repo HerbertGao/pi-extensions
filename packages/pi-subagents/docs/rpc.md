@@ -148,7 +148,7 @@ Like `consume` and `steer`, both channels are outside the `ping` version handsha
 
 `subagents:rpc:list-agents` `{ requestId }` answers with every enabled type and the label and color its config would render: `{ agents: [{ name, displayName?, color? }] }`. The handler reloads agent files first (the caller wires `refreshAgents`), so the list matches what a spawn right now could use. `@herbertgao/pi-cc-extensions` pulls it once per session — on `subagents:ready` — and draws transcript badges from the answer.
 
-Registry mutations announce themselves as `subagents:agents-changed` `{}` on the same bus: emitted by register/unregister and by the file reload whenever the spawnable set actually changes. A badge holder re-pulls list-agents on it, so a mid-session ephemeral registration gets its color without a new session. Like the register channels, both are outside the `ping` version handshake.
+Registry mutations announce themselves as `subagents:agents-changed` `{}` on the same bus: emitted by register/unregister (only when something actually changed) and by the file reload whenever the spawnable set actually changed. The comparison covers name, display name and color, so a color-only edit to a file-backed agent is announced too, on the next spawn's reload. A badge holder re-pulls list-agents on it, so a mid-session ephemeral registration gets its color without a new session. Like the register channels, both are outside the `ping` version handshake.
 
 ## The manager registry
 

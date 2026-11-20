@@ -1128,22 +1128,42 @@ describe("list-agents RPC", () => {
     })
   })
 
-  it("announces registry changes on the bus", async () => {
+  it("announces registry changes once per real mutation", async () => {
     registerRpcHandlers(deps)
+    const changes = () =>
+      emitted.filter(({ event }) => event === "subagents:agents-changed").length
+    const settle = () => new Promise((r) => setTimeout(r, 10))
+
+    // A refused collision never reaches the emit (it throws first).
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-col",
+      agents: [{ name: "Explore", description: "d", systemPrompt: "p" }],
+    })
+    await settle()
+    expect(changes()).toBe(0)
+
+    // A real registration announces itself…
     events.emit("subagents:rpc:register-agents", {
       requestId: "reg-2",
       agents: [{ name: "UI Designer", description: "d", systemPrompt: "p" }],
     })
-    await new Promise((r) => setTimeout(r, 10))
+    await settle()
+    expect(changes()).toBe(1)
+
+    // …a no-op unregister (unknown names) does not…
+    events.emit("subagents:rpc:unregister-agents", {
+      requestId: "unreg-nop",
+      names: ["Never Registered"],
+    })
+    await settle()
+    expect(changes()).toBe(1)
+
+    // …and an actual removal does.
     events.emit("subagents:rpc:unregister-agents", {
       requestId: "unreg-1",
       names: ["UI Designer"],
     })
-    await new Promise((r) => setTimeout(r, 10))
-    const changes = emitted.filter(
-      ({ event }) => event === "subagents:agents-changed",
-    )
-    // Once per mutation, so badge holders know to re-pull.
-    expect(changes).toHaveLength(2)
+    await settle()
+    expect(changes()).toBe(2)
   })
 })

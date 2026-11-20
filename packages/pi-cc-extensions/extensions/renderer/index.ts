@@ -1,6 +1,6 @@
 import { ToolExecutionComponent, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { CompactThinkingController } from "../feature/compact-thinking.ts";
-import { initAgentBadges } from "./tool/agent-badge.ts";
+import { initAgentBadges, refreshAgentBadges } from "./tool/agent-badge.ts";
 import { installToolGrouping, type ToolGroupingHooks } from "./tool/grouping.ts";
 import {
 	installCompactMode,
@@ -243,6 +243,9 @@ export default function (
 	});
 
 	pi.on("session_start", async (event, ctx) => {
+		// 徽章表随会话重新拉取：pi-subagents 在场时无论 session_start 处理顺序
+		// 先后都会填上；缺席时超时清空，保持纯文本而不是沿用旧颜色。
+		refreshAgentBadges(pi.events);
 		// 延后一拍再确认 write 归属：其他扩展同样在各自的 session_start 里注册工具，
 		// 本 handler 执行时可能还看不到对方，此时注册会与对方撞名（注册表先到先得），
 		// 对方的 write 会被静默丢弃。等所有 session_start 跑完，检测结果才是权威的。

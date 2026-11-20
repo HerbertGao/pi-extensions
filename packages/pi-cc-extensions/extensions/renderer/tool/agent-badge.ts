@@ -28,7 +28,7 @@ export interface BadgeTheme {
 
 // ---- Color math (mirrored; see the header) ----
 
-const NAMED_AGENT_COLORS: Readonly<Record<string, string>> = {
+export const NAMED_AGENT_COLORS: Readonly<Record<string, string>> = {
 	red: "#DC2626",
 	blue: "#6A9BCC",
 	green: "#16A34A",
@@ -42,7 +42,7 @@ const NAMED_AGENT_COLORS: Readonly<Record<string, string>> = {
 	indigo: "#6366F1",
 	gold: "#EAB308",
 	"neon-green": "#10B981",
-	"neon-cyan": "#06D6D4",
+	"neon-cyan": "#06B6D4",
 	"metallic-blue": "#3B82F6",
 	violet: "#8B5CF6",
 	rose: "#F43F5E",
@@ -96,13 +96,6 @@ function rgbTo256({ r, g, b }: Rgb): { index: number; rgb: Rgb } {
 	return { index: 16 + 36 * rIndex + 6 * gIndex + bIndex, rgb: cube };
 }
 
-function ansiColor(layer: "foreground" | "background", color: Rgb | number): string {
-	const code = layer === "foreground" ? 38 : 48;
-	return typeof color === "number"
-		? `\u001b[${code};5;${color}m`
-		: `\u001b[${code};2;${color.r};${color.g};${color.b}m`;
-}
-
 function relativeLuminance({ r, g, b }: Rgb): number {
 	const linear = (value: number) => {
 		const channel = value / 255;
@@ -125,12 +118,15 @@ export function renderAgentBadge(
 	const shown = quantized?.rgb ?? rgb;
 	const contrasting = relativeLuminance(shown) > 0.179 ? BLACK : WHITE;
 	const label = theme.bold ? theme.bold(` ${name} `) : ` ${name} `;
-	return (
-		ansiColor("background", quantized?.index ?? rgb) +
-		ansiColor("foreground", quantized ? rgbTo256(contrasting).index : contrasting) +
-		label +
-		"\u001b[39m\u001b[49m"
-	);
+	// fg 与 bg 合并在同一个 SGR、以全量 reset 收尾：ccstyle 的行重绘器
+	// （stripBackgroundAnsi）只剥以背景码开头的转义，合并序列原样存活；它又在
+	// 每个 \u001b[0m 后补回行底色，所以徽章结尾用 0m 而不是 39m/49m —— 后者的
+	// 49m 被剥掉后徽章底色会一直铺到行尾。
+	const fgPart = quantized
+		? `38;5;${rgbTo256(contrasting).index}`
+		: `38;2;${contrasting.r};${contrasting.g};${contrasting.b}`;
+	const bgPart = quantized ? `48;5;${quantized.index}` : `48;2;${rgb.r};${rgb.g};${rgb.b}`;
+	return `\u001b[${fgPart};${bgPart}m${label}\u001b[0m`;
 }
 
 // ---- Cache + bus client ----
@@ -156,46 +152,84 @@ async function fetchAgentBadges(events: BadgeEvents, timeoutMs = 2000): Promise<
 	const channel = `subagents:rpc:list-agents:reply:${requestId}`;
 	return new Promise((resolve) => {
 		let timer: ReturnType<typeof setTimeout>;
+		// Silence or a bad reply clears the cache: a session where pi-subagents is
+		// filtered out must fall back to plain rows, not keep the previous
+		// session's colors for types that can no longer spawn. (Replies arrive in
+		// pull order on this in-process bus, so an older snapshot can never
+		// overwrite a newer one; timeouts unsubscribe, so a late reply is dropped.)
+		const clearAndResolve = () => {
+			badgeCache.clear();
+			resolve();
+		};
 		const unsub = events.on(channel, (raw) => {
 			clearTimeout(timer);
 			unsub();
 			const reply = raw as
 				| { success: true; data?: { agents?: Array<Record<string, unknown>> } }
 				| { success: false };
+			// A malformed envelope is silence, not a crash inside the bus dispatch.
+			if (!raw || typeof raw !== "object" || typeof reply.success !== "boolean") {
+				clearAndResolve();
+				return;
+			}
 			if (reply.success && Array.isArray(reply.data?.agents)) fillCache(reply.data.agents);
-			resolve();
+			else clearAndResolve();
 		});
 		timer = setTimeout(() => {
 			unsub();
-			resolve(); // no answer: keep the cache as-is, rows stay plain
+			clearAndResolve();
 		}, timeoutMs);
 		events.emit("subagents:rpc:list-agents", { requestId });
 	});
 }
 
+let unsubscribeBadges: (() => void) | undefined;
+
 /**
  * Subscribe the cache to pi-subagents' lifecycle: pull on ready, re-pull when
- * the spawnable set changes. Call once at extension setup; the subscriptions
- * live for the process and subagents:ready re-fires per session.
+ * the spawnable set changes. Idempotent — a second invocation replaces the
+ * first subscription, so repeated factory runs (integration tests) never
+ * stack listeners. The subscriptions live for the process; subagents:ready
+ * re-fires per session.
  */
-export function initAgentBadges(events: BadgeEvents | undefined): () => void {
+export function initAgentBadges(events: BadgeEvents | undefined, timeoutMs = 2000): () => void {
 	// Headless hosts and test harnesses may expose no bus; without one there is
 	// nothing to pull and rows simply stay plain.
 	if (!events?.on || !events.emit) return () => {};
+	unsubscribeBadges?.();
 	const pull = () => {
-		void fetchAgentBadges(events);
+		void fetchAgentBadges(events, timeoutMs);
 	};
 	const unsubReady = events.on("subagents:ready", pull);
 	const unsubChanged = events.on("subagents:agents-changed", pull);
-	return () => {
+	unsubscribeBadges = () => {
 		unsubReady();
 		unsubChanged();
 	};
+	return unsubscribeBadges;
+}
+
+/** Drop the cached table (tests and the session-start refresh use this). */
+export function clearAgentBadges(): void {
+	badgeCache.clear();
+}
+
+/** Pull the table now. The renderer calls this on its own session_start: a
+ * present pi-subagents refills regardless of handler order (its own ready pull
+ * may have run before ours), and an absent one leaves the timeout's clear in
+ * place — so a filtered-out session starts plain instead of keeping the
+ * previous session's colors. */
+export function refreshAgentBadges(events: BadgeEvents | undefined): void {
+	if (!events?.on || !events.emit) return;
+	void fetchAgentBadges(events);
 }
 
 /** A styled badge for a spawnable type, or undefined when its color is unknown. */
 export function agentBadge(type: string, theme: BadgeTheme): string | undefined {
 	const info = badgeCache.get(type.toLowerCase());
-	if (!info?.color) return undefined;
+	// A configured-but-invalid color is "no badge" (same rule as pi-subagents'
+	// hasAgentBadge), so the row keeps its normal toolTitle rendering instead of
+	// a bare unstyled name.
+	if (!info?.color || !resolveAgentColor(info.color)) return undefined;
 	return renderAgentBadge(info.displayName || type, info.color, theme);
 }

@@ -285,7 +285,9 @@ export function toolCallSummary(
 			return {
 				main: `${title} ${displayName}`,
 				detail: "",
-				agentType: displayName,
+				// 徽章按「派发类型」查表，绝不按运行名：general-purpose 运行即使起名
+				// Code Reviewer，也不能捡到同名注册类型的颜色。
+				agentType: typeof type === "string" ? type : undefined,
 				payload: description ? `\u00b7 ${description}` : undefined,
 			};
 		}

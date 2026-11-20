@@ -350,8 +350,9 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
   }>(events, "subagents:rpc:unregister-agents", ({ names }) => {
     if (!Array.isArray(names) || names.some((n) => typeof n !== "string"))
       throw new Error("unregister-agents requires an array of type names")
-    unregisterEphemeralAgents(names)
-    events.emit("subagents:agents-changed", {})
+    // Emit only for a real removal — once per actual registry change.
+    if (unregisterEphemeralAgents(names) > 0)
+      events.emit("subagents:agents-changed", {})
   })
 
   // The badge holder's snapshot: every enabled type with the label and color
