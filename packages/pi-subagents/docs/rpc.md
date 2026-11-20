@@ -1,6 +1,6 @@
 # Driving subagents from another extension
 
-Another pi extension can spawn a subagent, listen for subagent completion, read the result, steer and stop the run — all over the `pi.events` bus, without importing this package directly. Seven request/reply channels (`subagents:rpc:ping`, `subagents:rpc:spawn`, `subagents:rpc:stop`, `subagents:rpc:consume`, `subagents:rpc:steer`, `subagents:rpc:register-agents`, `subagents:rpc:unregister-agents`), the lifecycle events in README's [event table](../README.md#events), one per-message usage event (`subagents:usage`), one terminal `subagents:disposed`, and one in-process registry at `Symbol.for("pi-subagents:manager")`.
+Another pi extension can spawn a subagent, listen for subagent completion, read the result, steer and stop the run — all over the `pi.events` bus, without importing this package directly. Eight request/reply channels (`subagents:rpc:ping`, `subagents:rpc:spawn`, `subagents:rpc:stop`, `subagents:rpc:consume`, `subagents:rpc:steer`, `subagents:rpc:register-agents`, `subagents:rpc:unregister-agents`, `subagents:rpc:list-agents`), the `subagents:agents-changed` registry event, the lifecycle events in README's [event table](../README.md#events), one per-message usage event (`subagents:usage`), one terminal `subagents:disposed`, and one in-process registry at `Symbol.for("pi-subagents:manager")`.
 
 The thing worth understanding up front is that **the bus is in-process.** Every "RPC" call here is a synchronous `pi.events.emit` into the same event loop, and every reply comes back the same way. That single fact explains most of what follows: why `signal` and the `on*` callbacks work on a spawn payload at all, why a `consume` fired inside a `subagents:completed` handler lands _before_ the notification decision has been made, and why none of this survives a real process boundary.
 
@@ -143,6 +143,12 @@ It takes an id only, enforces the same top-level ownership guard as stop, and an
 `subagents:rpc:register-agents` `{ requestId, agents: [{ name, description, systemPrompt, color? }], tools?: "none" | "builtin" }` registers ephemeral agent types — spawnable immediately as `subagent_type`, surviving every agent-file reload, and cleared on the next `session_start`. The payload is deliberately narrow: the system prompt is applied in replace mode, extension and skill access is refused, and the only tool choice is none or the built-ins. A file-loaded agent with the same name (case-insensitively) wins — the overlay never shadows the user's own agents. `subagents:rpc:unregister-agents` `{ requestId, names }` removes types by name; file-backed types are untouched.
 
 Like `consume` and `steer`, both channels are outside the `ping` version handshake: an older build has no handler and never replies, so give the call a timeout and treat expiry as "not available here". The intended caller is `@herbertgao/pi-agency`, which seats an Agency Agents catalog persona this way — the persona body as system prompt, the card name as the agent's label, the card color as its badge.
+
+## Listing agents for badge rendering
+
+`subagents:rpc:list-agents` `{ requestId }` answers with every enabled type and the label and color its config would render: `{ agents: [{ name, displayName?, color? }] }`. The handler reloads agent files first (the caller wires `refreshAgents`), so the list matches what a spawn right now could use. `@herbertgao/pi-cc-extensions` pulls it once per session — on `subagents:ready` — and draws transcript badges from the answer.
+
+Registry mutations announce themselves as `subagents:agents-changed` `{}` on the same bus: emitted by register/unregister and by the file reload whenever the spawnable set actually changes. A badge holder re-pulls list-agents on it, so a mid-session ephemeral registration gets its color without a new session. Like the register channels, both are outside the `ping` version handshake.
 
 ## The manager registry
 

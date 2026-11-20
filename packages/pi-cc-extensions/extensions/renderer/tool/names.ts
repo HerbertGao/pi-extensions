@@ -4,6 +4,7 @@ import { visibleWidth } from "@earendil-works/pi-tui";
 import { keyText } from "../../utils/keybindings.ts";
 import { config } from "../../config/config.ts";
 import { oneLine } from "../../utils/format.ts";
+import { agentBadge, type BadgeTheme } from "./agent-badge.ts";
 import { headTruncateToWidth } from "./result.ts";
 
 /** toolLabelClip=0 时不设字符上限，交给渲染时的实际宽度截断。 */
@@ -64,6 +65,8 @@ export type ToolCallSummaryOptions = {
 export type ToolCallSummary = {
 	main: string;
 	detail: string;
+	/** Agent 行的派发类型：渲染层据它在类型有配置色时画徽章，替换标题里的类型名。 */
+	agentType?: string;
 	/** 路径摘要保留结构，供最终渲染按实际宽度优先保留文件名。 */
 	path?: { prefix: string; value: string };
 	/** 标题之外的原始载荷（入参 JSON、脚本代码、命令、路径、查询…），已压成单行，渲染时用 muted 接在标题后。 */
@@ -282,6 +285,7 @@ export function toolCallSummary(
 			return {
 				main: `${title} ${displayName}`,
 				detail: "",
+				agentType: displayName,
 				payload: description ? `\u00b7 ${description}` : undefined,
 			};
 		}
@@ -425,6 +429,7 @@ export function renderToolSummary(
 	summary: ToolCallSummary,
 	width: number,
 	fg: (color: ThemeColor, text: string) => string,
+	theme?: BadgeTheme,
 ): string {
 	// 路径摘要：前缀用标题色，值用次级色并按可用宽度中间截断（文件名优先保留）。
 	if (summary.path) {
@@ -432,6 +437,17 @@ export function renderToolSummary(
 		const pathWidth = width - visibleWidth(prefix) - 1;
 		if (pathWidth < MIN_PAYLOAD_WIDTH) return fg("toolTitle", prefix);
 		return `${fg("toolTitle", prefix)} ${fg("muted", truncatePathToWidth(summary.path.value, Math.min(pathWidth, clipLimit())))}`;
+	}
+	// Agent 行：类型有配置色时用 pi-subagents 同款徽章替换「Subagent 类型名」标题，
+	// 无色或缓存未命中时保持纯文本（缓存在 subagents:ready / agents-changed 后拉取）。
+	if (summary.agentType && theme) {
+		const badge = agentBadge(summary.agentType, theme);
+		if (badge) {
+			const room = width - visibleWidth(badge);
+			return room >= MIN_PAYLOAD_WIDTH && summary.payload
+				? `${badge}${fg("muted", headTruncateToWidth(` ${summary.payload}`, room))}`
+				: badge;
+		}
 	}
 	const title = fitToolCallSummary(summary, width);
 	if (!summary.payload) return fg("toolTitle", title);

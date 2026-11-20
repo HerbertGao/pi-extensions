@@ -618,8 +618,13 @@ export default function (pi: ExtensionAPI) {
 
   /** Reload agents from package/global/project agent dirs and merge with defaults (called on init and each Agent invocation). */
   const reloadCustomAgents = (strict = false) => {
+    // The before/after comparison feeds subagents:agents-changed, so badge
+    // holders re-pull exactly when the spawnable set actually changed.
+    const before = getAvailableTypes().join(",")
     const userAgents = loadCustomAgents(process.cwd(), strict)
     registerAgents(userAgents)
+    if (getAvailableTypes().join(",") !== before)
+      pi.events.emit("subagents:agents-changed", {})
   }
 
   // Initial load — the only strict one. A bad edit mid-session must not kill the
@@ -1169,6 +1174,7 @@ export default function (pi: ExtensionAPI) {
       rpcHandle = registerRpcHandlers({
         events: pi.events,
         pi,
+        refreshAgents: () => reloadCustomAgents(),
         getCtx: () => currentCtx,
         manager: {
           spawn: spawnTopLevel,
@@ -1508,6 +1514,7 @@ export default function (pi: ExtensionAPI) {
     rpcHandle?.unsubSteer()
     rpcHandle?.unsubRegisterAgents()
     rpcHandle?.unsubUnregisterAgents()
+    rpcHandle?.unsubListAgents()
     rpcHandle = undefined
     currentCtx = undefined
     // Only release the global slot if this activation claimed it — a child

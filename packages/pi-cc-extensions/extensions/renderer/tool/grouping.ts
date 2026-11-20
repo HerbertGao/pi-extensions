@@ -23,6 +23,7 @@ import {
 } from "./codemode.ts";
 import { getToolMouseTui } from "../mouse/scroll.ts";
 import { mcpToolTitle } from "./mcp-title.ts";
+import { type BadgeTheme } from "./agent-badge.ts";
 import { collapseHintText, isToolTuiFullscreen, showMoreHintText } from "./names.ts";
 import {
 	contentRowRange,
@@ -370,12 +371,18 @@ function shellResultTail(
 }
 
 /** 子工具折叠行正文：与组内同一套摘要。 */
-function toolSummaryText(tool: any, toolStatus: ToolStatus, width: number, fg: Fg): string {
+function toolSummaryText(
+	tool: any,
+	toolStatus: ToolStatus,
+	width: number,
+	fg: Fg,
+	theme?: BadgeTheme,
+): string {
 	const summary = askUserResultSummary(tool) ?? codemodeResultSummary(tool) ?? toolSummary(tool);
 	const detail = fg("dim", summary.detail);
 	const result = agentResultTail(tool, fg) + shellResultTail(tool, fg, toolStatus);
 	const mainWidth = Math.max(0, width - visibleWidth(detail) - visibleWidth(result));
-	return `${renderToolSummary(summary, mainWidth, fg)}${detail}${result}`;
+	return `${renderToolSummary(summary, mainWidth, fg, theme)}${detail}${result}`;
 }
 
 /**
@@ -437,7 +444,7 @@ function toolItem(tool: any): GroupDisplayItem {
 		name: toolName(tool),
 		label: toolTitle(tool),
 		status: toolStatus,
-		summary: (width, theme) => toolSummaryText(tool, toolStatus, width, themeFg(theme)),
+		summary: (width, theme) => toolSummaryText(tool, toolStatus, width, themeFg(theme), theme),
 		expandedRows: (width) => expandedToolRows(tool, width),
 		hitTarget: tool,
 	};

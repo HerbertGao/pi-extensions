@@ -1,5 +1,6 @@
 import { ToolExecutionComponent, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { CompactThinkingController } from "../feature/compact-thinking.ts";
+import { initAgentBadges } from "./tool/agent-badge.ts";
 import { installToolGrouping, type ToolGroupingHooks } from "./tool/grouping.ts";
 import {
 	installCompactMode,
@@ -116,6 +117,9 @@ export default function (
 ) {
 	// 可选 override：集成测试不依赖用户全局配置。
 	if (configOverride) setConfig(normalizeConfig({ ...config, ...configOverride }));
+	// Agent 行的徽章颜色表：subagents:ready 后拉取、agents-changed 时刷新。
+	// pi-subagents 缺席或过旧时缓存为空，行渲染保持纯文本。
+	initAgentBadges(pi.events);
 	const writeExecutionMetadata = new WriteExecutionMetadataStore();
 	const mouseOwner = {};
 	let installation:
