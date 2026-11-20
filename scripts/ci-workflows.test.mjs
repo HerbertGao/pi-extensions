@@ -102,13 +102,16 @@ test("only the gated release job retains publishing permissions and commands", (
   assert.equal(changesets.with.version, "bun run version")
   assert.equal(changesets.with.publish, "bun run release")
   assert.equal(changesets.env.NPM_CONFIG_PROVENANCE, "true")
-  assert.ok(
-    publish.steps.some(
-      (step) =>
-        step.if ===
-          "always() && steps.changesets.outputs.published == 'true'" &&
-        step.run === "node scripts/verify-published-packages.mjs",
-    ),
+  assert.equal(publish["timeout-minutes"], 30)
+  assert.equal(release.jobs.check["timeout-minutes"], 20)
+  assert.equal(ci.jobs.check["timeout-minutes"], 20)
+  assert.equal(checks.jobs.suite["timeout-minutes"], 20)
+  const verify = publish.steps.find(
+    (step) => step.run === "node scripts/verify-published-packages.mjs",
+  )
+  assert.equal(
+    verify.if,
+    "always() && steps.changesets.outputs.hasChangesets != 'true' && (steps.changesets.outcome == 'success' || steps.changesets.outputs.published == 'true')",
   )
   assert.ok(publish.steps.every((step) => step.run !== "bun run check"))
 })
