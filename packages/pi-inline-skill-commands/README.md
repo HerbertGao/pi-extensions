@@ -24,6 +24,24 @@ pi install /absolute/path/to/pi-extensions/packages/pi-inline-skill-commands
 
 Restart Pi or run `/reload` after installation. If `@herbertgao/pi-extensions` already provides this extension, do not install the standalone package as well.
 
+## Session names
+
+Expanding a skill rewrites the stored prompt, so `/resume` would otherwise show the skill body. A brand-new session is therefore named with the prompt you typed, both for a mid-prompt command and for a native start-of-prompt one, and later prompts leave that name alone. Extension-authored prompts do not trigger it.
+
+```text
+Check this using the same pattern /skill:test
+```
+
+That session appears in `/resume` as the sentence above, not as the expanded block. A prompt is named when it carries a recognised skill command: a native start-of-prompt command is named whether or not the skill exists, while a mid-prompt one is named only when it actually expands.
+
+Sessions created before this package was installed keep their stored block until you run:
+
+```text
+/resume-session-name
+```
+
+It rebuilds the typed prompt from the first message's skill block (`/skill:name argue this` for a native command, the original sentence for a mid-prompt one) and sets it as the session name. Because a native block stores only the arguments, args that repeat the command itself (`/skill:name write about /skill:name usage`) come back without the leading command. Renaming writes one `session_info` entry, the same as `/name`, so `/name` and `/resume` both see it. The command reports a message and changes nothing when the first message with non-blank text has no skill block.
+
 ## Compatibility
 
 Pi currently filters `/` out of extension-provided autocomplete trigger characters. To provide automatic mid-text completion anyway, this package patches `CustomEditor` once and calls its private autocomplete trigger. It does not replace the active editor factory, so editor customizations from other packages remain in place. That internal dependency can break when Pi changes its editor. If the private trigger is unavailable, mid-text Tab completion and submission-time expansion still work.

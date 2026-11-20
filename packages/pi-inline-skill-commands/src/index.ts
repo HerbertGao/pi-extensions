@@ -3,10 +3,13 @@ import {
   CustomEditor,
   DefaultResourceLoader,
   getAgentDir,
+  parseSkillBlock,
   SettingsManager,
   stripFrontmatter,
   type ExtensionAPI,
   type ExtensionContext,
+  type InputSource,
+  type ParsedSkillBlock,
   type Skill,
 } from "@earendil-works/pi-coding-agent"
 import type {
@@ -208,6 +211,39 @@ async function loadSessionSkills(ctx: ExtensionContext): Promise<SkillMap> {
   )
 }
 
+/** Rebuild the typed prompt from a stored skill block, keeping the command readable. */
+function sessionNameFromBlock(block: ParsedSkillBlock): string {
+  const rest = block.userMessage?.trim()
+  // A body containing `</skill>` makes Pi's non-greedy envelope split early; the tail is not prose.
+  if (!rest || rest.includes("<skill ") || rest.includes("</skill>")) {
+    return `/skill:${block.name}`
+  }
+  const command = new RegExp(
+    `(^|${MID_SKILL_BOUNDARY})/skill:${escapeRegExp(block.name)}(?![A-Za-z0-9_-])`,
+  )
+  return command.test(rest) ? rest : `/skill:${block.name} ${rest}`
+}
+
+function messageText(message: { content: unknown }): string {
+  const content = message.content
+  if (typeof content === "string") return content
+  if (!Array.isArray(content)) return ""
+  return content
+    .filter((part) => part?.type === "text")
+    .map((part) => part.text as string)
+    .join(" ")
+}
+
+/** First user message with non-blank text, so a text-less message never decides a name. */
+function firstUserMessageText(ctx: ExtensionContext): string | undefined {
+  for (const entry of ctx.sessionManager.getEntries()) {
+    if (entry.type !== "message" || entry.message.role !== "user") continue
+    const text = messageText(entry.message)
+    if (text.trim()) return text
+  }
+  return undefined
+}
+
 export default function piInlineSkillCommands(pi: ExtensionAPI): void {
   let skillsPromise: Promise<SkillMap> | undefined
   installMidSkillTrigger()
@@ -234,6 +270,49 @@ export default function piInlineSkillCommands(pi: ExtensionAPI): void {
   pi.on("input", async (event, ctx) => {
     if (!MID_SKILL_COMMAND.test(event.text)) return
     const text = expandMidSkillCommand(event.text, await getSkills(ctx))
+    const nativeStart = event.text.trimStart().startsWith("/skill:")
+    if (text === undefined && !nativeStart) return
+    try {
+      nameFirstSkillPrompt(pi, event.source, event.text, ctx)
+    } catch {
+      // A session name is cosmetic; never let it abort the expansion below.
+    }
     return text === undefined ? undefined : { action: "transform", text }
   })
+
+  pi.registerCommand("resume-session-name", {
+    description:
+      "Name this session from its first prompt instead of the expanded skill block",
+    handler: async (_args, ctx) => {
+      const first = firstUserMessageText(ctx)
+      if (first === undefined) {
+        ctx.ui.notify("This session has no user message with text yet", "info")
+        return
+      }
+      const block = parseSkillBlock(first)
+      if (!block) {
+        ctx.ui.notify("The first message has no expanded skill block", "info")
+        return
+      }
+      const name = sessionNameFromBlock(block)
+      pi.setSessionName(name)
+      ctx.ui.notify(`Session name set: ${pi.getSessionName() ?? name}`, "info")
+    },
+  })
+}
+
+/** A fresh session keeps the typed prompt as its name instead of the expanded block. */
+function nameFirstSkillPrompt(
+  pi: ExtensionAPI,
+  source: InputSource,
+  text: string,
+  ctx: ExtensionContext,
+): void {
+  // Extension-authored prompts are not the user's first prompt.
+  if (source === "extension") return
+  if (ctx.sessionManager.getSessionName()) return
+  // A text-less first message leaves `/resume` showing the block, so it must not block naming.
+  if (firstUserMessageText(ctx) !== undefined) return
+  const name = text.trim()
+  if (name) pi.setSessionName(name)
 }
