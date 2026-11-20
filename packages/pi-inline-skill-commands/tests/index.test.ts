@@ -496,6 +496,15 @@ test("resume-session-name rebuilds the typed prompt from a stored block", async 
   await command("", nearMiss.ctx)
   assert.equal(pi.names[3], "/skill:test compare /skill:testing")
 
+  // A dotted longer name is a different command, exactly as the expansion pattern treats it.
+  const dotted = createFakeContext({
+    messages: [
+      `<skill name="test" location="/tmp/SKILL.md">\nBody.\n</skill>\n\ncompare /skill:test.notes`,
+    ],
+  })
+  await command("", dotted.ctx)
+  assert.equal(pi.names[4], "/skill:test compare /skill:test.notes")
+
   // Expansion allows CJK punctuation before the command, so the rebuild must too.
   const cjk = createFakeContext({
     messages: [
@@ -503,7 +512,7 @@ test("resume-session-name rebuilds the typed prompt from a stored block", async 
     ],
   })
   await command("", cjk.ctx)
-  assert.equal(pi.names[4], "检查一下，/skill:test")
+  assert.equal(pi.names[5], "检查一下，/skill:test")
 
   // A body containing `</skill>` splits Pi's envelope early; do not use the tail as a name.
   const split = createFakeContext({
@@ -512,7 +521,7 @@ test("resume-session-name rebuilds the typed prompt from a stored block", async 
     ],
   })
   await command("", split.ctx)
-  assert.equal(pi.names[5], "/skill:test")
+  assert.equal(pi.names[6], "/skill:test")
 
   // Stored user messages carry content parts, not a bare string.
   const parts = createFakeContext({
@@ -526,7 +535,7 @@ test("resume-session-name rebuilds the typed prompt from a stored block", async 
     ],
   })
   await command("", parts.ctx)
-  assert.equal(pi.names[6], "/skill:test argue this")
+  assert.equal(pi.names[7], "/skill:test argue this")
 
   // A text-less first message is skipped, the way `/resume` builds `firstMessage`.
   const imageOnly = createFakeContext({
@@ -536,23 +545,23 @@ test("resume-session-name rebuilds the typed prompt from a stored block", async 
     ],
   })
   await command("", imageOnly.ctx)
-  assert.equal(pi.names[7], "/skill:test argue this")
+  assert.equal(pi.names[8], "/skill:test argue this")
 
   // Empty userMessage falls back to the command alone.
   const empty = createFakeContext({
     messages: [`<skill name="test" location="/tmp/SKILL.md">\nBody.\n</skill>`],
   })
   await command("", empty.ctx)
-  assert.equal(pi.names[8], "/skill:test")
+  assert.equal(pi.names[9], "/skill:test")
 
   const plain = createFakeContext({ messages: ["no skill here"] })
   await command("", plain.ctx)
-  assert.equal(pi.names.length, 9)
+  assert.equal(pi.names.length, 10)
   assert.match(plain.notes.at(-1) ?? "", /no expanded skill block/)
 
   const none = createFakeContext({})
   await command("", none.ctx)
-  assert.equal(pi.names.length, 9)
+  assert.equal(pi.names.length, 10)
   assert.match(none.notes.at(-1) ?? "", /no user message with text/)
 
   // Text parts are joined with one space, like Pi's `firstMessage`.
@@ -568,5 +577,5 @@ test("resume-session-name rebuilds the typed prompt from a stored block", async 
     ],
   })
   await command("", splitParts.ctx)
-  assert.equal(pi.names[9], "/skill:test explain this")
+  assert.equal(pi.names[10], "/skill:test explain this")
 })

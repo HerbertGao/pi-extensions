@@ -218,8 +218,9 @@ function sessionNameFromBlock(block: ParsedSkillBlock): string {
   if (!rest || rest.includes("<skill ") || rest.includes("</skill>")) {
     return `/skill:${block.name}`
   }
+  // Same trailing rule as the expansion pattern: a dotted longer name is a different command.
   const command = new RegExp(
-    `(^|${MID_SKILL_BOUNDARY})/skill:${escapeRegExp(block.name)}(?![A-Za-z0-9_-])`,
+    `(^|${MID_SKILL_BOUNDARY})/skill:${escapeRegExp(block.name)}(?!\\.?[A-Za-z0-9_-])`,
   )
   return command.test(rest) ? rest : `/skill:${block.name} ${rest}`
 }
