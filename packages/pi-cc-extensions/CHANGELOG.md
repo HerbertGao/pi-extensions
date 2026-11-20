@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.21-local.3
+
+### Patch Changes
+
+- [#402](https://github.com/HerbertGao/pi-extensions/pull/402) [`f0109df`](https://github.com/HerbertGao/pi-extensions/commit/f0109dfd7bb213fe26260a0c882e45d2bf83935d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Color the ccstyle Agent tool rows with each type's configured badge. pi-subagents exposes the label and color of every spawnable type over a new `subagents:rpc:list-agents` bus channel and announces registry changes with a `subagents:agents-changed` event; pi-cc-extensions pulls the table on `subagents:ready` and renders Agent rows as padded background badges (same palette, hex, 256-color quantization, and contrast rules as pi-subagents' own badges). Without pi-subagents on the bus the rows stay plain text.
+
 ## 1.0.21-local.2
 
 ### Patch Changes

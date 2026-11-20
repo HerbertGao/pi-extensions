@@ -1,5 +1,18 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.18
+
+### Patch Changes
+
+- [#402](https://github.com/HerbertGao/pi-extensions/pull/402) [`f0109df`](https://github.com/HerbertGao/pi-extensions/commit/f0109dfd7bb213fe26260a0c882e45d2bf83935d) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Color the ccstyle Agent tool rows with each type's configured badge. pi-subagents exposes the label and color of every spawnable type over a new `subagents:rpc:list-agents` bus channel and announces registry changes with a `subagents:agents-changed` event; pi-cc-extensions pulls the table on `subagents:ready` and renders Agent rows as padded background badges (same palette, hex, 256-color quantization, and contrast rules as pi-subagents' own badges). Without pi-subagents on the bus the rows stay plain text.
+
+- [#401](https://github.com/HerbertGao/pi-extensions/pull/401) [`09bed8a`](https://github.com/HerbertGao/pi-extensions/commit/09bed8a789c603958995746d073982b92a1d92fe) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin graphifyy 0.9.113. The CLI stays outside the npm aggregate. Warm AST caches rebuild. Python is now >=3.11.5,<3.15. The Pi skill path is unchanged.
+
+- Updated dependencies [[`f0109df`](https://github.com/HerbertGao/pi-extensions/commit/f0109dfd7bb213fe26260a0c882e45d2bf83935d), [`f7e030f`](https://github.com/HerbertGao/pi-extensions/commit/f7e030f578bb73f401d74fa4bac2b67947bc997a)]:
+  - @herbertgao/pi-cc-extensions@1.0.21
+  - @herbertgao/pi-subagents@0.26.1
+  - @herbertgao/pi-inline-skill-commands@0.2.0
+
 ## 2026.11.17
 
 ### Patch Changes

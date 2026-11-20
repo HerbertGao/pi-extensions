@@ -1,5 +1,11 @@
 # @herbertgao/pi-inline-skill-commands
 
+## 0.2.0
+
+### Minor Changes
+
+- [#404](https://github.com/HerbertGao/pi-extensions/pull/404) [`f7e030f`](https://github.com/HerbertGao/pi-extensions/commit/f7e030f578bb73f401d74fa4bac2b67947bc997a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Name a fresh session with the prompt you typed instead of the expanded skill block, and add `/resume-session-name` to rebuild that name for sessions that already stored a block.
+
 ## 0.1.1
 
 ### Patch Changes
