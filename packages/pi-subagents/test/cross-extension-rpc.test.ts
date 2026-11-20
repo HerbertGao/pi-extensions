@@ -1017,3 +1017,153 @@ describe("register-agents RPC", () => {
     expect(getAgentConfig("Reality Checker")).toBeDefined()
   })
 })
+
+describe("list-agents RPC", () => {
+  let events: EventBus
+  let emitted: Array<{ event: string; data: unknown }>
+  let refreshAgents: ReturnType<typeof vi.fn>
+  let deps: RpcDeps
+
+  beforeEach(() => {
+    emitted = []
+    const handlers = new Map<string, Set<(data: unknown) => void>>()
+    events = {
+      on(event, handler) {
+        if (!handlers.has(event)) handlers.set(event, new Set())
+        handlers.get(event)!.add(handler)
+        return () => handlers.get(event)?.delete(handler)
+      },
+      emit(event, data) {
+        emitted.push({ event, data })
+        for (const handler of handlers.get(event) ?? []) handler(data)
+      },
+    }
+    refreshAgents = vi.fn()
+    deps = {
+      events,
+      pi: { events },
+      getCtx: () => ({}),
+      refreshAgents,
+      manager: {
+        spawn: vi.fn(),
+        awaitStartup: vi.fn().mockResolvedValue(undefined),
+        abort: vi.fn(),
+        getRecord: vi.fn(),
+        consumeResult: vi.fn(),
+        steer: vi.fn(),
+      },
+    }
+  })
+
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  const list = (requestId: string) =>
+    new Promise((resolve) => {
+      events.on(`subagents:rpc:list-agents:reply:${requestId}`, resolve)
+      events.emit("subagents:rpc:list-agents", { requestId })
+    })
+
+  it("lists enabled agents with their display names and colors", async () => {
+    registerAgents(
+      new Map([
+        [
+          "Code Reviewer",
+          {
+            name: "Code Reviewer",
+            displayName: "Code Reviewer",
+            description: "Reviews code",
+            color: "purple",
+            systemPrompt: "p",
+            promptMode: "replace",
+            extensions: false,
+            skills: false,
+          },
+        ],
+      ]),
+    )
+    registerRpcHandlers(deps)
+    const reply = (await list("list-1")) as {
+      success: boolean
+      data: {
+        agents: Array<{ name: string; displayName?: string; color?: string }>
+      }
+    }
+    expect(reply.success).toBe(true)
+    const reviewer = reply.data.agents.find((a) => a.name === "Code Reviewer")
+    expect(reviewer).toEqual({
+      name: "Code Reviewer",
+      displayName: "Code Reviewer",
+      color: "purple",
+    })
+    // A default type appears too, and the list refreshes files first.
+    expect(refreshAgents).toHaveBeenCalled()
+  })
+
+  it("includes a freshly registered ephemeral type", async () => {
+    registerRpcHandlers(deps)
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-1",
+      agents: [
+        {
+          name: "MCP Builder",
+          description: "d",
+          systemPrompt: "p",
+          color: "indigo",
+        },
+      ],
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const reply = (await list("list-2")) as {
+      success: boolean
+      data: { agents: Array<{ name: string; color?: string }> }
+    }
+    const builder = reply.data.agents.find((a) => a.name === "MCP Builder")
+    expect(builder).toEqual({
+      name: "MCP Builder",
+      displayName: "MCP Builder",
+      color: "indigo",
+    })
+  })
+
+  it("announces registry changes once per real mutation", async () => {
+    registerRpcHandlers(deps)
+    const changes = () =>
+      emitted.filter(({ event }) => event === "subagents:agents-changed").length
+    const settle = () => new Promise((r) => setTimeout(r, 10))
+
+    // A refused collision never reaches the emit (it throws first).
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-col",
+      agents: [{ name: "Explore", description: "d", systemPrompt: "p" }],
+    })
+    await settle()
+    expect(changes()).toBe(0)
+
+    // A real registration announces itself…
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-2",
+      agents: [{ name: "UI Designer", description: "d", systemPrompt: "p" }],
+    })
+    await settle()
+    expect(changes()).toBe(1)
+
+    // …a no-op unregister (unknown names) does not…
+    events.emit("subagents:rpc:unregister-agents", {
+      requestId: "unreg-nop",
+      names: ["Never Registered"],
+    })
+    await settle()
+    expect(changes()).toBe(1)
+
+    // …and an actual removal does.
+    events.emit("subagents:rpc:unregister-agents", {
+      requestId: "unreg-1",
+      names: ["UI Designer"],
+    })
+    await settle()
+    expect(changes()).toBe(2)
+  })
+})

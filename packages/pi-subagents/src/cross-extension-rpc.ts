@@ -15,6 +15,8 @@
 
 import { isTopLevelAgent } from "./agent-manager.js"
 import {
+  getAvailableTypes,
+  getConfig,
   registerEphemeralAgents,
   unregisterEphemeralAgents,
 } from "./agent-types.js"
@@ -74,6 +76,9 @@ export interface RpcDeps {
   pi: unknown // passed through to manager.spawn
   getCtx: () => unknown | undefined // returns current ExtensionContext
   manager: SpawnCapable
+  /** Reload agent files before list-agents answers, so the list matches what
+   * a spawn right now could use. index.ts wires this to reloadCustomAgents. */
+  refreshAgents?: () => void
 }
 
 export interface RpcHandle {
@@ -84,6 +89,7 @@ export interface RpcHandle {
   unsubSteer: () => void
   unsubRegisterAgents: () => void
   unsubUnregisterAgents: () => void
+  unsubListAgents: () => void
 }
 
 /**
@@ -332,6 +338,9 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
             ? ` (applied: ${applied.map((name) => `"${name}"`).join(", ")})`
             : ""),
       )
+    // Badge holders (pi-cc-extensions) re-pull list-agents on this event, so a
+    // freshly seated persona gets its colored badge without a new session.
+    events.emit("subagents:agents-changed", {})
     return { agents: applied }
   })
 
@@ -341,8 +350,33 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
   }>(events, "subagents:rpc:unregister-agents", ({ names }) => {
     if (!Array.isArray(names) || names.some((n) => typeof n !== "string"))
       throw new Error("unregister-agents requires an array of type names")
-    unregisterEphemeralAgents(names)
+    // Emit only for a real removal — once per actual registry change.
+    if (unregisterEphemeralAgents(names) > 0)
+      events.emit("subagents:agents-changed", {})
   })
+
+  // The badge holder's snapshot: every enabled type with the label and color
+  // its config would render. pi-cc-extensions pulls this once per session (on
+  // subagents:ready) and again on subagents:agents-changed, then draws
+  // transcript badges from it. Additive like the other channels: outside the
+  // ping handshake, a missing handler just never replies.
+  const unsubListAgents = handleRpc<{ requestId: string }>(
+    events,
+    "subagents:rpc:list-agents",
+    () => {
+      deps.refreshAgents?.()
+      return {
+        agents: getAvailableTypes().map((type) => {
+          const config = getConfig(type)
+          return {
+            name: type,
+            displayName: config.displayName,
+            ...(config.color ? { color: config.color } : {}),
+          }
+        }),
+      }
+    },
+  )
 
   return {
     unsubPing,
@@ -352,5 +386,6 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
     unsubSteer,
     unsubRegisterAgents,
     unsubUnregisterAgents,
+    unsubListAgents,
   }
 }

@@ -617,9 +617,31 @@ export default function (pi: ExtensionAPI) {
   seedProjectTrust(process.cwd())
 
   /** Reload agents from package/global/project agent dirs and merge with defaults (called on init and each Agent invocation). */
+  /** Current session context; undefined outside a session (also gates the
+   * agents-changed emit above to active sessions). */
+  let currentCtx: ExtensionContext | undefined
+
   const reloadCustomAgents = (strict = false) => {
+    // The before/after comparison feeds subagents:agents-changed, so badge
+    // holders re-pull exactly when the spawnable set actually changed. Gated
+    // on an active session: the factory-time first load always "changes" the
+    // set (defaults → defaults+files) and would fire a pull nobody can answer
+    // yet; session_start's own reload runs after currentCtx is set and still
+    // announces anything that changed since.
+    // Signature covers name, displayName and color: a color-only edit to a
+    // file-backed agent is a real change for badge holders, not just a rename.
+    const signature = () =>
+      getAvailableTypes()
+        .map((type) => {
+          const config = getConfig(type)
+          return `${type}|${config.displayName}|${config.color ?? ""}`
+        })
+        .join(",")
+    const before = signature()
     const userAgents = loadCustomAgents(process.cwd(), strict)
     registerAgents(userAgents)
+    if (currentCtx !== undefined && signature() !== before)
+      pi.events.emit("subagents:agents-changed", {})
   }
 
   // Initial load — the only strict one. A bad edit mid-session must not kill the
@@ -1103,7 +1125,6 @@ export default function (pi: ExtensionAPI) {
   }
 
   // --- Cross-extension RPC via pi.events ---
-  let currentCtx: ExtensionContext | undefined
   // RPC handlers + the `subagents:ready` broadcast are wired on `session_start`
   // (a bound lifecycle event), not at factory time. pi runs every extension
   // factory before the `extensions:` filter and only fires lifecycle events for
@@ -1169,6 +1190,7 @@ export default function (pi: ExtensionAPI) {
       rpcHandle = registerRpcHandlers({
         events: pi.events,
         pi,
+        refreshAgents: () => reloadCustomAgents(),
         getCtx: () => currentCtx,
         manager: {
           spawn: spawnTopLevel,
@@ -1508,6 +1530,7 @@ export default function (pi: ExtensionAPI) {
     rpcHandle?.unsubSteer()
     rpcHandle?.unsubRegisterAgents()
     rpcHandle?.unsubUnregisterAgents()
+    rpcHandle?.unsubListAgents()
     rpcHandle = undefined
     currentCtx = undefined
     // Only release the global slot if this activation claimed it — a child

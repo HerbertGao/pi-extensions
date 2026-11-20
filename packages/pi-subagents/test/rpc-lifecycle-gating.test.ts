@@ -319,4 +319,30 @@ describe("issue #142: RPC handlers + subagents:ready are gated on session_start"
       ).toHaveLength(1)
     }
   })
+  it("file reloads announce agents-changed only when the spawnable set changes", async () => {
+    const { pi, lifecycle } = makePi()
+    subagentsExtension(pi as any)
+    const session = ctx()
+    const changes = () =>
+      pi.events.emit.mock.calls.filter(
+        (c: any[]) => c[0] === "subagents:agents-changed",
+      )
+    // First session load over an empty agent dir: nothing changed since the
+    // factory load, and the factory load itself is gated on an active session.
+    await lifecycle.get("session_start")({}, session)
+    expect(changes()).toHaveLength(0)
+
+    // A file agent appears mid-session: the next reload announces it once.
+    mkdirSync(join(agentDir, "agents"), { recursive: true })
+    writeFileSync(
+      join(agentDir, "agents", "late-reviewer.md"),
+      "---\nname: Late Reviewer\ndescription: appears mid-session\n---\n\nRole text.\n",
+    )
+    await lifecycle.get("session_start")({}, session)
+    expect(changes()).toHaveLength(1)
+
+    // A reload with no further change stays silent.
+    await lifecycle.get("session_start")({}, session)
+    expect(changes()).toHaveLength(1)
+  })
 })
