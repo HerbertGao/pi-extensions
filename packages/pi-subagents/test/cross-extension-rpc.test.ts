@@ -3,6 +3,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
+  clearEphemeralAgents,
+  getAgentConfig,
+  registerAgents,
+} from "../src/agent-types.js"
+import {
   type EventBus,
   FEATURES,
   PROTOCOL_VERSION,
@@ -18,6 +23,29 @@ import {
   setScopeModelsEnabled,
 } from "../src/model-scope.js"
 import type { WorkflowDetail, WorkflowInfo } from "../src/workflow-info.js"
+
+/** Minimal manager stub for identity RPC tests. */
+function identityManagerStub() {
+  return {
+    spawn: vi.fn(),
+    awaitStartup: vi.fn().mockResolvedValue(undefined),
+    abort: vi.fn().mockReturnValue(true),
+    waitForSettled: vi.fn().mockResolvedValue(true),
+    isSettling: vi.fn().mockReturnValue(false),
+    getRecord: vi.fn(),
+    listAgents: vi.fn().mockReturnValue([]),
+    isNotificationPending: vi.fn().mockReturnValue(false),
+    consumeResult: vi.fn(),
+    steer: vi.fn(),
+  }
+}
+
+function identityWorkflowsStub(): WorkflowReader {
+  return {
+    get: vi.fn(),
+    list: vi.fn().mockReturnValue([]),
+  }
+}
 
 /** Simple in-process event bus for testing. */
 function createEventBus(): EventBus {
@@ -1221,5 +1249,319 @@ describe("cross-extension RPC", () => {
         { model: BLOCKED },
       )
     })
+  })
+})
+
+describe("register-agents RPC", () => {
+  let events: EventBus
+  let deps: RpcDeps
+
+  beforeEach(() => {
+    events = createEventBus()
+    deps = {
+      events,
+      pi: { events },
+      getCtx: () => ({}),
+      manager: identityManagerStub(),
+      workflows: identityWorkflowsStub(),
+    }
+  })
+
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  const register = (requestId: string, agents: unknown[], tools?: string) =>
+    new Promise((resolve) => {
+      events.on(`subagents:rpc:register-agents:reply:${requestId}`, resolve)
+      events.emit("subagents:rpc:register-agents", {
+        requestId,
+        agents,
+        ...(tools ? { tools } : {}),
+      })
+    })
+
+  it("registers an ephemeral type from a persona payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-1", [
+      {
+        name: "MCP Builder",
+        description: "Expert MCP developer.",
+        systemPrompt: "You are MCP Builder.",
+        color: "indigo",
+      },
+    ])
+    expect(reply).toEqual({
+      success: true,
+      data: { agents: ["MCP Builder"] },
+    })
+    const config = getAgentConfig("MCP Builder")
+    expect(config?.systemPrompt).toBe("You are MCP Builder.")
+    expect(config?.color).toBe("indigo")
+    expect(config?.promptMode).toBe("replace")
+    expect(config?.extensions).toBe(false)
+  })
+
+  it('maps tools "none" to a fully tool-less type and rejects anything else', async () => {
+    registerRpcHandlers(deps)
+    await register(
+      "reg-2",
+      [{ name: "S", description: "d", systemPrompt: "p" }],
+      "none",
+    )
+    expect(getAgentConfig("S")?.builtinToolNames).toEqual([])
+
+    const rejected = await register(
+      "reg-3",
+      [{ name: "T", description: "d", systemPrompt: "p" }],
+      "everything",
+    )
+    expect(rejected).toEqual({
+      success: false,
+      error: 'tools must be "none" or "builtin"',
+    })
+  })
+
+  it("rejects an invalid payload with an error envelope", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-4", [{ description: "no name" }])
+    expect(reply).toEqual({
+      success: false,
+      error: "agents[0].name must be 1-64 characters",
+    })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+  })
+
+  it("fails when a name collides with an existing type", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-col", [
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    expect(reply).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore"',
+    })
+
+    await clearEphemeralAgents()
+    await register("reg-pre", [
+      { name: "Earlier Type", description: "d", systemPrompt: "p" },
+    ])
+    const mixed = await register("reg-col2", [
+      { name: "Good Agent", description: "d", systemPrompt: "p" },
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    expect(mixed).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore" (applied: "Good Agent")',
+    })
+    const scoped = await register("reg-col3", [
+      { name: "Earlier Type", description: "d", systemPrompt: "p2" },
+    ])
+    expect(scoped).toEqual({
+      success: true,
+      data: { agents: ["Earlier Type"] },
+    })
+  })
+
+  it("fails on duplicate names within one payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-dup", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+      { name: "mcp builder", description: "d", systemPrompt: "p2" },
+    ])
+    expect(reply).toEqual({
+      success: false,
+      error: 'agents[1].name "mcp builder" duplicates agents[0]',
+    })
+  })
+
+  it("unregisters over the bus and leaves file-backed types alone", async () => {
+    registerRpcHandlers(deps)
+    registerAgents(
+      new Map([
+        [
+          "Reality Checker",
+          {
+            name: "Reality Checker",
+            description: "file",
+            systemPrompt: "p",
+            promptMode: "replace",
+            extensions: false,
+            skills: false,
+          },
+        ],
+      ]),
+    )
+    await register("reg-5", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+    ])
+
+    const reply = new Promise((resolve) => {
+      events.on("subagents:rpc:unregister-agents:reply:unreg-1", resolve)
+      events.emit("subagents:rpc:unregister-agents", {
+        requestId: "unreg-1",
+        names: ["MCP Builder", "Reality Checker"],
+      })
+    })
+    expect(await reply).toEqual({ success: true })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+    expect(getAgentConfig("Reality Checker")).toBeDefined()
+  })
+})
+
+describe("list-agents RPC", () => {
+  let events: EventBus
+  let emitted: Array<{ event: string; data: unknown }>
+  let refreshAgents: ReturnType<typeof vi.fn>
+  let deps: RpcDeps
+
+  beforeEach(() => {
+    emitted = []
+    const handlers = new Map<string, Set<(data: unknown) => void>>()
+    events = {
+      on(event, handler) {
+        if (!handlers.has(event)) handlers.set(event, new Set())
+        handlers.get(event)!.add(handler)
+        return () => handlers.get(event)?.delete(handler)
+      },
+      emit(event, data) {
+        emitted.push({ event, data })
+        for (const handler of handlers.get(event) ?? []) handler(data)
+      },
+    }
+    refreshAgents = vi.fn()
+    deps = {
+      events,
+      pi: { events },
+      getCtx: () => ({}),
+      refreshAgents,
+      manager: identityManagerStub(),
+      workflows: identityWorkflowsStub(),
+    }
+  })
+
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  const list = (requestId: string) =>
+    new Promise((resolve) => {
+      events.on(`subagents:rpc:list-agents:reply:${requestId}`, resolve)
+      events.emit("subagents:rpc:list-agents", { requestId })
+    })
+
+  it("lists enabled agents with their display names and colors", async () => {
+    registerAgents(
+      new Map([
+        [
+          "Code Reviewer",
+          {
+            name: "Code Reviewer",
+            displayName: "Code Reviewer",
+            description: "Reviews code",
+            color: "purple",
+            systemPrompt: "p",
+            promptMode: "replace",
+            extensions: false,
+            skills: false,
+          },
+        ],
+      ]),
+    )
+    registerRpcHandlers(deps)
+    const reply = (await list("list-1")) as {
+      success: boolean
+      data: {
+        agents: Array<{ name: string; displayName?: string; color?: string }>
+      }
+    }
+    expect(reply.success).toBe(true)
+    const reviewer = reply.data.agents.find((a) => a.name === "Code Reviewer")
+    expect(reviewer).toEqual({
+      name: "Code Reviewer",
+      displayName: "Code Reviewer",
+      color: "purple",
+    })
+    expect(refreshAgents).toHaveBeenCalled()
+  })
+
+  it("includes a freshly registered ephemeral type", async () => {
+    registerRpcHandlers(deps)
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-1",
+      agents: [
+        {
+          name: "MCP Builder",
+          description: "d",
+          systemPrompt: "p",
+          color: "indigo",
+        },
+      ],
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const reply = (await list("list-2")) as {
+      success: boolean
+      data: { agents: Array<{ name: string; color?: string }> }
+    }
+    const builder = reply.data.agents.find((a) => a.name === "MCP Builder")
+    expect(builder).toEqual({
+      name: "MCP Builder",
+      displayName: "MCP Builder",
+      color: "indigo",
+    })
+  })
+
+  it("announces registry changes once per real mutation", async () => {
+    registerRpcHandlers(deps)
+    const changes = () =>
+      emitted.filter(({ event }) => event === "subagents:agents-changed").length
+    const settle = () => new Promise((r) => setTimeout(r, 10))
+
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-col",
+      agents: [{ name: "Explore", description: "d", systemPrompt: "p" }],
+    })
+    await settle()
+    expect(changes()).toBe(0)
+
+    events.emit("subagents:rpc:register-agents", {
+      requestId: "reg-2",
+      agents: [{ name: "UI Designer", description: "d", systemPrompt: "p" }],
+    })
+    await settle()
+    expect(changes()).toBe(1)
+
+    events.emit("subagents:rpc:unregister-agents", {
+      requestId: "unreg-nop",
+      names: ["Never Registered"],
+    })
+    await settle()
+    expect(changes()).toBe(1)
+
+    events.emit("subagents:rpc:unregister-agents", {
+      requestId: "unreg-1",
+      names: ["UI Designer"],
+    })
+    await settle()
+    expect(changes()).toBe(2)
+  })
+
+  it("list-agents is not the running-agent list RPC", async () => {
+    registerRpcHandlers(deps)
+    const runs = await new Promise((resolve) => {
+      events.on("subagents:rpc:list:reply:runs-1", resolve)
+      events.emit("subagents:rpc:list", { requestId: "runs-1" })
+    })
+    const types = await list("types-1")
+    expect(runs).toEqual({ success: true, data: { agents: [] } })
+    expect(types).toMatchObject({
+      success: true,
+      data: { agents: expect.any(Array) },
+    })
+    expect(
+      ((types as { data: { agents: unknown[] } }).data.agents.length ?? 0) > 0,
+    ).toBe(true)
   })
 })

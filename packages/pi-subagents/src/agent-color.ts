@@ -192,8 +192,21 @@ export function renderAgentName(
   type: string | undefined,
   theme: AgentNameTheme,
   style: AgentNameStyle = {},
+  /** A run's own name. It outranks only the generic default type; a real type
+   * (Code Reviewer) is itself the identity and keeps its own label. */
+  label?: string,
 ): string {
-  if (!type) return renderAgentNameLabel("Agent", undefined, theme, style)
+  if (!type) {
+    return renderAgentNameLabel(label ?? "Agent", undefined, theme, style)
+  }
   const config = getConfig(type)
-  return renderAgentNameLabel(config.displayName, config.color, theme, style)
+  // general-purpose is the identity-less default: a run's name is the better
+  // label there. Any other type is itself the identity and wins over the name.
+  const generic = type.toLowerCase() === "general-purpose"
+  return renderAgentNameLabel(
+    generic ? (label ?? config.displayName) : config.displayName,
+    config.color,
+    theme,
+    style,
+  )
 }

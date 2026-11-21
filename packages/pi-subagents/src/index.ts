@@ -54,6 +54,7 @@ import {
   steerAgent,
 } from "./agent-runner.js"
 import {
+  clearEphemeralAgents,
   formatAgentTypeList,
   getAgentConfig,
   getAvailableTypes,
@@ -1125,6 +1126,10 @@ export default function (pi: ExtensionAPI) {
     // resumed session all land here, and any of them may follow a `pi install`
     // that added a package the cached root list predates.
     invalidatePackageCache()
+    // Ephemeral types live for the current session only: a new or resumed
+    // session starts clean, so a persona's registration never outlives the
+    // run that seated it.
+    clearEphemeralAgents()
     reloadCustomAgents()
     if (ctx.hasUI) {
       widget.setUICtx(ctx.ui)
@@ -1138,6 +1143,7 @@ export default function (pi: ExtensionAPI) {
       rpcHandle = registerRpcHandlers({
         events: pi.events,
         pi,
+        refreshAgents: () => reloadCustomAgents(),
         getCtx: () => currentCtx,
         manager: {
           spawn: spawnTopLevel,
@@ -2272,11 +2278,16 @@ Terse command-style prompts produce shallow, generic work.
           )
         : ""
       const desc = args.description ?? ""
-      const name = renderAgentName(args.subagent_type, theme, {
-        fallbackColor: "toolTitle",
-        restoreBackground: rowBackground,
-        bold: true,
-      })
+      const name = renderAgentName(
+        args.subagent_type,
+        theme,
+        {
+          fallbackColor: "toolTitle",
+          restoreBackground: rowBackground,
+          bold: true,
+        },
+        args.name,
+      )
       return new Text(
         rowBackground +
           "▸ " +
