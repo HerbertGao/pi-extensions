@@ -15,10 +15,16 @@
  */
 
 import { isTopLevelAgent } from "./agent-manager.js"
+import {
+  getAvailableTypes,
+  getConfig,
+  registerEphemeralAgents,
+  unregisterEphemeralAgents,
+} from "./agent-types.js"
 import { type ModelRegistry, resolveModel } from "./model-resolver.js"
 import { checkModelScope } from "./model-scope.js"
 import { toSubagentInfo } from "./subagent-info.js"
-import type { AgentRecord } from "./types.js"
+import type { AgentConfig, AgentRecord } from "./types.js"
 import type { WorkflowDetail, WorkflowInfo } from "./workflow-info.js"
 
 /** Minimal event bus interface needed by the RPC handlers. */
@@ -128,6 +134,8 @@ export interface WorkflowReader {
 export interface RpcDeps {
   events: EventBus
   pi: unknown // passed through to manager.spawn
+  /** Reload file-backed agents before `list-agents` answers. */
+  refreshAgents?: () => void
   getCtx: () => unknown | undefined // returns current ExtensionContext
   manager: SpawnCapable
   workflows: WorkflowReader
@@ -139,6 +147,9 @@ export interface RpcHandle {
   unsubStop: () => void
   unsubConsume: () => void
   unsubSteer: () => void
+  unsubRegisterAgents: () => void
+  unsubUnregisterAgents: () => void
+  unsubListAgents: () => void
   unsubGet: () => void
   unsubList: () => void
   unsubWorkflowGet: () => void
@@ -168,6 +179,45 @@ function handleRpc<P extends { requestId: string }>(
       })
     }
   })
+}
+
+/** Validate one register-agents payload entry into an AgentConfig. Narrow on
+ * purpose: no tool allowlist beyond none/builtin, no extension or skill access,
+ * replace-mode system prompt — a persona is role text, not an executable agent
+ * definition. */
+export function ephemeralAgentConfig(
+  candidate: unknown,
+  index: number,
+): [string, AgentConfig] {
+  if (typeof candidate !== "object" || candidate === null)
+    throw new Error(`agents[${index}] must be an object`)
+  const { name, description, systemPrompt, color } = candidate as Record<
+    string,
+    unknown
+  >
+  if (typeof name !== "string" || !name.trim() || name.length > 64)
+    throw new Error(`agents[${index}].name must be 1-64 characters`)
+  if (typeof description !== "string" || !description.trim())
+    throw new Error(`agents[${index}].description must be a non-empty string`)
+  if (typeof systemPrompt !== "string" || !systemPrompt.trim())
+    throw new Error(`agents[${index}].systemPrompt must be a non-empty string`)
+  if (color !== undefined && (typeof color !== "string" || !color))
+    throw new Error(
+      `agents[${index}].color must be a non-empty string when given`,
+    )
+  const trimmed = name.trim()
+  return [
+    trimmed,
+    {
+      name: trimmed,
+      description,
+      systemPrompt,
+      color: typeof color === "string" ? color : undefined,
+      promptMode: "replace",
+      extensions: false,
+      skills: false,
+    },
+  ]
 }
 
 /**
@@ -329,6 +379,75 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
       throw new Error("Agent is not running")
   })
 
+  // Register session-scoped agent types from another extension (pi-agency
+  // seating a catalog persona). Additive like consume/steer: outside the ping
+  // version handshake — an older pi-subagents simply never replies and the
+  // caller's timeout is the discovery signal.
+  const unsubRegisterAgents = handleRpc<{
+    requestId: string
+    agents: unknown[]
+    tools?: unknown
+  }>(events, "subagents:rpc:register-agents", ({ agents, tools }) => {
+    if (!Array.isArray(agents) || agents.length === 0)
+      throw new Error("register-agents requires a non-empty agents array")
+    if (tools !== undefined && tools !== "none" && tools !== "builtin")
+      throw new Error('tools must be "none" or "builtin"')
+    const builtinToolNames = tools === "none" ? [] : undefined
+    const entries = new Map<string, AgentConfig>()
+    const seen = new Map<string, number>()
+    agents.forEach((candidate, index) => {
+      const [name, config] = ephemeralAgentConfig(candidate, index)
+      const lower = name.toLowerCase()
+      const firstIndex = seen.get(lower)
+      if (firstIndex !== undefined)
+        throw new Error(
+          `agents[${index}].name "${name}" duplicates agents[${firstIndex}]`,
+        )
+      seen.set(lower, index)
+      entries.set(name, { ...config, builtinToolNames })
+    })
+    const applied = registerEphemeralAgents(entries)
+    // Badge holders (pi-cc-extensions) re-pull list-agents on this event, so a
+    // freshly seated persona gets its colored badge without a new session.
+    events.emit("subagents:agents-changed", {})
+    return { agents: applied }
+  })
+
+  const unsubUnregisterAgents = handleRpc<{
+    requestId: string
+    names: unknown
+  }>(events, "subagents:rpc:unregister-agents", ({ names }) => {
+    if (!Array.isArray(names) || names.some((n) => typeof n !== "string"))
+      throw new Error("unregister-agents requires an array of type names")
+    // Emit only for a real removal — once per actual registry change.
+    if (unregisterEphemeralAgents(names) > 0)
+      events.emit("subagents:agents-changed", {})
+  })
+
+  // The badge holder's snapshot: every enabled type with the label and color
+  // its config would render. pi-cc-extensions pulls this once per session (on
+  // subagents:ready) and again on subagents:agents-changed, then draws
+  // transcript badges from it. Additive like the other channels: outside the
+  // ping handshake, a missing handler just never replies. Not to be confused
+  // with `subagents:rpc:list`, which snapshots running agent instances.
+  const unsubListAgents = handleRpc<{ requestId: string }>(
+    events,
+    "subagents:rpc:list-agents",
+    () => {
+      deps.refreshAgents?.()
+      return {
+        agents: getAvailableTypes().map((type) => {
+          const config = getConfig(type)
+          return {
+            name: type,
+            displayName: config.displayName,
+            ...(config.color ? { color: config.color } : {}),
+          }
+        }),
+      }
+    },
+  )
+
   // Snapshots, for a listener that joined after the lifecycle events it needed
   // had already fired — bound late, or reloaded mid-run. Reads only, so owned
   // agents are included: they carry `parentAgentId` / `workflowId` exactly as
@@ -402,6 +521,9 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
     unsubStop,
     unsubConsume,
     unsubSteer,
+    unsubRegisterAgents,
+    unsubUnregisterAgents,
+    unsubListAgents,
     unsubGet,
     unsubList,
     unsubWorkflowGet,

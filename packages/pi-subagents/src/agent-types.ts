@@ -86,14 +86,109 @@ export function buildAgentRegistry(
 
 /**
  * Register agents into the unified registry.
- * Starts with DEFAULT_AGENTS, then overlays user agents (overrides defaults with same name).
+ * Starts with DEFAULT_AGENTS, then overlays user agents (overrides defaults with same name),
+ * then the ephemeral overlay (see `registerEphemeralAgents`).
  * Disabled agents (enabled === false) are kept in the registry but excluded from spawning.
  */
 export function registerAgents(userAgents: Map<string, AgentConfig>): void {
   agents.clear()
+  // The rebuilt registry is file/default-backed throughout, so no key in it
+  // is ours any more — drop ownership before the overlay re-applies.
+  ephemeralOwned.clear()
   for (const [name, config] of buildAgentRegistry(userAgents)) {
     agents.set(name, config)
   }
+  overlayEphemeral(agents)
+}
+
+/**
+ * Ephemeral agents: registered at runtime by another extension over the RPC
+ * bus (pi-agency seating a catalog persona), overlaid after every file load so
+ * they survive `reloadCustomAgents()` — which runs before every spawn and
+ * would otherwise wipe them. A file-loaded agent with the same name wins: user
+ * files are the authority and an ephemeral overlay never shadows them. The
+ * overlay is cleared on each session_start, so a type lives for the current
+ * session only.
+ */
+const ephemeralAgents = new Map<string, AgentConfig>()
+/** Registry keys currently served by the ephemeral overlay (not file-backed). */
+const ephemeralOwned = new Set<string>()
+
+/** Overlay the ephemeral types onto a registry; returns the names applied. */
+function overlayEphemeral(registry: Map<string, AgentConfig>): string[] {
+  const applied: string[] = []
+  for (const [name, config] of ephemeralAgents) {
+    const key = resolveKeyIn(registry, name)
+    // A key we do not own is file- or default-backed: the user's type wins
+    // and this registration is skipped — never a silent shadow. A key we own
+    // is our own previous entry, replaced in place. Both checks are
+    // case-insensitive, like spawn resolution.
+    if (key !== undefined && !ephemeralOwned.has(key)) continue
+    if (key !== undefined && key !== name) {
+      registry.delete(key)
+      ephemeralOwned.delete(key)
+    }
+    registry.set(name, config)
+    ephemeralOwned.add(name)
+    applied.push(name)
+  }
+  return applied
+}
+
+/** Whether an ephemeral registration may overlay the live registry for `name`.
+ * File- and default-backed keys win; only keys we already own may be replaced. */
+function canOverlayEphemeralName(name: string): boolean {
+  const key = resolveKeyIn(agents, name)
+  if (key === undefined) return true
+  return ephemeralOwned.has(key)
+}
+
+/** Register session-scoped agent types at runtime; spawnable immediately.
+ * The batch is atomic: every name is checked against file/default types before
+ * any mutation; a collision fails the whole call with no partial overlay. */
+export function registerEphemeralAgents(
+  entries: Map<string, AgentConfig>,
+): string[] {
+  const conflicts = [...entries.keys()].filter(
+    (name) => !canOverlayEphemeralName(name),
+  )
+  if (conflicts.length > 0) {
+    throw new Error(
+      `agent type already exists: ${conflicts.map((name) => `"${name}"`).join(", ")}`,
+    )
+  }
+  for (const [name, config] of entries) {
+    // A case-variant of an existing ephemeral key replaces it in place, so
+    // one persona cannot leave a second, unreachable entry behind.
+    const existing = resolveKeyIn(ephemeralAgents, name)
+    if (existing !== undefined && existing !== name)
+      ephemeralAgents.delete(existing)
+    ephemeralAgents.set(name, config)
+  }
+  overlayEphemeral(agents)
+  return [...entries.keys()]
+}
+
+/** Remove ephemeral types by name (case-insensitive); file-backed types stay.
+ * Returns how many were actually removed, so callers can emit change events
+ * only for real mutations. */
+export function unregisterEphemeralAgents(names: readonly string[]): number {
+  let removed = 0
+  for (const name of names) {
+    const key = resolveKeyIn(ephemeralAgents, name)
+    if (!key) continue
+    ephemeralAgents.delete(key)
+    if (ephemeralOwned.delete(key)) agents.delete(key)
+    removed++
+  }
+  return removed
+}
+
+/** Drop every ephemeral type; file-backed types stay. Called on session_start. */
+export function clearEphemeralAgents(): void {
+  for (const key of ephemeralOwned) agents.delete(key)
+  ephemeralOwned.clear()
+  ephemeralAgents.clear()
 }
 
 /** Case-insensitive key resolution within a registry. */
