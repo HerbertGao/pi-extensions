@@ -37,7 +37,9 @@ export class PromptEditor extends CustomEditor {
 		userPaddingX = saved;
 		self.paddingX = saved + PROMPT_COLS;
 		try {
-			const lines = super.render(width);
+			// Pi 1.6+：`render()` 可能返回缓存的 `readonly string[]`，不得原地改写父级缓冲区。
+			const parentLines = super.render(width);
+			const lines = [...parentLines];
 			// 布局：lines[0] 顶边框，lines[1..n-2] 内容，lines[n-1] 底边框（autocomplete 在底边框后追加，
 			// 首内容行恒为 index 1）。开头是 paddingX 个纯空格，前两列换成 ❯+空格，剩余 padding 保留；
 			// 续行不动——Claude Code 行为。

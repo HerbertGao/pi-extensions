@@ -1,8 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { initTheme } from "@earendil-works/pi-coding-agent";
+import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import { config } from "../extensions/config/config.ts";
-import { applyPromptEditor, clearPromptEditor } from "../extensions/feature/shell/prompt-editor.ts";
+import {
+	PromptEditor,
+	applyPromptEditor,
+	clearPromptEditor,
+} from "../extensions/feature/shell/prompt-editor.ts";
+
+const hostModule = (path: string) =>
+	new URL(path, import.meta.resolve("@earendil-works/pi-coding-agent")).href;
+const [{ getEditorTheme }, { KeybindingsManager }] = await Promise.all([
+	import(hostModule("./modes/interactive/theme/theme.js")),
+	import(hostModule("./core/keybindings.js")),
+]);
+initTheme("dark");
+
+function promptEditorHarness(text = "hello") {
+	const tui = {
+		terminal: { rows: 24, columns: 80 },
+		requestRender() {},
+	};
+	const editor = new PromptEditor(tui as never, getEditorTheme(), new KeybindingsManager(), {
+		embedWorkingStatus: true,
+	});
+	editor.setText(text);
+	return editor;
+}
 
 type EditorFactory = (tui: unknown, theme: unknown, keybindings: unknown) => unknown;
 
@@ -38,6 +64,22 @@ function useEditorPrefix(t: { after: (fn: () => void) => void }, enabled: boolea
 	});
 	config.enableEditorPrefix = enabled;
 }
+
+test("render keeps the parent buffer intact and still paints the prefix", () => {
+	const editor = promptEditorHarness();
+	const parentRender = Object.getPrototypeOf(PromptEditor.prototype).render as (
+		this: PromptEditor,
+		width: number,
+	) => readonly string[];
+	const parentBefore = parentRender.call(editor, 80);
+	const parentSnapshot = [...parentBefore];
+	const output = editor.render(80);
+
+	assert.notEqual(output, parentBefore, "returns a copy, not the parent render buffer");
+	assert.deepEqual(parentRender.call(editor, 80), parentSnapshot, "parent lines stay unchanged");
+	const firstContent = stripTerminalSequences(output[1] ?? "");
+	assert.match(firstContent, /^❯ /, "first content row still uses the prompt glyph");
+});
 
 test("restores the editor it replaced", (t) => {
 	useEditorPrefix(t, true);

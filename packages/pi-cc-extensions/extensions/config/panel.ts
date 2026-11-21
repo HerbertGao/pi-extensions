@@ -1253,7 +1253,7 @@ export async function showCcstylePanel(
 			render(width: number): string[] {
 				const safeWidth = Math.max(0, Math.floor(width));
 				const rule = renderPanelRule(theme, safeWidth);
-				const body = activeList().render(safeWidth);
+				const body = [...activeList().render(safeWidth)];
 				// Drop SettingsList's built-in hint — the panel footer below is the single source.
 				while (body.length > 0 && body[body.length - 1] === "") body.pop();
 				const listHintIndex = body.findIndex(
