@@ -30,7 +30,7 @@ Record a new upstream commit in this table whenever a sync is accepted. Each der
 
 Imported forks and companions are not all reviewed from GitHub commits.
 
-- If the upstream publishes to npm, monitor that npm version only. Do not import or flag unpublished GitHub commits. `pi-cc-extensions`, `pi-subagents`, `impeccable`, Tifan packages, and `pi-antigravity` are in this group. Their `upstreams.json` entries use `"watch": "npm"`.
+- If the upstream publishes to npm, monitor that npm version only. Do not import or flag unpublished GitHub commits. `pi-cc-extensions`, `pi-subagents`, `impeccable`, and Tifan packages are in this group. Their `upstreams.json` entries use `"watch": "npm"`. Other npm-only companions are monitored through `upstreams.json` `companions` pins alone.
 - If the upstream publishes to PyPI and this repository pins it, monitor that PyPI version only. `graphifyy` is registered under `pypi` with `"watch": "pypi"`. The expected version is the requirement in [`pins/graphifyy`](../pins/graphifyy). A different PyPI version is a release update on the same upstream-tracking Issue. GitHub commits for that repository are not monitored, and the package stays out of the npm aggregate. Install and bootstrap steps are in [`docs/graphify.md`](graphify.md).
 - If the upstream does not publish to npm but publishes GitHub releases or tags, monitor that release or tag. No current source uses this channel, so the monitor does not fetch releases yet.
 - If the upstream publishes neither, review GitHub source commits. `NVlabs/SoL-Pi` is the current case and uses `"watch": "commits"`.
@@ -256,26 +256,26 @@ For Subagents, the direct migration is complete. The package retains only reposi
 
 The aggregate package also pins the following npm packages under their original names without modifying their upstream source:
 
-| Package                              | Version   | Upstream                         |
-| ------------------------------------ | --------- | -------------------------------- |
-| `pi-antigravity`                     | `0.14.0`  | `Rahularya01/pi-antigravity`     |
-| `@dietrichgebert/ponytail`           | `5.3.3`   | `DietrichGebert/ponytail`        |
-| `@juicesharp/rpiv-ask-user-question` | `2.15.0`  | `juicesharp/rpiv-mono`           |
-| `@narumitw/pi-btw`                   | `0.63.8`  | `narumiruna/pi-extensions`       |
-| `@narumitw/pi-caffeinate`            | `0.49.15` | `narumiruna/pi-extensions`       |
-| `@pi-plugins/fast-mode`              | `0.1.16`  | `k3dom/pi-plugins`               |
-| `@tifan/pi-copy-response`            | `0.2.7`   | `tifandotme/pi-extensions`       |
-| `@tifan/pi-handoff`                  | `2.2.2`   | `tifandotme/pi-extensions`       |
-| `@tifan/pi-mermaid-open`             | `0.2.2`   | `tifandotme/pi-extensions`       |
-| `@tifan/pi-recap`                    | `0.4.8`   | `tifandotme/pi-extensions`       |
-| `@tifan/pi-rename`                   | `0.6.0`   | `tifandotme/pi-extensions`       |
-| `@tintinweb/pi-tasks`                | `0.9.1`   | `tintinweb/pi-tasks`             |
-| `pi-typesafe`                        | `0.14.0`  | `DevMortimer/pi-typesafe`        |
-| `pi-next-cue`                        | `1.0.8`   | `ouzhenkun/pi-next-cue`          |
-| `pi-lens`                            | `4.5.1`   | `apmantza/pi-lens`               |
-| `pi-web-access`                      | `0.48.0`  | `nicobailon/pi-web-access`       |
-| `pi-provider-qoder`                  | `0.6.13`  | `simonsmh/pi-provider-qoder`     |
-| `pi-commandcode-provider`            | `0.8.6`   | `patlux/pi-commandcode-provider` |
+| Package                               | Version   | Upstream                         |
+| ------------------------------------- | --------- | -------------------------------- |
+| `@estebanforge/pi-antigravity-bridge` | `1.13.1`  | `EstebanForge/pi-extensions`     |
+| `@dietrichgebert/ponytail`            | `5.3.3`   | `DietrichGebert/ponytail`        |
+| `@juicesharp/rpiv-ask-user-question`  | `2.15.0`  | `juicesharp/rpiv-mono`           |
+| `@narumitw/pi-btw`                    | `0.63.8`  | `narumiruna/pi-extensions`       |
+| `@narumitw/pi-caffeinate`             | `0.49.15` | `narumiruna/pi-extensions`       |
+| `@pi-plugins/fast-mode`               | `0.1.16`  | `k3dom/pi-plugins`               |
+| `@tifan/pi-copy-response`             | `0.2.7`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-handoff`                   | `2.2.2`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-mermaid-open`              | `0.2.2`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-recap`                     | `0.4.8`   | `tifandotme/pi-extensions`       |
+| `@tifan/pi-rename`                    | `0.6.0`   | `tifandotme/pi-extensions`       |
+| `@tintinweb/pi-tasks`                 | `0.9.1`   | `tintinweb/pi-tasks`             |
+| `pi-typesafe`                         | `0.14.0`  | `DevMortimer/pi-typesafe`        |
+| `pi-next-cue`                         | `1.0.8`   | `ouzhenkun/pi-next-cue`          |
+| `pi-lens`                             | `4.5.1`   | `apmantza/pi-lens`               |
+| `pi-web-access`                       | `0.48.0`  | `nicobailon/pi-web-access`       |
+| `pi-provider-qoder`                   | `0.6.13`  | `simonsmh/pi-provider-qoder`     |
+| `pi-commandcode-provider`             | `0.8.6`   | `patlux/pi-commandcode-provider` |
 
 `@tintinweb/pi-tasks@0.9.1` is pinned under its original name, not forked. npm `0.9.1` is git `c820715be1bf05db36d0739e88061b97b8c2c9d3`, which is also the default-branch head. The package is MIT, has no runtime dependencies, and peers `typebox` `*`, `@earendil-works/pi-coding-agent` `>=0.80.5`, and `@earendil-works/pi-tui` `>=0.80.5`. `TaskExecute` talks to subagents over `subagents:rpc:*` protocol version 2. It does not import `@tintinweb/pi-subagents`. The bundled `@herbertgao/pi-subagents` fork, replayed onto upstream `0.26.1` (`14ef1946`), still answers that protocol. Its remaining local patches—mention-clone tool context, worktree preservation when cleanup fails, and retention of unconsumed results—do not change the RPC envelope. `subagents:rpc:steer` is additive on the same bus. `TaskExecute` does not request worktree isolation. No other tintinweb package is pinned. The only forked tintinweb package in this repository is `pi-subagents`.
 
@@ -289,6 +289,10 @@ On Pi 0.99.0+, the aggregate uses Pi's host-provided packages and native MCP imp
 
 The `@narumitw/pi-caffeinate@0.49.9` companion is accepted as a direct MIT package. Its macOS entry uses the built-in `caffeinate` inhibitor and exposes `/caffeinate` mode/status controls; its `dbus-native@^0.16.0` dependency remains an unbundled promoted runtime dependency for Linux support. Node uses the existing socket transport; Bun on Linux/macOS can automatically use FFI and a per-connection reader thread, falling back when unavailable. This conditional addition was disclosed and accepted; no daemon or build step is installed.
 
+### 2026-11-21 Antigravity bridge companion swap
+
+The aggregate replaces bundled `pi-antigravity` (direct Cloud Code Assist OAuth) with `@estebanforge/pi-antigravity-bridge@1.13.1` (integrity `sha512-GmsTP7VodChxg7MvqbE1luLVZyoC0T/+ifq8adNqcRk1Mo6iqVzeeXlhoZFWmwHgtN6OLBFEy5BJtosoitc6kg==`, gitHead `bdc904e03b94eb665b36039daa77f54d3e979923`). MIT. Pi entry is `./extensions`. The provider id stays `antigravity`; models appear as `antigravity/*`. Default engine is `agy acp` (ACP), with stream-json as fallback. Web search, URL fetch, and image generation tools from the unofficial package are not registered; use `pi-web-access` or enable the bridge's opt-in web tools. Runtime npm dependencies are `@estebanforge/pi-ask-shared@^0.1.6`, `@estebanforge/pi-tui-dialogs@^0.1.3`, and `@modelcontextprotocol/sdk@^1.31.0` (aggregate already promotes `^1.32.1`). Peer is `@earendil-works/pi-coding-agent@^1.5.1`; this repo's host lock is Pi 1.5.0+ and should run 1.6.0, but the bridge was released against 1.5.x semantics. The promoted `turndown-plugin-gfm` and `@mixmark-io/domino` aggregate dependencies drop with `pi-antigravity`; `turndown` stays for `pi-web-access`. **Machine requirement:** the official `agy` CLI must be installed and authenticated on the host; it is not an npm dependency and CI does not install or log in to Antigravity. Smoke checks provider registration and the `/agy` command without spawning `agy`. Live ACP/stream-json turns stay an external-validation boundary.
+
 ### 2026-11-21 issue #407 review
 
 Release updates. CC stays the 2026-11-18 full replay of `9a0ecdd29f9c` (`1.0.21`). Impeccable stays at `ab3617920fcd` (`4.10.0`). No new optional product is imported. Unpublished commits after these npm and PyPI releases are not imported. The published package versions of forked packages stay at their current `*-local.*` lines until the changesets are consumed. The workspace lock stays Pi `1.5.0`. Host peers stay `*`.
@@ -300,7 +304,6 @@ Release updates. CC stays the 2026-11-18 full replay of `9a0ecdd29f9c` (`1.0.21`
 PR [#408](https://github.com/HerbertGao/pi-extensions/pull/408) merged the `0.26.2` replay but dropped the HerbertGao-only ephemeral overlay and its bus channels. Restore them on top of the replayed tree without reverting `0.26.2` additions (`subagents:rpc:get`, `list`, `workflow_get`, `workflow_list`, stop-settle, workflow events, cache retention). `subagents:rpc:list` answers running agent instances; `subagents:rpc:list-agents` answers the spawnable type table — consumers must not conflate them. `register-agents` validates the whole batch before overlaying any ephemeral types, so a file/default name collision does not leave half-applied types behind. Cross-package coverage lives in `packages/pi-subagents/test/identity-bus-contract.test.ts` (real `registerRpcHandlers`, not mocked replies). The root `scripts/identity-rpc-contract.test.mjs` wrapper runs that file under `node --test scripts/*.test.mjs`.
 
 - graphifyy: **version pin** `0.9.114` in `pins/graphifyy` (wheel/sdist sha256 `69eb5cb6061983f7c8ad2c86dda0a0e47e305f8d565a4f82e744f33aebfb5333`). PyPI latest is that release and it is not yanked. License expression stays Apache-2.0. Requires Python `>=3.11.5,<3.15`. Default runtime dependency ranges match `0.9.113`. The package stays out of the npm aggregate. `graphify install --platform pi` still writes `~/.pi/agent/skills/graphify/SKILL.md`. Installing and running the CLI stays outside `bun run check`.
-- pi-antigravity: **version pin** `0.15.0` (gitHead `67706dd5fcc0a710f69f89412a6867673c58a684`, integrity `sha512-DuB5JnoF+Vg3J0jBfhjYm1AIXwdqweozc2sc7TPlc26lVyuSOuCHdFrI3LNY3VF0x1Sleq85drgoVj7cehEzsQ==`). MIT, Pi entry and tool surface unchanged at the aggregate contract level. Runtime dependencies bump to `undici@^8.12.4` and `turndown@^7.2.5`; the aggregate promotes matching floors. Live provider calls stay an external-validation boundary.
 - pi-commandcode-provider: **version pin** `0.8.7` (integrity `sha512-2V366yAL4meEtZ1CpYxP8mHyNDymYg3Ai6NHGsIGRT0juZ+ZuD4RXsnaj9oWan0oUxU6xnSB0GgZolE7ljMh2w==`). npm publishes no gitHead. MIT, no runtime dependencies, optional peers `*`, Pi entry `./index.ts`. Reviewed against the published tarball; registration, auth lookup, Provider-only inference, status redaction, and capability tables remain the aggregate contract. Live login and provider calls stay an external-validation boundary.
 - NVlabs SoL-Pi: **reviewed without import** at cursor `097fad010518`. The only commits after `219568034fa5` announce SoL-Pi v2 development in upstream `README.md`; no runtime source under `packages/sol-pi` changed.
 

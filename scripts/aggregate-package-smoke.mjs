@@ -469,17 +469,7 @@ try {
     ["pi-lens/dist/index.js", "tools", "lens_diagnostics"],
     ["pi-lens/dist/index.js", "tools", "pi_lens_activate_tools"],
     ["pi-lens/dist/index.js", "commands", "lens-widget-toggle"],
-    ["pi-antigravity/src/features/google-search.ts", "tools", "google_search"],
-    [
-      "pi-antigravity/src/features/read-url-content.ts",
-      "tools",
-      "read_url_content",
-    ],
-    [
-      "pi-antigravity/src/features/generate-image.ts",
-      "tools",
-      "generate_image",
-    ],
+    ["@estebanforge/pi-antigravity-bridge/extensions", "commands", "agy"],
     ["pi-provider-qoder/dist/index.js", "commands", "qoder-usage"],
     ["pi-typesafe/extensions/index.js", "commands", "typesafe"],
     ["pi-typesafe/extensions/index.js", "tools", "typesafe_evaluate"],
@@ -511,6 +501,24 @@ try {
   ) {
     throw new Error(
       `Expected qoder and qoder-cn providers, got ${qoderProviders.join(", ")}`,
+    )
+  }
+  const bridgeEntry = resolve(
+    packageRoot,
+    "node_modules",
+    "@estebanforge",
+    "pi-antigravity-bridge",
+    "extensions",
+  )
+  const antigravityProviders = result.runtime.pendingProviderRegistrations
+    .filter((registration) => registration.extensionPath === bridgeEntry)
+    .map((registration) => registration.name)
+    .toSorted()
+  if (
+    JSON.stringify(antigravityProviders) !== JSON.stringify(["antigravity"])
+  ) {
+    throw new Error(
+      `Expected antigravity provider from pi-antigravity-bridge, got ${antigravityProviders.join(", ")}`,
     )
   }
   const solPiEntry = resolve(
