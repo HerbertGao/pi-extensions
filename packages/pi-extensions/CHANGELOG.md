@@ -1,5 +1,17 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.19
+
+### Minor Changes
+
+- [#411](https://github.com/HerbertGao/pi-extensions/pull/411) [`dc96d1e`](https://github.com/HerbertGao/pi-extensions/commit/dc96d1e57a277efa8b33a85f9ed558fe36ff810a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replace bundled `pi-antigravity` with `@estebanforge/pi-antigravity-bridge@1.13.1`, which uses the official `agy` CLI (`agy acp` by default) instead of direct Cloud Code Assist OAuth. Antigravity models stay under `antigravity/*`; configure the bridge with `/agy`. Install and authenticate `agy` on the host before using the provider.
+
+### Patch Changes
+
+- Updated dependencies [[`364e65f`](https://github.com/HerbertGao/pi-extensions/commit/364e65f8a9e4bf7a9d79c58c0a54ebedd390dba4), [`9c3ce2b`](https://github.com/HerbertGao/pi-extensions/commit/9c3ce2b433eaa06d08d70ef60271f700a7abecd9), [`9019008`](https://github.com/HerbertGao/pi-extensions/commit/901900815d94885beae9d4290e69dd24451ca7ea)]:
+  - @herbertgao/pi-cc-extensions@1.0.21
+  - @herbertgao/pi-subagents@0.27.0
+
 ## 2026.11.18
 
 ### Patch Changes
