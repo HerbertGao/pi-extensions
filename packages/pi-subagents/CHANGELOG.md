@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.2-local.2
+
+### Minor Changes
+
+- [#408](https://github.com/HerbertGao/pi-extensions/pull/408) [`9019008`](https://github.com/HerbertGao/pi-extensions/commit/901900815d94885beae9d4290e69dd24451ca7ea) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Subagents sync to upstream 0.26.2: bus RPC observations for agents and workflows, per-agent prompt cache retention settings, and expanded workflow result metadata on the RPC bus. Local mention-clone tool context, worktree preservation, unconsumed-result retention, and the fullscreen workflow-card redraw guard are preserved.
+
+### Patch Changes
+
+- [#410](https://github.com/HerbertGao/pi-extensions/pull/410) [`9c3ce2b`](https://github.com/HerbertGao/pi-extensions/commit/9c3ce2b433eaa06d08d70ef60271f700a7abecd9) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Restore session-scoped agent type registration over the event bus (`subagents:rpc:register-agents`, `list-agents`, `unregister-agents`, and `subagents:agents-changed`) after the upstream 0.26.2 replay. `agency_register` and ccstyle Agent badge rows work again; `renderAgentName` prefers a `general-purpose` run's own name. A `register-agents` batch is now atomic—name collisions with file/default types reject the whole payload with no partial types or missing `agents-changed` notification. Upstream `0.26.2` get/list/workflow RPC behavior is unchanged.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.21-local.4
+
+### Patch Changes
+
+- [#406](https://github.com/HerbertGao/pi-extensions/pull/406) [`364e65f`](https://github.com/HerbertGao/pi-extensions/commit/364e65f8a9e4bf7a9d79c58c0a54ebedd390dba4) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Fix input editor prefix rendering for Pi 1.6+ `render()` readonly line buffers.
+
 ## 1.0.21-local.3
 
 ### Patch Changes
