@@ -82,30 +82,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-## `pi-antigravity`
+## `@estebanforge/pi-antigravity-bridge`
 
-The aggregate bundles the MIT-licensed [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity) package version 0.14.0 under its original attribution:
-
-MIT License
-
-Copyright (c) 2026 Rahul Arya
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.13.1 under its original package name. The published npm release corresponds to git commit [`bdc904e03b94eb665b36039daa77f54d3e979923`](https://github.com/EstebanForge/pi-extensions/commit/bdc904e03b94eb665b36039daa77f54d3e979923). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
 
 ## `pi-typesafe`
 

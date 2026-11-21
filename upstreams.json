@@ -30,12 +30,6 @@
       "repository": "https://github.com/NVlabs/SoL-Pi",
       "reviewedCommit": "097fad0105181dd93003eb4948a0d649a550bfe2",
       "watch": "commits"
-    },
-    {
-      "name": "pi-antigravity",
-      "repository": "https://github.com/Rahularya01/pi-antigravity",
-      "reviewedCommit": "67706dd5fcc0a710f69f89412a6867673c58a684",
-      "watch": "npm"
     }
   ],
   "companions": [
@@ -96,8 +90,8 @@
       "repository": "https://github.com/nicobailon/pi-web-access"
     },
     {
-      "package": "pi-antigravity",
-      "repository": "https://github.com/Rahularya01/pi-antigravity"
+      "package": "@estebanforge/pi-antigravity-bridge",
+      "repository": "https://github.com/EstebanForge/pi-extensions"
     },
     {
       "package": "pi-provider-qoder",
