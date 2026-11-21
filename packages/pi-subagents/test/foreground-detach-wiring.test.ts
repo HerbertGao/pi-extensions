@@ -472,12 +472,12 @@ describe("Agent tool — foreground run sent to the background", () => {
     expect(created).toEqual([
       [
         "subagents:created",
-        {
+        expect.objectContaining({
           id: runs.agentId("long job"),
           type: "general-purpose",
           description: "long job",
           isBackground: true,
-        },
+        }),
       ],
     ])
     runs.finish("long job", "DONE")

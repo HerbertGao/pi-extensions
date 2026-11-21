@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { renderRunningAgentStatus } from "../src/index.js"
-import type { AgentRecord, WidgetMode } from "../src/types.js"
+import type { WidgetMode } from "../src/types.js"
 import {
   type AgentActivity,
   AgentWidget,
@@ -111,7 +111,7 @@ describe("AgentWidget", () => {
       parentAgentId?: string
       workflowId?: string
     } = {},
-  ): AgentRecord {
+  ) {
     return {
       id,
       type: "general-purpose",
@@ -416,7 +416,7 @@ describe("AgentWidget cost display", () => {
       setWidget: (_k, c) => {
         factory = c
       },
-    })
+    } as any)
     widget.update()
     return factory(
       { terminal: { columns: 200 }, requestRender: () => {} },
@@ -471,7 +471,7 @@ describe("AgentWidget cost display", () => {
       setWidget: (_k, c) => {
         factory = c
       },
-    })
+    } as any)
     widget.update()
     const out = factory(
       { terminal: { columns: 200 }, requestRender: () => {} },
@@ -509,7 +509,7 @@ describe("AgentWidget cost display", () => {
       setWidget: (_k, c) => {
         factory = c
       },
-    })
+    } as any)
     widget.update()
     const out = factory(
       { terminal: { columns: 200 }, requestRender: () => {} },
@@ -555,7 +555,7 @@ describe("AgentWidget cost display", () => {
       setWidget: (_k, c) => {
         factory = c
       },
-    })
+    } as any)
     widget.update()
     expect(
       factory({ terminal: { columns: 200 }, requestRender: () => {} }, theme)
@@ -622,7 +622,7 @@ describe("AgentWidget overflow accounting", () => {
       setWidget: (_k, c) => {
         factory = c
       },
-    })
+    } as any)
     widget.update()
     if (!factory) return []
     return factory(

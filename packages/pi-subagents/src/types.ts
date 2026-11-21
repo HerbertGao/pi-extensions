@@ -2,7 +2,7 @@
  * types.ts — Type definitions for the subagent system.
  */
 
-import type { ThinkingLevel } from "@earendil-works/pi-ai"
+import type { CacheRetention, ThinkingLevel } from "@earendil-works/pi-ai"
 import type { AgentSession } from "@earendil-works/pi-coding-agent"
 import type { LifetimeUsage } from "./usage.js"
 
@@ -80,6 +80,8 @@ export interface AgentConfig {
   maxTurns?: number
   /** Persist this subagent as a normal pi session instead of keeping it in memory only. */
   persistSession?: boolean
+  /** Prompt-cache retention for this agent's model calls; overrides the `cacheRetention` setting. */
+  cacheRetention?: CacheRetention
   /** Write the subagent's .output transcript. Defaults to true; false suppresses only that transcript. */
   outputTranscript?: boolean
   /** Optional session directory used when persistSession is true. Omitted = pi's normal session location. */
@@ -128,6 +130,13 @@ export type JoinMode = "async" | "group" | "smart"
  * - `off`: hide the widget entirely.
  */
 export type WidgetMode = "all" | "background" | "off"
+
+/**
+ * Prompt-cache retention for subagent model calls: pi's own values, plus
+ * `inherit` (the global setting only) to leave pi's default — including its
+ * `PI_CACHE_RETENTION` environment variable — in charge.
+ */
+export type CacheRetentionSetting = CacheRetention | "inherit"
 
 /**
  * How much of the conversation viewer's transcript is rendered as Markdown.
@@ -259,12 +268,7 @@ export interface AgentRecord {
   /** Worktree info if the agent is running in an isolated worktree. */
   worktree?: { path: string; branch: string; baseSha: string; workPath: string }
   /** Worktree cleanup result after agent completion. */
-  worktreeResult?: {
-    hasChanges: boolean
-    branch?: string
-    path?: string
-    error?: string
-  }
+  worktreeResult?: { hasChanges: boolean; branch?: string }
   /** The tool_use_id from the original Agent tool call. */
   toolCallId?: string
   /** Path to the streaming output transcript file. */

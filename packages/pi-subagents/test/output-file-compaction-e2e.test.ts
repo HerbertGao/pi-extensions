@@ -109,7 +109,7 @@ describe("output-file streaming across a real compaction (#145)", () => {
         compaction: { enabled: false, keepRecentTokens: 500 },
         retry: { enabled: false },
       }),
-    } as any)
+    })
 
     const outPath = join(tmp, "agent.output")
     writeInitialEntry(outPath, "agent-145", "repro", cwd)

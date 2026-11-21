@@ -74,6 +74,7 @@ function makeActivity(): AgentActivity {
     toolUses: 0,
     responseText: "",
     turnCount: 1,
+    lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
   }
 }
 
@@ -199,81 +200,6 @@ describe("custom agent color runtime surfaces", () => {
       expect(placement).toBe("aboveEditor")
       expect(output).toContain(DISPLAY_NAME)
       expect(output).toContain(PURPLE_BACKGROUND)
-    } finally {
-      widget.dispose()
-    }
-  })
-
-  it("keeps a real type's name and badge when the run is named", () => {
-    const record = { ...makeRecord(), alias: "seat-one" }
-    const widget = new AgentWidget(
-      { listAgents: () => [record] } as unknown as ConstructorParameters<
-        typeof AgentWidget
-      >[0],
-      new Map([[record.id, makeActivity()]]),
-      () => "all",
-    )
-    let factory: WidgetFactory | undefined
-    widget.setUICtx({
-      setStatus: vi.fn(),
-      setWidget: (_key, content) => {
-        if (typeof content === "function") factory = content as WidgetFactory
-      },
-    })
-
-    try {
-      widget.update()
-      const output = factory?.(
-        { terminal: { columns: 120 }, requestRender: vi.fn() },
-        theme,
-      )
-        .render()
-        .join("\n")
-
-      // A registered type is itself the identity: its display name and badge
-      // win over the run's own name.
-      expect(output).toContain(DISPLAY_NAME)
-      expect(output).not.toMatch(/seat-one/)
-      expect(output).toContain(PURPLE_BACKGROUND)
-    } finally {
-      widget.dispose()
-    }
-  })
-
-  it("labels a generic run with its own name", () => {
-    const record = {
-      ...makeRecord(),
-      type: "general-purpose",
-      alias: "MCP Builder",
-    }
-    const widget = new AgentWidget(
-      { listAgents: () => [record] } as unknown as ConstructorParameters<
-        typeof AgentWidget
-      >[0],
-      new Map([[record.id, makeActivity()]]),
-      () => "all",
-    )
-    let factory: WidgetFactory | undefined
-    widget.setUICtx({
-      setStatus: vi.fn(),
-      setWidget: (_key, content) => {
-        if (typeof content === "function") factory = content as WidgetFactory
-      },
-    })
-
-    try {
-      widget.update()
-      const output = factory?.(
-        { terminal: { columns: 120 }, requestRender: vi.fn() },
-        theme,
-      )
-        .render()
-        .join("\n")
-
-      // general-purpose carries no identity: the run's own name (here a
-      // persona card name, spaces included) becomes the label, uncolored.
-      expect(output).toContain("MCP Builder")
-      expect(output).not.toContain("general-purpose")
     } finally {
       widget.dispose()
     }

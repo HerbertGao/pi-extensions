@@ -62,6 +62,7 @@ import {
   SessionManager,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent"
+import { getCacheRetention, installCacheRetention } from "./cache-retention.js"
 import { runInChildSessionContext } from "./child-context.js"
 import { agentMentionReminder } from "./mention.js"
 import { withoutCwdSection } from "./prompts.js"
@@ -142,8 +143,6 @@ export async function runMentionClone(
     // Pi 0.80.8 moved createAgentSession from modelRegistry to modelRuntime;
     // agent-runner.ts carries the same shim for the same reason — pass both so
     // the clone keeps the parent's providers across the supported range.
-    // SAFETY: The supported Pi versions expose runtime through this facade at
-    // runtime; the optional property keeps the pre-modelRuntime fallback safe.
     const parentModelRuntime = (
       ctx.modelRegistry as unknown as { runtime?: unknown }
     ).runtime
@@ -203,6 +202,8 @@ export async function runMentionClone(
       } as Parameters<typeof createAgentSession>[0]),
     )
     session = created.session
+    // No agent config here — the clone is a copy of the conversation, so only the setting applies.
+    installCacheRetention(session, getCacheRetention())
 
     // User text first, reminder after — the order Claude Code's attachment
     // renderer produces, where the reminder trails the message it is about.
