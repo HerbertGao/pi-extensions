@@ -19,7 +19,7 @@ vi.mock("../src/worktree.js", () => ({
   isWorktreeIsolationEnabled: vi.fn(() => true),
 }))
 
-import { type RunResult, resumeAgent, runAgent } from "../src/agent-runner.js"
+import { resumeAgent, runAgent } from "../src/agent-runner.js"
 import { addUsage } from "../src/usage.js"
 import { createWorktree, isWorktreeIsolationEnabled } from "../src/worktree.js"
 
@@ -1526,163 +1526,6 @@ describe("AgentManager — isolation: worktree fails loud, no silent fallback", 
     expect(record.result).toContain("Changes saved to branch")
   })
 
-  it("reports a preserved worktree when cleanup fails after a completed run", async () => {
-    const { createWorktree, cleanupWorktree } =
-      await import("../src/worktree.js")
-    const wt = {
-      path: "/wt/recover",
-      branch: "pi-agent-recover",
-      baseSha: "abc",
-      workPath: "/wt/recover",
-    }
-    vi.mocked(createWorktree).mockResolvedValueOnce(wt)
-    vi.mocked(cleanupWorktree).mockResolvedValueOnce({
-      hasChanges: true,
-      path: wt.path,
-      error: "commit failed",
-    })
-    resolvedRun()
-
-    manager = new AgentManager()
-    const id = manager.spawn(mockPi, mockCtx, "X", "go", {
-      description: "go",
-      isBackground: true,
-      isolation: "worktree",
-    })
-    await manager.awaitStartup(id)
-    await manager.getRecord(id)!.promise
-
-    const record = manager.getRecord(id)!
-    expect(record.status).toBe("error")
-    expect(record.error).toBe(
-      "Worktree cleanup failed: commit failed\nAgent worktree remains at `/wt/recover` for recovery.",
-    )
-    expect(record.result).toBe("done")
-    expect(record.worktreeResult).toMatchObject({
-      path: wt.path,
-      error: "commit failed",
-    })
-  })
-
-  it("keeps a resolved agent failure when cleanup also fails", async () => {
-    const { createWorktree, cleanupWorktree } =
-      await import("../src/worktree.js")
-    const wt = {
-      path: "/wt/resolved-error",
-      branch: "pi-agent-error",
-      baseSha: "abc",
-      workPath: "/wt/resolved-error",
-    }
-    vi.mocked(createWorktree).mockResolvedValueOnce(wt)
-    vi.mocked(cleanupWorktree).mockResolvedValueOnce({
-      hasChanges: true,
-      path: wt.path,
-      error: "commit failed",
-    })
-    vi.mocked(runAgent).mockResolvedValueOnce({
-      responseText: "partial output",
-      session: mockSession(),
-      aborted: false,
-      steered: false,
-      failure: "model failed",
-    })
-
-    manager = new AgentManager()
-    const id = manager.spawn(mockPi, mockCtx, "X", "go", {
-      description: "go",
-      isBackground: true,
-      isolation: "worktree",
-    })
-    await manager.awaitStartup(id)
-    await manager.getRecord(id)!.promise
-
-    const record = manager.getRecord(id)!
-    expect(record.status).toBe("error")
-    expect(record.error).toBe(
-      "model failed\nWorktree cleanup failed: commit failed\nAgent worktree remains at `/wt/resolved-error` for recovery.",
-    )
-  })
-
-  it("adds the recovery path to an existing agent error", async () => {
-    const { createWorktree, cleanupWorktree } =
-      await import("../src/worktree.js")
-    const wt = {
-      path: "/wt/error",
-      branch: "pi-agent-error",
-      baseSha: "abc",
-      workPath: "/wt/error",
-    }
-    vi.mocked(createWorktree).mockResolvedValueOnce(wt)
-    vi.mocked(cleanupWorktree).mockResolvedValueOnce({
-      hasChanges: true,
-      path: wt.path,
-      error: "branch failed",
-    })
-    vi.mocked(runAgent).mockRejectedValueOnce(new Error("provider failed"))
-
-    manager = new AgentManager()
-    const id = manager.spawn(mockPi, mockCtx, "X", "go", {
-      description: "go",
-      isBackground: true,
-      isolation: "worktree",
-    })
-    await manager.awaitStartup(id)
-    await manager.getRecord(id)!.promise
-
-    const record = manager.getRecord(id)!
-    expect(record.status).toBe("error")
-    expect(record.error).toBe(
-      "provider failed\nWorktree cleanup failed: branch failed\nAgent worktree remains at `/wt/error` for recovery.",
-    )
-  })
-
-  it("surfaces the recovery path when cleanup fails after a stop", async () => {
-    const { createWorktree, cleanupWorktree } =
-      await import("../src/worktree.js")
-    const wt = {
-      path: "/wt/stopped",
-      branch: "pi-agent-stopped",
-      baseSha: "abc",
-      workPath: "/wt/stopped",
-    }
-    vi.mocked(createWorktree).mockResolvedValueOnce(wt)
-    vi.mocked(cleanupWorktree).mockResolvedValueOnce({
-      hasChanges: true,
-      path: wt.path,
-      error: "commit failed",
-    })
-    let finishRun: (() => void) | undefined
-    vi.mocked(runAgent).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishRun = () =>
-            resolve({
-              responseText: "partial output",
-              session: mockSession(),
-              aborted: false,
-              steered: false,
-            })
-        }),
-    )
-
-    manager = new AgentManager()
-    const id = manager.spawn(mockPi, mockCtx, "X", "go", {
-      description: "go",
-      isBackground: true,
-      isolation: "worktree",
-    })
-    await manager.awaitStartup(id)
-    expect(manager.abort(id)).toBe(true)
-    finishRun!()
-    await manager.getRecord(id)!.promise
-
-    const record = manager.getRecord(id)!
-    expect(record.status).toBe("error")
-    expect(record.error).toBe(
-      "Worktree cleanup failed: commit failed\nAgent worktree remains at `/wt/stopped` for recovery.",
-    )
-  })
-
   it("a stop that lands during the copy discards the worktree instead of running", async () => {
     // Window that did not exist when creation was synchronous: abort() can mark
     // the record stopped while the repo is still being copied.
@@ -1719,113 +1562,6 @@ describe("AgentManager — isolation: worktree fails loud, no silent fallback", 
     expect(runAgent).not.toHaveBeenCalled()
     expect(cleanupWorktree).toHaveBeenCalledWith(mockPi, "/tmp", wt, "stopped")
     expect(manager.getRecord(id)!.status).toBe("stopped")
-  })
-
-  it("surfaces cleanup failure when a stop lands during the copy", async () => {
-    const { createWorktree, cleanupWorktree } =
-      await import("../src/worktree.js")
-    let releaseCopy!: () => void
-    const wt = {
-      path: "/wt/copy-failed",
-      branch: "pi-agent-x",
-      baseSha: "abc",
-      workPath: "/wt/copy-failed",
-    }
-    vi.mocked(createWorktree).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          releaseCopy = () => resolve(wt)
-        }),
-    )
-    vi.mocked(cleanupWorktree).mockResolvedValueOnce({
-      hasChanges: true,
-      path: wt.path,
-      error: "remove failed",
-    })
-    vi.mocked(runAgent).mockClear()
-
-    manager = new AgentManager()
-    const id = manager.spawn(mockPi, mockCtx, "X", "stopped", {
-      description: "stopped",
-      isBackground: true,
-      isolation: "worktree",
-    })
-    const startup = manager.awaitStartup(id)
-    expect(manager.abort(id)).toBe(true)
-
-    releaseCopy()
-    await expect(startup).rejects.toThrow(
-      "Worktree cleanup failed: remove failed\nAgent worktree remains at `/wt/copy-failed` for recovery.",
-    )
-
-    expect(runAgent).not.toHaveBeenCalled()
-    expect(cleanupWorktree).toHaveBeenCalledWith(mockPi, "/tmp", wt, "stopped")
-    expect(manager.getRecord(id)).toBeUndefined()
-  })
-
-  it("notifies a queued caller when copy-stage cleanup fails", async () => {
-    const { createWorktree, cleanupWorktree } =
-      await import("../src/worktree.js")
-    let finishFirst: (() => void) | undefined
-    vi.mocked(runAgent).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishFirst = () =>
-            resolve({
-              responseText: "done",
-              session: mockSession(),
-              aborted: false,
-              steered: false,
-            })
-        }),
-    )
-    let releaseCopy: (() => void) | undefined
-    const wt = {
-      path: "/wt/queued-failed",
-      branch: "pi-agent-x",
-      baseSha: "abc",
-      workPath: "/wt/queued-failed",
-    }
-    vi.mocked(createWorktree).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          releaseCopy = () => resolve(wt)
-        }),
-    )
-    vi.mocked(cleanupWorktree).mockResolvedValueOnce({
-      hasChanges: true,
-      path: wt.path,
-      error: "remove failed",
-    })
-    const completed: AgentRecord[] = []
-    manager = new AgentManager((record) => completed.push(record), 1)
-
-    const firstId = manager.spawn(mockPi, mockCtx, "X", "first", {
-      description: "first",
-      isBackground: true,
-    })
-    await manager.awaitStartup(firstId)
-    const queuedId = manager.spawn(mockPi, mockCtx, "X", "queued", {
-      description: "queued",
-      isBackground: true,
-      isolation: "worktree",
-    })
-    expect(manager.getRecord(queuedId)!.status).toBe("queued")
-
-    finishFirst!()
-    await manager.getRecord(firstId)!.promise
-    await vi.waitFor(() => expect(releaseCopy).toBeDefined())
-    expect(manager.abort(queuedId)).toBe(true)
-    releaseCopy!()
-
-    await vi.waitFor(() =>
-      expect(manager.getRecord(queuedId)!.status).toBe("error"),
-    )
-    const queuedRecord = manager.getRecord(queuedId)!
-    expect(queuedRecord.error).toBe(
-      "Worktree cleanup failed: remove failed\nAgent worktree remains at `/wt/queued-failed` for recovery.",
-    )
-    expect(completed).toContain(queuedRecord)
   })
 })
 
@@ -2597,9 +2333,7 @@ describe("AgentManager — resolved runs with a failed final turn map to error (
 
   it("an external stop still wins over a late failure resolution", async () => {
     manager = new AgentManager()
-    let resolveRun:
-      | ((v: RunResult | PromiseLike<RunResult>) => void)
-      | undefined
+    let resolveRun: ((v: unknown) => void) | undefined
     const session = mockSession()
     vi.mocked(runAgent).mockImplementation(
       () =>
@@ -4071,5 +3805,192 @@ describe("AgentManager — the agent file's `isolation` wins over the spawn opti
     await manager.awaitStartup(id)
 
     expect(createWorktree).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("AgentManager — waitForSettled (#443)", () => {
+  let manager: AgentManager
+  afterEach(() => manager?.dispose())
+
+  /**
+   * The parent ends as soon as it is aborted. The child is inside a tool call
+   * that ignores the abort — a write in progress — and finishes only when the
+   * test opens its gate.
+   */
+  function parentAndStubbornChild() {
+    let openGate!: () => void
+    const gate = new Promise<void>((resolve) => {
+      openGate = resolve
+    })
+    const writes: string[] = []
+    vi.mocked(runAgent).mockImplementation(
+      async (_ctx, _type, prompt, opts: any) => {
+        if (prompt === "child") {
+          await gate
+          writes.push("OLD")
+          return {
+            responseText: "child done",
+            session: mockSession(),
+            aborted: true,
+            steered: false,
+          }
+        }
+        await new Promise<void>((resolve) =>
+          opts.signal.addEventListener("abort", () => resolve(), {
+            once: true,
+          }),
+        )
+        return {
+          responseText: "",
+          session: mockSession(),
+          aborted: true,
+          steered: false,
+        }
+      },
+    )
+    manager = new AgentManager()
+    const parentId = manager.spawn(
+      mockPi,
+      mockCtx,
+      "general-purpose",
+      "parent",
+      { description: "parent", isBackground: true },
+    )
+    const childId = manager.spawn(mockPi, mockCtx, "general-purpose", "child", {
+      description: "child",
+      isBackground: true,
+      parentAgentId: parentId,
+      depth: 2,
+    })
+    return { parentId, childId, writes, openGate }
+  }
+
+  it("does not resolve while an aborted agent's owned child is still in a tool call", async () => {
+    const { parentId, childId, writes, openGate } = parentAndStubbornChild()
+
+    manager.abort(parentId)
+    await manager.getRecord(parentId)!.promise
+    // The repro: the parent has settled and the child already reads "stopped",
+    // yet its write has not landed.
+    expect(manager.getRecord(childId)!.status).toBe("stopped")
+
+    let settled: boolean | undefined
+    const waiting = manager.waitForSettled(parentId, 5_000).then((s) => {
+      settled = s
+    })
+    await new Promise((r) => setTimeout(r, 20))
+    expect(settled).toBeUndefined()
+
+    openGate()
+    await waiting
+    expect(settled).toBe(true)
+    // Settled means the child's write is behind us: a replacement writing now
+    // cannot be overwritten by it.
+    writes.push("NEW")
+    expect(writes).toEqual(["OLD", "NEW"])
+  })
+
+  it("also waits for a descendant spawned while the tree unwinds", async () => {
+    let openChild!: () => void
+    const childGate = new Promise<void>((resolve) => {
+      openChild = resolve
+    })
+    let openGrandchild!: () => void
+    const grandchildGate = new Promise<void>((resolve) => {
+      openGrandchild = resolve
+    })
+    let childId = ""
+    vi.mocked(runAgent).mockImplementation(
+      async (_ctx, _type, prompt, opts: any) => {
+        if (prompt === "child") {
+          await childGate
+          // Its last act before returning: a background grandchild.
+          manager.spawn(mockPi, mockCtx, "general-purpose", "grandchild", {
+            description: "grandchild",
+            isBackground: true,
+            parentAgentId: childId,
+            depth: 3,
+          })
+        } else if (prompt === "grandchild") {
+          await grandchildGate
+        } else {
+          await new Promise<void>((resolve) =>
+            opts.signal.addEventListener("abort", () => resolve(), {
+              once: true,
+            }),
+          )
+        }
+        return {
+          responseText: "",
+          session: mockSession(),
+          aborted: true,
+          steered: false,
+        }
+      },
+    )
+    manager = new AgentManager()
+    const parentId = manager.spawn(
+      mockPi,
+      mockCtx,
+      "general-purpose",
+      "parent",
+      { description: "parent", isBackground: true },
+    )
+    childId = manager.spawn(mockPi, mockCtx, "general-purpose", "child", {
+      description: "child",
+      isBackground: true,
+      parentAgentId: parentId,
+      depth: 2,
+    })
+
+    manager.abort(parentId)
+    let settled: boolean | undefined
+    const waiting = manager.waitForSettled(parentId, 5_000).then((s) => {
+      settled = s
+    })
+    openChild()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(settled, "the grandchild is still running").toBeUndefined()
+
+    openGrandchild()
+    await waiting
+    expect(settled).toBe(true)
+  })
+
+  it("reports false at the bound when a descendant never settles", async () => {
+    const { parentId, openGate } = parentAndStubbornChild()
+
+    manager.abort(parentId)
+    expect(await manager.waitForSettled(parentId, 30)).toBe(false)
+    openGate()
+  })
+
+  it("resolves true at once for an agent that has already settled with no descendants", async () => {
+    resolvedRun()
+    manager = new AgentManager()
+    const id = manager.spawn(mockPi, mockCtx, "general-purpose", "solo", {
+      description: "solo",
+      isBackground: true,
+    })
+    await manager.getRecord(id)!.promise
+
+    expect(await manager.waitForSettled(id, 1_000)).toBe(true)
+  })
+
+  // What `get` reads as `settling`: the parent's own run is over and both
+  // records read "stopped", but the child's write is still in flight.
+  it("reports a stopped agent as settling until its owned child's run ends", async () => {
+    const { parentId, childId, openGate } = parentAndStubbornChild()
+
+    manager.abort(parentId)
+    await manager.getRecord(parentId)!.promise
+    expect(manager.getRecord(parentId)!.status).toBe("stopped")
+    expect(manager.isSettling(parentId)).toBe(true)
+    expect(manager.isSettling(childId)).toBe(true)
+
+    openGate()
+    await manager.getRecord(childId)!.promise
+    expect(manager.isSettling(parentId)).toBe(false)
+    expect(manager.isSettling(childId)).toBe(false)
   })
 })

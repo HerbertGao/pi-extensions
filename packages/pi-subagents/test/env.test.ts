@@ -46,7 +46,7 @@ describe("detectEnv", () => {
     const tmpDir = mkdtempSync(join(tmpdir(), "pi-env-branch-"))
     try {
       execSync(
-        "git init && git config user.email test@test.com && git config user.name Test && git checkout -b test-branch && git commit --no-gpg-sign --allow-empty -m init",
+        "git init && git config user.email test@test.com && git config user.name Test && git checkout -b test-branch && git commit --allow-empty -m init",
         {
           cwd: tmpDir,
           stdio: "pipe",

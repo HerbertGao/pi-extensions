@@ -858,7 +858,6 @@ export class FleetList {
       selected
         ? { fallbackColor: "text", bold: hasAgentBadge(record.type) }
         : { fallbackColor: "muted" },
-      record.alias,
     )
     const description = selected
       ? theme.fg("text", record.description)

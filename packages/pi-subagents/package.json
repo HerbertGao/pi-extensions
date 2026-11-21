@@ -1,6 +1,6 @@
 {
   "name": "@herbertgao/pi-subagents",
-  "version": "0.26.1-local.3",
+  "version": "0.26.2-local.1",
   "description": "Claude Code-style autonomous subagents and workflow orchestration for Pi, with HerbertGao-maintained UI extensions.",
   "keywords": [
     "agent",
@@ -74,10 +74,10 @@
   },
   "x-upstream": {
     "package": "@tintinweb/pi-subagents",
-    "version": "0.26.1",
-    "reviewedVersion": "0.26.1",
+    "version": "0.26.2",
+    "reviewedVersion": "0.26.2",
     "repository": "https://github.com/tintinweb/pi-subagents",
-    "commit": "14ef1946b439ad2c7e7db618ecdb36f5532052e7",
+    "commit": "e9bd10502cd512288642bd8a97c169042a2310b9",
     "trackVersion": true
   }
 }

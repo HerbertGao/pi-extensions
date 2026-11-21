@@ -452,7 +452,6 @@ export class AgentWidget {
       startedAt: number
       completedAt?: number
       error?: string
-      alias?: string
       lifetimeUsage?: LifetimeUsage
     },
     theme: Theme,
@@ -496,7 +495,7 @@ export class AgentWidget {
     parts.push(duration)
 
     const modeTag = modeLabel ? ` ${theme.fg("dim", `(${modeLabel})`)}` : ""
-    return `${icon} ${renderAgentName(a.type, theme, { fallbackColor: "dim" }, a.alias)}${modeTag}  ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`
+    return `${icon} ${renderAgentName(a.type, theme, { fallbackColor: "dim" })}${modeTag}  ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`
   }
 
   /**
@@ -591,7 +590,7 @@ export class AgentWidget {
       runningLines.push([
         truncate(
           theme.fg("dim", "├─") +
-            ` ${theme.fg("accent", frame)} ${renderAgentName(a.type, theme, { bold: true }, a.alias)}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${fgPreservingNestedStyles(theme, "dim", statsText)}`,
+            ` ${theme.fg("accent", frame)} ${renderAgentName(a.type, theme, { bold: true })}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${fgPreservingNestedStyles(theme, "dim", statsText)}`,
         ),
         truncate(theme.fg("dim", "│  ") + theme.fg("dim", `  ⎿  ${activity}`)),
       ])

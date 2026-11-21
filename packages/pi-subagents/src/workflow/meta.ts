@@ -297,9 +297,9 @@ export function extractMeta(source: string): MetaExtraction {
   // `` `a${1 + 1}b` `` resolves without touching a single global, so it would
   // sail through the empty-context check below and silently produce "a2b".
   if (sawInterpolation) {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: quoting the syntax being rejected
     fail(
-      "`meta` must not use template interpolation (`$" +
-        "{...}`).\n" +
+      "`meta` must not use template interpolation (`${...}`).\n" +
         PURE_LITERAL_HINT,
     )
   }

@@ -920,13 +920,7 @@ describe("createWorkflowHost — abort, resume and gate", () => {
   })
 
   it("runs a gate through pi.exec in the child's own tree", async () => {
-    const exec = vi.fn(
-      async (
-        _command: string,
-        _args: string[],
-        _options: { cwd?: string; timeout?: number },
-      ) => execResult({ stdout: "3 passing" }),
-    )
+    const exec = vi.fn(async () => execResult({ stdout: "3 passing" }))
     const host = createWorkflowHost({
       pi: { exec } as any,
       ctx: ctx({ cwd: "/session" }),
@@ -943,13 +937,7 @@ describe("createWorkflowHost — abort, resume and gate", () => {
   })
 
   it("falls back to the session's cwd when the child had no tree of its own", async () => {
-    const exec = vi.fn(
-      async (
-        _command: string,
-        _args: string[],
-        _options: { cwd?: string; timeout?: number },
-      ) => execResult(),
-    )
+    const exec = vi.fn(async () => execResult())
     const host = createWorkflowHost({
       pi: { exec } as any,
       ctx: ctx({ cwd: "/session" }),
@@ -962,13 +950,7 @@ describe("createWorkflowHost — abort, resume and gate", () => {
   })
 
   it("fails a gate on a non-zero exit and surfaces its output", async () => {
-    const exec = vi.fn(
-      async (
-        _command: string,
-        _args: string[],
-        _options: { cwd?: string; timeout?: number },
-      ) => execResult({ code: 1, stderr: "1 failing" }),
-    )
+    const exec = vi.fn(async () => execResult({ code: 1, stderr: "1 failing" }))
     const host = createWorkflowHost({
       pi: { exec } as any,
       ctx: ctx(),
@@ -981,13 +963,7 @@ describe("createWorkflowHost — abort, resume and gate", () => {
   })
 
   it("fails a gate that was killed, which pi.exec reports with exit code 0", async () => {
-    const exec = vi.fn(
-      async (
-        _command: string,
-        _args: string[],
-        _options: { cwd?: string; timeout?: number },
-      ) => execResult({ killed: true, code: 0 }),
-    )
+    const exec = vi.fn(async () => execResult({ killed: true, code: 0 }))
     const host = createWorkflowHost({
       pi: { exec } as any,
       ctx: ctx(),
@@ -1071,6 +1047,153 @@ describe("SubagentWorkflow tool — script vs scriptPath vs name", () => {
       "the persisted script path is what makes iteration edit-then-rerun",
     ).toBeTruthy()
     expect(existsSync(scriptLine!.slice("Script: ".length))).toBe(true)
+  })
+
+  it("announces the run on pi.events — started once, then settled, no progress push", async () => {
+    const result = await tools
+      .get("SubagentWorkflow")
+      .execute(
+        "tc-ev",
+        { script: inlineScript },
+        undefined,
+        undefined,
+        workflowCtx(),
+      )
+    const runId = /Task ID: (\S+)/.exec(textOf(result))![1]
+    const wf = () =>
+      booted.pi.events.emit.mock.calls.filter(([e]: [string]) =>
+        e.startsWith("subagents:workflow_"),
+      )
+
+    // started fires synchronously, before the first agent, carrying the summary.
+    expect(wf()[0][0]).toBe("subagents:workflow_started")
+    expect(wf()[0][1]).toMatchObject({
+      id: runId,
+      name: "from-inline",
+      description: "inline source",
+      status: "running",
+      toolCallId: "tc-ev",
+      agentCount: 0,
+    })
+
+    // settled fires once the detached run completes.
+    await vi.waitFor(() =>
+      expect(wf().map(([e]: [string]) => e)).toContain(
+        "subagents:workflow_settled",
+      ),
+    )
+    expect(wf().at(-1)![1]).toMatchObject({
+      id: runId,
+      name: "from-inline",
+      status: "completed",
+      agentCount: 0,
+    })
+
+    // Only the two lifecycle events — progress is pulled via workflow_get, never pushed.
+    expect(wf().map(([e]: [string]) => e)).toEqual([
+      "subagents:workflow_started",
+      "subagents:workflow_settled",
+    ])
+    // The script returned nothing and the call passed no args.
+    expect(wf().at(-1)![1]).not.toHaveProperty("result")
+    expect(wf()[0][1]).not.toHaveProperty("args")
+  })
+
+  it("carries the call's args on workflow_started, and args and log lines on workflow_get", async () => {
+    const wf = () =>
+      booted.pi.events.emit.mock.calls.filter(([e]: [string]) =>
+        e.startsWith("subagents:workflow_"),
+      )
+    const context = workflowCtx()
+    await booted.lifecycle.get("session_start")?.({}, context)
+
+    const result = await tools.get("SubagentWorkflow").execute(
+      "tc-args",
+      {
+        script: `${inlineScript}log("reviewing " + args.pr);\n`,
+        args: { pr: 123 },
+      },
+      undefined,
+      undefined,
+      context,
+    )
+    const runId = /Task ID: (\S+)/.exec(textOf(result))![1]
+
+    expect(wf()[0]).toEqual([
+      "subagents:workflow_started",
+      expect.objectContaining({ id: runId, args: { pr: 123 } }),
+    ])
+    await vi.waitFor(() =>
+      expect(wf().map(([e]: [string]) => e)).toContain(
+        "subagents:workflow_settled",
+      ),
+    )
+    expect(wf().at(-1)![1]).not.toHaveProperty("args")
+
+    const [, workflowGet] = booted.pi.events.on.mock.calls.find(
+      ([c]: [string]) => c === "subagents:rpc:workflow_get",
+    )!
+    await workflowGet({ requestId: "wg-args", workflowId: runId })
+    const [, reply] = booted.pi.events.emit.mock.calls.find(
+      ([c]: [string]) => c === "subagents:rpc:workflow_get:reply:wg-args",
+    )!
+    expect(reply.data.workflow.args).toEqual({ pr: 123 })
+    expect(reply.data.workflow.logs).toEqual([
+      expect.stringContaining("reviewing 123"),
+    ])
+  })
+
+  it("carries the script's return value on workflow_settled, and omits it when the run fails", async () => {
+    const settled = () =>
+      booted.pi.events.emit.mock.calls.filter(
+        ([e]: [string]) => e === "subagents:workflow_settled",
+      )
+    const context = workflowCtx()
+    await booted.lifecycle.get("session_start")?.({}, context)
+
+    // Longer than the notification's 4000-char cap: the bus must not truncate.
+    const result = await tools.get("SubagentWorkflow").execute(
+      "tc-res",
+      {
+        script: `${inlineScript}return { findings: [{ file: "a.ts" }], body: "x".repeat(5000) };\n`,
+      },
+      undefined,
+      undefined,
+      context,
+    )
+    const runId = /Task ID: (\S+)/.exec(textOf(result))![1]
+    await vi.waitFor(() => expect(settled()).toHaveLength(1))
+    const payload = settled()[0][1]
+    expect(payload).toMatchObject({
+      status: "completed",
+      result: { findings: [{ file: "a.ts" }] },
+    })
+    expect(payload.result.body).toHaveLength(5000)
+
+    // A listener mutating its payload must not reach the run: workflow_get still
+    // returns what the script returned.
+    payload.result.findings[0].file = "mutated"
+    const [, workflowGet] = booted.pi.events.on.mock.calls.find(
+      ([c]: [string]) => c === "subagents:rpc:workflow_get",
+    )!
+    await workflowGet({ requestId: "wg-1", workflowId: runId })
+    const [, reply] = booted.pi.events.emit.mock.calls.find(
+      ([c]: [string]) => c === "subagents:rpc:workflow_get:reply:wg-1",
+    )!
+    expect(reply.data.workflow.result.findings[0].file).toBe("a.ts")
+
+    await tools
+      .get("SubagentWorkflow")
+      .execute(
+        "tc-res-fail",
+        { script: `${inlineScript}throw new Error("script blew up");\n` },
+        undefined,
+        undefined,
+        workflowCtx(),
+      )
+    await vi.waitFor(() => expect(settled()).toHaveLength(2))
+    expect(settled()[1][1]).toMatchObject({ status: "failed" })
+    expect(settled()[1][1]).not.toHaveProperty("result")
   })
 
   it("prefers scriptPath over script when both are given", async () => {
@@ -2104,7 +2227,7 @@ describe("collisions with another extension", () => {
       },
     })
 
-  const warnings = (context: any): string[] =>
+  const warnings = (context: any) =>
     context.ui.notify.mock.calls
       .filter((c: any[]) => c[1] === "warning")
       .map((c: any[]) => String(c[0]))

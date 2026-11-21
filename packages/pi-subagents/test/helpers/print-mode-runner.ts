@@ -55,6 +55,7 @@ import {
   fauxToolCall,
   getCurrentSystemPrompt,
   type Model,
+  type SimpleStreamOptions,
   type ToolCall,
 } from "@earendil-works/pi-ai"
 import {
@@ -68,7 +69,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent"
 import { fauxModelBackend } from "./faux-model-backend.js"
-import { getModel, modelContext, registerFauxProvider } from "./pi-ai.js"
+import { getModel, registerFauxProvider } from "./pi-ai.js"
 
 /** Path to the pi-subagents extension entrypoint (repo `src/index.ts`). */
 const EXTENSION_PATH = fileURLToPath(
@@ -94,11 +95,13 @@ export type FauxReply =
 /**
  * A context-branching responder. Invoked once per model call (parent OR child)
  * with that call's own `Context`, so it can decide what to emit from the prompt
- * it sees — order-independent, unlike a flat FIFO `steps` list.
+ * it sees — order-independent, unlike a flat FIFO `steps` list. `options` are
+ * the request options as they reached the provider (e.g. `cacheRetention`).
  */
 export type FauxResponder = (
   context: Context,
   state: { callCount: number },
+  options?: SimpleStreamOptions,
 ) => FauxReply | Promise<FauxReply>
 
 export interface RunPrintModeOptions {
@@ -388,8 +391,8 @@ export async function runPrintMode(
         )
       }
       const max = options.maxModelCalls ?? 16
-      const factory: FauxResponseStep = async (context, _opts, state) =>
-        toAssistantMessage(await respond(modelContext(context), state))
+      const factory: FauxResponseStep = async (context, opts, state) =>
+        toAssistantMessage(await respond(context, state, opts))
       faux.setResponses(Array.from({ length: max }, () => factory))
     }
   }
@@ -438,7 +441,7 @@ export async function runPrintMode(
             ? { defaultTools: options.defaultTools }
             : {}),
         }),
-  } as any)
+  })
   session.setSessionName("print-mode-host")
 
   // Binding fires session_start so the extension initializes and publishes its

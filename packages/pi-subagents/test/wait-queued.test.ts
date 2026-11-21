@@ -66,7 +66,7 @@ const flush = async () => {
 
 /** runAgent mock where each call blocks until we resolve it manually. */
 function deferredRuns() {
-  const resolvers: Array<() => void> = []
+  const resolvers: Array<(v: any) => void> = []
   vi.mocked(runAgent).mockImplementation(
     () =>
       new Promise((resolve) => {

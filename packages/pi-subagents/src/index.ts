@@ -54,7 +54,6 @@ import {
   steerAgent,
 } from "./agent-runner.js"
 import {
-  clearEphemeralAgents,
   formatAgentTypeList,
   getAgentConfig,
   getAvailableTypes,
@@ -71,6 +70,7 @@ import {
   setFallbackSubagent,
   setToolDescriptionMode,
 } from "./agent-types.js"
+import { getCacheRetention, setCacheRetention } from "./cache-retention.js"
 import { inChildSessionContext } from "./child-context.js"
 import { CompletionOutbox, NOTIFICATION_HOLD_MS } from "./completion-outbox.js"
 import { type RpcHandle, registerRpcHandlers } from "./cross-extension-rpc.js"
@@ -143,10 +143,12 @@ import {
   getStatusNote,
   partialOutputSuffix,
 } from "./status-note.js"
+import { toSubagentInfo } from "./subagent-info.js"
 import {
   type AgentInvocation,
   type AgentMentionMode,
   type AgentRecord,
+  type CacheRetentionSetting,
   type JoinMode,
   type NotificationDetails,
   type SubagentType,
@@ -245,6 +247,12 @@ import {
   workflowRunId,
 } from "./workflow/task.js"
 import { workflowToolDescription } from "./workflow/tool-description.js"
+import {
+  toWorkflowDetail,
+  toWorkflowInfo,
+  workflowArgs,
+  workflowResult,
+} from "./workflow-info.js"
 import {
   isWorktreeIsolationEnabled,
   setWorktreeIsolationEnabled,
@@ -617,31 +625,9 @@ export default function (pi: ExtensionAPI) {
   seedProjectTrust(process.cwd())
 
   /** Reload agents from package/global/project agent dirs and merge with defaults (called on init and each Agent invocation). */
-  /** Current session context; undefined outside a session (also gates the
-   * agents-changed emit above to active sessions). */
-  let currentCtx: ExtensionContext | undefined
-
   const reloadCustomAgents = (strict = false) => {
-    // The before/after comparison feeds subagents:agents-changed, so badge
-    // holders re-pull exactly when the spawnable set actually changed. Gated
-    // on an active session: the factory-time first load always "changes" the
-    // set (defaults → defaults+files) and would fire a pull nobody can answer
-    // yet; session_start's own reload runs after currentCtx is set and still
-    // announces anything that changed since.
-    // Signature covers name, displayName and color: a color-only edit to a
-    // file-backed agent is a real change for badge holders, not just a rename.
-    const signature = () =>
-      getAvailableTypes()
-        .map((type) => {
-          const config = getConfig(type)
-          return `${type}|${config.displayName}|${config.color ?? ""}`
-        })
-        .join(",")
-    const before = signature()
     const userAgents = loadCustomAgents(process.cwd(), strict)
     registerAgents(userAgents)
-    if (currentCtx !== undefined && signature() !== before)
-      pi.events.emit("subagents:agents-changed", {})
   }
 
   // Initial load — the only strict one. A bad edit mid-session must not kill the
@@ -808,65 +794,26 @@ export default function (pi: ExtensionAPI) {
     widget.update()
   }, 30_000)
 
-  /** Helper: build event data for lifecycle events from an AgentRecord. */
-  function buildEventData(record: AgentRecord) {
-    const durationMs = record.completedAt
-      ? record.completedAt - record.startedAt
-      : Date.now() - record.startedAt
-    // All three fields are lifetime-accumulated (Σ over every assistant message_end),
-    // so they survive compaction together — input + output ≤ total always.
-    // tokens is omitted when nothing was ever produced (e.g. agent errored before
-    // any message_end fired), preserving prior payload shape.
-    const u = record.lifetimeUsage
-    const total = getLifetimeTotal(u)
-    const tokens =
-      total > 0 ? { input: u.input, output: u.output, total } : undefined
-    // The whole run's spend as a pi `Usage` — pi's convention for handing spend
-    // to a consumer, so `usage.cost.total` and `usage.cacheRead` are where a
-    // listener already expects them and anything pi adds to `Usage` arrives
-    // without a change here. Omitted when nothing was spent, so "spent nothing"
-    // and "never ran" stay distinguishable. Ungated by `showCost`: that setting
-    // governs what a human is shown, not what the event carries.
-    //
-    // `tokens` above is the other convention, kept as it shipped: a flat view
-    // model like pi's own `SessionStats`, carrying the DISPLAY total, which
-    // excludes cacheRead (#38). The two answer different questions and neither
-    // derives from the other.
-    const usage = toReportedUsage(u)
-    return {
-      id: record.id,
-      type: record.type,
-      description: record.description,
-      result: record.result,
-      error: record.error,
-      status: record.status,
-      toolUses: record.toolUses,
-      durationMs,
-      tokens,
-      usage,
-    }
-  }
-
   // Background completion: route through group join or send individual nudge
   const manager = new AgentManager(
     (record) => {
-      // Owned children — nested, or a workflow's — report only through their
-      // owner: the parent's scoped tools, or the workflow's card, notification
-      // and dialog. Keep them out of top-level lifecycle, transcript,
-      // notification, and UI channels.
-      if (!isTopLevelAgent(record)) return
-
-      // Emit lifecycle event based on terminal status
+      // The lifecycle events cover every agent, owned ones included: they carry
+      // `parentAgentId` / `workflowId`, so a listener that wants only the
+      // session's own agents filters on those (#442).
       const isError =
         record.status === "error" ||
         record.status === "stopped" ||
         record.status === "aborted"
-      const eventData = buildEventData(record)
-      if (isError) {
-        pi.events.emit("subagents:failed", eventData)
-      } else {
-        pi.events.emit("subagents:completed", eventData)
-      }
+      pi.events.emit(
+        isError ? "subagents:failed" : "subagents:completed",
+        toSubagentInfo(record),
+      )
+
+      // Everything below is for the session's own agents only. Owned children —
+      // nested, or a workflow's — report to the model through their owner: the
+      // parent's scoped tools, or the workflow's card, notification and dialog.
+      // Keep them out of the transcript, notification, and UI channels.
+      if (!isTopLevelAgent(record)) return
 
       // Persist the final record: get_subagent_result answers from it once the
       // live record is gone, and other extensions reconstruct history from it.
@@ -901,7 +848,17 @@ export default function (pi: ExtensionAPI) {
     },
     undefined,
     (record) => {
-      if (!isTopLevelAgent(record)) return
+      if (!isTopLevelAgent(record)) {
+        // An owned agent never queues (it takes no pool slot) and has no
+        // `subagents:created` emit site of its own, so it is announced here, the
+        // moment it starts: a startup that fails first leaves no record and so
+        // announces nothing. A resume re-announces the id, as a detached
+        // top-level resume does.
+        const info = toSubagentInfo(record)
+        pi.events.emit("subagents:created", info)
+        pi.events.emit("subagents:started", info)
+        return
+      }
       // Agent-tool spawns refresh these surfaces in their tool handler, but RPC
       // and scheduler spawns enter through the manager directly.
       if (currentCtx?.hasUI) {
@@ -911,19 +868,12 @@ export default function (pi: ExtensionAPI) {
         fleet.update()
       }
       // Emit started event when agent transitions to running (including from queue)
-      pi.events.emit("subagents:started", {
-        id: record.id,
-        type: record.type,
-        description: record.description,
-      })
+      pi.events.emit("subagents:started", toSubagentInfo(record))
     },
     (record, info) => {
-      if (!isTopLevelAgent(record)) return
       // Emit compacted event when agent's session compacts (preserves count on record).
       pi.events.emit("subagents:compacted", {
-        id: record.id,
-        type: record.type,
-        description: record.description,
+        ...toSubagentInfo(record),
         reason: info.reason,
         tokensBefore: info.tokensBefore,
         compactionCount: record.compactionCount,
@@ -938,10 +888,9 @@ export default function (pi: ExtensionAPI) {
       // The same message, live, for anyone keeping their own ledger — a footer
       // that breaks spend down by agent type and thinking level, say. This is the
       // one place every agent's spend passes through, which is why it is emitted
-      // here and not from the lifecycle events: those fire for top-level agents
-      // only, once, at the end, so a workflow's children and nested agents would
-      // never be counted, and a running agent would read as free until it
-      // stopped. Deliberately ungated by `reportUsage` — that decides whether the
+      // here and not from the lifecycle events: those carry spend once, at the
+      // end, so a running agent would read as free until it stopped.
+      // Deliberately ungated by `reportUsage` — that decides whether the
       // parent session's own totals include this spend, not whether it happened.
       //
       // `model` and `thinking` are read off the record per message, not captured
@@ -980,8 +929,10 @@ export default function (pi: ExtensionAPI) {
       })
     },
     (record, message) => {
-      if (!isTopLevelAgent(record)) return
-      pi.events.emit("subagents:steered", { id: record.id, message })
+      pi.events.emit("subagents:steered", {
+        ...toSubagentInfo(record),
+        message,
+      })
     },
   )
 
@@ -1125,6 +1076,7 @@ export default function (pi: ExtensionAPI) {
   }
 
   // --- Cross-extension RPC via pi.events ---
+  let currentCtx: ExtensionContext | undefined
   // RPC handlers + the `subagents:ready` broadcast are wired on `session_start`
   // (a bound lifecycle event), not at factory time. pi runs every extension
   // factory before the `extensions:` filter and only fires lifecycle events for
@@ -1173,10 +1125,6 @@ export default function (pi: ExtensionAPI) {
     // resumed session all land here, and any of them may follow a `pi install`
     // that added a package the cached root list predates.
     invalidatePackageCache()
-    // Ephemeral types live for the current session only: a new or resumed
-    // session starts clean, so a persona's registration never outlives the
-    // run that seated it.
-    clearEphemeralAgents()
     reloadCustomAgents()
     if (ctx.hasUI) {
       widget.setUICtx(ctx.ui)
@@ -1190,16 +1138,35 @@ export default function (pi: ExtensionAPI) {
       rpcHandle = registerRpcHandlers({
         events: pi.events,
         pi,
-        refreshAgents: () => reloadCustomAgents(),
         getCtx: () => currentCtx,
         manager: {
           spawn: spawnTopLevel,
           awaitStartup: (id) => manager.awaitStartup(id),
           getRecord: (id) => manager.getRecord(id),
+          listAgents: () => manager.listAgents(),
+          isNotificationPending: (id) => {
+            const record = manager.getRecord(id)
+            // Owned agents are never notified, and a read result never will be.
+            if (!record || !isTopLevelAgent(record) || record.resultConsumed)
+              return false
+            if (record.status === "running" || record.status === "queued")
+              return false
+            // The three places a settled agent's completion waits: the outbox,
+            // a `group` holding it for its siblings, and a `group` spawn whose
+            // turn has not ended yet (see the manager's onComplete).
+            return (
+              outbox.has(id) ||
+              groupJoin.isHolding(id) ||
+              turnGroupSpawns.includes(id)
+            )
+          },
           // Unguarded on purpose: the stop handler now runs the top-level check
           // itself off `getRecord`, and reports the refusal instead of the
           // "Agent not found" a false from here used to be read as.
           abort: (id) => manager.abort(id),
+          waitForSettled: (id, timeoutMs) =>
+            manager.waitForSettled(id, timeoutMs),
+          isSettling: (id) => manager.isSettling(id),
           consumeResult: (id) => {
             const record = resolveAgentRef(id)
             // Same guard as get_subagent_result: a running agent has no result
@@ -1213,6 +1180,17 @@ export default function (pi: ExtensionAPI) {
             return true
           },
           steer: (id, message) => manager.steer(id, message),
+        },
+        // Read-only snapshots of workflow runs, for `workflow_get` / `workflow_list`.
+        // A run is top-level, so there is no ownership to guard. `get` carries the
+        // live per-agent detail; `list` is summaries only.
+        workflows: {
+          get: (id) => {
+            const task = workflowTasks.get(id)
+            return task ? toWorkflowDetail(task) : undefined
+          },
+          list: () =>
+            [...workflowTasks.values()].map((task) => toWorkflowInfo(task)),
         },
       })
       // Broadcast readiness so extensions loaded alongside us can discover us.
@@ -1528,9 +1506,10 @@ export default function (pi: ExtensionAPI) {
     rpcHandle?.unsubPing()
     rpcHandle?.unsubConsume()
     rpcHandle?.unsubSteer()
-    rpcHandle?.unsubRegisterAgents()
-    rpcHandle?.unsubUnregisterAgents()
-    rpcHandle?.unsubListAgents()
+    rpcHandle?.unsubGet()
+    rpcHandle?.unsubList()
+    rpcHandle?.unsubWorkflowGet()
+    rpcHandle?.unsubWorkflowList()
     rpcHandle = undefined
     currentCtx = undefined
     // Only release the global slot if this activation claimed it — a child
@@ -1618,9 +1597,7 @@ export default function (pi: ExtensionAPI) {
       const record = manager.getRecord(id)
       if (record) {
         pi.events.emit("subagents:created", {
-          id,
-          type: record.type,
-          description: record.description,
+          ...toSubagentInfo(record),
           isBackground: true,
         })
       }
@@ -1702,8 +1679,6 @@ export default function (pi: ExtensionAPI) {
     (mode) =>
       chooseViewerMarkdown(
         mode,
-        // SAFETY: FleetList keeps the live ExtensionContext; this cast only
-        // narrows its structural UI surface to the optional warning context.
         currentCtx as unknown as ExtensionCommandContext | undefined,
       ),
     getFullscreenScrollbar,
@@ -1972,9 +1947,7 @@ export default function (pi: ExtensionAPI) {
     // event carrying the caller's type would re-register the agent under
     // the wrong one in cross-extension mirrors keyed by id.
     pi.events.emit("subagents:created", {
-      id,
-      type: existing.type,
-      description: existing.description,
+      ...toSubagentInfo(existing),
       isBackground: true,
     })
 
@@ -1984,8 +1957,6 @@ export default function (pi: ExtensionAPI) {
   // Grab UI context from first tool execution + clear lingering widget on new turn
   pi.on("tool_execution_start", async (_event, ctx) => {
     widget.setUICtx(ctx.ui as UICtx)
-    // SAFETY: Pi's UI context implements the FleetUICtx structural subset;
-    // this assertion exposes only the methods FleetList calls.
     fleet.setUICtx(ctx.ui as unknown as FleetUICtx)
     watchHandoffKey(ctx.ui)
     widget.onTurnStart()
@@ -2032,6 +2003,7 @@ export default function (pi: ExtensionAPI) {
     setFleetView: setFleetViewEnabled,
     setAgentMentions: setAgentMentionMode,
     setRememberAgents,
+    setCacheRetention,
     setWidgetMode: setWidgetMode,
     setOutputTranscript: setOutputTranscriptDefault,
     setWorktreeIsolation: setWorktreeIsolationEnabled,
@@ -2081,11 +2053,11 @@ export default function (pi: ExtensionAPI) {
   // With no per-result note by design, the model would have every reason to go
   // on reporting a `pi-agent-*` branch that was never created.
   const isolationGuideline = isWorktreeIsolationEnabled()
-    ? `\n- Use isolation: "worktree" to give the agent its own git worktree (safe parallel file modifications); leave it unset, or pass "off", for none. The worktree is normally removed when the agent finishes and changes land on a named branch. If preservation fails, the worktree is kept and its recovery path is reported.`
+    ? `\n- Use isolation: "worktree" to give the agent its own git worktree (safe parallel file modifications); leave it unset, or pass "off", for none. The worktree is removed when the agent finishes; if it made changes, they are committed to a branch and the branch is named in the result.`
     : ""
 
   const isolationCompactGuideline = isWorktreeIsolationEnabled()
-    ? `\n- isolation: "worktree" uses a temporary git worktree. Changes land on a branch; a preservation failure keeps the worktree and reports its path.`
+    ? `\n- isolation: "worktree" gives the agent its own git worktree (removed on completion); changes land on a branch named in the result.`
     : ""
 
   // Compact Agent tool description (#91, `toolDescriptionMode: "compact"`) —
@@ -2227,11 +2199,11 @@ Terse command-style prompts produce shallow, generic work.
       name: Type.Optional(
         Type.String({
           description:
-            'Optional memorable name for this agent, e.g. "auth-audit", so it can be addressed as `@name` at the prompt and by steer_subagent / get_subagent_result. Any characters are accepted; the `@handle` is slugged from it (lowercase letters, digits, `_`, `-`) while UI labels show it as given, spaces included. Worth setting when several agents of the same type run at once; omit for one-off work. The agent stays reachable by its type either way.',
+            'Optional memorable name for this agent, e.g. "auth-audit", so it can be addressed as `@name` at the prompt and by steer_subagent / get_subagent_result. Letters, digits, `_` and `-`. Worth setting when several agents of the same type run at once; omit for one-off work. The agent stays reachable by its type either way.',
         }),
       ),
       subagent_type: Type.String({
-        description: `The type of specialized agent to use. Available types: ${getAvailableTypes().join(", ")}. Custom agents from .pi/agents/*.md (project) or ${getAgentDir()}/agents/*.md (global) are also available, as are types another tool registered for this session — a list outside this description is usable, not invalid.`,
+        description: `The type of specialized agent to use. Available types: ${getAvailableTypes().join(", ")}. Custom agents from .pi/agents/*.md (project) or ${getAgentDir()}/agents/*.md (global) are also available.`,
       }),
       model: Type.Optional(
         Type.String({
@@ -2300,16 +2272,11 @@ Terse command-style prompts produce shallow, generic work.
           )
         : ""
       const desc = args.description ?? ""
-      const name = renderAgentName(
-        args.subagent_type,
-        theme,
-        {
-          fallbackColor: "toolTitle",
-          restoreBackground: rowBackground,
-          bold: true,
-        },
-        args.name,
-      )
+      const name = renderAgentName(args.subagent_type, theme, {
+        fallbackColor: "toolTitle",
+        restoreBackground: rowBackground,
+        bold: true,
+      })
       return new Text(
         rowBackground +
           "▸ " +
@@ -2980,13 +2947,11 @@ Terse command-style prompts produce shallow, generic work.
         fleet.ensureTimer()
         fleet.update()
 
-        // Emit created event
-        pi.events.emit("subagents:created", {
-          id,
-          type: subagentType,
-          description: params.description,
-          isBackground: true,
-        })
+        if (record)
+          pi.events.emit("subagents:created", {
+            ...toSubagentInfo(record),
+            isBackground: true,
+          })
 
         return backgroundResult(id, record)
       }
@@ -3307,6 +3272,24 @@ Terse command-style prompts produce shallow, generic work.
     ctx: ExtensionContext,
     task: WorkflowTask,
   ): Promise<void> {
+    // This function must never reject (both callers are detached). The payload
+    // is built inside the guard as well as emitted there: a stale `pi` throws
+    // on emit after a session replacement, and either throw would otherwise
+    // surface as an unhandled rejection.
+    const announce = (event: string, build: () => unknown) => {
+      try {
+        pi.events.emit(event, build())
+      } catch {
+        /* stale `pi`, or a payload that could not be built */
+      }
+    }
+    // Bracket the run on the bus. The per-agent detail between these is pulled
+    // on demand via `subagents:rpc:workflow_get`, not pushed — `onProgress`
+    // fires per tool call and message per agent, too hot for the bus.
+    announce("subagents:workflow_started", () => ({
+      ...toWorkflowInfo(task),
+      ...workflowArgs(task),
+    }))
     try {
       const result = await runWorkflow({
         script: task.script,
@@ -3344,6 +3327,10 @@ Terse command-style prompts produce shallow, generic work.
     } catch (err) {
       failWorkflowTask(task, err instanceof Error ? err.message : String(err))
     }
+    announce("subagents:workflow_settled", () => ({
+      ...toWorkflowInfo(task),
+      ...workflowResult(task),
+    }))
   }
 
   /**
@@ -4099,6 +4086,7 @@ Terse command-style prompts produce shallow, generic work.
       fleetView: isFleetViewEnabled(),
       agentMentions: getAgentMentionMode(),
       rememberAgents: getRememberAgents(),
+      cacheRetention: getCacheRetention(),
       widgetMode: getWidgetMode(),
       outputTranscript: getOutputTranscriptDefault(),
       worktreeIsolation: isWorktreeIsolationEnabled(),
@@ -4393,6 +4381,16 @@ Terse command-style prompts produce shallow, generic work.
             "Persist subagent sessions so `@handle` can resume one long after it finished (they also appear in /resume)",
           currentValue: getRememberAgents() ? "on" : "off",
           values: ["on", "off"],
+        },
+        {
+          id: "cacheRetention",
+          label: "Prompt cache retention",
+          description:
+            "Prompt cache lifetime for subagent model calls: short (5 min on Anthropic), long (1 hour), none, " +
+            "or inherit (pi's default, incl. PI_CACHE_RETENTION). An agent's cache_retention frontmatter overrides it; " +
+            "the main session is unaffected. Applies to agents started after the change",
+          currentValue: getCacheRetention(),
+          values: ["inherit", "short", "long", "none"],
         },
         {
           id: "packageAgents",
@@ -4748,6 +4746,9 @@ Terse command-style prompts produce shallow, generic work.
           target,
           `Remember agents ${enabled ? "enabled" : "disabled"}`,
         )
+      } else if (id === "cacheRetention") {
+        setCacheRetention(value as CacheRetentionSetting)
+        notifyApplied(ctx, target, `Prompt cache retention set to ${value}`)
       } else if (id === "widgetMode") {
         setWidgetMode(value as WidgetMode)
         notifyApplied(ctx, target, `Widget set to ${value}`)
@@ -4866,8 +4867,6 @@ Terse command-style prompts produce shallow, generic work.
     viewAgentConversation,
     // Read lazily: `currentCtx` is rebound on every session_start, and the
     // fleet list may act between sessions, when there is none.
-    // SAFETY: ExtensionContext and ExtensionCommandContext share the runtime
-    // UI/session fields used by persistSettings; the value can also be absent.
     getCtx: () => currentCtx as unknown as ExtensionCommandContext | undefined,
     onTaskChange: (task) => workflowCards.request(task.id),
   }

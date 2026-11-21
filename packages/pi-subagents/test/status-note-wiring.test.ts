@@ -171,7 +171,7 @@ describe("status note reaches the parent through the real handlers", () => {
     expect(out).not.toContain("ask before")
   })
 
-  it("hides nested records from top-level tools, registry, transcripts, and lifecycle", async () => {
+  it("hides nested records from top-level tools, registry, transcripts and notifications, but not the lifecycle events", async () => {
     vi.mocked(runAgent).mockResolvedValue({
       responseText: "nested result",
       session: { dispose: vi.fn() } as any,
@@ -200,8 +200,10 @@ describe("status note reaches the parent through the real handlers", () => {
     )
 
     // Internal scoped tools receive the raw owning manager through nestedRuntime.
+    // `lastCall`, not `calls[0]`: the mock is not reset between tests, and an
+    // earlier test's manager emits on that test's `pi`, not this one's.
     const rawManager =
-      vi.mocked(runAgent).mock.calls[0]![3]!.nestedRuntime!.manager
+      vi.mocked(runAgent).mock.lastCall![3].nestedRuntime.manager
     pi.events.emit.mockClear()
     pi.appendEntry.mockClear()
     pi.sendMessage.mockClear()
@@ -233,21 +235,77 @@ describe("status note reaches the parent through the real handlers", () => {
         .execute("tc-nested", params, undefined, undefined, ctx())
       expect(textOf(result)).toContain("Agent not found")
     }
-    expect(pi.events.emit).not.toHaveBeenCalledWith(
+    // The lifecycle events cover owned agents, carrying the owner so a
+    // listener can tell them apart (#442).
+    const owned = expect.objectContaining({
+      id,
+      parentAgentId: topId,
+      depth: 2,
+    })
+    const lifecycle = pi.events.emit.mock.calls
+      .filter((c: any[]) => c[1]?.id === id)
+      .map((c: any[]) => c[0])
+    expect(lifecycle).toEqual([
+      "subagents:created",
       "subagents:started",
-      expect.objectContaining({ id }),
-    )
-    expect(pi.events.emit).not.toHaveBeenCalledWith(
       "subagents:completed",
-      expect.objectContaining({ id }),
-    )
-    expect(pi.events.emit).not.toHaveBeenCalledWith(
-      "subagents:failed",
-      expect.objectContaining({ id }),
-    )
+    ])
+    for (const name of lifecycle)
+      expect(pi.events.emit).toHaveBeenCalledWith(name, owned)
     expect(pi.appendEntry).not.toHaveBeenCalledWith(
       "subagents:record",
       expect.objectContaining({ id }),
+    )
+    expect(pi.sendMessage).not.toHaveBeenCalled()
+  })
+
+  it("reports a workflow's agent on the lifecycle events with its workflowId, and nowhere else", async () => {
+    vi.mocked(runAgent).mockResolvedValue({
+      responseText: "step done",
+      session: { dispose: vi.fn() } as any,
+      aborted: false,
+      steered: false,
+    })
+    const { pi } = makePi()
+    subagentsExtension(pi)
+    const registry = (globalThis as any)[Symbol.for("pi-subagents:manager")]
+    registry.spawn(pi, ctx(), "general-purpose", "top", {
+      description: "owner",
+      isBackground: false,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const rawManager =
+      vi.mocked(runAgent).mock.lastCall![3].nestedRuntime.manager
+    pi.events.emit.mockClear()
+    pi.appendEntry.mockClear()
+    pi.sendMessage.mockClear()
+
+    const { id } = await rawManager.spawnAndWait(
+      pi,
+      ctx(),
+      "general-purpose",
+      "step",
+      {
+        description: "workflow step",
+        workflowId: "wf-1",
+      },
+    )
+
+    expect(pi.events.emit).toHaveBeenCalledWith(
+      "subagents:started",
+      expect.objectContaining({ id, workflowId: "wf-1" }),
+    )
+    expect(pi.events.emit).toHaveBeenCalledWith(
+      "subagents:completed",
+      expect.objectContaining({
+        id,
+        workflowId: "wf-1",
+        result: "step done",
+      }),
+    )
+    expect(pi.appendEntry).not.toHaveBeenCalledWith(
+      "subagents:record",
+      expect.anything(),
     )
     expect(pi.sendMessage).not.toHaveBeenCalled()
   })
@@ -379,9 +437,7 @@ describe("subagents:compacted", () => {
     expect(counts).toEqual([1, 2])
   })
 
-  it("stays silent for a nested child, like every other lifecycle event", async () => {
-    // Nested records are internal to their parent; leaking their compactions
-    // would spam the parent session's bus with ids no consumer can resolve.
+  it("fires for a nested child too, carrying its owner (#442)", async () => {
     runWithCompaction({ reason: "threshold", tokensBefore: 999 })
     const { pi, tools } = makePi()
     subagentsExtension(pi)
@@ -398,12 +454,12 @@ describe("subagents:compacted", () => {
       ctx(),
     )
     const rawManager =
-      vi.mocked(runAgent).mock.calls[0]![3]!.nestedRuntime!.manager
+      vi.mocked(runAgent).mock.lastCall![3].nestedRuntime.manager
     const parentId =
-      vi.mocked(runAgent).mock.calls[0]![3]!.nestedRuntime!.parentAgentId
+      vi.mocked(runAgent).mock.lastCall![3].nestedRuntime.parentAgentId
     pi.events.emit.mockClear()
 
-    rawManager.spawn(pi, ctx(), "general-purpose", "nested", {
+    const id = rawManager.spawn(pi, ctx(), "general-purpose", "nested", {
       description: "nested child",
       isBackground: true,
       parentAgentId: parentId,
@@ -412,9 +468,15 @@ describe("subagents:compacted", () => {
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(pi.events.emit).not.toHaveBeenCalledWith(
+    expect(pi.events.emit).toHaveBeenCalledWith(
       "subagents:compacted",
-      expect.anything(),
+      expect.objectContaining({
+        id,
+        parentAgentId: parentId,
+        depth: 2,
+        reason: "threshold",
+        tokensBefore: 999,
+      }),
     )
   })
 })
