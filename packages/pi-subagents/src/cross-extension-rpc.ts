@@ -407,18 +407,6 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
       entries.set(name, { ...config, builtinToolNames })
     })
     const applied = registerEphemeralAgents(entries)
-    // A skipped name collides with a file-loaded or default type: fail loudly
-    // rather than let the caller spawn that type believing it is the persona.
-    const skipped = [...entries.keys()].filter(
-      (name) => !applied.includes(name),
-    )
-    if (skipped.length > 0)
-      throw new Error(
-        `agent type already exists: ${skipped.map((name) => `"${name}"`).join(", ")}` +
-          (applied.length > 0
-            ? ` (applied: ${applied.map((name) => `"${name}"`).join(", ")})`
-            : ""),
-      )
     // Badge holders (pi-cc-extensions) re-pull list-agents on this event, so a
     // freshly seated persona gets its colored badge without a new session.
     events.emit("subagents:agents-changed", {})

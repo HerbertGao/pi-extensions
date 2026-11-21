@@ -135,12 +135,28 @@ function overlayEphemeral(registry: Map<string, AgentConfig>): string[] {
   return applied
 }
 
+/** Whether an ephemeral registration may overlay the live registry for `name`.
+ * File- and default-backed keys win; only keys we already own may be replaced. */
+function canOverlayEphemeralName(name: string): boolean {
+  const key = resolveKeyIn(agents, name)
+  if (key === undefined) return true
+  return ephemeralOwned.has(key)
+}
+
 /** Register session-scoped agent types at runtime; spawnable immediately.
- * Returns the names actually applied, so a caller can fail loudly when a name
- * collides with a file-loaded or default type instead of shadowing it. */
+ * The batch is atomic: every name is checked against file/default types before
+ * any mutation; a collision fails the whole call with no partial overlay. */
 export function registerEphemeralAgents(
   entries: Map<string, AgentConfig>,
 ): string[] {
+  const conflicts = [...entries.keys()].filter(
+    (name) => !canOverlayEphemeralName(name),
+  )
+  if (conflicts.length > 0) {
+    throw new Error(
+      `agent type already exists: ${conflicts.map((name) => `"${name}"`).join(", ")}`,
+    )
+  }
   for (const [name, config] of entries) {
     // A case-variant of an existing ephemeral key replaces it in place, so
     // one persona cannot leave a second, unreachable entry behind.
@@ -149,15 +165,8 @@ export function registerEphemeralAgents(
       ephemeralAgents.delete(existing)
     ephemeralAgents.set(name, config)
   }
-  const applied = overlayEphemeral(agents)
-  // A skipped name collided with a file/default type: drop it from the store
-  // as well, so it cannot silently apply later if that type disappears.
-  for (const name of entries.keys()) {
-    if (!applied.includes(name)) ephemeralAgents.delete(name)
-  }
-  // Report only this call's names: the overlay re-applies the whole store, so
-  // returning `applied` would list types the caller never sent.
-  return [...entries.keys()].filter((name) => applied.includes(name))
+  overlayEphemeral(agents)
+  return [...entries.keys()]
 }
 
 /** Remove ephemeral types by name (case-insensitive); file-backed types stay.

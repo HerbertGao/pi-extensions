@@ -1353,8 +1353,10 @@ describe("register-agents RPC", () => {
     ])
     expect(mixed).toEqual({
       success: false,
-      error: 'agent type already exists: "Explore" (applied: "Good Agent")',
+      error: 'agent type already exists: "Explore"',
     })
+    expect(getAgentConfig("Good Agent")).toBeUndefined()
+
     const scoped = await register("reg-col3", [
       { name: "Earlier Type", description: "d", systemPrompt: "p2" },
     ])
@@ -1374,6 +1376,72 @@ describe("register-agents RPC", () => {
       success: false,
       error: 'agents[1].name "mcp builder" duplicates agents[0]',
     })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+  })
+
+  it("leaves prior ephemeral values when a mixed update + conflict fails", async () => {
+    registerRpcHandlers(deps)
+    await register("reg-pre", [
+      { name: "Earlier Type", description: "d", systemPrompt: "first" },
+    ])
+    const mixed = await register("reg-mix", [
+      { name: "Earlier Type", description: "d", systemPrompt: "second" },
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    expect(mixed).toMatchObject({
+      success: false,
+      error: 'agent type already exists: "Explore"',
+    })
+    expect(getAgentConfig("Earlier Type")?.systemPrompt).toBe("first")
+  })
+
+  it("emits agents-changed only after a fully successful batch", async () => {
+    const emitted: Array<{ event: string }> = []
+    const bus = {
+      handlers: new Map<string, Set<(data: unknown) => void>>(),
+      on(event: string, handler: (data: unknown) => void) {
+        const set = this.handlers.get(event) ?? new Set()
+        set.add(handler)
+        this.handlers.set(event, set)
+        return () => set.delete(handler)
+      },
+      emit(event: string, data: unknown) {
+        emitted.push({ event })
+        for (const h of this.handlers.get(event) ?? []) h(data)
+      },
+    } as EventBus
+    registerRpcHandlers({
+      events: bus,
+      pi: { events: bus },
+      getCtx: () => ({}),
+      manager: identityManagerStub(),
+      workflows: identityWorkflowsStub(),
+    })
+    const fail = await new Promise((resolve) => {
+      bus.on("subagents:rpc:register-agents:reply:reg-atomic-fail", resolve)
+      bus.emit("subagents:rpc:register-agents", {
+        requestId: "reg-atomic-fail",
+        agents: [
+          { name: "Seat Me", description: "d", systemPrompt: "p" },
+          { name: "Explore", description: "d", systemPrompt: "p" },
+        ],
+      })
+    })
+    expect(fail).toMatchObject({ success: false })
+    expect(
+      emitted.filter((e) => e.event === "subagents:agents-changed").length,
+    ).toBe(0)
+
+    await new Promise((resolve) => {
+      bus.on("subagents:rpc:register-agents:reply:reg-atomic-ok", resolve)
+      bus.emit("subagents:rpc:register-agents", {
+        requestId: "reg-atomic-ok",
+        agents: [{ name: "Seat Me", description: "d", systemPrompt: "p" }],
+      })
+    })
+    expect(
+      emitted.filter((e) => e.event === "subagents:agents-changed").length,
+    ).toBe(1)
   })
 
   it("unregisters over the bus and leaves file-backed types alone", async () => {
