@@ -88,7 +88,7 @@ The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com
 
 ## `pi-typesafe`
 
-The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.14.0 under its original MIT license:
+The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.15.1 under its original MIT license:
 
 MIT License
 
