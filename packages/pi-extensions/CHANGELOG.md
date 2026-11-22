@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.20
+
+### Patch Changes
+
+- [#413](https://github.com/HerbertGao/pi-extensions/pull/413) [`e703338`](https://github.com/HerbertGao/pi-extensions/commit/e703338631d4174a4fdf9485284b1e50a8e62df8) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin Graphify PyPI `0.9.115` and bundle `pi-typesafe@0.15.1` so TypeSafe accepts Pi 1.x peers and per-backend auth matches the published companion releases.
+
 ## 2026.11.19
 
 ### Minor Changes
