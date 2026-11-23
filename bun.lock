@@ -67,12 +67,12 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.11.19",
+      "version": "2026.11.20",
       "dependencies": {
-        "@ast-grep/cli": "0.51.1",
+        "@ast-grep/cli": "0.51.2",
         "@ast-grep/napi": "^0.51.0",
         "@dietrichgebert/ponytail": "5.3.3",
-        "@estebanforge/pi-antigravity-bridge": "1.13.1",
+        "@estebanforge/pi-antigravity-bridge": "1.13.2",
         "@estebanforge/pi-ask-shared": "^0.1.6",
         "@estebanforge/pi-tui-dialogs": "^0.1.3",
         "@herbertgao/pi-agency": "0.1.4",
@@ -87,9 +87,9 @@
         "@modelcontextprotocol/sdk": "^1.32.1",
         "@mozilla/readability": "^0.6.0",
         "@napi-rs/keyring": "^2.1.0",
-        "@narumitw/pi-btw": "0.63.8",
-        "@narumitw/pi-caffeinate": "0.49.15",
-        "@narumitw/pi-tui-kit": "^0.70.0",
+        "@narumitw/pi-btw": "0.63.9",
+        "@narumitw/pi-caffeinate": "0.49.16",
+        "@narumitw/pi-tui-kit": "^0.71.0",
         "@pi-plugins/fast-mode": "0.1.16",
         "@shikijs/cli": "^4.0.2",
         "@tifan/pi-copy-response": "0.2.7",
@@ -111,7 +111,7 @@
         "nanoid": "^5.1.16",
         "p-limit": "^6.1.0",
         "pi-commandcode-provider": "0.8.7",
-        "pi-lens": "4.5.1",
+        "pi-lens": "4.5.2",
         "pi-next-cue": "1.0.8",
         "pi-provider-qoder": "0.6.13",
         "pi-typesafe": "0.15.1",
@@ -195,21 +195,25 @@
   "packages": {
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@0.129.0", "", { "dependencies": { "json-schema-to-ts": "^3.1.1", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-MH7LB20kNpGLUpPTe2OG5XvL/KhX8HUO9XyBaFjgFk6TLS4Xjt0VPIuMKywe7POKKPslX+QxSlVok9e+8kG5Nw=="],
 
-    "@ast-grep/cli": ["@ast-grep/cli@0.51.1", "", { "dependencies": { "detect-libc": "2.1.2" }, "optionalDependencies": { "@ast-grep/cli-darwin-arm64": "0.51.1", "@ast-grep/cli-darwin-x64": "0.51.1", "@ast-grep/cli-linux-arm64-gnu": "0.51.1", "@ast-grep/cli-linux-x64-gnu": "0.51.1", "@ast-grep/cli-win32-arm64-msvc": "0.51.1", "@ast-grep/cli-win32-ia32-msvc": "0.51.1", "@ast-grep/cli-win32-x64-msvc": "0.51.1" }, "bin": { "sg": "sg", "ast-grep": "ast-grep" } }, "sha512-xdX9+jHTZLwpYtHFRmK4Zzoe0UPmZrn037wwCHKBqaFJPC12xiGTwrZEZDMbBwRwmsGYcG1yHsb7yvEFU8EzNw=="],
+    "@ast-grep/cli": ["@ast-grep/cli@0.51.2", "", { "dependencies": { "detect-libc": "2.1.2" }, "optionalDependencies": { "@ast-grep/cli-darwin-arm64": "0.51.2", "@ast-grep/cli-darwin-x64": "0.51.2", "@ast-grep/cli-linux-arm64-gnu": "0.51.2", "@ast-grep/cli-linux-arm64-musl": "0.51.2", "@ast-grep/cli-linux-x64-gnu": "0.51.2", "@ast-grep/cli-linux-x64-musl": "0.51.2", "@ast-grep/cli-win32-arm64-msvc": "0.51.2", "@ast-grep/cli-win32-ia32-msvc": "0.51.2", "@ast-grep/cli-win32-x64-msvc": "0.51.2" }, "bin": { "sg": "sg", "ast-grep": "ast-grep" } }, "sha512-iAtkqUeMwgmVUXy9XH5Bck0oe0Lo+1aN7MLKiNu0MoeifePo0kPe9zWtH7x8QgGfEHOdO3aBE0OtH4GzsChnqA=="],
 
-    "@ast-grep/cli-darwin-arm64": ["@ast-grep/cli-darwin-arm64@0.51.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-C279HR4eytYkHrmqudMi+eUG3ZvuAqWc0zp9i5aPugFF389AE6N6SbiSFdKeVZXMaUVpwRbmBQbBTr5cA0Tugw=="],
+    "@ast-grep/cli-darwin-arm64": ["@ast-grep/cli-darwin-arm64@0.51.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-KGvO4opuCvREiNOl8W/ZmG97rEfbUidoAgmj0+bgibQzJQ4hpLtdTeGWfD/4rdqeIDESv7yBaHbAaEY7SNdR/Q=="],
 
-    "@ast-grep/cli-darwin-x64": ["@ast-grep/cli-darwin-x64@0.51.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-i8wJd4amxXCvEgZDcU8QDnVE92oqJyDFPyTjaT1PVtBQ0Vb7Y55iTu1dwBwXVi0inFM2OJ4Ze57yCz1uNuXTbg=="],
+    "@ast-grep/cli-darwin-x64": ["@ast-grep/cli-darwin-x64@0.51.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-XwUi5mwn1pu8vZCPHC9tdJqJcHSeZ/EUi0Mnz0g0MIQk9puiXHb/VyY21GzHa7pWJZ5oyT2KE7JzZxTQwKmIDA=="],
 
-    "@ast-grep/cli-linux-arm64-gnu": ["@ast-grep/cli-linux-arm64-gnu@0.51.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-ix/97iBUPGvf9KrhKRcooSJLmwBgAo7GhKHm7VH30kpxOMUrNLqiTXJj2eZVLiO2xQdUFnbwhVn+A7blSlYLJQ=="],
+    "@ast-grep/cli-linux-arm64-gnu": ["@ast-grep/cli-linux-arm64-gnu@0.51.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-T9otX6zk58rN5F9SIvGSM4QXVHmVb2N62L5L4ZpVY1f93FqzaS3y7OIQTSPrTpfvZuth3dyoL9kZXTVGcllkWg=="],
 
-    "@ast-grep/cli-linux-x64-gnu": ["@ast-grep/cli-linux-x64-gnu@0.51.1", "", { "os": "linux", "cpu": "x64" }, "sha512-FlaaRLyopXet+zFrWOdlTbyJb+QqZzgV9jxIbgz0FoVsJSaJ6jsenO/6bgYJk4zPOCUODuvoQ1/XFlB4r6BdcQ=="],
+    "@ast-grep/cli-linux-arm64-musl": ["@ast-grep/cli-linux-arm64-musl@0.51.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-NxLmXQWHGxJp8j+Tlb0Vz/kOmVgQZAOJBYBmg3euhEtmZ4k/pc+3/GiRK4kYC9ryzdc0TuqREcn9CCo92/v2rQ=="],
 
-    "@ast-grep/cli-win32-arm64-msvc": ["@ast-grep/cli-win32-arm64-msvc@0.51.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-WRgt7DX/APxJ6KwGopM0jiC1SN4okxXh2kXY5/YliNy0oPc7ayE5FdG7Dqz40iyOE3EpQN6SZVRquvkpJEagnQ=="],
+    "@ast-grep/cli-linux-x64-gnu": ["@ast-grep/cli-linux-x64-gnu@0.51.2", "", { "os": "linux", "cpu": "x64" }, "sha512-1ToEMb1m/tzjyQNEOhPjRZ3xIUfvY1adR2uP76ZQTmtCPwFWdZdFjIFKiigbzTaH48XoZYUN9L2E7lKbRBZzBw=="],
 
-    "@ast-grep/cli-win32-ia32-msvc": ["@ast-grep/cli-win32-ia32-msvc@0.51.1", "", { "os": "win32", "cpu": "ia32" }, "sha512-Nclj/nsZmiT1bg1jfVL9sqpv0dzcZv6lZu1uk/UrjtvXw832yewmJucvmpAOd0fcb6l57SQ69Jqvt9MNzKwFSQ=="],
+    "@ast-grep/cli-linux-x64-musl": ["@ast-grep/cli-linux-x64-musl@0.51.2", "", { "os": "linux", "cpu": "x64" }, "sha512-XuTizC8JqsbPOwcyXmIf9TMETQAy83uEm77uyzZY8GcvBj9PcSkcEykLFa4dHErKK2jnh7Ts9SUtEpppLSdrAw=="],
 
-    "@ast-grep/cli-win32-x64-msvc": ["@ast-grep/cli-win32-x64-msvc@0.51.1", "", { "os": "win32", "cpu": "x64" }, "sha512-98fN1gUWJ6AMcwfFdUAQV+4haq5HAzDZWyu3W5zCZXkhhvcT3GLY9oRcACrr7yefIQohHpj5GG0rUZNlwukrMQ=="],
+    "@ast-grep/cli-win32-arm64-msvc": ["@ast-grep/cli-win32-arm64-msvc@0.51.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-7SfwFvS9sJqoFcisxMh+mGKS9fixg0eCa7PhZZWLKB4MhGZydnoLJreVCg0ffHVZQJlYJItOUMzkuTb33kBbSQ=="],
+
+    "@ast-grep/cli-win32-ia32-msvc": ["@ast-grep/cli-win32-ia32-msvc@0.51.2", "", { "os": "win32", "cpu": "ia32" }, "sha512-ih2meRyYNSfYyJIQHtEnRnY+obt96xNlOfTxbSZGEj6veU68BdpXhQKB/O5V9VTw7ip+IdRK5MKZPWikMocXIw=="],
+
+    "@ast-grep/cli-win32-x64-msvc": ["@ast-grep/cli-win32-x64-msvc@0.51.2", "", { "os": "win32", "cpu": "x64" }, "sha512-YzSajn4h8XNOfpf8QD4wYlGSzqlIahwUSp+k/WA9UM8p1QRNbokm1WTI+FvK9dmocgHogQaAmvcDWKiEPabhBg=="],
 
     "@ast-grep/napi": ["@ast-grep/napi@0.51.0", "", { "optionalDependencies": { "@ast-grep/napi-darwin-arm64": "0.51.0", "@ast-grep/napi-darwin-x64": "0.51.0", "@ast-grep/napi-linux-arm64-gnu": "0.51.0", "@ast-grep/napi-linux-arm64-musl": "0.51.0", "@ast-grep/napi-linux-x64-gnu": "0.51.0", "@ast-grep/napi-linux-x64-musl": "0.51.0", "@ast-grep/napi-win32-arm64-msvc": "0.51.0", "@ast-grep/napi-win32-ia32-msvc": "0.51.0", "@ast-grep/napi-win32-x64-msvc": "0.51.0" } }, "sha512-thHIZoygVkwW/6yBFBgqPtmKpAnEfwsJyIFliKo6hxkXlYLLfvwReDH2le/5zk358ir/97IJdTB7xv309LYbSQ=="],
 
@@ -377,7 +381,7 @@
 
     "@earendil-works/pi-tui": ["@earendil-works/pi-tui@1.5.0", "", { "dependencies": { "get-east-asian-width": "1.6.0", "marked": "18.0.11", "marked-cjk-friendly": "0.1.2" } }, "sha512-56KqrDVeLF18k+syppVbT35Ai1opbM44ot+sL7O3K40CaWwXCiwOpqEFugDBAILtAhseZh6uYIuYxPPOJHLFAA=="],
 
-    "@estebanforge/pi-antigravity-bridge": ["@estebanforge/pi-antigravity-bridge@1.13.1", "", { "dependencies": { "@estebanforge/pi-ask-shared": "^0.1.6", "@estebanforge/pi-tui-dialogs": "^0.1.3", "@modelcontextprotocol/sdk": "^1.31.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "^1.5.1" }, "optionalPeers": ["@earendil-works/pi-coding-agent"] }, "sha512-GmsTP7VodChxg7MvqbE1luLVZyoC0T/+ifq8adNqcRk1Mo6iqVzeeXlhoZFWmwHgtN6OLBFEy5BJtosoitc6kg=="],
+    "@estebanforge/pi-antigravity-bridge": ["@estebanforge/pi-antigravity-bridge@1.13.2", "", { "dependencies": { "@estebanforge/pi-ask-shared": "^0.1.6", "@estebanforge/pi-tui-dialogs": "^0.1.3", "@modelcontextprotocol/sdk": "^1.31.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "^1.5.1" }, "optionalPeers": ["@earendil-works/pi-coding-agent"] }, "sha512-0/uc084ZMSDw4qONdyUQTd8HpVIRTTQcJdrqTzl22Bhr6Z8Qq3cdlrkYG8pBbUyIlyF2L2/218OJtIC1HGGhqA=="],
 
     "@estebanforge/pi-ask-shared": ["@estebanforge/pi-ask-shared@0.1.6", "", {}, "sha512-u5w2e5m2nhlUagKcO5EIwmuF+r6VGffjZIXkLTxWiSR+b5ODbhVrtb7MMTR2igOPwBzJwfcZhPdrjdBPo4iZ2Q=="],
 
@@ -459,11 +463,11 @@
 
     "@napi-rs/keyring-win32-x64-msvc": ["@napi-rs/keyring-win32-x64-msvc@2.1.0", "", { "os": "win32", "cpu": "x64" }, "sha512-3zYwO7dhJiUNyv2te81ujXm2vGxHwgx+z2eBm0dTYe3aWpvKQVzpfxCp/7cViJs8duVYE04wVOgXiRhRCMEq2w=="],
 
-    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.63.8", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.70.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-dskbX1uMMY03ZF2v+EvkIc94L7PM+dfAEu8AL3771TXEa94SwsjPnjN7/DUDDHglmyWA7l/w/7UWh4EcPZYxlQ=="],
+    "@narumitw/pi-btw": ["@narumitw/pi-btw@0.63.9", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.71.0" }, "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-FeaoOOm07OQ+LCcIUNKuhsDirV/UirDbgobkdUcqF4To4WtGsSyACQVljGiGKCekM5d7GKkPNuu+mMK5Hb9zfQ=="],
 
-    "@narumitw/pi-caffeinate": ["@narumitw/pi-caffeinate@0.49.15", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.70.0", "dbus-native": "^0.16.3" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-ium0FipKppoaywC9i0VH2uqULqGYSPta8LuPkJObwEfYUh4dKUtVWgycarG6HvNCWt2/wIZFU+hb/xb84wdvWA=="],
+    "@narumitw/pi-caffeinate": ["@narumitw/pi-caffeinate@0.49.16", "", { "dependencies": { "@narumitw/pi-tui-kit": "^0.71.0", "dbus-native": "^0.16.3" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-Y2P2mYaWSL/ZffOZyHz61PBNOqZtHPcddAeDE1ZbfX92OGAuah3Hvys/nXGrvtxitVlg+dCe0J4HUYnVt3ggYg=="],
 
-    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.70.1", "", { "dependencies": { "diff": "9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-7D1MOH2l6rcH+rDBKfHHTrNwplejkBF4Md3HD0VpOL7jWKpoGGtyPE7+q7rlSl76pF50ULgxj+t9eU6c4S9WYA=="],
+    "@narumitw/pi-tui-kit": ["@narumitw/pi-tui-kit@0.71.0", "", { "dependencies": { "diff": "^9.0.0", "grok-mermaid": "0.2.3", "highlight.js": "11.12.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*" } }, "sha512-v8m2U86GmfgXe5NgwJRI5PpNkY+fyFu6xjUGxO5bzw/9dcdbLh5LRxMX+RixCmMRCeydNnpDJVz9ChUaIcb1KQ=="],
 
     "@nodelib/fs.scandir": ["@nodelib/fs.scandir@2.1.5", "", { "dependencies": { "@nodelib/fs.stat": "2.0.5", "run-parallel": "^1.1.9" } }, "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="],
 
@@ -1287,7 +1291,7 @@
 
     "pi-commandcode-provider": ["pi-commandcode-provider@0.8.7", "", { "peerDependencies": { "@earendil-works/pi-ai": "*", "@earendil-works/pi-coding-agent": "*" }, "optionalPeers": ["@earendil-works/pi-ai", "@earendil-works/pi-coding-agent"] }, "sha512-2V366yAL4meEtZ1CpYxP8mHyNDymYg3Ai6NHGsIGRT0juZ+ZuD4RXsnaj9oWan0oUxU6xnSB0GgZolE7ljMh2w=="],
 
-    "pi-lens": ["pi-lens@4.5.1", "", { "dependencies": { "@ast-grep/cli": "0.51.1", "@ast-grep/napi": "^0.51.0", "js-yaml": "^5.2.2", "minimatch": "^11.0.4", "pidusage": "^4.0.1", "vscode-jsonrpc": "^10.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-zuHH/3ce37UTlJGCJzjawrsjOXC8Z9w4BJ/UahtlqE4Q6OB6k6djMwdfCcVrwfJuOcwXLROTVPjyQY9NXpfPcw=="],
+    "pi-lens": ["pi-lens@4.5.2", "", { "dependencies": { "@ast-grep/cli": "0.51.2", "@ast-grep/napi": "^0.51.0", "js-yaml": "^5.2.2", "minimatch": "^11.0.4", "pidusage": "^4.0.1", "vscode-jsonrpc": "^10.0.0" }, "optionalDependencies": { "jiti": "^2.7.0", "web-tree-sitter": "0.25.10" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-tui": "*", "typebox": "^1.0.0" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"], "bin": { "pi-lens": "dist/mcp/cli.js", "pi-lens-mcp": "dist/mcp/server.js", "pi-lens-analyze": "dist/mcp/analyze-cli.js" } }, "sha512-78xCNnXvN5Y4V1jbGKrlAZ7Z4TDU4q4oYEKzUzwuBUNUpumucq37fXZcLTdA7FJM91V7zjxJH+rrKb5Ixd4sQQ=="],
 
     "pi-next-cue": ["pi-next-cue@1.0.8", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=1.2.0" } }, "sha512-GjVBAEINsd/2bp1aVhTTSOHnSkDeuKW4JEu1wuTNPh5VIa1D/jUUPyVRsE54AlazTN4w644xtR6V7GCKORYgVg=="],
 

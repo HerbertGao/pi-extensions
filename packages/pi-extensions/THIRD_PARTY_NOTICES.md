@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 ## `@narumitw/pi-caffeinate`
 
-The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.15 under its original MIT license:
+The aggregate bundles [`@narumitw/pi-caffeinate`](https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-caffeinate) version 0.49.16 under its original MIT license:
 
 MIT License
 
@@ -84,7 +84,7 @@ THE SOFTWARE.
 
 ## `@estebanforge/pi-antigravity-bridge`
 
-The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.13.1 under its original package name. The published npm release corresponds to git commit [`bdc904e03b94eb665b36039daa77f54d3e979923`](https://github.com/EstebanForge/pi-extensions/commit/bdc904e03b94eb665b36039daa77f54d3e979923). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
+The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.13.2 under its original package name. The published npm release corresponds to git commit [`6b40e5bd49bffba8909556e1b802fe8dacc153e8`](https://github.com/EstebanForge/pi-extensions/commit/6b40e5bd49bffba8909556e1b802fe8dacc153e8). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
 
 ## `pi-typesafe`
 
