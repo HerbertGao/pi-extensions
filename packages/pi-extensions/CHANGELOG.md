@@ -1,5 +1,11 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.21
+
+### Patch Changes
+
+- [#416](https://github.com/HerbertGao/pi-extensions/pull/416) [`e76e871`](https://github.com/HerbertGao/pi-extensions/commit/e76e871a7789047843b72892409a597a7a9c18d1) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Pin `@estebanforge/pi-antigravity-bridge@1.13.2`, `@narumitw/pi-btw@0.63.9`, `@narumitw/pi-caffeinate@0.49.16`, and `pi-lens@4.5.2`. Promote `@narumitw/pi-tui-kit@^0.71.0` and `@ast-grep/cli@0.51.2` for BTW, caffeinate, and pi-lens.
+
 ## 2026.11.20
 
 ### Patch Changes
