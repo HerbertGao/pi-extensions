@@ -124,20 +124,29 @@ export async function runMentionClone(
       // here is delivered into a session that is disposed moments later, so the
       // agent would run, appear in the widget and the fleet, and reach nobody.
       // Keep Pi's tool-call capabilities, but attribute the spawn to the main session.
+      const prevTools = (ctx as ExtensionToolContext).tools
+      const prevExecuteTool = (ctx as ExtensionToolContext).executeTool
       Object.assign(ctx, {
         tools: cloneCtx.tools,
         executeTool: cloneCtx.executeTool,
       })
-      return agentTool.execute(
-        undefined as never,
-        {
-          ...(params as Record<string, unknown>),
-          run_in_background: true,
-        } as typeof params,
-        signal,
-        onUpdate,
-        ctx as ExtensionContext & ExtensionToolContext,
-      )
+      return agentTool
+        .execute(
+          undefined as never,
+          {
+            ...(params as Record<string, unknown>),
+            run_in_background: true,
+          } as typeof params,
+          signal,
+          onUpdate,
+          ctx as ExtensionContext & ExtensionToolContext,
+        )
+        .finally(() => {
+          Object.assign(ctx, {
+            tools: prevTools,
+            executeTool: prevExecuteTool,
+          })
+        })
     },
   }
 

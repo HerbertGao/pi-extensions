@@ -324,6 +324,30 @@ describe("cloning the conversation", () => {
 })
 
 describe("attributing the spawn to the real session", () => {
+  it("restores the main session tool surface after attributing the spawn", async () => {
+    const mainTools = [{ name: "read" }]
+    const mainExecuteTool = vi.fn()
+    const cloneTools = [{ name: "clone-only" }]
+    const cloneExecuteTool = vi.fn()
+    const o = opts({
+      ctx: mainCtx({ tools: mainTools, executeTool: mainExecuteTool }),
+    })
+    cloneSession(async (tool) => {
+      await tool.execute(
+        "clone-tool-call-1",
+        { subagent_type: "Explore", prompt: "go" },
+        undefined,
+        undefined,
+        { cwd: "/fork", tools: cloneTools, executeTool: cloneExecuteTool },
+      )
+    })
+
+    await runMentionClone(o)
+
+    expect(o.ctx.tools).toBe(mainTools)
+    expect(o.ctx.executeTool).toBe(mainExecuteTool)
+  })
+
   it("runs the real Agent handler with the MAIN context, not the fork's", async () => {
     // The handler reads cwd, model and sessionManager.getSessionId() off this
     // to place the .output transcript and rootSessionId. The clone's own
