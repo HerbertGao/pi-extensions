@@ -39,6 +39,7 @@ vi.mock("@earendil-works/pi-coding-agent", async () => {
   }
 })
 
+import { setCacheRetention } from "../src/cache-retention.js"
 import { agentMentionReminder } from "../src/mention.js"
 import { runMentionClone } from "../src/mention-clone.js"
 
@@ -264,6 +265,23 @@ describe("cloning the conversation", () => {
     expect(built.modelRuntime).toEqual({ kind: "runtime" })
   })
 
+  it("applies the prompt cache retention setting to the clone's model calls", async () => {
+    const session = cloneSession(callsAgent())
+    const inner = vi.fn(
+      (_m: unknown, _c: unknown, _o?: { cacheRetention?: string }) => undefined,
+    )
+    session.agent = { streamFunction: inner }
+    setCacheRetention("short")
+    try {
+      await runMentionClone(opts())
+    } finally {
+      setCacheRetention("inherit")
+    }
+
+    session.agent.streamFunction("model", "context", {})
+    expect(inner.mock.calls[0]?.[2]).toEqual({ cacheRetention: "short" })
+  })
+
   it("gives the clone the Agent tool and nothing else", async () => {
     // It runs where nobody is watching. A full toolset would let an invisible
     // turn read, write or run things on the user's behalf.
@@ -306,6 +324,30 @@ describe("cloning the conversation", () => {
 })
 
 describe("attributing the spawn to the real session", () => {
+  it("restores the main session tool surface after attributing the spawn", async () => {
+    const mainTools = [{ name: "read" }]
+    const mainExecuteTool = vi.fn()
+    const cloneTools = [{ name: "clone-only" }]
+    const cloneExecuteTool = vi.fn()
+    const o = opts({
+      ctx: mainCtx({ tools: mainTools, executeTool: mainExecuteTool }),
+    })
+    cloneSession(async (tool) => {
+      await tool.execute(
+        "clone-tool-call-1",
+        { subagent_type: "Explore", prompt: "go" },
+        undefined,
+        undefined,
+        { cwd: "/fork", tools: cloneTools, executeTool: cloneExecuteTool },
+      )
+    })
+
+    await runMentionClone(o)
+
+    expect(o.ctx.tools).toBe(mainTools)
+    expect(o.ctx.executeTool).toBe(mainExecuteTool)
+  })
+
   it("runs the real Agent handler with the MAIN context, not the fork's", async () => {
     // The handler reads cwd, model and sessionManager.getSessionId() off this
     // to place the .output transcript and rootSessionId. The clone's own
@@ -317,9 +359,9 @@ describe("attributing the spawn to the real session", () => {
     await runMentionClone(o)
 
     expect(tool.execute).toHaveBeenCalledTimes(1)
-    // Our local delta spreads the main ctx and adds the clone's tool-call
-    // capabilities, so the object is no longer identical to `o.ctx`.
-    expect(tool.execute.mock.calls[0][4]).toMatchObject(o.ctx)
+    const callCtx = tool.execute.mock.calls[0][4]
+    // Main-session attribution: the real session context, not the fork's cwd.
+    expect(callCtx).toBe(o.ctx)
   })
 
   it("passes no tool-call id, since the real session issued none", async () => {

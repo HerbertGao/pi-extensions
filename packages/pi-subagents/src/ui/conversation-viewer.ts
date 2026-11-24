@@ -75,7 +75,7 @@ interface ToolBlock {
    * transcript re-wrapped every block on every keystroke. The rows only change
    * when the inputs above do, so they are kept and reused until one does.
    */
-  rows?: string[]
+  rows?: readonly string[]
   width?: number
 }
 
@@ -875,7 +875,7 @@ export class ConversationViewer implements Component, Focusable {
     text: string,
     width: number,
     dim: boolean,
-  ): string[] {
+  ): readonly string[] {
     let entry = this.markdownCache.get(msg)
     if (!entry) {
       entry = {
@@ -1149,7 +1149,7 @@ export class ConversationViewer implements Component, Focusable {
     result: ToolResultPart | undefined,
     notRun: string | undefined,
     width: number,
-  ): string[] {
+  ): readonly string[] {
     let block = this.toolBlocks.get(call.id)
     let changed = false
     if (!block) {

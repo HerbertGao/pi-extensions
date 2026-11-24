@@ -58,6 +58,7 @@ import {
   createAgentSession,
   DefaultResourceLoader,
   type ExtensionContext,
+  type ExtensionToolContext,
   getAgentDir,
   SessionManager,
   type ToolDefinition,
@@ -122,17 +123,30 @@ export async function runMentionClone(
       // false, and a foreground agent answers through its TOOL RESULT — which
       // here is delivered into a session that is disposed moments later, so the
       // agent would run, appear in the widget and the fleet, and reach nobody.
-      return agentTool.execute(
-        undefined as never,
-        {
-          ...(params as Record<string, unknown>),
-          run_in_background: true,
-        } as typeof params,
-        signal,
-        onUpdate,
-        // Keep Pi's tool-call capabilities, but attribute the spawn to the main session.
-        { ...ctx, tools: cloneCtx.tools, executeTool: cloneCtx.executeTool },
-      )
+      // Keep Pi's tool-call capabilities, but attribute the spawn to the main session.
+      const prevTools = (ctx as ExtensionToolContext).tools
+      const prevExecuteTool = (ctx as ExtensionToolContext).executeTool
+      Object.assign(ctx, {
+        tools: cloneCtx.tools,
+        executeTool: cloneCtx.executeTool,
+      })
+      return agentTool
+        .execute(
+          undefined as never,
+          {
+            ...(params as Record<string, unknown>),
+            run_in_background: true,
+          } as typeof params,
+          signal,
+          onUpdate,
+          ctx as ExtensionContext & ExtensionToolContext,
+        )
+        .finally(() => {
+          Object.assign(ctx, {
+            tools: prevTools,
+            executeTool: prevExecuteTool,
+          })
+        })
     },
   }
 

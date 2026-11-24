@@ -102,6 +102,7 @@ const ROW: Record<string, number> = {
   maxSubagentDepth: 3,
   defaultMaxTurns: 4,
   graceTurns: 5,
+  headlessWaitMinutes: 6,
 }
 
 /** Keystrokes that open the editor on the selected row, type `value`, and submit it. */
@@ -241,6 +242,28 @@ describe("/agents → Settings writes only the changed setting", () => {
     // is not a change — it stays in the global layer only.
     expect(readJson(projectFile())).toEqual({ maxConcurrent: 4 })
     expect(readJson(globalFile())).toEqual({ graceTurns: 7 })
+  })
+
+  it("saves a typed headless wait, survives a restart, and resets to no limit", async () => {
+    const agents = boot()
+    const typed = typeSetting("headlessWaitMinutes", "10")
+    await agents(typed.ctx)
+    expect(readJson(globalFile())).toEqual({ headlessWaitMinutes: 10 })
+    expect(typed.notify).toHaveBeenCalledWith(
+      "Headless wait set to 10 min (saved to global settings)",
+      "info",
+    )
+
+    const again = drivePage([])
+    await restart()(again.ctx)
+    expect(again.page.screen).toMatch(/Headless wait \(min\) +global +10\b/)
+
+    const cleared = typeSetting("headlessWaitMinutes", "0")
+    await agents(cleared.ctx)
+    expect(cleared.notify).toHaveBeenCalledWith(
+      "Headless wait set to no limit (saved to global settings)",
+      "info",
+    )
   })
 
   it("does not re-write an earlier change over what another session saved since", async () => {
@@ -456,7 +479,7 @@ describe("/agents → Settings writes only the changed setting", () => {
     const { ctx } = drivePage([
       ...FOCUS_LIST,
       DEL,
-      ...Array<string>(6).fill(DOWN),
+      ...Array<string>(7).fill(DOWN),
       ENTER,
     ])
 
@@ -469,7 +492,7 @@ describe("/agents → Settings writes only the changed setting", () => {
     // Package agents is on by default because no gate is set at all.
     writeJson(globalFile(), { packageAgents: false })
     const agents = boot()
-    const { ctx, page } = drivePage([...toRow(19), DEL])
+    const { ctx, page } = drivePage([...toRow(20), DEL])
 
     await agents(ctx)
 
@@ -521,8 +544,8 @@ describe("/agents → Settings writes only the changed setting", () => {
       ".pi/subagents.json · created on first change",
     )
 
-    // Tab → Project, then Enter on Join mode (7th row), which cycles its value.
-    const { ctx, page } = drivePage([TAB, ...toRow(6), ENTER])
+    // Tab → Project, then Enter on Join mode (8th row), which cycles its value.
+    const { ctx, page } = drivePage([TAB, ...toRow(7), ENTER])
     await agents(ctx)
 
     expect(Object.keys(readJson(projectFile()) as object)).toEqual([
@@ -771,6 +794,6 @@ describe("/agents → Settings filter and height", () => {
     expect(page.lines.length).toBeLessThanOrEqual(24)
     expect(page.lines[0]).toContain("Subagent Settings")
     expect(page.screen).toMatch(/^> Report usage to session +off\b/m)
-    expect(page.screen).toContain("(29/29)")
+    expect(page.screen).toContain("(30/30)")
   })
 })

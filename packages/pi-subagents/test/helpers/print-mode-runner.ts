@@ -149,6 +149,8 @@ export interface RunPrintModeOptions {
   extensionFactories?: InlineExtension[]
   /** Faux-mode `defaultTools` setting, e.g. `["+tool_search"]`. */
   defaultTools?: string[]
+  /** Extension CLI flags, as `pi --name=value` sets them, e.g. `subagents-workflow-file`. */
+  flags?: Record<string, string>
   /** Called once after the real parent session is created and extensions are bound. */
   onParentSession?: (
     session: AgentSession,
@@ -415,6 +417,10 @@ export async function runPrintMode(
     noContextFiles: true,
   })
   await loader.reload()
+  // What pi's CLI does with `--name=value` once the extensions are loaded.
+  for (const [name, value] of Object.entries(options.flags ?? {})) {
+    loader.getExtensions().runtime.flagValues.set(name, value)
+  }
 
   // Run any test-supplied registration (e.g. loadCustomAgents) now that globals
   // are isolated but before the parent turn spawns anything.
