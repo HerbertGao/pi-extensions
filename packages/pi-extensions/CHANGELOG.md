@@ -1,5 +1,14 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.22
+
+### Patch Changes
+
+- [#419](https://github.com/HerbertGao/pi-extensions/pull/419) [`07a8446`](https://github.com/HerbertGao/pi-extensions/commit/07a844664a9ff81b1a09dd02b25e787445cf4b06) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bump bundled `@estebanforge/pi-antigravity-bridge` to 1.13.3, `pi-provider-qoder` to 0.6.14, and replay `@herbertgao/pi-subagents` onto upstream 0.26.3 so print mode waits for background agents and workflows. Pin Graphify PyPI `0.9.118`.
+
+- Updated dependencies [[`07a8446`](https://github.com/HerbertGao/pi-extensions/commit/07a844664a9ff81b1a09dd02b25e787445cf4b06)]:
+  - @herbertgao/pi-subagents@0.27.0
+
 ## 2026.11.21
 
 ### Patch Changes
