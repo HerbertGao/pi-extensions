@@ -67,12 +67,12 @@
     },
     "packages/pi-extensions": {
       "name": "@herbertgao/pi-extensions",
-      "version": "2026.11.20",
+      "version": "2026.11.21",
       "dependencies": {
         "@ast-grep/cli": "0.51.2",
         "@ast-grep/napi": "^0.51.0",
         "@dietrichgebert/ponytail": "5.3.3",
-        "@estebanforge/pi-antigravity-bridge": "1.13.2",
+        "@estebanforge/pi-antigravity-bridge": "1.13.3",
         "@estebanforge/pi-ask-shared": "^0.1.6",
         "@estebanforge/pi-tui-dialogs": "^0.1.3",
         "@herbertgao/pi-agency": "0.1.4",
@@ -113,7 +113,7 @@
         "pi-commandcode-provider": "0.8.7",
         "pi-lens": "4.5.2",
         "pi-next-cue": "1.0.8",
-        "pi-provider-qoder": "0.6.13",
+        "pi-provider-qoder": "0.6.14",
         "pi-typesafe": "0.15.1",
         "pi-web-access": "0.48.0",
         "pidusage": "^4.0.1",
@@ -381,7 +381,7 @@
 
     "@earendil-works/pi-tui": ["@earendil-works/pi-tui@1.5.0", "", { "dependencies": { "get-east-asian-width": "1.6.0", "marked": "18.0.11", "marked-cjk-friendly": "0.1.2" } }, "sha512-56KqrDVeLF18k+syppVbT35Ai1opbM44ot+sL7O3K40CaWwXCiwOpqEFugDBAILtAhseZh6uYIuYxPPOJHLFAA=="],
 
-    "@estebanforge/pi-antigravity-bridge": ["@estebanforge/pi-antigravity-bridge@1.13.2", "", { "dependencies": { "@estebanforge/pi-ask-shared": "^0.1.6", "@estebanforge/pi-tui-dialogs": "^0.1.3", "@modelcontextprotocol/sdk": "^1.31.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "^1.5.1" }, "optionalPeers": ["@earendil-works/pi-coding-agent"] }, "sha512-0/uc084ZMSDw4qONdyUQTd8HpVIRTTQcJdrqTzl22Bhr6Z8Qq3cdlrkYG8pBbUyIlyF2L2/218OJtIC1HGGhqA=="],
+    "@estebanforge/pi-antigravity-bridge": ["@estebanforge/pi-antigravity-bridge@1.13.3", "", { "dependencies": { "@estebanforge/pi-ask-shared": "^0.1.6", "@estebanforge/pi-tui-dialogs": "^0.1.3", "@modelcontextprotocol/sdk": "^1.31.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": "^1.5.1" }, "optionalPeers": ["@earendil-works/pi-coding-agent"] }, "sha512-4j7RH51kxIf9lV52ODO7c7e0IbBqXA8oup3qpf7q4FpD23o3vhinhQhb8iiqWqkPSOC86+u9k5PmXj9jXmg85g=="],
 
     "@estebanforge/pi-ask-shared": ["@estebanforge/pi-ask-shared@0.1.6", "", {}, "sha512-u5w2e5m2nhlUagKcO5EIwmuF+r6VGffjZIXkLTxWiSR+b5ODbhVrtb7MMTR2igOPwBzJwfcZhPdrjdBPo4iZ2Q=="],
 
@@ -1295,7 +1295,7 @@
 
     "pi-next-cue": ["pi-next-cue@1.0.8", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": ">=1.2.0" } }, "sha512-GjVBAEINsd/2bp1aVhTTSOHnSkDeuKW4JEu1wuTNPh5VIa1D/jUUPyVRsE54AlazTN4w644xtR6V7GCKORYgVg=="],
 
-    "pi-provider-qoder": ["pi-provider-qoder@0.6.13", "", {}, "sha512-G5aouKbj6ORvVdj7wgi1Z7GEobkumqioVTxrORPSYYSSsxv/dSZA7uEbbGZhvSIZ2WJbEHHVEodEPV+sGCQTeA=="],
+    "pi-provider-qoder": ["pi-provider-qoder@0.6.14", "", {}, "sha512-jRRaGFMJD9E+53eaaqOV/ibR+AcVWB49Rcyqw9jcWbYg7NBRCNVj+CXuT3nieG59aBxErYcuU8u8tiUjUXaBDg=="],
 
     "pi-typesafe": ["pi-typesafe@0.15.1", "", { "dependencies": { "@typesafe-ai/sdk": "^0.7.0" }, "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.85.1 <2", "@earendil-works/pi-tui": ">=0.85.1 <2", "typebox": "*" }, "optionalPeers": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"] }, "sha512-lreIEX4hwS1wxNwRkOEsRtrVf1nqYv6evvdX3UwDZ8ZzlGBEoajE4WVdvP44fZ2Wt+XOagsmPfqVRKeu5DExJQ=="],
 
