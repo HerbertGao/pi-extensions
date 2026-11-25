@@ -234,8 +234,9 @@ export type AgencyToolsOptions = {
 export async function rpcRegisterAgents(
   events: AgencyEvents,
   agents: Array<Record<string, string>>,
-  tools: "none" | "builtin",
+  tools: "all" | "builtin" | "none",
   timeoutMs: number,
+  extensions?: string[],
 ): Promise<void> {
   const requestId = randomUUID()
   const channel = `subagents:rpc:register-agents:reply:${requestId}`
@@ -256,7 +257,12 @@ export async function rpcRegisterAgents(
         ),
       )
     }, timeoutMs)
-    events.emit("subagents:rpc:register-agents", { requestId, agents, tools })
+    events.emit("subagents:rpc:register-agents", {
+      requestId,
+      agents,
+      tools,
+      ...(extensions ? { extensions } : {}),
+    })
   })
 }
 
@@ -555,9 +561,18 @@ export function agencyTools(
           "Persona files relative to the catalog, e.g. security/security-appsec-engineer.md, or absolute paths inside it.",
       }),
       tools: Type.Optional(
-        Type.Union([Type.Literal("none"), Type.Literal("builtin")], {
+        Type.Union(
+          [Type.Literal("all"), Type.Literal("builtin"), Type.Literal("none")],
+          {
+            description:
+              'Tool surface. "all" (default) inherits the session\'s extensions and skills like general-purpose, so web search, fetch, and MCP stay available; "builtin" keeps only pi\'s built-in tools; "none" is a structurally tool-less advisory seat.',
+          },
+        ),
+      ),
+      extensions: Type.Optional(
+        Type.Array(Type.String(), {
           description:
-            'The type\'s tool surface: "none" for tool-less advisory seats, "builtin" (default) for pi\'s built-in tools.',
+            'With tools "all", narrow the inherited extensions to these ids (e.g. ["pi-web-access"]). Omit to inherit all.',
         }),
       ),
     }),
@@ -567,7 +582,12 @@ export function agencyTools(
           persona: Type.String(),
           type: Type.String(),
           color: NullableString,
-          tools: Type.Union([Type.Literal("none"), Type.Literal("builtin")]),
+          tools: Type.Union([
+            Type.Literal("all"),
+            Type.Literal("builtin"),
+            Type.Literal("none"),
+          ]),
+          extensions: Type.Array(Type.String()),
         }),
       ),
     }),
@@ -576,7 +596,7 @@ export function agencyTools(
       if (!events) {
         throw new Error("agency_register needs the pi.events bus")
       }
-      const tools = params.tools ?? "builtin"
+      const tools = params.tools ?? "all"
       const entries = params.personas.map((persona) => {
         const card = loadPersonaEntry(root, persona)
         return { persona, card }
@@ -591,12 +611,14 @@ export function agencyTools(
         })),
         tools,
         options.rpcTimeoutMs ?? 2000,
+        params.extensions,
       )
       const results = entries.map(({ persona, card }) => ({
         persona,
         type: card.name,
         color: card.color ?? null,
         tools,
+        extensions: params.extensions ?? [],
       }))
       const text =
         results

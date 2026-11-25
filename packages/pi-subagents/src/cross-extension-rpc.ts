@@ -221,6 +221,41 @@ export function ephemeralAgentConfig(
 }
 
 /**
+ * The tool surface a registered persona runs with. Three named tiers plus an
+ * optional extension allowlist, because a persona's value is usually its
+ * research reach: `"all"` (the default) inherits the parent session's
+ * extensions and skills exactly like `general-purpose`, `"builtin"` keeps only
+ * pi's built-in tools, and `"none"` is the structurally tool-less advisory
+ * seat. `extensions` narrows `"all"` to named extensions — the ids are the same
+ * ones an agent file's `extensions:` accepts.
+ */
+export function agentToolSurface(
+  tools: unknown,
+  extensions: unknown,
+): Pick<AgentConfig, "builtinToolNames" | "extensions" | "skills"> {
+  const tier = tools ?? "all"
+  if (tier !== "all" && tier !== "builtin" && tier !== "none")
+    throw new Error('tools must be "all", "builtin" or "none"')
+  if (extensions !== undefined && tier !== "all")
+    throw new Error('extensions only narrows tools: "all"')
+  let allowlist: true | string[] = true
+  if (extensions !== undefined) {
+    if (
+      !Array.isArray(extensions) ||
+      extensions.length === 0 ||
+      extensions.some((name) => typeof name !== "string" || !name.trim())
+    )
+      throw new Error("extensions must be a non-empty array of extension ids")
+    allowlist = extensions.map((name) => (name as string).trim())
+  }
+  if (tier === "none")
+    return { builtinToolNames: [], extensions: false, skills: false }
+  if (tier === "builtin")
+    return { builtinToolNames: undefined, extensions: false, skills: false }
+  return { builtinToolNames: undefined, extensions: allowlist, skills: true }
+}
+
+/**
  * Register ping, spawn, stop, consume, steer, get, and list RPC handlers on the event bus.
  * Returns unsub functions for cleanup.
  */
@@ -387,31 +422,37 @@ export function registerRpcHandlers(deps: RpcDeps): RpcHandle {
     requestId: string
     agents: unknown[]
     tools?: unknown
-  }>(events, "subagents:rpc:register-agents", ({ agents, tools }) => {
-    if (!Array.isArray(agents) || agents.length === 0)
-      throw new Error("register-agents requires a non-empty agents array")
-    if (tools !== undefined && tools !== "none" && tools !== "builtin")
-      throw new Error('tools must be "none" or "builtin"')
-    const builtinToolNames = tools === "none" ? [] : undefined
-    const entries = new Map<string, AgentConfig>()
-    const seen = new Map<string, number>()
-    agents.forEach((candidate, index) => {
-      const [name, config] = ephemeralAgentConfig(candidate, index)
-      const lower = name.toLowerCase()
-      const firstIndex = seen.get(lower)
-      if (firstIndex !== undefined)
-        throw new Error(
-          `agents[${index}].name "${name}" duplicates agents[${firstIndex}]`,
-        )
-      seen.set(lower, index)
-      entries.set(name, { ...config, builtinToolNames })
-    })
-    const applied = registerEphemeralAgents(entries)
-    // Badge holders (pi-cc-extensions) re-pull list-agents on this event, so a
-    // freshly seated persona gets its colored badge without a new session.
-    events.emit("subagents:agents-changed", {})
-    return { agents: applied }
-  })
+    extensions?: unknown
+  }>(
+    events,
+    "subagents:rpc:register-agents",
+    ({ agents, tools, extensions }) => {
+      if (!Array.isArray(agents) || agents.length === 0)
+        throw new Error("register-agents requires a non-empty agents array")
+      const surface = agentToolSurface(tools, extensions)
+      const entries = new Map<string, AgentConfig>()
+      const seen = new Map<string, number>()
+      agents.forEach((candidate, index) => {
+        const [name, config] = ephemeralAgentConfig(candidate, index)
+        const lower = name.toLowerCase()
+        const firstIndex = seen.get(lower)
+        if (firstIndex !== undefined)
+          throw new Error(
+            `agents[${index}].name "${name}" duplicates agents[${firstIndex}]`,
+          )
+        seen.set(lower, index)
+        entries.set(name, { ...config, ...surface })
+      })
+      // A collision with a file-loaded or default type is refused inside
+      // registerEphemeralAgents, before anything is written — so this payload is
+      // all-or-nothing and the caller never spawns the wrong agent.
+      const applied = registerEphemeralAgents(entries)
+      // Badge holders (pi-cc-extensions) re-pull list-agents on this event, so a
+      // freshly seated persona gets its colored badge without a new session.
+      events.emit("subagents:agents-changed", {})
+      return { agents: applied }
+    },
+  )
 
   const unsubUnregisterAgents = handleRpc<{
     requestId: string

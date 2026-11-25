@@ -459,12 +459,14 @@ test("register turns personas into session-scoped agent types", async () => {
       type: "MCP Builder",
       color: "indigo",
       tools: "none",
+      extensions: [],
     },
     {
       persona: "engineering/engineering-backend-architect.md",
       type: "Backend Architect",
       color: null,
       tools: "none",
+      extensions: [],
     },
   ])
   assert.match(
@@ -492,10 +494,16 @@ test("register defaults to builtin tools and surfaces RPC errors", async () => {
     undefined,
     undefined as any,
   )
+  // 默认 "all"：专家继承会话扩展（web_search / fetch / MCP），与 general-purpose 同档。
   assert.equal(
     quiet.emitted.find(({ event }) => event === "subagents:rpc:register-agents")
       ?.data.tools,
-    "builtin",
+    "all",
+  )
+  assert.equal(
+    quiet.emitted.find(({ event }) => event === "subagents:rpc:register-agents")
+      ?.data.extensions,
+    undefined,
   )
 
   // A bus without the channel never replies: the timeout is the discovery path.
@@ -548,4 +556,33 @@ test("register defaults to builtin tools and surfaces RPC errors", async () => {
     ),
     /needs the pi\.events bus/,
   )
+})
+
+test("register narrows inherited extensions to an allowlist", async () => {
+  const { root } = fixture()
+  const bus = rpcBus()
+  const { register } = agencyTools(root, { events: bus, rpcTimeoutMs: 500 })
+  const result = await register.execute(
+    "call",
+    {
+      personas: ["specialized/specialized-mcp-builder.md"],
+      tools: "all",
+      extensions: ["pi-web-access"],
+    },
+    undefined,
+    undefined,
+    undefined as any,
+  )
+  const call = bus.emitted.find(
+    ({ event }) => event === "subagents:rpc:register-agents",
+  )
+  assert.equal(call!.data.tools, "all")
+  assert.deepEqual(call!.data.extensions, ["pi-web-access"])
+  assert.deepEqual((result.structuredContent as any).results[0], {
+    persona: "specialized/specialized-mcp-builder.md",
+    type: "MCP Builder",
+    color: "indigo",
+    tools: "all",
+    extensions: ["pi-web-access"],
+  })
 })
