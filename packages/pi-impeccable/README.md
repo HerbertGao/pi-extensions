@@ -1,6 +1,6 @@
 # @herbertgao/pi-impeccable
 
-The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `4.10.0` Pi skill payload (`cli-v4.10.0`). It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
+The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `4.11.0` Pi skill payload (`skill-v4.11.0`). It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
 
 ## Install
 
@@ -27,7 +27,7 @@ Upstream `pin` and `unpin` only discover skill installations in project harness 
 
 ## Updates and provenance
 
-This package vendors the official Pi payload: 63 files from commit [`ab3617920fcdb5009163a725ba8ff59927a63474`](https://github.com/pbakaus/impeccable/commit/ab3617920fcdb5009163a725ba8ff59927a63474). `scripts/live-browser.js` has two local fixes on top of that commit: Go still cleans edit markers on the live selection, but it no longer detaches a staged removal, so Undo and Discard can restore the hidden node. A user exit still keeps Live down for a minute, and that early return clears the live init flag so a later inject on the same page can start. The review cursor stays at that commit. Updates are reviewed and released through this repository rather than the upstream auto-updater. The launcher pins engine `0.1.27`. Context loads a long DESIGN.md as a map, and the first launcher failure is not retried. A user exit stays down for a minute, the missing-PRODUCT.md notice shows once, and hovering the live bar no longer widens it. `/impeccable foundations` walks a product-foundations checklist, and a hidden live bar stops capturing page clicks.
+This package vendors the official Pi payload from commit [`88cfafae649164e6dc48b88d3c0c1bf6662eaade`](https://github.com/pbakaus/impeccable/commit/88cfafae649164e6dc48b88d3c0c1bf6662eaade). `scripts/live-browser.js` has two local fixes on top of that release: Go still cleans edit markers on the live selection, but it no longer detaches a staged removal, so Undo and Discard can restore the hidden node. A user exit still keeps Live down for a minute, and that early return clears the live init flag so a later inject on the same page can start. Updates are reviewed and released through this repository rather than the upstream auto-updater. The launcher pins engine `0.1.30`. Context loads a long DESIGN.md as a map, and the first launcher failure is not retried. A user exit stays down for a minute, the missing-PRODUCT.md notice shows once, and hovering the live bar no longer widens it. `/impeccable foundations` walks a product-foundations checklist, and a hidden live bar stops capturing page clicks.
 
 ## License
 

@@ -10666,6 +10666,9 @@ void main() {
   let steerLocked = false;
   let steerRequestId = null;
   let steerPendingMessage = '';
+  const steerTimedOutIds = new Set();
+  /** @type {Map<string, string>} */
+  const steerTimedOutPending = new Map();
   let steerInputWasFocused = false;
   let pageChatDotsEl = null;
   let steerAwaitTimer = null;
@@ -11253,10 +11256,10 @@ void main() {
     clearSteerAwaitTimer();
     steerAwaitTimer = setTimeout(() => {
       if (!steerLocked || steerRequestId !== id) return;
-      unlockSteerChat({
-        error: steerTimeoutMessage(),
-        restoreMessage: steerPendingMessage,
-      });
+      // The steer stays queued on the server until steer_done, so refilling the input would invite a duplicate.
+      steerTimedOutIds.add(id);
+      steerTimedOutPending.set(id, steerPendingMessage);
+      unlockSteerChat({ error: steerTimeoutMessage() });
     }, STEER_AWAIT_TIMEOUT_MS);
   }
 
@@ -11268,10 +11271,10 @@ void main() {
   function steerTimeoutMessage() {
     const head = 'Steer timed out after 2 minutes. ';
     if (steerQueuedBehindGeneration()) {
-      return head + 'The agent is still busy with the current generation - your message was not lost, but it never got picked up. Send it again once the variants land.';
+      return head + 'The agent is still busy with the current generation. Your message is queued and the agent picks it up once the variants land.';
     }
     if (!agentPollingConnected) {
-      return head + 'No agent is polling right now. Run impeccable live-poll, then send it again.';
+      return head + 'No agent is polling right now. Your message is queued: run impeccable live-poll and the agent picks it up.';
     }
     return head + 'The agent picked it up but never replied with steer_done. Check the agent session for a stalled or failed steer.';
   }
@@ -11606,6 +11609,28 @@ void main() {
   }
 
   function maybeCompleteSteer(msg) {
+    if (msg.type === 'steer_done' && steerTimedOutIds.delete(msg.id)) {
+      steerTimedOutPending.delete(msg.id);
+      showToast(msg.message || 'Queued steer applied', 4000);
+      return true;
+    }
+    if (msg.type === 'error' && steerTimedOutIds.delete(msg.id)) {
+      const restoreMessage = steerTimedOutPending.get(msg.id) || '';
+      steerTimedOutPending.delete(msg.id);
+      const errorText = msg.message || 'Queued steer failed';
+      const composerDraft = pageChatInput?.value.trim() || '';
+      // Match the late steer_done path: never disturb a newer in-flight steer or an active draft.
+      if (steerRequestId || composerDraft) {
+        showToast(errorText, 5000);
+        return true;
+      }
+      if (restoreMessage) {
+        unlockSteerChat({ error: errorText, restoreMessage });
+        return true;
+      }
+      showToast(errorText, 5000);
+      return true;
+    }
     if (!steerRequestId || msg.id !== steerRequestId) return false;
     if (msg.type === 'steer_done') {
       unlockSteerChat({ message: msg.message, file: msg.file });
