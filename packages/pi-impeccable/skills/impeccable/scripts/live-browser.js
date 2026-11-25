@@ -11617,10 +11617,18 @@ void main() {
     if (msg.type === 'error' && steerTimedOutIds.delete(msg.id)) {
       const restoreMessage = steerTimedOutPending.get(msg.id) || '';
       steerTimedOutPending.delete(msg.id);
-      unlockSteerChat({
-        error: msg.message || 'Queued steer failed',
-        restoreMessage: pageChatInput?.value.trim() ? '' : restoreMessage,
-      });
+      const errorText = msg.message || 'Queued steer failed';
+      const composerDraft = pageChatInput?.value.trim() || '';
+      // Match the late steer_done path: never disturb a newer in-flight steer or an active draft.
+      if (steerRequestId || composerDraft) {
+        showToast(errorText, 5000);
+        return true;
+      }
+      if (restoreMessage) {
+        unlockSteerChat({ error: errorText, restoreMessage });
+        return true;
+      }
+      showToast(errorText, 5000);
       return true;
     }
     if (!steerRequestId || msg.id !== steerRequestId) return false;
