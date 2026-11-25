@@ -3,6 +3,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
+  clearEphemeralAgents,
+  getAgentConfig,
+  registerAgents,
+} from "../src/agent-types.js"
+import {
   type EventBus,
   FEATURES,
   PROTOCOL_VERSION,
@@ -1220,6 +1225,258 @@ describe("cross-extension RPC", () => {
         "x",
         { model: BLOCKED },
       )
+    })
+  })
+})
+
+describe("register-agents RPC", () => {
+  let events: EventBus
+  let deps: RpcDeps
+
+  beforeEach(() => {
+    events = createEventBus()
+    deps = {
+      events,
+      pi: { events },
+      getCtx: () => ({}),
+      manager: {
+        spawn: vi.fn(),
+        awaitStartup: vi.fn().mockResolvedValue(undefined),
+        abort: vi.fn(),
+        getRecord: vi.fn(),
+        consumeResult: vi.fn(),
+        steer: vi.fn(),
+      },
+    }
+  })
+
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  const register = (requestId: string, agents: unknown[], tools?: string) =>
+    new Promise((resolve) => {
+      events.on(`subagents:rpc:register-agents:reply:${requestId}`, resolve)
+      events.emit("subagents:rpc:register-agents", {
+        requestId,
+        agents,
+        ...(tools ? { tools } : {}),
+      })
+    })
+
+  it("registers an ephemeral type from a persona payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-1", [
+      {
+        name: "MCP Builder",
+        description: "Expert MCP developer.",
+        systemPrompt: "You are MCP Builder.",
+        color: "indigo",
+      },
+    ])
+    expect(reply).toEqual({
+      success: true,
+      data: { agents: ["MCP Builder"] },
+    })
+    const config = getAgentConfig("MCP Builder")
+    expect(config?.systemPrompt).toBe("You are MCP Builder.")
+    expect(config?.color).toBe("indigo")
+    expect(config?.promptMode).toBe("replace")
+    // Default surface is "all": a persona keeps the session's extensions and
+    // skills, so web search / fetch / MCP stay reachable.
+    expect(config?.extensions).toBe(true)
+    expect(config?.skills).toBe(true)
+  })
+
+  it('maps tools "none" to a fully tool-less type and rejects anything else', async () => {
+    registerRpcHandlers(deps)
+    await register(
+      "reg-2",
+      [{ name: "S", description: "d", systemPrompt: "p" }],
+      "none",
+    )
+    expect(getAgentConfig("S")?.builtinToolNames).toEqual([])
+
+    const rejected = await register(
+      "reg-3",
+      [{ name: "T", description: "d", systemPrompt: "p" }],
+      "everything",
+    )
+    expect(rejected).toEqual({
+      success: false,
+      error: 'tools must be "all", "builtin" or "none"',
+    })
+  })
+
+  it("rejects an invalid payload with an error envelope", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-4", [{ description: "no name" }])
+    expect(reply).toEqual({
+      success: false,
+      error: "agents[0].name must be 1-64 characters",
+    })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+  })
+
+  it("fails when a name collides with an existing type", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-col", [
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    // The caller must learn the collision: spawning "Explore" would silently
+    // run the default file agent, not the persona.
+    expect(reply).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore"',
+    })
+
+    // A mixed payload is refused whole: the collision is detected before any
+    // entry is written, so the free name does not leak into the registry either.
+    const mixed = await register("reg-col2", [
+      { name: "Good Agent", description: "d", systemPrompt: "p" },
+      { name: "Explore", description: "d", systemPrompt: "p" },
+    ])
+    expect(mixed).toEqual({
+      success: false,
+      error: 'agent type already exists: "Explore"',
+    })
+    expect(getAgentConfig("Good Agent")).toBeUndefined()
+  })
+
+  it("fails on duplicate names within one payload", async () => {
+    registerRpcHandlers(deps)
+    const reply = await register("reg-dup", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+      { name: "mcp builder", description: "d", systemPrompt: "p2" },
+    ])
+    expect(reply).toEqual({
+      success: false,
+      error: 'agents[1].name "mcp builder" duplicates agents[0]',
+    })
+  })
+
+  it("unregisters over the bus and leaves file-backed types alone", async () => {
+    registerRpcHandlers(deps)
+    registerAgents(
+      new Map([
+        [
+          "Reality Checker",
+          {
+            name: "Reality Checker",
+            description: "file",
+            systemPrompt: "p",
+            promptMode: "replace",
+            extensions: false,
+            skills: false,
+          },
+        ],
+      ]),
+    )
+    await register("reg-5", [
+      { name: "MCP Builder", description: "d", systemPrompt: "p" },
+    ])
+
+    const reply = new Promise((resolve) => {
+      events.on("subagents:rpc:unregister-agents:reply:unreg-1", resolve)
+      events.emit("subagents:rpc:unregister-agents", {
+        requestId: "unreg-1",
+        names: ["MCP Builder", "Reality Checker"],
+      })
+    })
+    expect(await reply).toEqual({ success: true })
+    expect(getAgentConfig("MCP Builder")).toBeUndefined()
+    expect(getAgentConfig("Reality Checker")).toBeDefined()
+  })
+})
+
+describe("register-agents tool surface", () => {
+  let events: EventBus
+  let deps: RpcDeps
+
+  beforeEach(() => {
+    events = createEventBus()
+    deps = {
+      events,
+      pi: { events },
+      getCtx: () => ({}),
+      manager: {
+        spawn: vi.fn(),
+        awaitStartup: vi.fn().mockResolvedValue(undefined),
+        abort: vi.fn(),
+        getRecord: vi.fn(),
+        consumeResult: vi.fn(),
+        steer: vi.fn(),
+      },
+    }
+    registerRpcHandlers(deps)
+  })
+
+  afterEach(() => {
+    clearEphemeralAgents()
+    registerAgents(new Map())
+  })
+
+  const register = (requestId: string, extra: Record<string, unknown> = {}) =>
+    new Promise((resolve) => {
+      events.on(`subagents:rpc:register-agents:reply:${requestId}`, resolve)
+      events.emit("subagents:rpc:register-agents", {
+        requestId,
+        agents: [
+          { name: `Seat ${requestId}`, description: "d", systemPrompt: "p" },
+        ],
+        ...extra,
+      })
+    })
+
+  it('defaults to "all": extensions and skills inherited like general-purpose', async () => {
+    expect(await register("t-default")).toEqual({
+      success: true,
+      data: { agents: ["Seat t-default"] },
+    })
+    const config = getAgentConfig("Seat t-default")
+    expect(config?.extensions).toBe(true)
+    expect(config?.skills).toBe(true)
+    expect(config?.builtinToolNames).toBeUndefined()
+  })
+
+  it("builtin keeps the built-in tools and drops extensions", async () => {
+    await register("t-builtin", { tools: "builtin" })
+    const config = getAgentConfig("Seat t-builtin")
+    expect(config?.extensions).toBe(false)
+    expect(config?.skills).toBe(false)
+    expect(config?.builtinToolNames).toBeUndefined()
+  })
+
+  it('"none" is structurally tool-less', async () => {
+    await register("t-none", { tools: "none" })
+    const config = getAgentConfig("Seat t-none")
+    expect(config?.extensions).toBe(false)
+    expect(config?.builtinToolNames).toEqual([])
+  })
+
+  it("an extension allowlist narrows the inherited set", async () => {
+    await register("t-list", { tools: "all", extensions: ["pi-web-access"] })
+    expect(getAgentConfig("Seat t-list")?.extensions).toEqual(["pi-web-access"])
+  })
+
+  it("rejects an allowlist on a non-all tier and a malformed allowlist", async () => {
+    expect(
+      await register("t-bad1", {
+        tools: "builtin",
+        extensions: ["pi-web-access"],
+      }),
+    ).toEqual({
+      success: false,
+      error: 'extensions only narrows tools: "all"',
+    })
+    expect(await register("t-bad2", { tools: "all", extensions: [] })).toEqual({
+      success: false,
+      error: "extensions must be a non-empty array of extension ids",
+    })
+    expect(await register("t-bad3", { tools: "everything" })).toEqual({
+      success: false,
+      error: 'tools must be "all", "builtin" or "none"',
     })
   })
 })

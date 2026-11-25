@@ -241,6 +241,22 @@ It takes an id only, enforces the same top-level ownership guard as stop, and an
 
 `subagents:rpc:get` `{ requestId, agentId }` replies `{ agent }`. `subagents:rpc:list` `{ requestId }` replies `{ agents }`. Both return the [agent fields](../README.md#agent-fields) the lifecycle events carry, built by the same `toSubagentInfo` (`src/subagent-info.ts`). Use them when your extension loaded after the events it needed had already fired. Detect them with `features.includes("get")` / `"list"` on the `ping` reply.
 
+## Registering session-scoped agent types
+
+`subagents:rpc:register-agents` `{ requestId, agents: [{ name, description, systemPrompt, color? }], tools?: "all" | "builtin" | "none", extensions?: string[] }` registers ephemeral agent types — spawnable immediately as `subagent_type`, surviving every agent-file reload, and cleared on the next `session_start`.
+
+The prompt is applied in replace mode (the persona body _is_ the system prompt). The tool surface has three tiers, defaulting to `"all"`:
+
+| `tools`           | built-ins | extensions                                              | skills    |
+| ----------------- | --------- | ------------------------------------------------------- | --------- |
+| `"all"` (default) | every one | inherited from the session, or narrowed by `extensions` | inherited |
+| `"builtin"`       | every one | none                                                    | none      |
+| `"none"`          | none      | none                                                    | none      |
+
+`"all"` exists because a seated persona's value is usually its reach: without inherited extensions it has no `web_search`, no `fetch`, and no MCP, so a research expert silently degrades to `bash` and `curl`. `extensions: ["pi-web-access"]` narrows it to named extension ids (the same ids an agent file's `extensions:` accepts) and is only valid with `tools: "all"`; an empty or non-string entry is refused. `"none"` is the structurally tool-less advisory seat.
+
+A file-loaded agent with the same name (case-insensitively) wins — the overlay never shadows the user's own agents. `subagents:rpc:unregister-agents` `{ requestId, names }` removes types by name; file-backed types are untouched.
+
 `list` returns every agent the manager holds, in any status, nested and workflow agents included. Filter on `status`, `parentAgentId` and `workflowId` yourself.
 
 A record stays readable until the manager removes it: 10 minutes after the agent finishes (`cleanup` in `src/agent-manager.ts`; a nested agent's waits for its parent's record to go), or sooner, at a session start or switch, if its result was consumed (`clearCompleted(true)` keeps records whose result was not read). After that, `get` returns `Agent not found`, and only a top-level agent's saved `subagents:record` session entry remains.
