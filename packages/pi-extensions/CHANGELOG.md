@@ -1,5 +1,19 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.23
+
+### Patch Changes
+
+- [#422](https://github.com/HerbertGao/pi-extensions/pull/422) [`8e29396`](https://github.com/HerbertGao/pi-extensions/commit/8e2939615a356090c2b25d29e2b7621090def5ff) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay pi-cc-extensions onto upstream 1.0.22. Hidden tools no longer inflate `/context` figures, and the status bar drops cost-currency settings. Regular mode still does not enable terminal mouse reporting.
+
+  Vendor Impeccable 4.11.0 with engine 0.1.30, keeping local live-browser staging fixes.
+
+  Bump bundled Antigravity bridge to 1.15.0, Qoder provider to 0.6.15, and pin Graphify PyPI 0.9.119. The Graphify CLI stays outside the npm aggregate.
+
+- Updated dependencies [[`8e29396`](https://github.com/HerbertGao/pi-extensions/commit/8e2939615a356090c2b25d29e2b7621090def5ff)]:
+  - @herbertgao/pi-cc-extensions@1.0.22
+  - @herbertgao/pi-impeccable@0.6.1
+
 ## 2026.11.22
 
 ### Patch Changes
