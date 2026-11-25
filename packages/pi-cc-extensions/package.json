@@ -1,6 +1,6 @@
 {
 	"name": "@herbertgao/pi-cc-extensions",
-	"version": "1.0.21-local.4",
+	"version": "1.0.22-local.5",
 	"license": "MIT",
 	"description": "A Pi productivity suite with Claude Code-style UI, context inspection, and agent/session references",
 	"type": "module",
@@ -74,10 +74,10 @@
 	},
 	"x-upstream": {
 		"package": "pi-cc-extensions",
-		"version": "1.0.21",
-		"reviewedVersion": "1.0.21",
+		"version": "1.0.22",
+		"reviewedVersion": "1.0.22",
 		"repository": "https://github.com/minuque/pi-cc-extensions",
-		"commit": "9a0ecdd29f9cecca9c34ae591b0de85896f2c07e",
+		"commit": "be88d4b90dd5e35c167af6c3de4d73db094e6080",
 		"trackVersion": true
 	}
 }

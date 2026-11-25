@@ -2,7 +2,6 @@
 # Package: graphifyy (the CLI command is graphify)
 # This file is monitored by scripts/check-upstreams.mjs.
 # PyPI: https://pypi.org/project/graphifyy/
-# Checked: 2026-11-24 (stable 0.9.118)
-# PyPI has no 0.9.116 or 0.9.117 release; reviewed 0.9.115 through 0.9.118 spans that gap.
+# Checked: 2026-11-25 (stable 0.9.119)
 
-graphifyy==0.9.118
+graphifyy==0.9.119

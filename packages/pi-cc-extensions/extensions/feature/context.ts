@@ -464,6 +464,12 @@ export function collectContextBreakdown(
 ): ContextBreakdown {
 	const options = (ctx.getSystemPromptOptions?.() ?? {}) as BuildSystemPromptOptions;
 	const selectedTools = new Set(options.selectedTools ?? ["read", "bash", "edit", "write"]);
+	// prepareLoadout 隐藏的声明不会进请求：pi 把隐藏名字从 toolsAdded 和 selectedTools 里减掉，
+	// codemode "only" 隐藏激活的 direct 工具就是这样。这里跟着跳过，否则会把从未发给模型的
+	// schema 也算进去。hiddenTools 取自 base 快照，随 setActiveTools 刷新。
+	// 注意这只是下界：codemode 的 wire 描述由 prepareLoadout 换成内联目录（默认 inlineBudget
+	// 3000 时约多 10k 字符），而 getAllTools() 给的是注册表描述。
+	const hiddenTools = new Set(options.hiddenTools ?? []);
 	const toolDefinitionPreview: string[] = [];
 	const toolResultPreview: string[] = [];
 	const contextPreview: string[] = [];
@@ -484,6 +490,7 @@ export function collectContextBreakdown(
 
 	for (const tool of allTools) {
 		if (!selectedTools.has(tool.name)) continue;
+		if (hiddenTools.has(tool.name)) continue;
 		const definition = {
 			name: tool.name,
 			description: tool.description,
@@ -522,10 +529,13 @@ export function collectContextBreakdown(
 						previewValue({
 							content: message.content,
 							sections: message.sections,
-							toolsAdded: (message.toolsAdded ?? []).map((tool: { name?: string }) => tool?.name),
-							toolsRemoved: (message.toolsRemoved ?? []).map(
-								(tool: { name?: string }) => tool?.name,
-							),
+							// 与请求一致：隐藏声明不会出现在 toolsAdded / toolsRemoved 里。
+							toolsAdded: (message.toolsAdded ?? [])
+								.map((tool: { name?: string }) => tool?.name)
+								.filter((name): name is string => name !== undefined && !hiddenTools.has(name)),
+							toolsRemoved: (message.toolsRemoved ?? [])
+								.map((tool: { name?: string }) => tool?.name)
+								.filter((name): name is string => name !== undefined && !hiddenTools.has(name)),
 						}),
 				);
 			} else if (message.role === "assistant") {

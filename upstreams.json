@@ -16,13 +16,13 @@
     {
       "name": "pi-cc-extensions",
       "repository": "https://github.com/minuque/pi-cc-extensions",
-      "reviewedCommit": "9a0ecdd29f9cecca9c34ae591b0de85896f2c07e",
+      "reviewedCommit": "be88d4b90dd5e35c167af6c3de4d73db094e6080",
       "watch": "npm"
     },
     {
       "name": "impeccable",
       "repository": "https://github.com/pbakaus/impeccable",
-      "reviewedCommit": "ab3617920fcdb5009163a725ba8ff59927a63474",
+      "reviewedCommit": "88cfafae649164e6dc48b88d3c0c1bf6662eaade",
       "watch": "npm"
     },
     {

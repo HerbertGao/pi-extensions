@@ -89,8 +89,6 @@ Renderer snapshots for `on` / `compact` modes: [default](./docs/tool-render-exam
   "footerTokenRateMode": "average",        // average: whole-prompt avg; live: trailing 1s rate
   "footerTokenRateTtft": true,             // append TTFT to the rate chip; false shows tok/s only
   "footerSessionTokens": false,            // conversation token total chip (Nerd Font glyph, Σ in plain text); sums usage.totalTokens from session entries. Off by default
-  "footerCurrency": "USD",                 // display currency for the footer cost
-  "footerCurrencyRate": null,              // display units per 1 cost unit; null changes the symbol only
   "footerNerdIcons": true,                 // Nerd Font glyphs for git/cache/tokens; false = plain text
   "footerGitStatsMode": "working",         // working (default): uncommitted; branch: cumulative net changes
   "footerContextLimit": "window",          // context chip limit: window (default) | compaction point | both (point + window); may briefly exceed 100%
@@ -119,7 +117,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Compatibility
 
-- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.21 leaves whole-table copy off until `/ccstyle` Features turns it on. It applies to fullscreen assistant bodies and shares one transformer slot with Markdown enhancement. 1.0.20 shows the date with a round summary's completion time, seals that summary when an outer tool appears, and reuses unchanged expanded-card rows. 1.0.19 appends the completion time to a round summary and counts a write together with a later edit of the same file. After `/new` or `/reload` resets the editor, the old editor is not written back. 1.0.18 drops the blank rail between Input and Output on an expanded card. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. 1.0.17 still passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
+- Node.js `>=22.19.0`; the monorepo typechecks against Pi `1.5.0`, and published Pi peer versions stay `*`. 1.0.22 drops footer cost currency/rate settings and stops counting hidden tools in `/context`. 1.0.21 leaves whole-table copy off until `/ccstyle` Features turns it on. It applies to fullscreen assistant bodies and shares one transformer slot with Markdown enhancement. 1.0.20 shows the date with a round summary's completion time, seals that summary when an outer tool appears, and reuses unchanged expanded-card rows. 1.0.19 appends the completion time to a round summary and counts a write together with a later edit of the same file. After `/new` or `/reload` resets the editor, the old editor is not written back. 1.0.18 drops the blank rail between Input and Output on an expanded card. Inline images in an expanded group line up with the output text, and in fullscreen they keep the card background. 1.0.17 still passes injected keybinding hints, `messageTypes`, and the waiting-for-input state through to Pi 1.5.x hosts that provide them.
 
 ## Recommended companions
 
@@ -131,7 +129,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.21 (MIT), upstream baseline [`9a0ecdd`](https://github.com/minuque/pi-cc-extensions/commit/9a0ecdd29f9cecca9c34ae591b0de85896f2c07e), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.22 (MIT), upstream baseline [`be88d4b`](https://github.com/minuque/pi-cc-extensions/commit/be88d4b90dd5e35c167af6c3de4d73db094e6080), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License
