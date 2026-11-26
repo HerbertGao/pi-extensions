@@ -2,6 +2,6 @@
 # Package: graphifyy (the CLI command is graphify)
 # This file is monitored by scripts/check-upstreams.mjs.
 # PyPI: https://pypi.org/project/graphifyy/
-# Checked: 2026-11-25 (stable 0.9.119)
+# Checked: 2026-11-26 (stable 0.9.120)
 
-graphifyy==0.9.119
+graphifyy==0.9.120

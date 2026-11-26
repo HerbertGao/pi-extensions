@@ -84,7 +84,7 @@ THE SOFTWARE.
 
 ## `@estebanforge/pi-antigravity-bridge`
 
-The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.13.2 under its original package name. The published npm release corresponds to git commit [`6b40e5bd49bffba8909556e1b802fe8dacc153e8`](https://github.com/EstebanForge/pi-extensions/commit/6b40e5bd49bffba8909556e1b802fe8dacc153e8). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
+The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.15.2 under its original package name. The published npm release corresponds to git commit [`222ebea774a4a8ac918079e7d55110d35dc05eca`](https://github.com/EstebanForge/pi-extensions/commit/222ebea774a4a8ac918079e7d55110d35dc05eca). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
 
 ## `pi-typesafe`
 
