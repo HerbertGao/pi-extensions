@@ -1,5 +1,11 @@
 # @herbertgao/pi-agency
 
+## 0.1.5
+
+### Patch Changes
+
+- [#424](https://github.com/HerbertGao/pi-extensions/pull/424) [`8fd29b1`](https://github.com/HerbertGao/pi-extensions/commit/8fd29b177afdf2a8ead04821142881cf08731f1a) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Give registered personas the tools their job needs. `agency_register` and `subagents:rpc:register-agents` now accept `tools: "all" | "builtin" | "none"` plus an optional `extensions` allowlist, defaulting to `"all"` — a seated persona inherits the session's extensions and skills the way `general-purpose` does, so a research expert keeps `web_search`, `fetch_content`, and MCP instead of silently degrading to `bash` and `curl`. `tools: "none"` still gives advisory seats a structurally empty tool surface, and `extensions: ["pi-web-access"]` narrows the inherited set.
+
 ## 0.1.4
 
 ### Patch Changes
