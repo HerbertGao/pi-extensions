@@ -129,7 +129,7 @@ pi -e .              # 只跑一次，不改 settings.json
 
 ## 致谢
 
-- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.22（MIT），上游基线 [`be88d4b`](https://github.com/minuque/pi-cc-extensions/commit/be88d4b90dd5e35c167af6c3de4d73db094e6080)；保留本仓库的配置迁移与兼容性补丁。
+- 基于 [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.23（MIT），上游基线 [`da101063`](https://github.com/minuque/pi-cc-extensions/commit/da1010633077bfd14aed64b82c552909779725db)；保留本仓库的配置迁移与兼容性补丁。
 - Rich diff 改编自 [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display)（MIT）；详见 [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md)。
 
 ## 许可证

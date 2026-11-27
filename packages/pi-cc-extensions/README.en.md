@@ -129,7 +129,7 @@ pi -e .              # one run, does not edit settings.json
 
 ## Credits
 
-- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.22 (MIT), upstream baseline [`be88d4b`](https://github.com/minuque/pi-cc-extensions/commit/be88d4b90dd5e35c167af6c3de4d73db094e6080), with this repository's configuration migration and compatibility patches retained.
+- Based on [`minuque/pi-cc-extensions`](https://github.com/minuque/pi-cc-extensions) 1.0.23 (MIT), upstream baseline [`da101063`](https://github.com/minuque/pi-cc-extensions/commit/da1010633077bfd14aed64b82c552909779725db), with this repository's configuration migration and compatibility patches retained.
 - Rich diffs are adapted from [`MasuRii/pi-tool-display`](https://github.com/MasuRii/pi-tool-display) (MIT). See [`extensions/renderer/tool/diff/ATTRIBUTION.md`](./extensions/renderer/tool/diff/ATTRIBUTION.md).
 
 ## License

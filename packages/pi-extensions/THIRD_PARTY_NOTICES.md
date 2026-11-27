@@ -84,11 +84,11 @@ THE SOFTWARE.
 
 ## `@estebanforge/pi-antigravity-bridge`
 
-The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.15.2 under its original package name. The published npm release corresponds to git commit [`222ebea774a4a8ac918079e7d55110d35dc05eca`](https://github.com/EstebanForge/pi-extensions/commit/222ebea774a4a8ac918079e7d55110d35dc05eca). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
+The aggregate bundles [`@estebanforge/pi-antigravity-bridge`](https://github.com/EstebanForge/pi-extensions/tree/main/packages/pi-antigravity-bridge) version 1.16.0 under its original package name. The published npm release corresponds to git commit [`03b971988d9e48928b5f3e9ec48f76bb4864060f`](https://github.com/EstebanForge/pi-extensions/commit/03b971988d9e48928b5f3e9ec48f76bb4864060f). The published tarball includes the MIT `LICENSE` file (Copyright (c) 2026 EstebanForge). Using the provider requires the official `agy` CLI on the host machine; it is not bundled as an npm dependency.
 
 ## `pi-typesafe`
 
-The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.15.1 under its original MIT license:
+The aggregate bundles [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe) version 0.16.0 under its original MIT license:
 
 MIT License
 
@@ -196,4 +196,4 @@ The aggregate bundles [`pi-provider-qoder`](https://github.com/simonsmh/pi-provi
 
 ## `@herbertgao/pi-impeccable`
 
-The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.11.0` at commit `88cfafae649164e6dc48b88d3c0c1bf6662eaade`, under the Apache License 2.0. `scripts/live-browser.js` includes two local fixes: a staged removal stays in the live DOM, and a one-minute exit clears the live init flag so a later inject can start. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.
+The aggregate bundles [`@herbertgao/pi-impeccable`](https://github.com/HerbertGao/pi-extensions/tree/master/packages/pi-impeccable), vendored from [`pbakaus/impeccable`](https://github.com/pbakaus/impeccable) release `4.11.1` at commit `2fc5e1459efbbf06d92c7306517c286bf12490cf`, under the Apache License 2.0. `scripts/live-browser.js` includes two local fixes: a staged removal stays in the live DOM, and a one-minute exit clears the live init flag so a later inject can start. The bundled child package includes the complete upstream `LICENSE` and `NOTICE.md`, including its third-party attributions.
