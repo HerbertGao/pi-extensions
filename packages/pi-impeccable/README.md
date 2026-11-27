@@ -1,6 +1,6 @@
 # @herbertgao/pi-impeccable
 
-The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `4.11.0` Pi skill payload (`skill-v4.11.0`). It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
+The [Impeccable](https://github.com/pbakaus/impeccable) design skill for [Pi](https://pi.dev/), vendored from the official `4.11.1` Pi skill payload (`skill-v4.11.1`). It provides design steering, critique, audit, and deterministic anti-pattern detection without an installer, background service, or global skill directory.
 
 ## Install
 
