@@ -1,5 +1,11 @@
 # @herbertgao/pi-cc-extensions
 
+## 1.0.23-local.1
+
+### Patch Changes
+
+- [#429](https://github.com/HerbertGao/pi-extensions/pull/429) [`52a4f9e`](https://github.com/HerbertGao/pi-extensions/commit/52a4f9eb747bb7c8c0cbd07c67e6e629ad6f987c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Replay onto upstream pi-cc-extensions 1.0.23, including compact table-copy redraw fixes while keeping regular-mode mouse policy and local write-diff cooperation.
+
 ## 1.0.22-local.6
 
 ### Patch Changes

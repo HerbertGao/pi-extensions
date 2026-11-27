@@ -1,5 +1,15 @@
 # @herbertgao/pi-extensions
 
+## 2026.11.25
+
+### Patch Changes
+
+- [#429](https://github.com/HerbertGao/pi-extensions/pull/429) [`52a4f9e`](https://github.com/HerbertGao/pi-extensions/commit/52a4f9eb747bb7c8c0cbd07c67e6e629ad6f987c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Bump bundled Antigravity bridge to 1.16.0, Ask to 2.16.0, TypeSafe to 0.16.0, and pin Graphify PyPI 0.9.121.
+
+- Updated dependencies [[`52a4f9e`](https://github.com/HerbertGao/pi-extensions/commit/52a4f9eb747bb7c8c0cbd07c67e6e629ad6f987c), [`52a4f9e`](https://github.com/HerbertGao/pi-extensions/commit/52a4f9eb747bb7c8c0cbd07c67e6e629ad6f987c)]:
+  - @herbertgao/pi-cc-extensions@1.0.22
+  - @herbertgao/pi-impeccable@0.6.2
+
 ## 2026.11.24
 
 ### Patch Changes
