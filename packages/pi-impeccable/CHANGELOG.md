@@ -1,5 +1,11 @@
 # @herbertgao/pi-impeccable
 
+## 0.6.2
+
+### Patch Changes
+
+- [#429](https://github.com/HerbertGao/pi-extensions/pull/429) [`52a4f9e`](https://github.com/HerbertGao/pi-extensions/commit/52a4f9eb747bb7c8c0cbd07c67e6e629ad6f987c) Thanks [@HerbertGao](https://github.com/HerbertGao)! - Vendor Impeccable 4.11.1 with engine 0.1.31, keeping local live-browser staging and exit init fixes.
+
 ## 0.6.1
 
 ### Patch Changes
