@@ -36,7 +36,7 @@
     "postpack": "node ../../scripts/aggregate-bundle.mjs restore"
   },
   "dependencies": {
-    "@ast-grep/cli": "0.51.2",
+    "@ast-grep/cli": "0.51.3",
     "@ast-grep/napi": "^0.51.0",
     "@dietrichgebert/ponytail": "5.3.3",
     "@estebanforge/pi-antigravity-bridge": "1.16.0",
@@ -78,7 +78,7 @@
     "nanoid": "^5.1.16",
     "p-limit": "^6.1.0",
     "pi-commandcode-provider": "0.8.7",
-    "pi-lens": "4.5.2",
+    "pi-lens": "4.5.3",
     "pi-next-cue": "1.0.8",
     "pi-provider-qoder": "0.6.15",
     "pi-typesafe": "0.16.0",

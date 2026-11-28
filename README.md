@@ -54,7 +54,7 @@ These packages retain their original names and upstream maintainers. The aggrega
 | [`pi-commandcode-provider`](https://github.com/patlux/pi-commandcode-provider)                             | `0.8.6`        | Command Code subscription models and `/login`.                                                         |
 | [`pi-next-cue`](https://www.npmjs.com/package/pi-next-cue)                                                 | `1.0.8`        | Predict the next prompt; Tab fills, Enter sends.                                                       |
 | [`pi-typesafe`](https://github.com/DevMortimer/pi-typesafe)                                                | `0.16.0`       | Structured TypeSafe/Jev decisions.                                                                     |
-| [`pi-lens`](https://github.com/apmantza/pi-lens)                                                           | `4.5.2`        | Code diagnostics and skills.                                                                           |
+| [`pi-lens`](https://github.com/apmantza/pi-lens)                                                           | `4.5.3`        | Code diagnostics and skills.                                                                           |
 | [`pi-web-access`](https://github.com/nicobailon/pi-web-access)                                             | `0.48.0`       | Web search and content access.                                                                         |
 | [`pi-provider-qoder`](https://github.com/simonsmh/pi-provider-qoder)                                       | `0.6.13`       | Qoder account models for global and China.                                                             |
 
